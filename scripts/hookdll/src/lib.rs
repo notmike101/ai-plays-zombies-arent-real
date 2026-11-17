@@ -30,6 +30,7 @@ const RID_INPUT: u32 = 0x10000003;
 const RID_HEADER: u32 = 0x10000005;
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 struct Shared {
     magic: u32,
     version: u32,
@@ -47,8 +48,8 @@ struct Shared {
     dbg0: u32, // MON_W
     dbg1: u32, // last abs_norm fail: 1=metrics 2=ClientToScreen, 0=ok
     dbg2: u32, // pump ticks
-    dbg3: u32, // thread alive stamp (heartbeat mirror)
-    _pad: [u32; 40],
+    dbg3: u32, // reserved
+    _pad: [u32; 39],
 }
 
 static mut SHARED: *mut Shared = core::ptr::null_mut();
@@ -139,12 +140,13 @@ struct POINT {
 }
 
 #[inline(always)]
-unsafe fn shared() -> Option<&'static Shared> {
+unsafe fn shared() -> Option<Shared> {
     let p = SHARED;
     if p.is_null() {
         return None;
     }
-    let s = &*p;
+    // The Python process changes this memory between calls; never cache a reference.
+    let s = core::ptr::read_volatile(p);
     if s.magic == MAGIC && s.version == VERSION {
         Some(s)
     } else {
@@ -223,8 +225,7 @@ unsafe fn pump(s: &Shared) {
         ABS_DIRTY = 1;
     }
     // Absolute mode: the game's raw pointer MUST equal our virtual cursor.
-    // Emit an abs record on enable lock-in, on any move, periodically, and
-    // before/after every button edge (edges carry the abs coords too).
+    // Raw movement is compatibility-only. Button edges use PostMessage exactly once.
     let moved = s.cursor_x != LAST_X || s.cursor_y != LAST_Y;
     let btn = s.buttons;
     let ch = btn ^ PREV_BTN;
@@ -315,8 +316,8 @@ unsafe extern "system" fn Hook_GetCursorPos(lpPoint: *mut POINT) -> i32 {
 unsafe extern "system" fn Hook_GetAsyncKeyState(vKey: i32) -> i16 {
     match shared() {
         Some(s) if s.enabled != 0 => {
-            if key_down(s, vKey) {
-                (-32768i16)
+            if key_down(&s, vKey) {
+                -32768i16
             } else {
                 0
             }
@@ -332,8 +333,8 @@ unsafe extern "system" fn Hook_GetKeyState(vKey: i32) -> i16 {
     match shared() {
         Some(s) if s.enabled != 0 => {
             let mut r: i16 = 0;
-            if key_down(s, vKey) {
-                r |= (-32768i16);
+            if key_down(&s, vKey) {
+                r |= -32768i16;
             }
             let toggle_bit = match vKey {
                 0x14 => 0, // VK_CAPITAL
@@ -360,7 +361,7 @@ unsafe extern "system" fn Hook_GetKeyboardState(lpKeyState: *mut u8) -> i32 {
         Some(s) if s.enabled != 0 && !lpKeyState.is_null() => {
             core::ptr::write_bytes(lpKeyState, 0, 256);
             for vk in 0..256i32 {
-                if key_down(s, vk) {
+                if key_down(&s, vk) {
                     *lpKeyState.offset(vk as isize) = 0x80;
                 }
             }
@@ -441,9 +442,9 @@ unsafe fn patch_iat(base: *mut c_void) -> usize {
         if !is_user32(dll_name_ptr) {
             continue;
         }
-        let mut ilt = base.byte_add(original_first_thunk as usize) as *const u64;
+        let ilt = base.byte_add(original_first_thunk as usize) as *const u64;
         let first_thunk_rva = core::ptr::read_unaligned(d.byte_add(4 * 4)) as usize;
-        let mut iat = base.byte_add(first_thunk_rva) as *mut u64;
+        let iat = base.byte_add(first_thunk_rva) as *mut u64;
         let mut j = 0usize;
         loop {
             let ord_name = core::ptr::read_unaligned(ilt.byte_add(8 * j));
@@ -605,6 +606,14 @@ mod tests {
     #[test]
     fn raw_input_matches_win32_x64() {
         unsafe {
+            assert_eq!(core::mem::size_of::<Shared>(), SECTION_SIZE);
+            assert_eq!(core::mem::offset_of!(Shared, raw_hwnd), 0x48);
+            assert_eq!(core::mem::offset_of!(Shared, dbg2), 0x5C);
+            let mut state: Shared = core::mem::zeroed();
+            state.buttons = 5;
+            assert!(key_down(&state, 1));
+            assert!(key_down(&state, 4));
+            assert!(!key_down(&state, 2));
             emit(0, 1, 1, 12345, 23456);
             let handle = core::ptr::addr_of_mut!(RING).cast::<u8>().add(RING_IDX as usize * RAW_SIZE);
             let mut size = 0;
