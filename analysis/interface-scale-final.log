@@ -1,0 +1,16 @@
+Mixed scale: inst1 unfinished campaign START OVER; inst3 fullscreen; inst2/4 windowed
+inst1 launched pid=30368
+inst3 launched pid=9604
+inst4 launched pid=17872
+inst2 launched pid=43040
+inst2 READY pid=43040 obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}
+PASS inst2 boot
+inst4 READY pid=17872 obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}
+PASS inst4 boot
+inst1 READY pid=30368 obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}
+PASS inst1 boot
+inst3 READY pid=9604 obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}
+PASS inst3 boot
+PASS simultaneous planning: 4/4
+PASS cleanup remaining=[]
+Restored inst1 progress and inst3 settings

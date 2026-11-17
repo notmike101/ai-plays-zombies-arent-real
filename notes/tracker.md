@@ -1,27 +1,38 @@
 # ZAR Tracker (live state — update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — final interface checks)
-- Interface only. No ML/trainer code changes, subagents, console commands, physical
-  input or installation writes. Unrelated training artifacts remain untouched.
-- Final mouse path: VirtualInput cursor/polling + one PostMessage edge sequence.
-  REA/Ghidra and isolated probes contradict the raw-only menu claim. ABI and
-  client coordinate bugs corrected; once-only injection is bounded and reconnects.
-- Two consecutive fresh acceptance cycles passed on the final mouse implementation:
-  analysis/interface-20261117-094110.log. Includes NO dialog, one garrison, zone,
-  wall, anchored wheel +/-1, battle start and existing R recovery; both cleaned up.
-- Four simultaneous planning boots passed: analysis/interface-scale.log. Fullscreen
-  fresh boot passed: analysis/interface-fullscreen-boot.log. All cleaned up.
-- Additional CONTINUE calibration found unfinished campaign buttons above the
-  completed-campaign layout. Windowed corrected click resumed L5 (209867 civ).
-  Final API checks for both layouts are running, then the four-copy proof repeats.
-- inst4 badges intact (39.23/34.31/21.14/13.69/7.91). Original save/settings backups
-  under analysis/interface-progress-backups; temporary resume fixtures are restored.
-- Owned live copies during this checkpoint: inst1 and inst3, PIDs in
-  analysis/interface-continue-final.log. Re-enumerate before acting.
+## CURRENT STATE (2026-11-17 — deterministic interface complete)
+- Interface only: no ML/trainer source changes, subagents, console commands,
+  physical cursor input or game-install writes. Unrelated training artifacts
+  remain uncommitted and untouched by this work.
+- v3 client-coordinate/Win32 ABI defects fixed. Mouse actions use VirtualInput
+  polling/cursor plus one posted edge sequence. Raw-only claims were contradicted
+  by isolated tests and REA/Ghidra WndProc analysis; raw is movement compatibility.
+- TWO consecutive final mouse acceptance cycles PASS:
+  analysis/interface-20261117-094110.log (PIDs 25820, 5804, both killed).
+  Each: fresh L1 $3111/8142 civilians, READY NO click, exactly one garrison,
+  22 polygon walls + one wall, zoom +/-1 with zero anchor drift, battle, R retry.
+- FINAL FOUR-COPY mixed-layout proof PASS: analysis/interface-scale-final.log.
+  inst1 30368 (unfinished campaign START OVER), inst2 43040, inst3 9604
+  (3840x2160 fullscreen), inst4 17872; all four coexisted in planning at $3111.
+  All four killed. Temporary inst1 progress and inst3 settings restored.
+- CONTINUE API PASS in windowed/fullscreen: analysis/interface-continue-final.log.
+  PIDs 11212/7560 resumed L5 planning with 209867 civilians, then were killed.
+  Uses a temporary existing unfinished checkpoint; original progress restored.
+- Eight offline Python checks + one native ABI/layout check PASS:
+  analysis/interface-unit-tests.log. Scoped git diff whitespace check is clean.
+- All game processes now absent (including stale copies named in the handoff).
+  Final inventory, DLL hash, settings restoration and badges: analysis/interface-cleanup.json.
+  inst1..4 retain badges 39.23/34.31/21.14/13.69/7.91; no badge repair was needed.
+- Limits: English/UI scale 1, calibrated clients 1920x1200 or 3840x2160. Boston
+  fresh stage1 and CONTINUE for partially cleared campaigns (1-4 badges) only.
+  Other destinations/sizes fail loudly. Zero-badge/completed CONTINUE is rejected.
+  Fresh dump economy is authoritative; unchanged env.money can read a stale mirror.
 
 ## NEXT STEPS
-1. Finish windowed/fullscreen CONTINUE API proof and repeat four-copy boot.
-2. Kill all test copies, restore probe settings/fixtures, commit final evidence and push.
+- No interface acceptance work outstanding. Future build/layout changes require
+  calibration and fresh live checks; source/menu matrix is notes/automation.md.
+- Reuse scripts/zar_boot.py for owned copies. Successful API callers own cleanup;
+  the CLI and acceptance test clean up automatically. No games are left running.
 
 ## VERIFIED CAPABILITIES (condensed; details notes/automation.md)
 1. Parallel unfocused copies; virtual input per instance (DLL): clicks, keys,
@@ -48,7 +59,7 @@ dense crowds + Battleship water AOE = path to silver. (notes/game-rules.md)
 ## SAFE-ZONE / DIALOG MECHANICS (user-confirmed + en.lang)
 - Zone tool: click perimeter points, close loop with Enter; fee ON CLOSE
   (L1 800x760px = $1155); land cap L1 30%. Select zone wall -> X -> YES(X)
-  refunds. Dialogs keyboard-only: YES(X)/NO, OK=Enter, ready-short YES=SPACE,
+  refunds. Dialogs accept virtual posted clicks or keys: YES(X)/NO, OK=Enter, ready-short YES=SPACE,
   ESC=NO (2nd ESC=pause). F6 writer frozen while dialog/menu up.
 
 ## EVIDENCE / PATHS

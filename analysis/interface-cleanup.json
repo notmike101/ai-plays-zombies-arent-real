@@ -1,0 +1,36 @@
+{
+  "time": "2026-11-17T09:50:58.754578-06:00",
+  "game_processes": [],
+  "inst3_settings_restored": true,
+  "badges": {
+    "inst1": [
+      "stage 1 = emerald 39.23 played",
+      "stage 2 = diamond 34.31 played",
+      "stage 3 = silver 21.14 played",
+      "stage 4 = silver 13.69 played",
+      "stage 5 = bronze 7.91 played"
+    ],
+    "inst2": [
+      "stage 1 = emerald 39.23 played",
+      "stage 2 = diamond 34.31 played",
+      "stage 3 = silver 21.14 played",
+      "stage 4 = silver 13.69 played",
+      "stage 5 = bronze 7.91 played"
+    ],
+    "inst3": [
+      "stage 1 = emerald 39.23 played",
+      "stage 2 = diamond 34.31 played",
+      "stage 3 = silver 21.14 played",
+      "stage 4 = silver 13.69 played",
+      "stage 5 = bronze 7.91 played"
+    ],
+    "inst4": [
+      "stage 1 = emerald 39.23 played",
+      "stage 2 = diamond 34.31 played",
+      "stage 3 = silver 21.14 played",
+      "stage 4 = silver 13.69 played",
+      "stage 5 = bronze 7.91 played"
+    ]
+  },
+  "dll_sha256": "efc1c4ea1c1b513a897b9a09997827843bea53dbabd97bb30f408c40db5e16b7"
+}
