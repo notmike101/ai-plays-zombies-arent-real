@@ -147,16 +147,19 @@ class ZAREnv:
                 return o
             sig = (o['civ'], o['zomb'])
             if (o['zomb'] or 0) > 0:
-                if sig == last:            # wedged: pause-modal or loss popup
-                    self.vi.key_press(0x20, sc=57, hold=0.25)
-                    time.sleep(1.2)
+                if sig == last:      # pause-modal / loss popup: unpause +
+                    self.vi.key_press(0x20, sc=57, hold=0.25)   # dismiss,
+                    time.sleep(1.2)  # then double-R below
                     self.vi.key_press(0x0D, sc=28, hold=0.25)
                     time.sleep(1.2)
+                # 1st R opens 'Restart this level? YES(R)/NO', 2nd R = YES
+                self.vi.key_press(0x52, sc=19, hold=0.25)
+                time.sleep(2.5)
                 self.vi.key_press(0x52, sc=19, hold=0.25)
             elif (o['civ'] or 0) == 0 and o.get('money') is None:
                 self.vi.key_press(0x0D, sc=28, hold=0.25)   # loss screen OK
             last = sig
-            time.sleep(3.5)
+            time.sleep(4.0)
         o = self.obs()
         if (o['civ'] or 0) > 0 and (o['zomb'] or 0) == 0 \
                 and o.get('money') is not None:
