@@ -91,6 +91,15 @@ class IntegrationTests(unittest.TestCase):
         self.assertTrue(self.observers[0]._closed)
         self.assertFalse(list(Path(self.temp.name).glob('*.json')))
 
+    def test_timeout_separates_snapshot_from_outcome_and_reward(self):
+        result = self.episode(None)
+        self.assertEqual(result['end'], 'timeout')
+        self.assertIsNone(result['saved_frac'])
+        self.assertEqual(result['observed_saved_frac'], 1.)
+        self.assertEqual(result['timeout_phase'], 'playing')
+        self.assertEqual(result['reward_components']['terminal'], 0.)
+        self.assertAlmostEqual(sum(result['reward_components'].values()), result['R'])
+
 
 if __name__ == '__main__':
     unittest.main()

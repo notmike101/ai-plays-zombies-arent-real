@@ -32,3 +32,12 @@ battle. This preserves the future signal without purchase/cast/READY bonuses.
 Tests cover0/20/60-step prefixes, battle discount and truncation bootstrap, and
 a real optimizer step.14 learning tests pass. Higher planning-return variance is
 a tradeoff; comparative gameplay improvement still needs multi-seed evaluation.
+
+## Reward reporting milestone
+History now separates infection cost and terminal saved reward. Timeouts keep an
+observed_saved_frac snapshot but saved_frac is null, with timeout_phase explicit;
+a paused planning board with100% alive is not a100% result. Error records include
+last tool/cell and phase. Unknown/out-of-range/non-finite outcomes and non-finite
+bootstrap values are rejected. Checkpoints and history record learning revision1
+and the reward/GAE coefficients; schema3 weights remain compatible.
+47 trainer/state/deck/spatial/reporting and35 visualizer tests pass.

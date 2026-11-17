@@ -160,6 +160,11 @@ class StateTests(unittest.TestCase):
     def test_unknown_terminal_is_not_a_training_sample(self):
         self.assertFalse(train.valid_trajectory({'end': 'won', 'saved_frac': None}))
         self.assertTrue(train.valid_trajectory({'end': 'timeout', 'bootstrap': 2}))
+        for row in ({'end': 'won', 'saved_frac': float('nan')},
+                    {'end': 'lost', 'saved_frac': 1.1},
+                    {'end': 'unknown', 'saved_frac': .5},
+                    {'end': 'timeout', 'bootstrap': float('inf')}):
+            self.assertFalse(train.valid_trajectory(row))
 
     def test_infection_cost_uses_the_next_state_without_floor(self):
         self.assertEqual(train.transition_reward({'infections': 0}, {'infections': 100}, 100), -1)

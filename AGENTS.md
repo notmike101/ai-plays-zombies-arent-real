@@ -242,3 +242,9 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
 - Tool hotkeys toggle. Undo may leave the old tool armed. Before selecting a
   planning/battle tool, cancel via virtual right-click and then press its hotkey.
   Repeated identical actions must reselect, never silently disarm the tool.
+
+## Reward evidence
+- Record infection and terminal reward components separately, plus the learning
+  configuration in history/checkpoints. Timeouts have saved_frac=null; keep their
+  HUD snapshot only as observed_saved_frac with timeout_phase. Never count it as
+  terminal success. Reject non-finite outcomes/bootstrap values before PPO.

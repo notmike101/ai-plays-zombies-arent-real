@@ -134,6 +134,7 @@ class LearningTests(unittest.TestCase):
             train.save_checkpoint(net, opt, path, 'run-a')
             original = path.read_bytes()
             restored = train.PolicyNet2()
+            self.assertEqual(torch.load(path, weights_only=True)['learning'], train.learning_config())
             resumed = torch.optim.Adam(restored.parameters())
             train.load_checkpoint(restored, resumed, path)
             self.assertTrue(resumed.state)

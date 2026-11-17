@@ -36,6 +36,7 @@ HIST = os.path.join(ROOT, 'analysis', 'nn_hist3.jsonl')
 NOBS, HID = 332, 128
 PLANNING_INDEX = INPUT_LABELS.index('Planning phase')
 BATTLE_GAMMA, BATTLE_LAMBDA = .99, .95
+SAVED_REWARD_SCALE = 5.
 NU, NC = 72, 48
 TOOLS = ['wait', 'ready', 'garrison', 'mortar', 'napalm', 'turret', 'mine',
          'c4', 'gas_mortar', 'upgrade_unit', 'zone_rect', 'heli', 'cta',
@@ -296,6 +297,12 @@ def checkpoint_schema():
     return dict(version=3, inputs=INPUT_LABELS, tools=TOOLS, cells=CELL_LABELS)
 
 
+def learning_config():
+    return dict(revision=1, infection_cost=1., terminal_saved_scale=SAVED_REWARD_SCALE,
+                planning_gamma=1., planning_lambda=1.,
+                battle_gamma=BATTLE_GAMMA, battle_lambda=BATTLE_LAMBDA)
+
+
 def load_pretrained(net, path):
     data = torch.load(path, weights_only=True)
     if data.get('schema') != checkpoint_schema():
@@ -316,6 +323,8 @@ def run_episode(args):
         np.random.seed(options['seed'] % (2**32))
     from env_zar import ZAREnv, ZAREnvError
     env = observer = None
+    u = c = None
+    state = {}
     logging = False
     try:
         env = ZAREnv(pid)
@@ -531,13 +540,16 @@ def run_episode(args):
             with torch.no_grad():
                 _, _, value, _ = net(torch.tensor([[f]], dtype=torch.float32), h)
                 bootstrap = float(value.item())
+        rewards = dict(infections=sum(rows['rews']), terminal=outcome_reward(saved, end))
         if rows['rews']:
-            rows['rews'][-1] += outcome_reward(saved, end)
+            rows['rews'][-1] += rewards['terminal']
         advance = end == 'won' and saved is not None and saved >= .35
         if end in ('aborted', 'lost') or end == 'won' and not advance:
             env.retry()
         return dict(rows, level=tag, pid=pid, win=end == 'won', advance=advance, end=end,
-                    saved_frac=saved, frac=o['civ']/civ0, bootstrap=bootstrap,
+                    saved_frac=saved if end != 'timeout' else None,
+                    observed_saved_frac=saved, timeout_phase=state['phase'] if end == 'timeout' else None,
+                    reward_components=rewards, frac=o['civ']/civ0, bootstrap=bootstrap,
                     civ0=civ0, t=time.monotonic()-start, sim=state['sim'],
                     R=sum(rows['rews']), nbuy=nbuy, ndeck=len(st['deck']),
                     spend=m0-o['money'], board=session, board_id=board_id,
@@ -547,7 +559,8 @@ def run_episode(args):
     except Exception as exc:
         import traceback
         traceback.print_exc()
-        return dict(level=tag, pid=pid, err=str(exc), seed=options.get('seed'),
+        return dict(level=tag, pid=pid, err=str(exc), last_tool=u, last_cell=c,
+                    phase=state.get('phase'), seed=options.get('seed'),
                     start_kind=options.get('start_kind', 'unknown'))
     finally:
         try:
@@ -582,12 +595,17 @@ def gae(rews, vals, lam=BATTLE_LAMBDA, gamma=BATTLE_GAMMA, bootstrap=0.0,
 def outcome_reward(saved_frac, end):
     if saved_frac is None or end == 'timeout':
         return 0.0
-    return 5.0 * saved_frac
+    return SAVED_REWARD_SCALE * saved_frac
 
 
 def valid_trajectory(tr):
-    return ('err' not in tr and (tr.get('saved_frac') is not None or
-            tr.get('end') == 'timeout' and 'bootstrap' in tr))
+    if 'err' in tr:
+        return False
+    if tr.get('end') == 'timeout':
+        return isinstance(tr.get('bootstrap'), (int, float)) and math.isfinite(tr['bootstrap'])
+    saved = tr.get('saved_frac')
+    return (tr.get('end') in ('won', 'lost', 'aborted') and
+            isinstance(saved, (int, float)) and math.isfinite(saved) and 0 <= saved <= 1)
 
 
 def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015):
@@ -683,7 +701,7 @@ def save_checkpoint(net, opt, path, run_id):
     path = os.fspath(path)
     tmp = path + '.tmp'
     torch.save({'policy': net.state_dict(), 'optimizer': opt.state_dict(),
-                'run_id': run_id, 'schema': checkpoint_schema()}, tmp)
+                'run_id': run_id, 'schema': checkpoint_schema(), 'learning': learning_config()}, tmp)
     if os.path.exists(path):
         shutil.copy2(path, path + '.previous')
     os.replace(tmp, path)
@@ -756,7 +774,7 @@ def main():
                     row = {k: v for k,v in tr.items() if k not in
                            ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'board')}
                     row.update(kind='episode', run_id=run_id, round=rnd, mode=a.mode,
-                               checkpoint_id=checkpoint_id, schema=3)
+                               checkpoint_id=checkpoint_id, schema=3, learning=learning_config())
                     fh.write(json.dumps(row) + '\n')
                     starts[tr['pid']] = 'next_level' if tr.get('advance') else 'carry'
                     if 'err' in tr:
@@ -771,7 +789,8 @@ def main():
                     sd = net.state_dict()
                     save_checkpoint(net, opt, a.model, run_id)
                     fh.write(json.dumps(dict(kind='update', run_id=run_id, round=rnd,
-                                             checkpoint_id=policy_id(net), **diagnostics))+'\n')
+                                             checkpoint_id=policy_id(net), learning=learning_config(),
+                                             **diagnostics))+'\n')
             if any('err' in tr for tr in trajs):
                 raise RuntimeError('Worker failed; stopped this run after preserving error history')
             if any(tr.get('advance') and tr.get('board', {}).get('scenario') ==
