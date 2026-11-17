@@ -94,3 +94,13 @@ Plan zone coords subtract map origin0x665358/5c. Stock0x656488:39 float32 in
 Stock_Item order; loadout0x655f90:19 int64 in NATIVE_ABILITIES order (env_zar.py).
 Runtime receipts: Police stock40->28 after spray; Police20/Stungas1 exactly matched
 session-log footer. No native writes. Building candidates can include scenery.
+
+## READY land legality (matching bbbff50f, 2026-11-17)
+Existing Ghidra functions `0x1401c0520` and `0x1400982c0` establish READY
+rejection for land-cap excess and money < -0.5. Land cache valid byte659258,
+geometry dirty byte65ce58; covered/total land cells659308/659310 (int64).
+Stage land km2 float65d9e0. Resolved cap small/large percents64df20/24 and
+small/large km2 thresholds64df28/2c. Between thresholds interpolate on sqrt
+area and round to nearest percent; reject coverage > cap+0.0001.
+Owned L1 PID48612: total257622 cells, area1.030488km2, settings30/12%,1/159km2.
+Read only; wait for the game's own cache refresh, never invoke/write native code.

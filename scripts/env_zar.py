@@ -103,6 +103,43 @@ class ZAREnv:
             if hashlib.file_digest(fh, 'sha256').hexdigest() != BUILD_SHA256:
                 raise ZAREnvError('Unsupported game build: revalidate memory offsets')
 
+    def geometry_legal(self):
+        """Matching-build READY land/budget gates; never refresh native caches by writing."""
+        for _ in range(10):
+            if self.scalar(0x659258, '<B') and not self.scalar(0x65ce58, '<B'):
+                break
+            time.sleep(.05)
+        else:
+            raise ZAREnvError('Land coverage cache did not settle')
+        covered = self.scalar(0x659308, '<q')
+        total = self.scalar(0x659310, '<q')
+        area, cap, large_cap, small, large = [self.scalar(rva, '<f') for rva in
+            (0x65d9e0, 0x64df20, 0x64df24, 0x64df28, 0x64df2c)]
+        money = self.money()
+        if (money is None or not all(map(math.isfinite, (area, cap, large_cap, small, large)))
+                or not 0 <= covered <= total or total <= 0 or min(area, small, large) < 0):
+            raise ZAREnvError('Invalid native land coverage')
+        if large > small and area > small:
+            cap = large_cap if area >= large else math.floor(cap + (large_cap-cap) *
+                ((math.sqrt(area)-math.sqrt(small))/(math.sqrt(large)-math.sqrt(small))) + .5)
+        return money >= -.5 and covered*100./total <= cap + .0001
+
+    def finish_geometry(self, before):
+        """Reject a READY-blocking edit by undoing exactly that edit, with receipts."""
+        after = self.dump()
+        if not before or not after:
+            raise ZAREnvError('Geometry requires before/after planning receipts')
+        if self.geometry_legal():
+            return after
+        self.vi.combo_press([0x11], 0x5A, sc=44, hold=.12)
+        time.sleep(.2)
+        restored = self.dump()
+        board = lambda d: [line for line in d['_text'].splitlines() if line.startswith('board ')]
+        if (not restored or not self.geometry_legal() or board(restored) != board(before)
+                or abs(float(restored['economy']['money'])-float(before['economy']['money'])) > .02):
+            raise ZAREnvError('Illegal geometry rollback did not restore the previous board')
+        return restored
+
     def scalar(self, rva, fmt):
         size = struct.calcsize(fmt)
         data = memscan.read(self.h, self.base + rva, size)

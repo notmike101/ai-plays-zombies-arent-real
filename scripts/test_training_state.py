@@ -10,6 +10,44 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_geometry_uses_native_land_cap_and_budget(self):
+        e = self.env()
+        values = {0x659258: 1, 0x65ce58: 0, 0x659308: 30, 0x659310: 100,
+                  0x65d9e0: 1., 0x64df20: 30., 0x64df24: 12.,
+                  0x64df28: 1., 0x64df2c: 159.}
+        e.scalar = lambda address, fmt: values[address]
+        e.money = lambda: 0.
+        self.assertTrue(e.geometry_legal())
+        values[0x659308] = 31
+        self.assertFalse(e.geometry_legal())
+        values[0x659308] = 13
+        values[0x65d9e0] = 159.
+        self.assertFalse(e.geometry_legal())
+        values[0x659308] = 12
+        self.assertTrue(e.geometry_legal())
+        e.money = lambda: -.51
+        self.assertFalse(e.geometry_legal())
+        values[0x659258] = 0
+        with patch.object(env_zar.time, 'sleep'), self.assertRaises(env_zar.ZAREnvError):
+            e.geometry_legal()
+
+    def test_invalid_geometry_undo_preserves_previous_board(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        e = self.env()
+        before = {'_text': 'board unit = Garrison 1 2', 'economy': {'money': '3000'}}
+        changed = {'_text': before['_text']+'\nboard zone = 4 ...', 'economy': {'money': '100'}}
+        e.dump = Mock(side_effect=[changed, before])
+        e.geometry_legal = Mock(side_effect=[False, True])
+        e.vi = SimpleNamespace(combo_press=Mock())
+        with patch.object(env_zar.time, 'sleep'):
+            self.assertEqual(e.finish_geometry(before), before)
+        e.vi.combo_press.assert_called_once_with([0x11], 0x5A, sc=44, hold=.12)
+        e.dump = Mock(side_effect=[changed, changed])
+        e.geometry_legal = Mock(side_effect=[False, True])
+        with patch.object(env_zar.time, 'sleep'), self.assertRaises(env_zar.ZAREnvError):
+            e.finish_geometry(before)
+
     def test_picker_bottom_and_stale_unowned_roster(self):
         from types import SimpleNamespace
         from unittest.mock import Mock

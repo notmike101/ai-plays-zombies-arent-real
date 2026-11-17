@@ -418,3 +418,8 @@ then a large rectangle ($520.86). Exactly ONE Ctrl+Z via virtual input restored
 $3037.80, removed that zone and retained the one garrison. This supersedes the
 old blanket claim that a single undo wipes everything: repeated undo can clear
 the board. Rollback must be one action with a verified planning receipt.
+
+The trainer now treats a READY-blocking geometry edit as a rejected action:
+read fresh pre/post dumps, check native land coverage and debt gates, single
+Ctrl+Z only when invalid, then verify identical board rows and balance. A failed
+rollback stops the worker. No reward bonus, strategy selection or memory writes.

@@ -431,6 +431,9 @@ def run_episode(args):
                     if not st.get('anchor'):
                         st['anchor'] = (u, c)
                     else:
+                        before_plan = env.dump()
+                        if not before_plan:
+                            raise ZAREnvError('Missing pre-geometry planning receipt')
                         x1, y1 = cell_of_px(st.pop('anchor')[1], env.cw, env.ch)
                         x2, y2 = cell_of_px(c, env.cw, env.ch)
                         env._arm(*((0x42, 48) if u == 10 else U_HOTKEY[u]))
@@ -443,7 +446,7 @@ def run_episode(args):
                             if u == 15:
                                 env.vi.click(x2, y2)
                         time.sleep(.2)
-                        plan = env.dump() or plan
+                        plan = env.finish_geometry(before_plan)
                 elif u in U_HOTKEY:
                     env._arm(*U_HOTKEY[u])
                     cx, cy = cell_of_px(c, env.cw, env.ch)

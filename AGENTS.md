@@ -220,3 +220,9 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
 ## Native economy validity
 - Safe-zone placement can overdraw money. Preserve signed finite native balances;
   negative money is valid debt, not missing memory. See notes/automation.md.
+
+## Planning geometry validity
+- After a model geometry edit, enforce native READY land/debt gates. If invalid,
+  undo exactly once and verify the previous board and balance. Never repeatedly
+  undo or clear the board to conceal an interface failure. The model chooses
+  all valid geometry; failed rollback must stop the worker.
