@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import threading
 import time
 
 import psutil
@@ -22,6 +23,7 @@ from zar_input import VirtualInput, window_of_pid, user32
 ROOT = Path(__file__).resolve().parents[1]
 COPIES = ROOT / 'game-copies'
 EXE = 'zombies-arent-real.exe'
+_ENV_ATTACH_LOCK = threading.Lock()
 
 
 def copy_path(copy_dir):
@@ -114,7 +116,10 @@ def boot(copy_dir, dest=('campaign', 'stage1')):
         click_fraction(vi, *target)
         vi.key_press(0x0D, sc=28, hold=.15)
         time.sleep(5)
-        env = ZAREnv(process.pid)
+        # memscan.module_base installs a per-call ctypes Structure signature.
+        # Serialize attachments so concurrent copies cannot replace that type.
+        with _ENV_ATTACH_LOCK:
+            env = ZAREnv(process.pid)
         if not env.obs()['civ']:
             # Only attempt ESC when the first start did not enter a world: an
             # unconditional ESC backs out of an unobstructed campaign page.
