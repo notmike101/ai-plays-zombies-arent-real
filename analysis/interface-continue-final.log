@@ -1,0 +1,7 @@
+inst1 launched pid=11212
+inst3 launched pid=7560
+inst1 READY pid=11212 obs={'civ': 209867, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 27047.044921875}
+inst3 READY pid=7560 obs={'civ': 209867, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 27047.044921875}
+PASS CONTINUE inst1 (1920, 1200) {'civ': 209867, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 27047.044921875}
+PASS CONTINUE inst3 (3840, 2160) {'civ': 209867, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 27047.044921875}
+restored progress/settings; remaining []

@@ -16,12 +16,13 @@ physical input, console commands, installation writes, or subagents.
    preserve progress backups and kill all test games in finally blocks.
 5. Update guidance/menu matrix and tracker with verified facts and limitations.
 
-Evidence so far: analysis/interface-audit-initial.log, interface-movement.log,
-interface-post-only.log, interface-pe-imports.json. Raw-only events increment
-raw_sent but do not move world cursor. Posted-only click purchases a garrison.
-The v3 native raw record layout and command constants disagree with Win32 x64.
-Inst4 retains all five badges. No trainer CLI processes found; stale copies
-listed by the user were terminated, with PID 7340 retained for the audit.
+Delivered: unified posted input, corrected native v3 ABI and cursor coordinates,
+bounded once-only injection, screenshot-free boot, live acceptance, and docs.
+Two consecutive fresh acceptance runs: analysis/interface-20261117-094110.log.
+Four-copy proof: analysis/interface-scale.log (a final mixed-layout repeat is in
+analysis/interface-scale-final.log). Fullscreen: interface-fullscreen-boot.log.
+CONTINUE windowed/fullscreen: interface-continue-final.log. REA/Ghidra evidence:
+interface-{pe-imports,raw-xrefs,raw-consumer}.json. Final process state is in tracker.
 
 Ruling: finish the supplied implementation specification directly, using the
 existing checkout and API; no extra design approval is needed. Source changes

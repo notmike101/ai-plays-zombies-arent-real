@@ -29,6 +29,7 @@ Drag sends held-button moves and releases in finally. No desktop input is sent.
 | Single freehand stroke | Does not commit zone/wall in this build | Corner/end presses are required |
 | Wheel | vi.wheel(+1/-1), WM_MOUSEWHEEL | Zoom .5795 -> .6374 -> .5795; world cursor unchanged |
 | READY confirmation | SPACE; second SPACE only if zombies remain zero | Zombies >0; blind second SPACE can pause |
+| CONTINUE from partially cleared campaign | Layout chosen from progress; virtual click | L5 planning in both 1920x1200 and 3840x2160; 209867 civilians |
 | Restart confirmation | Existing env.to_planning() R loop | Planning, placements and budget retained |
 | READY NO dialog button | vi.click at client fraction (.59,.567) | Covered by the acceptance suite; other dialogs use their bound keys |
 | Raw-only menu/world mouse actions | Not the supported action path | Isolated tests produced no successful action |
@@ -369,3 +370,16 @@ PrintWindow capture (analysis/interface-blocking-surface.png, ignored artifact)
 showed the READY confirmation over a fresh L1 board. The unconditional ENTER
 following a direct START OVER had opened it. ESC restored F6 immediately.
 The boot and acceptance scripts do not capture images.
+
+## Acceptance evidence (2026-11-17)
+- Final mouse implementation: interface-20261117-094110.log, two consecutive
+  fresh cycles; 1 garrison, 22 polygon walls + 1 wall, exact purchase receipts,
+  zero wheel-anchor drift, battle start and R recovery, cleanup after each.
+- Fullscreen fresh boot: interface-fullscreen-boot.log; CONTINUE in both layouts:
+  interface-continue-final.log. One-off PrintWindow captures calibrated layout
+  differences; boot/test code is entirely screenshot-free.
+- Eight offline Python checks and one native ABI/layout test:
+  interface-unit-tests.log. No model/trainer tests are implicated by these changes.
+- Four simultaneous worlds: interface-scale.log; final mixed-layout proof:
+  interface-scale-final.log. Failed exploratory runs are retained and superseded
+  by these named passing logs, not erased from the evidence trail.
