@@ -1,10 +1,16 @@
 # ZAR Tracker (live state — update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-17 — read-only telemetry streaming deployed)
-- Live follow-up in progress at user request: isolated inst9 cloned from inst4;
-  boot + current-checkpoint evaluation only, no optimizer/checkpoint writes.
-  Owned runner logs/evidence: visualizer/runtime/live-attachment*. Cleanup is
-  in the runner finally block; browser proof is required before reporting success.
+- Live follow-up PASS: isolated inst9 normal Boston L1, game PID 38408 and
+  evaluation worker 10824, current checkpoint. Captured 15 planning frames;
+  browser LIVE, 32 displayed inputs, sampled action and history verified against
+  SSE and the corresponding worker file. Initial civilian/money features matched
+  actual game counters. No source changes required. Details: visualizer-live-check.md.
+- Both test PIDs stopped; no game-copy processes remain. Checkpoint SHA-256
+  unchanged. Browser returned to Connected / WAITING FOR WORKER / zero inputs.
+  Normal server 22604 remains available. This proves planning attachment, not a
+  full battle. Recursive deletion of the new inst9 copy was blocked by automatic
+  approval review ("blocked by policy"); idle files remain, no bypass attempted.
 - User clarified observation-only visualizer, delegated implementation choices,
   and authorized guidance updates and push. Implementation through e5da13d pushed
   to origin/main; final tracker/plan completion accompanies it in the next commit.
@@ -66,9 +72,9 @@
   Fresh dump economy is authoritative; unchanged env.money can read a stale mirror.
 
 ## NEXT STEPS
-- Open/refresh http://localhost:8765. Real attachment requires a normally launched
-  instrumented worker's first decision; none was launched just for visualizer QA.
-  At the next coordinated training launch, verify a fresh real frame and labels.
+- Open/refresh http://localhost:8765. Real attachment has now been verified once;
+  the server waits because the isolated test worker was deliberately cleaned up.
+  Continue checking fresh real frames/labels after future integration changes.
 - Use AGENTS.md and visualizer/README.md for current streaming maintenance;
   older PLAN.md polling/integration-branch sections are explicitly historical.
 - No interface acceptance work outstanding. Future build/layout changes require
@@ -114,6 +120,9 @@ dense crowds + Battleship water AOE = path to silver. (notes/game-rules.md)
   24980,23776,49320-old etc]; user game pid 19588-era = user's own (untouched).
 
 ## HISTORY (dated run summaries)
+- 2026-11-17: User-requested live attachment proof passed on isolated inst9 with
+  actual checkpoint inference and browser SSE. Fifteen planning frames captured,
+  exact values/actions checked, checkpoint unchanged, test processes stopped.
 - 2026-11-17: Deployed read-only SSE, shared snapshot sampling, readable inputs
   and bounded sampled decision history. Tests and docs updated, changes pushed;
   no trainer/observer or gameplay changes. Synthetic preview cleaned up.

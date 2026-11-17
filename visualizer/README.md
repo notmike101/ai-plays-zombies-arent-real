@@ -110,6 +110,14 @@ Verified on 2026-11-16 before trainer integration: 16 Python tests; Node graph/l
 
 ## Current maintenance handoff
 
+Real-game attachment was verified on 2026-11-17: an isolated normal Boston L1
+game and the current checkpoint produced 15 actual planning frames. The browser
+displayed all 32 inputs and the sampled action/history through SSE; received data
+matched the saved worker frame exactly. Checkpoint hash was unchanged and both
+test processes were stopped. See [the live check record](../notes/visualizer-live-check.md)
+for assertions, evidence, safe repeat instructions and cleanup limits. This proves
+planning-phase attachment, not a complete battle or campaign.
+
 Current guidance is root `AGENTS.md`, this README and `notes/tracker.md`.
 `PLAN.md` records historical work; `notes/telemetry-plan.md` records the streaming
 change. The old integration branch and original directory-only scope are historical,

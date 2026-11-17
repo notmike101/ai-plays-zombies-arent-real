@@ -69,6 +69,12 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   A slow/disconnected viewer must never block a worker. Run `test_stream.js`
   and `test_mobile.js` via Playwright for transport/UI changes, using synthetic
   preview only; close test previews afterwards. See visualizer/README.md.
+- For an authorized real attachment check, use an owned idle game copy and
+  read-only policy evaluation, then match game/worker PIDs and actual browser
+  values/actions to one fresh observer frame. See notes/visualizer-live-check.md.
+  `nn_play2.py play` currently shares PPO/save logic with train: use the `greedy`
+  evaluation path or direct run_episode without optimization/checkpoint writes.
+  Evaluation still samples the policy; do not force actions for visualizer tests.
 - Launch `./visualizer/start.ps1` from the deployed checkout; open
   `http://localhost:8765` (binds `0.0.0.0:8765`). `-Preview` starts a separate,
   clearly labeled synthetic network, not a game. Reuse an existing server;
