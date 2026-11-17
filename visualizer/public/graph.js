@@ -8,7 +8,7 @@ export function layoutGraph(graph) {
   for (const layer of graph.layers) {
     let x, y, cols, dx, dy, title;
     if (layer.kind === 'input') { x=188; y=150; cols=1; dx=0; dy=Math.min(21,440/Math.max(1,layer.size-1)); title='01 / OBSERVATIONS'; }
-    else if (layer.kind === 'memory') { x=340; y=485; cols=16; dx=10; dy=12; title='PREVIOUS MEMORY'; }
+    else if (layer.kind === 'memory') { x=340; y=485; cols=16; dx=10; dy=Math.min(12,120/Math.ceil(layer.size/16)); title='PREVIOUS MEMORY'; }
     else if (layer.kind === 'gru') { x=565; y=178; cols=8; dx=16; dy=Math.min(23,360/Math.ceil(layer.size/8)); title='02 / RECURRENT STATE'; }
     else {
       x=900; y=headY; cols=layer.size>24 ? 8 : layer.id==='hc' ? 4 : 1; dx=23;
@@ -101,7 +101,15 @@ export class Renderer {
     this.width=rect.width; this.height=rect.height; const ratio=Math.min(window.devicePixelRatio||1,2);
     for(const canvas of [this.canvas,this.overlay]) {const w=Math.round(rect.width*ratio),h=Math.round(rect.height*ratio);if(canvas.width!==w)canvas.width=w;if(canvas.height!==h)canvas.height=h;}
     const ctx=this.overlay.getContext('2d'); ctx.setTransform(ratio,0,0,ratio,0,0); ctx.clearRect(0,0,this.width,this.height);
-    if(!this.layout) { if(this.mode==='Canvas 2D')this.context.clearRect(0,0,this.canvas.width,this.canvas.height);return; }
+    if(!this.layout) {
+      if(this.mode==='Canvas 2D') this.context.clearRect(0,0,this.canvas.width,this.canvas.height);
+      else {
+        const encoder=this.device.createCommandEncoder();
+        const pass=encoder.beginRenderPass({colorAttachments:[{view:this.context.getCurrentTexture().createView(),clearValue:{r:.027,g:.043,b:.055,a:1},loadOp:'clear',storeOp:'store'}]});
+        pass.end();this.device.queue.submit([encoder.finish()]);
+      }
+      return;
+    }
     const {nodes,byId,titles}=this.layout, values=this.frame?.values||{}, maximum={};
     for(const [id,vs] of Object.entries(values)) maximum[id]=Math.max(.001,...vs.map(v=>Math.abs(v)));
     const activation=n=>Math.min(1,Math.abs(values[n.layer]?.[n.index]||0)/(maximum[n.layer]||1));
@@ -113,7 +121,7 @@ export class Renderer {
     for(const edge of edges) {
       const a=byId.get(edge.from),b=byId.get(edge.to); if(!a||!b)continue;
       const rgb=edge.kind==='gate-rms'?palette.memory:edge.weight<0?palette.negative:palette.positive;
-      const alpha=this.focus?.length?.valueOf()? .45:.035+activation(a)*.12;
+      const alpha=this.focus ? .45:.035+activation(a)*.12;
       vertex(lines,a.x,a.y,[...rgb,alpha]);vertex(lines,b.x,b.y,[...rgb,alpha]);
       if(plain){const p=this.transform(a.x,a.y),q=this.transform(b.x,b.y);plain.strokeStyle=rgba(rgb,alpha);plain.lineWidth=.7;plain.beginPath();plain.moveTo(p.x,p.y);plain.lineTo(q.x,q.y);plain.stroke();}
     }

@@ -1,6 +1,6 @@
 import {Renderer, formatNumber} from './graph.js';
 const $ = id => document.getElementById(id);
-let frame=null, graph=null, revision=null, preview=false, paused=false, pinned=null, selectedStream='', lastState=null;
+let frame=null, graph=null, revision=null, preview=false, paused=false, pinned=null, selectedStream='', generation=0;
 const renderer=new Renderer($('network'),$('labels'),(mode,reason)=>{
   $('renderer').textContent=mode; $('renderer').title=reason||'Draws only when a sample or the view changes';
 });
@@ -15,10 +15,13 @@ function showStatus(status, detail) {
   text('connection-detail',detail);
 }
 function resetView() {
+  generation++;
   frame=null;graph=null;revision=null;pinned=null;renderer.graph=null;renderer.layout=null;renderer.frame=null;renderer.focus=null;
+  renderer.revision=null;renderer.stream=null;
   renderer.draw();$('empty').hidden=false;$('probabilities').replaceChildren();$('node-select').replaceChildren(new Option('Select a node…',''));
   for(const id of ['game','worker','parameters','phase','value','revision','age'])text(id,'—');
   text('architecture','Awaiting model');text('decision','Awaiting a decision');text('decision-sub','The actual sampled action appears here.');
+  text('footer-state','Waiting for telemetry');
   $('inspector').replaceChildren(element('p','small','Select a node to inspect its actual value.'));$('unpin').hidden=true;
 }
 function setMode(isPreview) {
@@ -67,10 +70,12 @@ function updateFrame(next) {
   text('footer-state',`${preview?'Synthetic inference':'Observed inference'} · sample ${frame.sequence} · ${renderer.layout.nodes.length} nodes`);
 }
 async function poll() {
+  const requestedGeneration=generation;
   try {
     const args=new URLSearchParams();if(preview)args.set('preview','1');if(selectedStream)args.set('stream',selectedStream);if(revision)args.set('revision',revision);
     const response=await fetch(`/api/state?${args}`,{signal:AbortSignal.timeout(4000)});if(!response.ok)throw new Error(`HTTP ${response.status}`);
-    const data=await response.json();lastState=data;
+    const data=await response.json();
+    if(requestedGeneration!==generation){setTimeout(poll,0);return;}
     const options=[new Option('Automatic attachment',''),...data.streams.map(s=>new Option(`Game ${s.game_pid} · worker ${s.worker_pid}${s.age>15?' · stale':''}`,s.id))];
     if(selectedStream&&!data.streams.some(s=>s.id===selectedStream))options.push(new Option('Selected worker unavailable',selectedStream));
     $('stream').replaceChildren(...options);$('stream').value=selectedStream;
