@@ -23,7 +23,7 @@ import torch.nn as nn
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 torch.set_num_threads(2)
 
-ROOT = r'D:\zar-scratch'
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Optional read-only visualizer; all telemetry stays under visualizer/.
 sys.path.append(ROOT)
 try:

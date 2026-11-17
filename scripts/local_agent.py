@@ -128,10 +128,6 @@ def preflight(copy='inst1'):
 
     if sys.platform != 'win32':
         errors.append('Live training requires this Windows deployment')
-    if ROOT != Path(source_constant(ROOT/'scripts/nn_play2.py', 'ROOT')).resolve():
-        errors.append('Trainer still targets D:\\zar-scratch. Use that deployed checkout; '
-                      'do not launch from a clone pointing at another checkout.')
-        return dict(ok=False, checks=checks, errors=errors)
     for package, module in [('torch', 'torch'), ('numpy', 'numpy'), ('psutil', 'psutil'),
                             ('pefile', 'pefile'), ('Pillow', 'PIL')]:
         def dependency(package=package, module=module):
@@ -326,7 +322,7 @@ def stop_process(pid, created, role):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['status', 'check', 'train', 'train-stop',
+    parser.add_argument('command', choices=['status', 'check', 'prepare-game', 'train', 'train-stop',
                                            'visualizer-start', 'visualizer-stop'])
     parser.add_argument('--copy', default='inst1')
     parser.add_argument('--rounds', type=int, default=6)
@@ -344,6 +340,10 @@ def main():
             result = status()
         elif args.command == 'check':
             result = preflight(args.copy)
+        elif args.command == 'prepare-game':
+            from prepare_game import prepare_copy
+            from project import load_config, config_path
+            result = dict(ok=True, copy=str(prepare_copy(config_path(load_config(), 'game', 'install_dir'), args.copy)))
         elif args.command == 'train':
             result = train(args)
         elif args.command == 'visualizer-start':

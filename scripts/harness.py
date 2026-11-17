@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from zar_input import VirtualInput, SC
 from game_drive import grab
 
-ROOT = r"D:\zar-scratch"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COPIES = os.path.join(ROOT, "game-copies")
 SESSIONS = os.path.join(ROOT, "sessions")
 

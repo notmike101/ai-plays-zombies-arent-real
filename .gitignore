@@ -27,3 +27,4 @@ analysis/nn3_operator.lock
 
 # Recreate locally from requirements.txt; never commit an interpreter/site-packages.
 .venv/
+zar.local.toml

@@ -1,0 +1,9 @@
+# Copy to zar.local.toml (ignored). Paths may be absolute or relative to this repo.
+[game]
+# Read-only supported install, or an existing compatible game-copies/instN.
+install_dir = ''
+
+[sharing]
+repository = 'notmike101/ai-plays-zombies-arent-real'
+# Required for Git/GitHub operations; configure the contribution identity helper.
+identity_helper = ''

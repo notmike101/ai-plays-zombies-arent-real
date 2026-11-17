@@ -33,6 +33,7 @@ STOCK_NAMES = ['Police', 'Garrison', 'Nest', 'Mine', 'C4', 'Sniper', 'Mortar',
                'ChemMine', 'Spikes', 'Oil', 'Napalm', 'Medevac', 'Dozer', 'Tank',
                'Nuke', 'Demolition', 'SeekDestroy', 'Cluster', 'AC130']
 PROGRESS = r'game-copies/inst2/steam_cloud/progress/Boston__MA.progress'
+ROOT = str(Path(__file__).resolve().parents[1])
 
 
 class ZAREnvError(RuntimeError):
@@ -59,7 +60,7 @@ def read_session(path, started_ms):
 
 
 class ZAREnv:
-    def __init__(self, pid, root=r'D:\zar-scratch'):
+    def __init__(self, pid, root=ROOT):
         self.root = root
         self.pid = pid
         self.base = memscan.module_base(pid)

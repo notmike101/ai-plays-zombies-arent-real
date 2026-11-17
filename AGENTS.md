@@ -24,9 +24,10 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 - Current training uses `scripts/train_run.py` -> `scripts/nn_play2.py`, schema3,
   `sessions/nn_policy3.pt`. A fresh clone does not include this ignored checkpoint.
   Missing resume weights are an error, never permission to start random training.
-- This is a same-computer handoff. `notes/local-environment.md` records local
-  dependencies and recovery. A different checkout is deliberately refused while
-  live trainer modules still target D:\zar-scratch; no hidden cross-checkout use.
+- Active trainer/environment paths derive from this checkout. Copy zar.example.toml
+  to ignored zar.local.toml and configure the read-only source game installation.
+  `local.ps1 prepare-game --copy instN` creates a NEW owned copy; never overwrites
+  one or imports user progress. Native build/checkpoint prerequisites still apply.
 
 ## Process rules (every turn)
 - TRACKER: live state, evidence, PIDs and next steps live in `notes/tracker.md`.

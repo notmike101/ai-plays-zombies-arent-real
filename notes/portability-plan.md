@@ -5,7 +5,7 @@ snapshots when weights change. Execute inline; no subagents. Preserve unrelated
 dirty policy2/history2 files. Do not modify the installed game or commit DLLs.
 
 ## Milestones
-- [ ] Paths/config/copies: stop the owned trainer after recording its last saved
+- [x] Paths/config/copies: stop the owned trainer after recording its last saved
   checkpoint, derive active module roots from __file__, add ignored zar.local.toml
   plus an example, prepare new owned copies from the configured read-only install.
   Refuse overwrite/traversal/reparse links/unsupported builds. Copy no user progress
@@ -31,3 +31,11 @@ dirty policy2/history2 files. Do not modify the installed game or commit DLLs.
 - Sharing goes to the existing PUBLIC repository, as explicitly selected by user.
   Only validated model+optimizer, compatibility metadata and selected metrics publish.
   Six-hour schedule creates a release only if the checkpoint bytes changed.
+- Previous trainer stopped safely at saved update46 (policy e9c9e765b8f64cf9);
+  launcher/game cleanup verified before source edits. Original visualizer preserved.
+  Four portability tests and15 operator tests pass, including relocated imports
+  from a directory with spaces. No schema/reward changes.
+- Actual installed EXE hash differs from supported a1bd5913...; copy guard correctly
+  refused it. Local config uses compatible game-copies/inst4 as read-only asset
+  source instead. New copies still exclude all progress/identity/runtime data.
+  Other game builds require separate native-offset validation, not a bypass.
