@@ -23,18 +23,17 @@ dependencies are pinned; their transitive dependencies are resolved by pip, so
 this is not a complete transitive lockfile. `.venv` is ignored, not distributed;
 recreate it at the destination rather than copying/moving the interpreter folder.
 
-Do not recreate/update an environment that active workers use. The pre-existing
-training run and server still use the original interpreter below; they were not
-restarted for this migration. Future normal launches use the venv. This removes
-the launchers' dependence on the user's Python installation path, not the native
-game's Windows/build requirements or the trainer's fixed deployment directory.
+Do not recreate/update an environment that active workers use. Normal launches
+use the venv. Active trainer/environment paths derive from their source checkout;
+there is no required D: drive or user-specific Python path. Windows x64 and the
+verified native game build are still required. See tracker.md for live processes.
 
 | Item | Verified location/version |
 | --- | --- |
 | Deployment | `D:\zar-scratch` |
 | OS/interface | Windows, x64 native game/input DLL |
 | Repository Python | `.venv\Scripts\python.exe`, CPython3.14.4 x64 |
-| Existing run's original Python | `%LOCALAPPDATA%\Python\pythoncore-3.14-64\python.exe` |
+| Original visualizer Python | `%LOCALAPPDATA%\Python\pythoncore-3.14-64\python.exe` |
 | PyTorch | `2.15.0+cpu` |
 | NumPy | `2.4.6` |
 | psutil | `7.2.2` |
@@ -43,20 +42,29 @@ game's Windows/build requirements or the trainer's fixed deployment directory.
 | Current model | `sessions/nn_policy3.pt` (+ `.previous` backup) |
 | Current history | `analysis/nn_hist3.jsonl` |
 | Input DLL | `scripts/hookdll/target/release/hookdll.dll` |
-| Game copies | `game-copies/instN` (start with inst1) |
+| Game copies | `game-copies/instN` (new clone: inst1; current full profile: inst12) |
 | Git/GitHub helper | `D:/github-agent/identity.mjs`, invoked with Node |
 
 These direct package versions were installed into a new isolated environment and
-tested. No native-game installer or checkpoint download is provided. The current model,
-owned game copies, DLL build output and runtime history are ignored artifacts;
-they are available on this computer but not supplied by a clone. Old tracked
-`nn_policy.pt`/`nn_policy2.pt` are incompatible with the current schema.
+tested. No native-game installer is provided. Current checkpoints are published
+as GitHub Release assets: see [sharing and restore](checkpoint-sharing.md).
+The model, owned game copies, DLL build output and runtime history are ignored
+artifacts. Old tracked `nn_policy.pt`/`nn_policy2.pt` are incompatible with the
+current schema; do not use them as a fallback.
 
 `local.ps1` explicitly selects `.venv\Scripts\python.exe`, regardless of PATH. It runs
 `scripts/local_agent.py`; that tool derives its own root and checks that the
-trainer agrees before allowing training. The underlying live trainer still has
-a fixed deployment path. Use the existing deployment; do not copy only scripts
-elsewhere and assume they use that directory's checkpoints.
+trainer agrees before allowing training. Copy `zar.example.toml` to ignored
+`zar.local.toml`, set the read-only game asset source and GitHub App helper paths,
+then run `local.ps1 build-input` and `local.ps1 prepare-game --copy instN`.
+See the root README for order/prerequisites. Full availability is the default:
+all unit/ability/upgrade unlocks plus Extra_Zones, without purchased items, SP
+or campaign progress. Old copies with incomplete profiles fail preflight; select
+a newly prepared copy explicitly rather than overwriting an existing one.
+
+The installed EXE on this computer differs from the supported hash. Local config
+therefore uses compatible `game-copies/inst4` as its read-only asset source.
+Do not bypass build validation to accept another game version.
 
 ## If a check fails
 
@@ -69,9 +77,9 @@ elsewhere and assume they use that directory's checkpoints.
   `scripts/local_agent.py`, then restore that validated backup explicitly. The
   helper never restores files automatically. Never replace it with legacy weights,
   `.tmp`, or random initialization to make a resume command succeed.
-- **Game copy absent:** use an existing idle owned copy (`--copy instN`). Do not
-  clone over a live copy. Preparation and copy settings are in `automation.md`;
-  the installed game under `C:\Games` remains read-only.
+- **Game copy absent:** configure the source and run `local.ps1 prepare-game
+  --copy instN` for a new name. Existing copies are never overwritten. The source
+  and installed game under `C:\Games` remain read-only.
 - **Wrong executable hash:** stop; memory offsets depend on the supported build.
   Do not remove the build check. Verified hash lives in `env_zar.BUILD_SHA256`.
 - **DLL missing/invalid:** source and Cargo.lock are in `scripts/hookdll`;
