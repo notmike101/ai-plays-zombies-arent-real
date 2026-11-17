@@ -30,7 +30,7 @@ ROOT = r'D:\zar-scratch'
 sys.path.append(ROOT)
 try:
     from visualizer.observer import Observer
-    from visualizer.labels import INPUT_LABELS
+    from visualizer.labels import INPUT_LABELS, validate as validate_labels
 except ImportError:
     Observer = None
 MODEL = os.path.join(ROOT, 'sessions', 'nn_policy2.pt')
@@ -435,6 +435,9 @@ def main():
     ap.add_argument('--rounds', type=int, default=6)
     ap.add_argument('--random', action='store_true')
     a = ap.parse_args()
+    if Observer is not None:
+        validate_labels(NOBS, INPUT_LABELS)  # AGENTS.md contract: mismatch
+        # means make_obs changed without labels -> refuse to launch training
     if a.mode == 'greedy':
         net = PolicyNet2()
         load_pretrained(net, MODEL)

@@ -7,15 +7,17 @@ import torch
 from torch import nn
 
 from observer import Observer
-from labels import INPUT_LABELS
+from labels import INPUT_LABELS, validate
 TOOLS = ['wait', 'ready', 'napalm', 'mortar', 'sniper', 'turret', 'mine', 'c4',
          'gas_mortar', 'upgrade_unit', 'zone_rect', 'para', 'heli', 'gas_bomb', 'ac130']
+NOBS = len(INPUT_LABELS)  # preview width follows the shared label list
+validate(nobs=NOBS)
 
 
 class PreviewPolicy(nn.Module):
     def __init__(self):
         super().__init__()
-        self.gru = nn.GRU(22, 128, batch_first=True)
+        self.gru = nn.GRU(NOBS, 128, batch_first=True)
         self.hu = nn.Linear(128, 15)
         self.hc = nn.Linear(128, 12)
         self.val = nn.Linear(128, 1)
@@ -34,7 +36,7 @@ def run(duration=0):
     h, step, start = None, 0, time.monotonic()
     try:
         while not duration or time.monotonic() - start < duration:
-            x = torch.tensor([[[math.sin(step * .18 + i * .63) * 2 for i in range(22)]]])
+            x = torch.tensor([[[math.sin(step * .18 + i * .63) * 2 for i in range(NOBS)]]])
             with torch.no_grad():
                 u, c, _, h = net(x, h)
                 du, dc = torch.distributions.Categorical(logits=u), torch.distributions.Categorical(logits=c)

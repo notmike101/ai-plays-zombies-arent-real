@@ -35,6 +35,9 @@ class FakeGame:
     def ready(self):
         pass
 
+    def crowd_topk(self):
+        return [], 0
+
     def hot_spot(self):
         return None
 
@@ -94,7 +97,12 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual([frame['phase'] for frame in observer.frames], ['planning', 'battle'])
         for index, frame in enumerate(observer.frames):
             self.assertEqual(frame['selected'], {'hu': observed['us'][index], 'hc': observed['cs'][index]})
-            self.assertEqual(len(frame['values']['input']), 22)
+            self.assertEqual(len(frame['values']['input']),
+                             self.globals['NOBS'])
+            inp = next(l for l in frame['graph']['layers']
+                       if l['id'] == 'input')
+            self.assertEqual(inp['labels'], self.globals['INPUT_LABELS'])
+            self.assertNotRegex(' '.join(inp['labels']), r'\binput \d+\b')
             self.assertAlmostEqual(sum(frame['probabilities']['hu']), 1, places=6)
         self.assertFalse(list(Path(self.temp.name).glob('*.json')))
 

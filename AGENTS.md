@@ -101,3 +101,20 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 1. Tracker + notes updated with verified findings; lessons learned -> notes.
 2. All uncommitted work committed (conventional).
 3. Kill test instances (enumerate via psutil dirname).
+
+## Visualizer label maintenance contract (2026-11-16, enforceable)
+Any change to `make_obs()` in `scripts/nn_play2.py` — feature add, removal,
+reorder, or semantic/normalization change — MUST land in the SAME change with:
+1. `visualizer/labels.py` `INPUT_LABELS` (names embed exact normalization);
+2. `visualizer/test_labels.py` `EXPECT` + `LABEL_PINS` probe table;
+3. `visualizer/demo.py` on width change (preview derives its width from
+   `INPUT_LABELS`, so never hand-edit it);
+4. green `python -m unittest test_labels test_observer test_integration
+   test_server` from `visualizer/` AND `python verify_model.py` (which checks
+   the labels the trainer actually supplies, verbatim, no generic fallbacks).
+Enforcement: `nn_play2.main()` refuses to launch training when
+`len(INPUT_LABELS) != NOBS` (`validate()` raises); a mismatch is a deployment
+bug and must never degrade into generic `input <n>` labels. Dimension-only
+tests or checking the synthetic preview are NOT sufficient proof: after
+deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.json`
+— `graph.layers[input].labels` readable, no `label_warning` key present).

@@ -1,5 +1,6 @@
 """Read-only check against the current trainer model; never calls run_episode or opens a game."""
 from pathlib import Path
+import re
 import runpy
 import statistics
 import tempfile
@@ -31,7 +32,11 @@ def main():
     rng = torch.random.get_rng_state()
     plain = sequence()
     with tempfile.TemporaryDirectory(dir=root / 'runtime') as directory:
-        observer = Observer(net, 0, 'verification-only', directory=directory)
+        observer = Observer(net, 0, 'verification-only', directory=directory,
+                            labels={'input': source['INPUT_LABELS'],
+                                    'hu': source['TOOLS'][:source['NU']],
+                                    'hc': [f'Cell {i + 1}'
+                                           for i in range(source['NC'])]})
         try:
             torch.random.set_rng_state(rng)
             observed = sequence()
@@ -43,7 +48,15 @@ def main():
             assert len(frame['values']['gru']) == source['HID']
             assert len(frame['values']['hu']) == source['NU']
             assert len(frame['values']['hc']) == source['NC']
-            print(f"Actual PolicyNet2: {frame['graph']['parameters']:,} parameters; exact outputs and sampled decisions match for 12 recurrent steps.")
+            inp = next(l for l in frame['graph']['layers']
+                       if l['id'] == 'input')
+            assert inp['labels'] == source['INPUT_LABELS'], \
+                'training-supplied labels must reach the published graph ' \
+                'verbatim'
+            assert not re.search(r'\binput \d+\b', ' '.join(inp['labels']))
+            print(f"Actual PolicyNet2: {source['NOBS']} inputs, "
+                  f"{frame['graph']['parameters']:,} parameters; exact outputs "
+                  f"and sampled decisions match for 12 recurrent steps.")
             with torch.no_grad():
                 measured = []
                 for _ in range(200):

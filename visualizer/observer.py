@@ -29,6 +29,7 @@ class Observer:
         self.net = weakref.ref(net)
         self.values = {}
         self.error = None
+        self.label_warning = None
         self._hooks = []
         self._queue = queue.Queue(maxsize=1)
         self._thread = None
@@ -95,6 +96,9 @@ class Observer:
         layers, edges = [], []
         def layer(name, size, kind):
             labels = self.labels.get(name, [])
+            if name == 'input' and len(labels) < size:
+                self.label_warning = (f'{name} labels {len(labels)}/{size} '
+                                      '(generic names published)')
             layers.append({'id': name, 'size': size, 'kind': kind,
                            'labels': [str(labels[i]) if i < len(labels) else f'{name} {i}' for i in range(size)]})
         def connect(source, target, weights, kind):
@@ -137,10 +141,14 @@ class Observer:
         if not self.values:
             return None
         self._topology()
-        return {**base, 'model_revision': self._revision, 'graph': self._graph,
-                'values': dict(self.values),
-                'probabilities': {k: vector(v) for k, v in (probabilities or {}).items()},
-                'selected': {k: int(v) for k, v in (selected or {}).items()}}
+        frame = {**base, 'model_revision': self._revision,
+                 'graph': self._graph, 'values': dict(self.values),
+                 'probabilities': {k: vector(v)
+                                   for k, v in (probabilities or {}).items()},
+                 'selected': {k: int(v) for k, v in (selected or {}).items()}}
+        if self.label_warning:
+            frame['label_warning'] = self.label_warning
+        return frame
 
     def publish(self, **kwargs):
         """Best effort, <=5 Hz, latest frame only. Failure never propagates to training."""
