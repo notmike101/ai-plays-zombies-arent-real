@@ -2,6 +2,7 @@ import json
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 import torch
@@ -126,6 +127,12 @@ class ObserverTests(unittest.TestCase):
             self.assertEqual(next(l['size'] for l in graph['layers'] if l['id'] == 'gru'), 12)
         finally:
             other.close()
+
+    def test_thread_start_failure_is_safe_to_close(self):
+        with patch('observer.threading.Thread.start', side_effect=RuntimeError('threads unavailable')):
+            other = Observer(self.net, 124, 'failure', directory=self.tmp.name)
+        self.assertFalse(other.publish())
+        other.close()
 
 
 if __name__ == '__main__':

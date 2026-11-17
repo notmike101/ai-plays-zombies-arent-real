@@ -67,6 +67,14 @@ class FeedTests(unittest.TestCase):
         os.utime(path, ns=(stamp, stamp))
         self.assertEqual(self.feed.state(now=121)['status'], 'live')
 
+    def test_old_crash_files_cannot_crowd_out_new_stream(self):
+        for i in range(130):
+            data = frame(f'z-old-{i:03}', 0)
+            self.write(data)
+            os.utime(self.root / (data['stream'] + '.json'), (1, 1))
+        self.write(frame('a-new', 200))
+        self.assertEqual(self.feed.state(now=201)['frame']['stream'], 'a-new')
+
     def test_http_allowlist(self):
         server = make_server('127.0.0.1', 0, self.feed)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
