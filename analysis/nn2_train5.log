@@ -1,0 +1,15 @@
+ep pid 49320 win False frac 0.0 R 1.66
+ep pid 49320 win False frac 0.0 R -1.81
+ep pid 49276 win False frac 0.0 R -2.95
+ep pid 49276 win False frac 0.0 R -3.39
+ep pid 49384 win True frac 1.0 R 15.19
+ep pid 49384 win False frac 0.0 R -0.8
+ep pid 39160 win False frac 0.0 R 4.41
+ep pid 39160 win False frac 0.0 R 1.32
+ep pid 21992 win False frac 0.0 R 0.93
+ep pid 21992 win False frac 0.0 R 3.42
+ppo2 batch loss 866.167
+ppo2 batch loss 845.208
+ppo2 batch loss 824.09
+ppo2 batch loss 804.058
+round 0: wins 1/10 meanfrac 0.100

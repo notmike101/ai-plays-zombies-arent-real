@@ -56,8 +56,8 @@ YS = [260, 500, 740]
 CELLS = [(x, y) for y in YS for x in XS]
 PLAN_STEPS = 60            # harness bound on planning phase (cap, not strategy)
 BATTLE_T = 560.0
-STEP_S = 2.5               # battle step period (seconds of game attention)
-
+STEP_S = 1.0               # battle step period; at 8x = ~10 s game time,
+# winning-recipe cadence, near the ~1.3 s act()-bound cycle floor
 
 def cell_of(i):
     return CELLS[i % 12]
