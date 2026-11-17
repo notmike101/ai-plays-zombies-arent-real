@@ -44,12 +44,12 @@ The old standalone patch has been removed now that it is applied; do not apply i
 - **Observations:** the actual feature vector passed to the policy. Labels identify transformed values such as log counts and normalized money; these are not raw HUD numbers.
 - **Previous memory:** the hidden state passed into this decision. It is zero at the start of an episode.
 - **Recurrent state:** the actual GRU output for this step.
-- **Action policy / map position:** actual linear-head outputs. The sidebar shows the actual masked sampling probabilities, and gold rings show the sampled choices. A chosen cell is marked unused for wait/ready.
+- **Action policy / map position:** actual linear-head outputs. Probability bars beside action nodes show the masked sampling probabilities, and gold rings show the sampled choices. A chosen cell is marked unused for wait/ready. The value prediction appears beside its output node.
 - **Expected return:** the value head's prediction of reward, not a win percentage or a confidence score.
 - **Brightness:** absolute activation normalized within its layer. Purple denotes negative values; green positive values. Blue identifies the memory layer and GRU connection summaries.
 - **Connections:** strongest weights per target (up to six), filtered by the Links control. Linear-head connections show signed weights. A GRU has three sets of gate weights, so its connections are explicitly **unsigned RMS summaries across reset/update/candidate gates**. They are not single synapses or causal attributions. Not every learned weight is drawn.
 
-Hover to inspect; click to pin a node and isolate its strongest displayed connections. The node selector offers the same inspection without a mouse. Scroll to zoom, drag to pan, and use Fit view to reset. Pause freezes only the view; inference continues. Small screens omit dense labels until zoomed in; the inspector remains available.
+The graph fills the window beneath a compact control bar. Click a node to open the collapsed Inspector, pin its value and isolate its strongest displayed connections. With the Inspector open, hover or use its node selector to inspect other nodes after clearing the pin. Worker details and additional probabilities are also in the Inspector. Scroll to zoom, drag to pan, and use Fit to reset. Pause freezes only the view; inference continues. Small screens omit dense labels until zoomed in; the inspector remains available.
 
 Automatic attachment stays on the selected fresh stream. After 15 seconds without a sample, it switches to another fresh stream if one exists; otherwise it labels the retained frame stale. A paused game or slow inference can therefore look stale without the process having crashed. Streams older than 120 seconds are omitted. Manual selection holds the requested stream rather than silently switching.
 

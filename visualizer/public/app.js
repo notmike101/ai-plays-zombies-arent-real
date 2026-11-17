@@ -97,7 +97,7 @@ $('stream').onchange=()=>{selectedStream=$('stream').value;resetView();};
 $('density').onchange=()=>{renderer.count=Number($('density').value);renderer.draw();};
 $('fit').onclick=()=>renderer.fit();
 $('pause').onclick=()=>{paused=!paused;$('pause').setAttribute('aria-pressed',String(paused));text('pause',paused?'▶ Resume':'Ⅱ Pause');$('pause-banner').hidden=!paused;};
-function pin(node){pinned=node?.id||null;renderer.focus=pinned;$('node-select').value=pinned||'';$('unpin').hidden=!pinned;renderer.draw();if(node)inspect(node);}
+function pin(node){pinned=node?.id||null;renderer.focus=pinned;$('node-select').value=pinned||'';$('unpin').hidden=!pinned;renderer.draw();if(node){$('details').open=true;inspect(node);}}
 $('unpin').onclick=()=>pin(null);$('node-select').onchange=()=>pin(renderer.layout?.byId.get($('node-select').value));
 const stage=$('stage');let drag=null;
 stage.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,px:renderer.pan.x,py:renderer.pan.y,moved:false};stage.setPointerCapture(e.pointerId);});

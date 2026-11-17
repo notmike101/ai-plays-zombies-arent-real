@@ -7,13 +7,13 @@ export function layoutGraph(graph) {
   let headY = 135;
   for (const layer of graph.layers) {
     let x, y, cols, dx, dy, title;
-    if (layer.kind === 'input') { x=188; y=150; cols=1; dx=0; dy=Math.min(21,440/Math.max(1,layer.size-1)); title='01 / OBSERVATIONS'; }
+    if (layer.kind === 'input') { x=188; y=150; cols=1; dx=0; dy=Math.min(21,440/Math.max(1,layer.size-1)); title='INPUTS'; }
     else if (layer.kind === 'memory') { x=340; y=485; cols=16; dx=10; dy=Math.min(12,120/Math.ceil(layer.size/16)); title='PREVIOUS MEMORY'; }
-    else if (layer.kind === 'gru') { x=565; y=178; cols=8; dx=16; dy=Math.min(23,360/Math.ceil(layer.size/8)); title='02 / RECURRENT STATE'; }
+    else if (layer.kind === 'gru') { x=565; y=178; cols=8; dx=16; dy=Math.min(23,360/Math.ceil(layer.size/8)); title='GRU HIDDEN STATE'; }
     else {
       x=900; y=headY; cols=layer.size>24 ? 8 : layer.id==='hc' ? 4 : 1; dx=23;
       dy=Math.min(21,420/Math.max(1,heads.reduce((s,l)=>s+Math.ceil(l.size/(l.id==='hc'?4:l.size>24?8:1)),0)));
-      title=layer.kind==='value' ? 'EXPECTED RETURN' : layer.id==='hc' ? 'MAP POSITION' : '03 / ACTION POLICY';
+      title=layer.kind==='value' ? 'EXPECTED RETURN' : layer.id==='hc' ? 'MAP POSITION' : 'ACTION';
       headY += Math.ceil(layer.size/cols)*dy+65;
     }
     titles.push({x:layer.kind==='input'?65:x, y:y-35, text:title, subtitle:`${layer.size} ${layer.kind==='input'?'features':layer.kind==='gru'?'hidden units':layer.kind==='memory'?'units · t − 1':'outputs'}`, layer:layer.id});
@@ -121,7 +121,7 @@ export class Renderer {
     for(const edge of edges) {
       const a=byId.get(edge.from),b=byId.get(edge.to); if(!a||!b)continue;
       const rgb=edge.kind==='gate-rms'?palette.memory:edge.weight<0?palette.negative:palette.positive;
-      const alpha=this.focus ? .45:.035+activation(a)*.12;
+      const alpha=this.focus ? .6:.06+activation(a)*.19;
       vertex(lines,a.x,a.y,[...rgb,alpha]);vertex(lines,b.x,b.y,[...rgb,alpha]);
       if(plain){const p=this.transform(a.x,a.y),q=this.transform(b.x,b.y);plain.strokeStyle=rgba(rgb,alpha);plain.lineWidth=.7;plain.beginPath();plain.moveTo(p.x,p.y);plain.lineTo(q.x,q.y);plain.stroke();}
     }
@@ -135,6 +135,22 @@ export class Renderer {
       if(isChosen){const p=this.transform(node.x,node.y);ctx.strokeStyle='#ffd283';ctx.lineWidth=1;ctx.beginPath();ctx.arc(p.x,p.y,9*p.scale,0,Math.PI*2);ctx.stroke();}
       if(this.transform(0,0).scale>=.5 && (node.kind==='input'||(node.kind==='policy'&&this.graph.layers.find(l=>l.id===node.layer).size<=24&&node.layer!=='hc'))) {
         const p=this.transform(node.x+(node.kind==='input'?-14:15),node.y+3); ctx.font=`${Math.max(8,10*p.scale)}px ui-monospace,monospace`;ctx.fillStyle=isChosen?'#ffe0a0':'#8d9da9';ctx.textAlign=node.kind==='input'?'right':'left';ctx.fillText(node.label.replaceAll('_',' '),p.x,p.y);
+      }
+    }
+    for(const node of nodes) {
+      const p=this.transform(1040,node.y),chosen=this.frame.selected?.[node.layer]===node.index;
+      if(p.scale<.5)continue;
+      if(node.kind==='policy' && node.layer!=='hc' && this.graph.layers.find(l=>l.id===node.layer).size<=24) {
+        const probability=this.frame.probabilities?.[node.layer]?.[node.index];
+        if(Number.isFinite(probability)) {
+          const width=64*p.scale;
+          ctx.fillStyle='#1a2b32';ctx.fillRect(p.x,p.y-2*p.scale,width,4*p.scale);
+          ctx.fillStyle=chosen?'#ecc67e':'#5cae91';ctx.fillRect(p.x,p.y-2*p.scale,width*Math.max(0,Math.min(1,probability)),4*p.scale);
+          ctx.font=`${Math.max(8,9*p.scale)}px ui-monospace,monospace`;ctx.textAlign='left';ctx.fillStyle=chosen?'#ecc67e':'#90a7b2';ctx.fillText(`${(probability*100).toFixed(1)}%`,p.x+width+6*p.scale,p.y+3*p.scale);
+        }
+      }
+      if(node.kind==='value') {
+        const label=this.transform(node.x+16,node.y+4);ctx.font=`${Math.max(9,12*p.scale)}px ui-monospace,monospace`;ctx.textAlign='left';ctx.fillStyle='#b6d4c8';ctx.fillText(formatNumber(values[node.layer]?.[node.index]),label.x,label.y);
       }
     }
     if(!plain){

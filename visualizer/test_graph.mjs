@@ -20,4 +20,11 @@ renderer.mode='WebGPU';renderer.context={getCurrentTexture:()=>({createView:()=>
 renderer.device={createCommandEncoder:()=>({beginRenderPass:()=>({end(){}}),finish:()=>({})}),queue:{submit(){submissions++;}}};
 renderer.draw();
 assert.equal(submissions,1,'Waiting state must clear old GPU inference');
+const labels=[];
+const context=new Proxy({fillText:(text)=>labels.push(text)}, {get:(target,key)=>target[key]||(()=>{})});
+const fullCanvas={getBoundingClientRect:()=>({width:1160,height:700})};
+const graphView=new Renderer(fullCanvas,{getContext:()=>context},()=>{});
+graphView.context=context;
+graphView.setFrame({stream:'test',model_revision:'one',graph,values:{hu:[1,2,3,4]},probabilities:{hu:[.25,.25,.25,.25]},selected:{hu:1}});
+assert(labels.includes('25.0%'),'Output probabilities must be visible on the graph itself');
 console.log('Graph assertions passed');
