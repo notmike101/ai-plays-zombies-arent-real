@@ -131,3 +131,19 @@ ppo2 batch loss 589.188
 ppo2 batch loss 579.311
 round 4: wins 3/7 meanfrac 0.429
 [ready] frozen -> SPACE
+ep pid 49320 win False frac 0.0 R -0.09
+ep pid 49320 win True frac 1.0 R 15.84
+ep pid 49276 win True frac 1.0 R 15.69
+ep pid 49276 win True frac 1.0 R 15.82
+ep pid 49384 win True frac 1.0 R 13.25
+ep pid 49384 win True frac 1.0 R 15.87
+ep pid 39160 win False frac 0.0 R -6.68
+ep pid 39160 win True frac 1.0 R 15.94
+ep pid 21992 win True frac 1.0 R 15.93
+ep pid 21992 win False frac 0.006 R -6.69
+ppo2 batch loss 84.357
+ppo2 batch loss 83.561
+ppo2 batch loss 83.018
+ppo2 batch loss 82.384
+round 5: wins 7/10 meanfrac 0.701
+done
