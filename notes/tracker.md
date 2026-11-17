@@ -1,19 +1,17 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — schema3 training starting)
-- User requested resumed training while keeping the computer usable.
-- Launcher41484: train_run.py --copies inst1 inst2 --eps2 --rounds200
-  --seed20261117. Games inst1=34196, inst2=2792; initial welcome/boot stage.
-- Parent and both games verified BELOW_NORMAL priority and affinity CPU0-7
-  (8 of24 logical CPUs). Both copies use low graphics, normal difficulty.
-- Baseline:8% system CPU,14.0GiB available RAM; GPU23%,3191/10240MiB.
-- No schema3 checkpoint existed; starting fresh schema3 weights. Original
-  nn_policy2.pt preserved. Output: sessions/nn_policy3.pt (with .previous),
-  analysis/nn_hist3.jsonl. Main log analysis/nn3_resume_20261117.log;
-  boot/exit logs analysis/nn3_launcher_20261117.log and .err.
-- Next: verify planning barriers, first PPO/checkpoint, and battle resource use.
-  Keep two copies unless measured headroom supports more. Training instances
-  are intentionally retained; they are not temporary validation games.
+## CURRENT STATE (2026-11-17 — resumed after HUD boundary fix)
+- First bounded-resource run41484 saved schema3 policy/Adam086738567eeb3fc4,
+  then stopped cleanly because inst1 hit an accidental READY dialog.
+- Root cause reproduced: grid cells40-47 overlap planning HUD. Fixed c743dc0;
+  two regression tests RED->GREEN,23 learning/state+12 deck+34 visualizer PASS.
+  Live51-decision probe passed, selected READY legitimately, then aborted at7.47%
+  saved. Diagnostic inst1 PID22648 cleaned. See notes/automation.md.
+- Restarting two-copy training from saved schema3 checkpoint/optimizer, seed20261121,
+  eps2/rounds200, low graphics/normal difficulty, BELOW_NORMAL and CPU0-7.
+- Logs: analysis/nn3_resume_safe_20261117.log and nn3_launcher_safe_20261117.log/.err.
+  Outputs sessions/nn_policy3.pt/.previous and analysis/nn_hist3.jsonl are ignored.
+- Next: confirm new game PIDs, first resumed update, current resource headroom.
 
 ## Prior snapshot (2026-11-17 — training improvements complete)
 - All four implementation milestones completed. Latest code092552d; earlier
