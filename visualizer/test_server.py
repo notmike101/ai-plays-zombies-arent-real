@@ -5,6 +5,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
@@ -74,6 +75,84 @@ class FeedTests(unittest.TestCase):
             os.utime(self.root / (data['stream'] + '.json'), (1, 1))
         self.write(frame('a-new', 200))
         self.assertEqual(self.feed.state(now=201)['frame']['stream'], 'a-new')
+
+    def test_shared_reads_and_bounded_deduplicated_history(self):
+        data = frame('one', 100)
+        data.update(sequence=1, phase='planning', selected={'hu': 0},
+                    probabilities={'hu': [1.0]})
+        data['graph']['layers'] = [{'id': 'hu', 'labels': ['wait']}]
+        self.write(data)
+        with patch.object(self.feed, '_read', wraps=self.feed._read) as reads:
+            first = self.feed.state(now=100)
+            self.feed.state(now=100.1)
+            self.assertEqual(reads.call_count, 1)
+        self.assertEqual(first['history'][0]['choices'][0]['label'], 'wait')
+        self.assertEqual(first['history'][0]['choices'][0]['probability'], 1.0)
+        self.assertEqual(len(self.feed.state(now=101)['history']), 1)
+        for i in range(2, 212):
+            data.update(sequence=i, timestamp=100+i)
+            self.write(data)
+            result = self.feed.state(now=100+i)
+        self.assertLessEqual(len(self.feed.history), 200)
+        self.assertEqual(len(result['history']), 50)
+        self.assertEqual(result['history'][-1]['sequence'], 211)
+        data.update(sequence=215, timestamp=400)
+        self.write(data)
+        self.assertEqual(self.feed.state(now=400)['history'][-1]['skipped'], 3)
+
+    def test_history_follows_selection_and_preview_and_survives_file_removal(self):
+        for name, preview in [('real', False), ('preview', True)]:
+            data = frame(name, 100, preview)
+            data['sequence'] = 1
+            self.write(data)
+        self.assertEqual([e['stream'] for e in self.feed.state(now=100)['history']], ['real'])
+        self.assertEqual([e['stream'] for e in self.feed.state(now=101, preview=True)['history']], ['preview'])
+        (self.root / 'real.json').unlink()
+        result = self.feed.state(now=102, stream='real')
+        self.assertEqual(result['status'], 'waiting')
+        self.assertEqual([e['stream'] for e in result['history']], ['real'])
+        self.assertEqual(self.feed.state(now=103, stream='preview')['history'], [])
+
+    def test_sse_reconnect_sends_graph_and_history_and_observes_updates(self):
+        data = frame('one', time.time())
+        data['sequence'] = 1
+        self.write(data)
+        server = make_server('127.0.0.1', 0, self.feed)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        url = f'http://127.0.0.1:{server.server_port}/api/events'
+
+        def receive(response):
+            while True:
+                line = response.readline()
+                if not line:
+                    self.fail('SSE ended before a state event')
+                if line.startswith(b'data: '):
+                    return json.loads(line[6:])
+
+        try:
+            with urlopen(url, timeout=4) as response:
+                self.assertEqual(response.headers.get_content_type(), 'text/event-stream')
+                first = receive(response)
+                self.assertIn('graph', first['frame'])
+                self.assertEqual(first['history'][0]['sequence'], 1)
+                data.update(timestamp=time.time(), sequence=2)
+                self.write(data)
+                for _ in range(5):
+                    changed = receive(response)
+                    if changed['frame']['sequence'] == 2:
+                        break
+                self.assertEqual(changed['frame']['sequence'], 2)
+                self.assertNotIn('graph', changed['frame'])
+            with urlopen(url, timeout=4) as response:
+                resumed = receive(response)
+                self.assertIn('graph', resumed['frame'])
+                self.assertEqual([e['sequence'] for e in resumed['history']], [1, 2])
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+        self.assertFalse(server.sampler.is_alive())
 
     def test_http_allowlist(self):
         server = make_server('127.0.0.1', 0, self.feed)
