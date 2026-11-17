@@ -318,6 +318,7 @@ def run_episode(args):
     try:
         env = ZAREnv(pid)
         env.validate_build()
+        env.discard_dump_states = True
         env.to_planning()
         initial = env.dump()
         if not initial or initial.get('where', {}).get('phase') != 'planning':

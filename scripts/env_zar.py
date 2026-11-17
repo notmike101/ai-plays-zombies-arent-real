@@ -352,6 +352,11 @@ class ZAREnv:
                 time.sleep(0.25)          # let the writer flush
                 with open(p, encoding='utf-8', errors='ignore') as fh:
                     txt = fh.read()
+                if getattr(self, 'discard_dump_states', False) and new[-1] not in before:
+                    replay = Path(p).with_suffix('.state').resolve()
+                    if not replay.is_relative_to((Path(self.root)/'game-copies').resolve()):
+                        raise ZAREnvError('Refusing replay cleanup outside owned game copies')
+                    replay.unlink(missing_ok=True)
                 return ZAREnv.dump_parse(txt)
         return None
 

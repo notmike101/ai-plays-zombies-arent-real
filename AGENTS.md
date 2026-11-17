@@ -226,3 +226,8 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
   undo exactly once and verify the previous board and balance. Never repeatedly
   undo or clear the board to conceal an interface failure. The model chooses
   all valid geometry; failed rollback must stop the worker.
+
+## Training dump retention
+- Trainer attachments discard only newly generated .state companions after reading
+  their text dump, and only within owned game-copies. Keep .txt receipts, session
+  logs and all pre-existing replay evidence; diagnostic attachments retain states.

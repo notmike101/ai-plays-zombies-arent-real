@@ -10,6 +10,29 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_training_discards_only_its_new_replay_snapshots(self):
+        from types import SimpleNamespace
+        e = self.env()
+        with tempfile.TemporaryDirectory() as root, patch.object(env_zar.time, 'sleep'):
+            e.root = root
+            copy = Path(root)/'game-copies'/'inst1'
+            dumps = copy/'debug_dumps'
+            dumps.mkdir(parents=True)
+            (dumps/'old.state').write_bytes(b'evidence')
+            e.copy_dir = lambda: str(copy)
+            def emit(*args, **kwargs):
+                (dumps/'fresh.state').write_bytes(b'replay')
+                (dumps/'fresh.txt').write_text('[where]\nphase = planning\n')
+            e.vi = SimpleNamespace(key_press=emit)
+            e.discard_dump_states = True
+            self.assertEqual(e.dump()['where']['phase'], 'planning')
+            self.assertFalse((dumps/'fresh.state').exists())
+            self.assertTrue((dumps/'fresh.txt').exists())
+            self.assertEqual((dumps/'old.state').read_bytes(), b'evidence')
+            e.discard_dump_states = False
+            self.assertIsNotNone(e.dump())
+            self.assertTrue((dumps/'fresh.state').exists())
+
     def test_geometry_uses_native_land_cap_and_budget(self):
         e = self.env()
         values = {0x659258: 1, 0x65ce58: 0, 0x659308: 30, 0x659310: 100,

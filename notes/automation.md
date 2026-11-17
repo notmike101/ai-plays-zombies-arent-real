@@ -423,3 +423,7 @@ The trainer now treats a READY-blocking geometry edit as a rejected action:
 read fresh pre/post dumps, check native land coverage and debt gates, single
 Ctrl+Z only when invalid, then verify identical board rows and balance. A failed
 rollback stops the worker. No reward bonus, strategy selection or memory writes.
+
+Training-only dump retention removes new replay .state companions after a successful
+text read. This avoids multi-gigabyte accumulation during long training. Diagnostic
+attachments retain replays by default; old files and .txt receipts are untouched.
