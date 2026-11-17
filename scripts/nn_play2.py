@@ -26,6 +26,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 torch.set_num_threads(2)
 
 ROOT = r'D:\zar-scratch'
+# Optional read-only visualizer; all telemetry stays under visualizer/.
+sys.path.append(ROOT)
+try:
+    from visualizer.observer import Observer
+    from visualizer.labels import INPUT_LABELS
+except ImportError:
+    Observer = None
 MODEL = os.path.join(ROOT, 'sessions', 'nn_policy2.pt')
 HIST = os.path.join(ROOT, 'analysis', 'nn_hist2.jsonl')
 NOBS, HID = 22, 128
@@ -119,6 +126,7 @@ def ready_once(env):
 def run_episode(args):
     pid, sd, eps_rand, tag = args
     from env_zar import ZAREnv
+    observer = None
     try:
         env = ZAREnv(pid)
         o = env.to_planning()          # R-loop to planning ONLY (net readies)
@@ -132,6 +140,12 @@ def run_episode(args):
             net = PolicyNet2()
             net.load_state_dict(sd)
             net.eval()
+            if Observer is not None:
+                observer = Observer(net, pid, tag, labels={
+                    'input': INPUT_LABELS if NOBS == len(INPUT_LABELS) else [],
+                    'hu': TOOLS[:NU],
+                    'hc': [f'Cell {i + 1}' for i in range(NC)],
+                })
         h = None
         obs, us, cs, ulps, clps, rews, mus, trail = [], [], [], [], [], [], [], []
         prev_o = dict(o)
@@ -182,6 +196,11 @@ def run_episode(args):
                     ulp = float(du.log_prob(torch.tensor(u)))
                     clp = float(dc.log_prob(torch.tensor(c)))
                     h = h.detach()
+                    if observer is not None:
+                        observer.publish(
+                            probabilities={'hu': du.probs, 'hc': dc.probs},
+                            selected={'hu': u, 'hc': c},
+                            phase='planning' if st['planning'] else 'battle')
             us.append(u)
             cs.append(c)
             ulps.append(ulp)
@@ -291,6 +310,9 @@ def run_episode(args):
         import traceback
         traceback.print_exc()
         return dict(level=tag, pid=pid, err=str(e))
+    finally:
+        if observer is not None:
+            observer.close()
 
 
 def gae(rews, vals, lam=0.95, gamma=0.99):

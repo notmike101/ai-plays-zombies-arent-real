@@ -40,4 +40,14 @@ Review fixes: removed filesystem timestamp cache after a reproducible collision;
 
 Ruling: retain the current checkout and branch, stage/commit only visualizer paths, and keep handoff notes here instead of root notes/tracker.md — avoids changing the other agent's branch or violating the user's directory boundary. No new worktree or external edits were needed.
 
-Pending: user permission for the prepared 22-line addition to scripts/nn_play2.py, followed by application at a safe training-owner-controlled restart and real-game attachment validation. No trainer was stopped or edited. No game test instances were created. The app defaults to waiting; preview is explicitly synthetic.
+Initial handoff (superseded by the integration entry below): user permission was pending for the prepared 22-line addition to scripts/nn_play2.py. No trainer was stopped or edited. No game test instances were created. The app defaults to waiting; preview is explicitly synthetic.
+
+## Integration handoff — 2026-11-16
+
+The user authorized applying the patch and updating AGENTS.md, then pushing. Active trainer parents 5420 and 46540 and their workers were observed at the start of this phase; the other agent was also changing nn_play2.py in the active checkout. To preserve that work and the no-live-script-edits rule, the native worktree tool created an isolated checkout, relocated and reattached at D:/worktrees/zar-visualizer-integration on codex/visualizer-integration. The active D:/zar-scratch checkout remains untouched by these integration commits.
+
+Applied the 22-line observer integration; added AGENTS.md requirements for label/architecture compatibility, detached best-effort telemetry, lifecycle cleanup, smoke tests and coordinated restarts. Retired the standalone integration.patch to prevent accidental reapplication. Updated README deployment instructions.
+
+Verification: 18 Python tests pass, including two new tests running the real episode function against a fake game. They verify unchanged episode results, actual sampled actions and cleanup after success/failure. Model verification preserves exact tensors and sampled actions for 12 recurrent steps. Node graph assertions pass. No live game was opened or controlled by these tests.
+
+Ruling: push the integration branch without updating the active training checkout or merging into main while trainer workers remain live. Bring the branch into the deployed checkout at the training owner's next safe restart, preserving their newer changes, then verify a real fresh telemetry sample. This is a deployment condition, not pending user permission. No additional edits to notes/tracker.md were authorized; the handoff stays here.
