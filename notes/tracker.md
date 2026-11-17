@@ -1,17 +1,20 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — resumed after HUD boundary fix)
-- First bounded-resource run41484 saved schema3 policy/Adam086738567eeb3fc4,
-  then stopped cleanly because inst1 hit an accidental READY dialog.
-- Root cause reproduced: grid cells40-47 overlap planning HUD. Fixed c743dc0;
-  two regression tests RED->GREEN,23 learning/state+12 deck+34 visualizer PASS.
-  Live51-decision probe passed, selected READY legitimately, then aborted at7.47%
-  saved. Diagnostic inst1 PID22648 cleaned. See notes/automation.md.
-- Restarting two-copy training from saved schema3 checkpoint/optimizer, seed20261121,
-  eps2/rounds200, low graphics/normal difficulty, BELOW_NORMAL and CPU0-7.
-- Logs: analysis/nn3_resume_safe_20261117.log and nn3_launcher_safe_20261117.log/.err.
-  Outputs sessions/nn_policy3.pt/.previous and analysis/nn_hist3.jsonl are ignored.
-- Next: confirm new game PIDs, first resumed update, current resource headroom.
+## CURRENT STATE (2026-11-17 — resuming after native debt fix)
+- First launch exposed a spatial grid row overlapping the planning HUD; fixed
+  c743dc0, regression tests and a 51-decision live probe passed. Probe cleaned.
+- Second run 02b76abde977 completed three valid episodes and saved policy/Adam
+  5279118f147fa614, then stopped because a real -$734 safe-zone balance was
+  treated as missing memory. Native footer proves debt; fixed dc63754.
+- Debt regression RED->GREEN; all 24 learning/state tests PASS. See automation.md.
+- Launcher PID48472 now boots inst1/inst2 for seed20261125, eps2/rounds200,
+  resuming sessions/nn_policy3.pt including optimizer. Low graphics, normal
+  difficulty, BELOW_NORMAL priority, CPU0-7 (8 of24 logical CPUs).
+- Logs: analysis/nn3_resume_debt_20261117.log and nn3_launcher_debt_20261117.log/.err.
+- Prior two-copy samples: total CPU19.7-52.6%, GPU29-37%, available RAM12.16-12.24
+  GiB; process tree RSS1.28-1.29 GiB, VRAM3485-3601/10240 MiB. Point-in-time only.
+- Prior launch45892 and games16380/19596 cleaned automatically on error.
+- Next: verify sustained batches/new checkpoint and current live PIDs/headroom.
 
 ## Prior snapshot (2026-11-17 — training improvements complete)
 - All four implementation milestones completed. Latest code092552d; earlier
