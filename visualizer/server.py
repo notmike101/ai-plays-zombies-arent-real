@@ -165,7 +165,15 @@ def make_server(host, port, feed=None):
         def do_GET(self):
             url = urlsplit(self.path)
             if url.path == '/api/events':
-                self.events(parse_qs(url.query))
+                if not self.server.stream_slots.acquire(blocking=False):
+                    self.send_error(503, 'Too many telemetry viewers; retry shortly')
+                    return
+                try:
+                    self.events(parse_qs(url.query))
+                except OSError:
+                    pass
+                finally:
+                    self.server.stream_slots.release()
                 return
             if url.path == '/api/state':
                 args = parse_qs(url.query)
@@ -192,7 +200,7 @@ def make_server(host, port, feed=None):
             self.end_headers()
             try:
                 self.wfile.write(body)
-            except (BrokenPipeError, ConnectionResetError):
+            except OSError:
                 pass
 
         def log_message(self, fmt, *args):
@@ -213,6 +221,7 @@ def make_server(host, port, feed=None):
 
     server = Server((host, port), Handler)
     server.stopped = threading.Event()
+    server.stream_slots = threading.BoundedSemaphore(16)
     server.sampler = threading.Thread(target=server.sample, daemon=True, name='telemetry-sampler')
     server.sampler.start()
     return server
