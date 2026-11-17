@@ -9,7 +9,7 @@ ABILITY_IDS = dict(zip(NATIVE_ABILITIES,
     (9, 1, 12, 11, 10, 18, 19, 23, 24, 25, 34, 35, 36, 29, 37, 38, 39, 40, 41)))
 KEY_ACTIONS = {
     'officer_mode': (81,16,True), 'officer_paint': (90,44,True),
-    'detonate_all': (84,20,True), 'next_special': (70,33,True),
+    'arm_detonation': (84,20,True), 'next_special': (70,33,True),
     'pan_up': (87,17,False), 'pan_left': (65,30,False),
     'pan_down': (83,31,False), 'pan_right': (68,32,False),
     'speed_half': (112,59,False), 'speed_1': (113,60,False),

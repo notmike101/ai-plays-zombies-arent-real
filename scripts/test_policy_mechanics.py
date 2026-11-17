@@ -108,6 +108,14 @@ class MechanicsTests(unittest.TestCase):
                          [EXTRA_TOOLS.index('dialog_confirm'),EXTRA_TOOLS.index('dialog_cancel')])
         self.assertEqual(masks.sum(),2)
 
+    def test_corridor_width_observation_and_contextual_wheel(self):
+        values=observation(fixture(),['-']*7,[dict(name='-',locked=False)]*3,
+            {'actions':{}},0,True,0,1920,1200,evac_tool=(True,False,165.))
+        self.assertEqual(values[-3:],[1.,0.,.165])
+        m=Mechanics.__new__(Mechanics);m.env=Mock(cw=1920,ch=1200);m.controls=Mock()
+        m.execute({'corridor_armed':True},'corridor_wider',9)
+        m.controls.arm.assert_not_called();m.controls.zoom.assert_called_once_with(1,(422,336))
+
     def test_terrain_codes_bridge_bits_and_outside_sentinel(self):
         s=fixture();s['terrain']['codes'][:3]=[4,0,-1];s['terrain']['bridges'][1]=1
         values=observation(s,['-']*7,[dict(name='-',locked=False)]*3,{'actions':{}},0,True,0,1920,1200)

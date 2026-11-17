@@ -47,6 +47,8 @@ def extra_masks(st):
         elif name.startswith('panel_'):enabled=name[6:] in st['hud']['actions']
         elif name.startswith('select_') and name[7:] in SELECTORS:
             mask *= [point is not None for point in st['targets'][name[7:]]]
+        elif name in ('corridor_wider','corridor_narrower'):enabled=planning
+        elif name in ('zoom_in','zoom_out'):enabled=not st.get('corridor_armed',False)
         elif name=='arm_slot':
             enabled=planning;mask[:]=0;mask[:7]=[n!='-' for n in st['planning_roster']]
         elif name in ('place_click','place_paint'):enabled=planning
@@ -67,7 +69,7 @@ def extra_masks(st):
         elif name=='reaim_selection':
             enabled=planning and selected
         elif name=='refund_selection':enabled=planning or len(sel['evac'])>0
-        elif name=='detonate_all':enabled=not planning and bool(np.any(st['native']['units']['kind']==9))
+        elif name=='arm_detonation':enabled=not planning and bool(np.any(st['native']['units']['kind']==9))
         elif name.startswith('speed_') or name=='pause_toggle':enabled=not planning
         if name in NONSPATIAL or name.startswith('pan_'):
             mask[:]=0;mask[0]=1
@@ -117,7 +119,7 @@ def unit_names(units, maps):
 
 
 def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, width, height,
-                gesture_anchor=None, armed=(0,0,0), paused=False, speed=2, dialog=False):
+                gesture_anchor=None, armed=(0,0,0), paused=False, speed=2, dialog=False, evac_tool=(False,False,150.)):
     s=snapshot;sel=s['selection'];u=s['units'];maps=s['unit_maps']
     camera=s['camera'];g=lambda x:math.log1p(max(float(x),0))
     result=[camera[0]/10000,camera[1]/10000,camera[2]/8,float(paint_mode),float(legal),land_fraction]
@@ -193,7 +195,7 @@ def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, 
         count=np.maximum(np.bincount(bins,minlength=48),1)
         for value in values:
             result.extend(np.bincount(bins,weights=np.asarray(value)[visible],minlength=48)/count)
-    result.append(float(dialog))
+    result += [float(dialog),float(evac_tool[0]),float(evac_tool[1]),evac_tool[2]/1000]
     assert len(result)==len(EXTRA_LABELS)
     if not np.isfinite(result).all():raise RuntimeError('Nonfinite mechanics observation')
     return list(map(float,result))
@@ -215,6 +217,9 @@ class Mechanics:
         if e.scalar(0x6553d4,'<f') or e.scalar(0x6553d8,'<f'):
             raise RuntimeError('Policy projection requires top-down camera')
         st['dialog']=bool(e.scalar(0x667868,'<B'))
+        active=bool(e.scalar(0x6651e0,'<B') or e.scalar(0x6651e2,'<B'))
+        hold=bool(e.scalar(0x6651e1,'<B'))
+        st['corridor_armed']=active and not hold
         hud=dict(actions={},valid=False) if st['dialog'] else read_panel(e)
         roster=c.planning_roster();perks=c.perks()
         bounds=hud.get('bounds')
@@ -229,7 +234,8 @@ class Mechanics:
             mechanics_features=observation(s,roster,perks,hud,e.scalar(0x665160,'<B'),legal,
                 covered/max(total,1),e.cw,e.ch,st.get('gesture_anchor'),
                 [e.scalar(rva,'<B') for rva in (0x667060,0x65d2e1,0x65d309)],
-                e.scalar(0x665fa2,'<B'),e.scalar(0x666868,'<q'),st['dialog']))
+                e.scalar(0x665fa2,'<B'),e.scalar(0x666868,'<q'),st['dialog'],
+                (active and not hold,active and hold,e.scalar(0x6651ec,'<f'))))
         st['playarea_cells']=inside_polygon(centers(e.cw,e.ch),p(s['playarea']))
         kinds=s['units']['kind'];defenders=(kinds>=2)&(kinds!=3)
         targets=dict(unit=s['units']['pos'][defenders],building=s['buildings']['center'],
@@ -248,6 +254,9 @@ class Mechanics:
 
     def execute(self,st,name,cell):
         e=self.env;c=self.controls;xy=(round(XF[cell%8]*e.cw),round(YF[cell//8]*e.ch))
+        if name in ('corridor_wider','corridor_narrower'):
+            if not st.get('corridor_armed'):c.arm(81,16)
+            return c.zoom(1 if name=='corridor_wider' else -1,xy)
         if name.startswith('dialog_'):return c.dialog(name=='dialog_confirm')
         if name.startswith('equip_'):return c.equip_unit(name[6:].replace('clear','-'),cell)
         if name.startswith('perk_'):return c.equip_perk(name[5:].replace('clear','-'),cell)

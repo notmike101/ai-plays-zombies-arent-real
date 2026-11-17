@@ -12,12 +12,12 @@ EXTRA_TOOLS = [f'place_{name}' for name in MISSING_UNITS] + [
     'select_add','select_box','move_selection','reaim_selection',
     'arm_slot','click_world','drag_world','shift_drag_world','right_click_world',
     'zone_begin','zone_corner','zone_finish','zone_back','cancel_tool','refund_selection','undo',
-    'officer_mode','officer_paint','detonate_all','next_special',
+    'officer_mode','officer_paint','arm_detonation','next_special',
     'pan_up','pan_left','pan_down','pan_right','zoom_in','zoom_out',
     'speed_half','speed_1','speed_2','speed_4'] + [f'panel_{name}' for name in PANEL_ACTIONS]
 EXTRA_TOOLS += ['select_helicopter','select_vehicle','select_medevac',
     'drag_corner','drag_edge','insert_corner','remove_corner','pause_toggle']
-EXTRA_TOOLS += ['place_click','place_paint','dialog_confirm','dialog_cancel']
+EXTRA_TOOLS += ['place_click','place_paint','dialog_confirm','dialog_cancel','corridor_wider','corridor_narrower']
 
 # Counts retain multiplicity; selected entities expose individual state below.
 GRID_CHANNELS = tuple(f'unit {name}' for name in UNITS if name not in ('Spikes','Oil')) + (
@@ -68,7 +68,8 @@ STATE_CHANNELS = ('wall HP fraction','wall breached cell fraction','wall level /
     'hazard kind / 8','hazard radius / 1000','hazard expiry sim time / 600')
 EXTRA_LABELS += [f'Native state {name} cell {i+1} (mean; 0 empty)' for name in STATE_CHANNELS for i in range(48)]
 
-EXTRA_LABELS += ['Modal dialog open (0/1)']
+EXTRA_LABELS += ['Modal dialog open (0/1)','Corridor tool armed (0/1)',
+    'Hold tool armed (0/1)','Corridor full width (native m / 1000)']
 
 
 def extra_cell_label(tool, cell):

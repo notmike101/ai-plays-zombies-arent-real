@@ -246,3 +246,21 @@ HUD reads skip the obscured panel. No blind SPACE/ESC watchdog is introduced.
 The fake-game integration now supplies the same perk contract as real refresh.
 Demolition on a240.8m tall building, SeekDestroy on a garrison, Cure, Tank,
 AC130 and Nuke each consumed native stock in scoped normal L5 diagnostics.
+
+
+## Context-sensitive corridor and detonation controls
+
+All19 battle abilities now have successful stock receipts, including APC, Bus
+and Dozer on valid open ground. Medevac Leave Now changed ordered0->1 after the
+queued simulation action was consumed. Both Civic officer subtype buttons
+changed the selected building's native officer_kind to1/0.
+Corridor Q + wheel grows native full width150->165m, and the resulting EVAC
+record has half_width82.5. Hold E + wheel zooms instead. Added explicit corridor
+wider/narrower actions, armed-tool/width observations, and blocked camera wheel
+zoom while corridor is armed. Raw drag completes the armed corridor at that width.
+C4 selected-panel detonation removed the selected native ID. Shift+T ARMS a
+click-near-charge tool; it is not a global detonation command. Renamed the new
+unreleased action arm_detonation. Armed click removed the remaining3 charges;
+no incorrect Detonate All promise remains. Native multiselection/panel handles
+selected groups. Schema4:4265 inputs/185 tools.127 script tests,37 visualizer
+tests,12-step observer parity and graph pass. Live mechanics refresh passed.
