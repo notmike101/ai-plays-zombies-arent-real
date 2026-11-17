@@ -13,3 +13,35 @@ ppo2 batch loss 248.843
 ppo2 batch loss 236.559
 ppo2 batch loss 223.119
 round 0: wins 4/10 meanfrac 0.400
+ep pid 49320 win False frac 0.0 R -0.18
+ep pid 49320 win False frac 0.0 R -0.13
+ep pid 49276 win False frac 0.808 R 3.49
+ep pid 49276 win False frac 0.808 R 3.36
+ep pid 49384 win True frac 1.0 R 15.82
+ep pid 49384 win False frac 0.0 R -6.3
+ep pid 39160 win False frac 0.0 R -0.1
+ep pid 39160 win False frac 0.0 R -0.16
+ep pid 21992 win True frac 1.0 R 15.84
+ep pid 21992 win False frac 0.0 R -0.11
+ppo2 batch loss 1547.793
+ppo2 batch loss 1519.009
+ppo2 batch loss 1496.316
+ppo2 batch loss 1468.37
+round 1: wins 2/10 meanfrac 0.362
+[ready] frozen -> SPACE
+[ready] frozen -> SPACE
+[ready] frozen -> SPACE
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play2.py", line 109, in run_episode
+    zo = env.obs()
+            ^^^^^^
+  File "D:\zar-scratch\scripts\env_zar.py", line 167, in to_planning
+    raise ZAREnvError('not planning: %s' % o)
+env_zar.ZAREnvError: not planning: {'civ': 6578, 'zomb': 1964, 'converting': 9, 'corpses': 0, 'police': 0, 'money': 3111.0}
+  File "D:\zar-scratch\scripts\nn_play2.py", line 109, in run_episode
+    zo = env.obs()
+            ^^^^^^
+  File "D:\zar-scratch\scripts\env_zar.py", line 167, in to_planning
+    raise ZAREnvError('not planning: %s' % o)
+env_zar.ZAREnvError: not planning: {'civ': 6578, 'zomb': 1964, 'converting': 9, 'corpses': 0, 'police': 0, 'money': 3111.0}
