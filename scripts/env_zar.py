@@ -93,7 +93,7 @@ class ZAREnv:
         d = memscan.read(self.h, self.base + 0x65d9c0, 4)
         if d and len(d) == 4:
             v = struct.unpack('<f', d)[0]
-            if math.isfinite(v) and 0 <= v < 1e7:
+            if math.isfinite(v) and abs(v) < 1e7:
                 return v
         return None
 

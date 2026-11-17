@@ -395,3 +395,12 @@ existing cell meanings/weights remain unchanged. Two regression tests failed
 before the fix and pass afterward. Failure screenshot: ignored
 visualizer/runtime/loadout-failure.png. Known dialog was cancelled with its NO
 button during diagnosis; no automatic battle start was used to hide the problem.
+
+## Native negative money (2026-11-17)
+
+Safe-zone placement can overdraw the planning balance. In owned inst1 session
+`logs/bbbff50f-BM-1-2.jsonl`, placing a 550-cell safe zone was followed by a
+planning footer with `stats.money = -734`. This is a valid game balance, not
+a failed memory read. `ZAREnv.money()` preserves signed finite balances within
+the existing magnitude bound; never substitute stale positive mirrors or zero.
+The regression covers debt, NaN, infinity and both magnitude limits.

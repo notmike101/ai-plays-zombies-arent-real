@@ -65,6 +65,12 @@ class StateTests(unittest.TestCase):
             with self.assertRaises(env_zar.ZAREnvError):
                 self.env().game_state()
 
+    def test_money_preserves_native_debt_and_rejects_invalid_reads(self):
+        for value in (-734., float('nan'), float('inf'), -1e7, 1e7):
+            with self.subTest(value=value), patch.object(env_zar.memscan, 'read',
+                                                       return_value=struct.pack('<f', value)):
+                self.assertEqual(self.env().money(), -734. if value == -734. else None)
+
     def test_dump_section_headers_with_descriptions(self):
         d = env_zar.ZAREnv.dump_parse('[economy]\nmoney = 0\n[plan] (map frame)\nboard unit = Garrison 1 2\n')
         self.assertEqual(d['economy'], {'money': '0'})

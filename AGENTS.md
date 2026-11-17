@@ -216,3 +216,7 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
   building-target availability. Only explicit READY may press the READY control.
 - Do not recover an accidental READY dialog by starting the battle. Fix the
   invalid click boundary; preserve model control over phase transitions.
+
+## Native economy validity
+- Safe-zone placement can overdraw money. Preserve signed finite native balances;
+  negative money is valid debt, not missing memory. See notes/automation.md.
