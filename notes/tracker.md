@@ -6,7 +6,9 @@
   CPUs), seed20261129,2 episodes/batch,200 rounds maximum (400 episodes).
 - Round0 completed two real aborted battles (5.72%,7.50% saved); PPO updated
   and saved schema3 policy497094f9caaee5be with all10 Adam parameter states.
-  Round1 is active. This is pipeline proof, not the35%-on-every-level goal.
+  Round1 also completed: one planning timeout (zero outcome reward), one battle
+  abort at5.80%; updated checkpoint847a556168d7cc42. Round2 battle
+  observed live. This is pipeline proof, not the35%-on-every-level goal.
 - inst2 PID21768 failed during parallel injection with argument1 OverflowError
   (int too long to convert) and was cleaned. Cause not yet isolated; the launcher
   correctly continued with inst1. Do not start competing workers on31384.
@@ -25,8 +27,10 @@
   owned REA processes cleaned. Notes/automation.md and memory-map.md hold evidence.
 - Logs: analysis/nn3_training_20261117.log; nn3_training_launcher_20261117.log/.err.
   Checkpoint sessions/nn_policy3.pt with .previous; history analysis/nn_hist3.jsonl.
-- Next: confirm round1 update, then leave training running. Future work: sustained
-  learning/evaluation across L1-L5 and isolate parallel-injection failure.
+- Training is left running in the background; saves each completed batch and
+  cleans its game on exit. No claim of continuous monitoring after this chat.
+  Next: review later learning/evaluation across L1-L5; isolate the parallel
+  injection failure before scaling back up. Resource samples are not hard GPU/RAM caps.
 
 ## Prior snapshot (2026-11-17 — training improvements complete)
 - All four implementation milestones completed. Latest code092552d; earlier
