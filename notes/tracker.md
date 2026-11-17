@@ -1,6 +1,41 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — isolated Python environment verified, training LIVE)
+## CURRENT STATE (2026-11-17 15:13 local — portable setup validated, training restarting)
+- Active module roots now derive from their checkout. Ignored zar.local.toml
+  configures the supported read-only asset source and GitHub App helper. Local
+  source is game-copies/inst4: the installed EXE differs from the supported hash;
+  never bypass the guard. Setup/build/copy/restore commands are in README.md.
+- User clarified ALL availability on fresh training copies. Preparation always
+  enables16 units/19 abilities/16 upgrades +Extra_Zones, no campaign progress,
+  purchases, SP spending or placements. inst12 is the new full-profile copy.
+  Use local.ps1 check --copy inst12 and train --copy inst12 on this deployment;
+  legacy inst1 lacks upgrades and deliberately fails the new profile preflight.
+- Fresh inst12 boot verified Boston L1,8142 civilians,$3111,normal/planning.
+  All52 availability entries persisted after native startup. A4-decision actual
+  policy probe completed without optimization; checkpoint SHA remained
+  35a8148ff8948406a40cc16951539d858b35617eeadedf6b789e8514326fc396.
+  All probe games cleaned. Distinct never-played menu layout fixed from captured
+  evidence; initial failed probes and fixture correction are in portability-plan.
+- Input DLL built twice clean with pinned Rust1.96.0/locked Cargo, matching SHA
+  2d2f160e53c26c521984727c922e7629bd6718e5010642d23f9db49bdcd8d848.
+  Rust ABI +Python checks PASS; new DLL hooks and virtual actions worked in native
+  boot/policy probe. DLL/targets/manifest remain ignored, source/build docs committed.
+- Checkpoint published and downloaded/verified:
+  https://github.com/notmike101/ai-plays-zombies-arent-real/releases/tag/checkpoint-35a8148ff8948406
+  Repeat publish returned already_published. Local Codex heartbeat
+  share-zar-checkpoints ACTIVE every6h, changed snapshots only. See checkpoint-sharing.md.
+- Offline checks:82 trainer/operator/interface +35 visualizer Python tests PASS
+  across milestone runs;12-step actual-policy parity and Node graph PASS. No
+  schema/reward/action changes. Full availability does NOT imply complete policy
+  action coverage; gameplay goal remains unmet.
+- Old run b39316bdad21 stopped at saved update46,policy e9c9e765b8f64cf9.
+  New .venv launch requested for inst12,200 rounds,2 episodes,seed20261172.
+  Verify actual PIDs/log/first completed update before treating it as healthy.
+  Original visualizer22604(created1794931712.9690397) preserved on8765.
+- Source/docs committed/pushed through799ad2b. Preserved unrelated legacy
+  policy2/history2 modifications and old untracked analysis artifacts.
+
+## Prior snapshot (2026-11-17 — isolated Python environment verified, training LIVE)
 - New .venv created with Python3.14.4 x64, include-system-site-packages=false;
   installed requirements.txt (torch2.15.0+cpu,numpy2.4.6,psutil7.2.2,
   pefile2024.8.26,Pillow12.3.0). Direct dependencies pinned, transitives resolved
