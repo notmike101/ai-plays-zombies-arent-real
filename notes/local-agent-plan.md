@@ -11,7 +11,7 @@ This is the existing Windows deployment, not a portable distribution project.
 
 ## Milestones
 
-- [ ] Read-only status/check: `scripts/local_agent.py`, `scripts/test_local_agent.py`.
+- [x] Read-only status/check: `scripts/local_agent.py`, `scripts/test_local_agent.py`.
   Inventory verified script paths/PIDs/creation times, resources, latest history,
   dependencies, supported owned copy/DLL and exact checkpoint compatibility.
   Test missing/wrong checkpoint, foreign process paths and malformed history.
@@ -37,3 +37,5 @@ actual training launch/stop is tested with fakes while the real learner is activ
   checkout while trainer ROOT remains hard-coded, rather than loading another
   checkout's model silently. Portable paths/releases are deferred deliberately.
 - No dependency reinstall, checkpoint publication or extra game copy is needed.
+- Milestone 1: five offline tests passed after the expected missing-module failure;
+  actual read-only preflight passed for schema3/Adam, inst1 executable and x64 DLL.
