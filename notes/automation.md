@@ -49,6 +49,27 @@ at import — all coords are physical. ALWAYS import game_drive (it sets DPI awa
 Coordinate helpers (client offset for a window): border_x = (winW − clientW)/2 (11 px),
 top offset = winH − clientH − border_x (45 px at 150%). WM_MOUSEWHEEL lParam = screen coords.
 
+
+## MENU INPUT — v0.42.1 Steam-update build (verified 2026-11-17, inst4 43876, hookdll v2)
+Steam auto-updated the copies; menus moved to RAWINPUT hit-testing:
+| Menu action | PostMessage | Physical SendInput (foreground) |
+|---|---|---|
+| Clicks (all menu buttons/rows) | ❌ DEAD | ✅ works (ABSOLUTE|VIRTUALDESK 0-65535; game must be FOREGROUND — WM_INPUT only reaches the focused app) |
+| WM_MOUSEWHEEL (campaign list scroll) | ✅ works | ✅ |
+| List selection arrows | ✅ ONLY with lParam bit24 EXTENDED set; UP=-1 DOWN=+1 WRAPS (e.g. 13->-2->11) | ✅ |
+| TAB focus ring | ✅ moves (no activation bound: SPACE/ENTER dead) | — |
+| ESC back | ✅ | ✅ |
+- Coordinate transform for physical clicks from capture (PrintWindow 1942x1256 incl. chrome):
+  `phys_client = cap/1.5 − (11, 37)` — python must be DPI-aware (SetProcessDPIAware) so
+  ClientToScreen takes physical client px (1280? no: physical client = 1920x1200 space? see
+  menu_nav.cap_to_client — verified against Boston row hit).
+- Campaign list = 13 rows + phantom 0; selection ONLY by click; wheel = scroll; state
+  machine is deterministic IF keys go >=0.45s apart + >=2s drain (queue latency lies).
+- scripts/menu_nav.py = driver (MenuDriver.click_cap / arrow / wheel / shot+diff).
+- Welcome page (EA Online, Play Now disabled ~30s) accepts pumped vi clicks when raw pump
+  + foreground line up; if wedged: wheel/ESC still work.
+- WORLD page: virtual crosshair renders at vi coords (GetCursorPos hook OK, armed banner
+  shows); purchase clicks under the new build are UNCONFIRMED (bg test in flight).
 ## What this means
 - Harness can fully drive: menus, level select, loadout, READY, pause/speed, F6 dumps,
   screenshots, zoom, pan? (WASD keys) — all unfocused, N instances parallel.
