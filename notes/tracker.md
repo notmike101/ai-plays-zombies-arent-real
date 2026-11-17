@@ -1,36 +1,25 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — training LIVE, bounded resources/storage)
-- Active run99adb97241d2: launcher11016, trainer42216, worker39664, inst1 game31384.
-  Normal difficulty, low graphics, BELOW_NORMAL priority, CPU0-7 (8 of24 logical
-  CPUs), seed20261129,2 episodes/batch,200 rounds maximum (400 episodes).
-- Round0 completed two real aborted battles (5.72%,7.50% saved); PPO updated
-  and saved schema3 policy497094f9caaee5be with all10 Adam parameter states.
-  Round1 also completed: one planning timeout (zero outcome reward), one battle
-  abort at5.80%; updated checkpoint847a556168d7cc42. Round2 battle
-  observed live. This is pipeline proof, not the35%-on-every-level goal.
-- inst2 PID21768 failed during parallel injection with argument1 OverflowError
-  (int too long to convert) and was cleaned. Cause not yet isolated; the launcher
-  correctly continued with inst1. Do not start competing workers on31384.
-- Live samples: total CPU16.1-20.4%, GPU29-47%,13.29-13.34GiB available RAM,
-  VRAM3394-3460/10240MiB. D:13.31GiB free. Point-in-time checks, not auto-throttling.
-- Fresh worker39664/game31384 frames show332 semantic input labels, no label
-  warning, and advancing episode/sequence. Existing visualizer server retained.
-- New training dumps retain text but discard replay companions; last3 fresh
-  receipts had no .state. Old evidence is retained; boot diagnostics retain states.
-- Fixes: HUD cell boundary c743dc0; native debt dc63754; verified native legality
-  + single-action rollback7df4ef6; bounded replay storage bab0862. Model owns
-  strategy; no install writes, difficulty changes, admin console or real mouse.
-- Tests:27 learning/state+17 deck/spatial/reporting+34 visualizer PASS (78).
-  Model/observer parity12 recurrent steps and Node graph PASS. Live invalid zone
-  rolled back exactly, restoring $3037.80 and preserving one garrison. Probe and
-  owned REA processes cleaned. Notes/automation.md and memory-map.md hold evidence.
-- Logs: analysis/nn3_training_20261117.log; nn3_training_launcher_20261117.log/.err.
-  Checkpoint sessions/nn_policy3.pt with .previous; history analysis/nn_hist3.jsonl.
-- Training is left running in the background; saves each completed batch and
-  cleans its game on exit. No claim of continuous monitoring after this chat.
-  Next: review later learning/evaluation across L1-L5; isolate the parallel
-  injection failure before scaling back up. Resource samples are not hard GPU/RAM caps.
+## CURRENT STATE (2026-11-17 — learning audit complete, training restarting)
+- Prior run99adb97241d2 ended after4 updates/8 records (6 aborted battles,1 timeout,
+  1 interface error); launcher/game cleaned. Latest checkpointc42691fb23e296d7.
+- Root cause reproduced: undo leaves safe-zone tool selected; its hotkey toggles
+  it off. Fix542f54f makes _arm/cast cancel then reselect. Live repeated-zone proof.
+- Learning fix7a5f2bf preserves battle credit across planning with gamma=lambda1;
+  battle remains .99/.95. No reward bonuses or model architecture/schema changes.
+- Reporting8bb6904 records reward components and learning revision; timeout saved
+  is null with separate observed snapshot. Updated ml-spec explicitly lists gaps.
+- Tests:82 core Python+additional input checks PASS,12-step observer parity and
+  Node graph PASS. Live30-decision rollout+isolated PPO PASS, user checkpoints
+  byte-identical; probe26456 cleaned. See notes/learning-audit.md.
+- Restarting one inst1 from saved schema3 policy/Adam: seed20261140,eps2,rounds200.
+  BELOW_NORMAL priority,CPU0-7,low graphics,normal difficulty. Launcher PID25848.
+- Logs: analysis/nn3_learning_audit_20261117.log and
+  nn3_learning_audit_launcher_20261117.log/.err. Native replay cleanup remains active.
+- Next: verify resumed update/worker telemetry/headroom, then leave training live.
+  Unresolved: exact recurrent continuation, richer carried-board state, missing
+  refund/repair/reposition/detonation/camera actions, parallel injection failure,
+  and consistent fresh-board >=35% outcomes on all5 levels.
 
 ## Prior snapshot (2026-11-17 — training improvements complete)
 - All four implementation milestones completed. Latest code092552d; earlier
