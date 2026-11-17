@@ -20,12 +20,13 @@
     <div id="preview-banner" class="preview-banner" hidden>SYNTHETIC INPUTS · NO GAME ATTACHED</div>
     <div id="pause-banner" class="pause-banner" hidden>VIEW PAUSED · Training continues</div>
     <div class="canvas-hint">Scroll to zoom · Drag to pan · Click a node to inspect</div>
+    <div class="zoom-controls" role="group" aria-label="Graph zoom"><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-in" aria-label="Zoom in">+</button></div>
     <div class="decision-hud"><span id="phase">—</span><strong id="decision">Awaiting a decision</strong><span id="decision-sub">—</span></div>
   </section>
   <details id="details" class="drawer">
     <summary>Inspector</summary>
     <div class="drawer-body">
-      <section class="inspect"><div class="section-heading"><h2>Node</h2><button id="unpin" hidden>Clear</button></div><label class="sr-only" for="node-select">Inspect a node</label><select id="node-select"><option value="">Select a node…</option></select><div id="inspector"><p class="small">Click a node to see its activation and strongest connections.</p></div></section>
+      <section class="inspect"><div class="section-heading"><h2>Node</h2><button id="unpin" hidden>Clear</button></div><label class="sr-only" for="node-select">Inspect a node</label><select id="node-select"><option value="">Select a node…</option></select><div id="inspector"><p class="small">Tap a node or choose one above to see its activation and strongest connections.</p></div></section>
       <section><h2>Decision probabilities</h2><div id="probabilities" class="probabilities"></div><div class="data-row"><span>Expected return</span><strong id="value">—</strong></div></section>
       <section><h2>Worker</h2><p id="connection-detail" class="small">Looking for an observer</p><div class="data-row"><span>Game</span><strong id="game">—</strong></div><div class="data-row"><span>Worker / episode</span><strong id="worker">—</strong></div><div class="data-row"><span>Parameters</span><strong id="parameters">—</strong></div><div class="data-row"><span>Last sample</span><strong id="age">—</strong></div><div class="data-row"><span>Revision</span><code id="revision">—</code></div></section>
       <p class="small" id="graph-note">Brightness is normalized per layer. Connections show weights, not causal explanations.</p>

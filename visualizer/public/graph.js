@@ -87,6 +87,12 @@ export class Renderer {
     this.frame=frame; this.draw();
   }
   fit() { this.zoom=1; this.pan={x:0,y:0}; this.draw(); }
+  zoomAt(zoom,x=this.width/2,y=this.height/2) {
+    const next=Math.max(.5,Math.min(12,zoom)),ratio=next/this.zoom;
+    this.pan={x:x-this.width/2-(x-this.width/2-this.pan.x)*ratio,
+              y:y-this.height/2-(y-this.height/2-this.pan.y)*ratio};
+    this.zoom=next;this.draw();
+  }
   transform(x,y) {
     const scale=Math.min(this.width/1160,this.height/700)*this.zoom;
     return {x:(x-580)*scale+this.width/2+this.pan.x,y:(y-350)*scale+this.height/2+this.pan.y,scale};

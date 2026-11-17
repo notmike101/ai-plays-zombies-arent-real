@@ -64,8 +64,7 @@ function updateFrame(next) {
   text('decision-sub',cell!==undefined?`${labelFor(cellHead.id,cell)}${cellRelevant?'':' · unused for this action'}`:'Observed from the worker’s actual sample');
   $('probabilities').replaceChildren();
   const probabilities=frame.probabilities?.[actionHead?.id]||[];
-  const ranked=probabilities.map((p,i)=>({p,i})).sort((a,b)=>b.p-a.p).slice(0,4);
-  if(action!==undefined && probabilities[action]!==undefined && !ranked.some(r=>r.i===action))ranked.push({p:probabilities[action],i:action});
+  const ranked=probabilities.map((p,i)=>({p,i})).sort((a,b)=>b.p-a.p);
   for(const {p,i} of ranked) {const row=element('div',`prob-row ${i===action?'chosen':''}`),label=element('div','prob-label'),track=element('div','prob-track'),fill=element('div','prob-fill');
     label.append(element('span','',`${i===action?'↳ ':''}${labelFor(actionHead.id,i)}`),element('span','',`${(p*100).toFixed(1)}%`));fill.style.width=`${Math.max(0,Math.min(100,p*100))}%`;track.append(fill);row.append(label,track);$('probabilities').append(row);}
   const val=heads.find(l=>l.kind==='value');text('value',formatNumber(frame.values?.[val?.id]?.[0]));
@@ -101,14 +100,43 @@ $('live').onclick=()=>setMode(false);$('preview').onclick=()=>setMode(true);
 $('stream').onchange=()=>{selectedStream=$('stream').value;resetView();};
 $('density').onchange=()=>{renderer.count=Number($('density').value);renderer.draw();};
 $('fit').onclick=()=>renderer.fit();
+$('zoom-in').onclick=()=>renderer.zoomAt(renderer.zoom*1.5);
+$('zoom-out').onclick=()=>renderer.zoomAt(renderer.zoom/1.5);
 $('pause').onclick=()=>{paused=!paused;$('pause').setAttribute('aria-pressed',String(paused));text('pause',paused?'▶ Resume':'Ⅱ Pause');$('pause-banner').hidden=!paused;};
 function pin(node){pinned=node?.id||null;renderer.focus=pinned;$('node-select').value=pinned||'';$('unpin').hidden=!pinned;renderer.draw();if(node){$('details').open=true;inspect(node);}}
 $('unpin').onclick=()=>pin(null);$('node-select').onchange=()=>pin(renderer.layout?.byId.get($('node-select').value));
-const stage=$('stage');let drag=null;
-stage.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,px:renderer.pan.x,py:renderer.pan.y,moved:false};stage.setPointerCapture(e.pointerId);});
-stage.addEventListener('pointermove',e=>{const r=stage.getBoundingClientRect();if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.hypot(dx,dy)>3)drag.moved=true;if(drag.moved){renderer.pan={x:drag.px+dx,y:drag.py+dy};renderer.draw();}}else if(!pinned)inspect(renderer.hit(e.clientX-r.left,e.clientY-r.top));});
-stage.addEventListener('pointerup',e=>{if(drag&&!drag.moved){const r=stage.getBoundingClientRect();pin(renderer.hit(e.clientX-r.left,e.clientY-r.top));}drag=null;});
-stage.addEventListener('pointercancel',()=>drag=null);
-stage.addEventListener('wheel',e=>{e.preventDefault();renderer.zoom=Math.max(.5,Math.min(5,renderer.zoom*Math.exp(-e.deltaY*.001)));renderer.draw();},{passive:false});
+const stage=$('stage'),pointers=new Map();let drag=null,moved=false;
+const point=e=>{const r=stage.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};};
+const rebase=()=>{const p=pointers.values().next().value;drag=p?{...p,pan:{...renderer.pan}}:null;};
+stage.addEventListener('pointerdown',e=>{
+  if(e.target.closest('button') || pointers.size>=2 || (e.pointerType==='mouse' && e.button!==0))return;
+  if(!pointers.size)moved=false;
+  pointers.set(e.pointerId,point(e));if(pointers.size===2)moved=true;
+  rebase();stage.setPointerCapture(e.pointerId);
+});
+stage.addEventListener('pointermove',e=>{
+  const p=point(e);
+  if(!pointers.has(e.pointerId)){if(!pinned && e.pointerType==='mouse')inspect(renderer.hit(p.x,p.y));return;}
+  const before=[...pointers.values()];pointers.set(e.pointerId,p);
+  if(pointers.size===2){
+    const after=[...pointers.values()],mid=ps=>({x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2});
+    const a=mid(before),b=mid(after),distance=ps=>Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);
+    renderer.pan.x+=b.x-a.x;renderer.pan.y+=b.y-a.y;
+    const oldDistance=distance(before),newDistance=distance(after);
+    renderer.zoomAt(renderer.zoom*(oldDistance>1 && newDistance>1?newDistance/oldDistance:1),b.x,b.y);
+  }else if(drag){
+    const dx=p.x-drag.x,dy=p.y-drag.y;if(Math.hypot(dx,dy)>4)moved=true;
+    if(moved){renderer.pan={x:drag.pan.x+dx,y:drag.pan.y+dy};renderer.draw();}
+  }
+});
+function releasePointer(e,cancelled=false){
+  if(!pointers.has(e.pointerId))return;
+  if(!cancelled && !moved && pointers.size===1){const p=point(e);pin(renderer.hit(p.x,p.y));}
+  pointers.delete(e.pointerId);rebase();
+}
+stage.addEventListener('pointerup',e=>releasePointer(e));
+stage.addEventListener('pointercancel',e=>releasePointer(e,true));
+stage.addEventListener('lostpointercapture',e=>releasePointer(e,true));
+stage.addEventListener('wheel',e=>{e.preventDefault();const p=point(e);renderer.zoomAt(renderer.zoom*Math.exp(-e.deltaY*.001),p.x,p.y);},{passive:false});
 new ResizeObserver(()=>renderer.draw()).observe(stage);
 poll();

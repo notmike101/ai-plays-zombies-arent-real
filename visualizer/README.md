@@ -49,7 +49,9 @@ The old standalone patch has been removed now that it is applied; do not apply i
 - **Brightness:** absolute activation normalized within its layer. Purple denotes negative values; green positive values. Blue identifies the memory layer and GRU connection summaries.
 - **Connections:** strongest weights per target (up to six), filtered by the Links control. Linear-head connections show signed weights. A GRU has three sets of gate weights, so its connections are explicitly **unsigned RMS summaries across reset/update/candidate gates**. They are not single synapses or causal attributions. Not every learned weight is drawn.
 
-The graph fills the window beneath a compact control bar. Click a node to open the collapsed Inspector, pin its value and isolate its strongest displayed connections. With the Inspector open, hover or use its node selector to inspect other nodes after clearing the pin. Worker details and additional probabilities are also in the Inspector. Scroll to zoom, drag to pan, and use Fit to reset. Pause freezes only the view; inference continues. Small screens omit dense labels until zoomed in; the inspector remains available.
+The graph fills the window beneath a compact control bar. Click or tap a node to open the collapsed Inspector, pin its value and isolate its strongest displayed connections. With the Inspector open, hover or use its node selector to inspect other nodes after clearing the pin. The Inspector includes every action probability, worker details and the selected node's activation, incoming weights and policy probability (including map-position nodes).
+
+On mobile, pinch to zoom around your fingers and drag with one finger to pan. The +/− buttons also zoom; Fit restores the overview. Magnification reaches 12× so dense nodes and labels can be read on narrow screens. The mobile Inspector spans the available width and scrolls independently to expose all details, including in landscape. Tap Inspector again to close it. On desktop, the mouse wheel zooms around the cursor. Pause freezes only the view; inference continues. Dense graph labels appear as you zoom in.
 
 Automatic attachment stays on the selected fresh stream. After 15 seconds without a sample, it switches to another fresh stream if one exists; otherwise it labels the retained frame stale. A paused game or slow inference can therefore look stale without the process having crashed. Streams older than 120 seconds are omitted. Manual selection holds the requested stream rather than silently switching.
 
@@ -75,6 +77,16 @@ $python = "$env:LOCALAPPDATA\Python\pythoncore-3.14-64\python.exe"
 & $python -B visualizer/verify_model.py
 node visualizer/test_graph.mjs
 ```
+
+For touch/layout regression checks, start the server with `-Preview`, then run these from `visualizer/` with a Chromium Playwright CLI session:
+
+```powershell
+npx --yes --package @playwright/cli playwright-cli -s=zar-mobile open http://localhost:8765
+npx --yes --package @playwright/cli playwright-cli -s=zar-mobile run-code --filename=test_mobile.js
+npx --yes --package @playwright/cli playwright-cli -s=zar-mobile close
+```
+
+The browser check sends multi-touch events, verifies pinch anchoring, pinch-to-pan transitions, cancellation, tap inspection, zoom controls, complete action probabilities and scroll access at 320×568, 390×844 and 844×390. It covers WebGPU (when available), forced Canvas 2D and desktop mouse interaction. It uses the separate preview model and never controls a game. Screenshots go to ignored `runtime/`. Browser emulation does not replace testing on physical iOS/Android devices.
 
 The model check imports the current trainer source without running its main function or opening a game. It checks exact recurrent outputs and sampled decisions, then reports a warm CPU inference benchmark. It does not establish end-to-end gameplay overhead.
 
