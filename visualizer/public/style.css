@@ -42,6 +42,8 @@ h2{font-size:11px;font-weight:500;margin:0 0 12px;color:#bdcfd8}
 #unpin{padding:3px 6px;font-size:10px}
 #node-select{width:100%;font-size:11px}
 .small{font-size:11px;color:var(--muted);line-height:1.65}
+#decision-log{list-style:none;margin:0;padding:0;font-size:11px}
+#decision-log li{padding:8px 0;border-bottom:1px solid var(--line)}
 .data-row,.incoming{display:flex;justify-content:space-between;gap:12px;margin-top:10px;color:var(--muted);font-size:10px}
 .data-row strong,.data-row code,.incoming{font:10px ui-monospace,Consolas,monospace;overflow-wrap:anywhere}
 .data-row strong,.data-row code{color:#b9ced9;text-align:right}

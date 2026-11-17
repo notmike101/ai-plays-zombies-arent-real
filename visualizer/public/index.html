@@ -28,6 +28,8 @@
     <div class="drawer-body">
       <section class="inspect"><div class="section-heading"><h2>Node</h2><button id="unpin" hidden>Clear</button></div><label class="sr-only" for="node-select">Inspect a node</label><select id="node-select"><option value="">Select a node…</option></select><div id="inspector"><p class="small">Tap a node or choose one above to see its activation and strongest connections.</p></div></section>
       <section><h2>Decision probabilities</h2><div id="probabilities" class="probabilities"></div><div class="data-row"><span>Expected return</span><strong id="value">—</strong></div></section>
+      <section><h2>Current observations</h2><p class="small">The actual normalized inputs for the displayed decision.</p><div id="observations"></div></section>
+      <section><h2>Recent sampled decisions</h2><p class="small">Latest 50 observed samples for this worker, newest first. Cells can be unused for wait/ready. Choices are not proof of game execution. Samples may be skipped; history resets when the server restarts.</p><ol id="decision-log" aria-label="Recent sampled decisions"></ol></section>
       <section><h2>Worker</h2><p id="connection-detail" class="small">Looking for an observer</p><div class="data-row"><span>Game</span><strong id="game">—</strong></div><div class="data-row"><span>Worker / episode</span><strong id="worker">—</strong></div><div class="data-row"><span>Parameters</span><strong id="parameters">—</strong></div><div class="data-row"><span>Last sample</span><strong id="age">—</strong></div><div class="data-row"><span>Revision</span><code id="revision">—</code></div></section>
       <p class="small" id="graph-note">Brightness is normalized per layer. Connections show weights, not causal explanations.</p>
     </div>

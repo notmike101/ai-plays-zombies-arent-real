@@ -1,6 +1,6 @@
 import {Renderer, formatNumber} from './graph.js';
 const $ = id => document.getElementById(id);
-let frame=null, graph=null, revision=null, preview=false, paused=false, pinned=null, selectedStream='', generation=0;
+let frame=null, graph=null, revision=null, preview=false, paused=false, pinned=null, selectedStream='', connection=null, latestState=null, history=[];
 const renderer=new Renderer($('network'),$('labels'),(mode,reason)=>{
   $('renderer').textContent=mode; $('renderer').title=reason||'Draws only when a sample or the view changes';
 });
@@ -15,7 +15,7 @@ function showStatus(status, detail) {
   text('connection-detail',detail);
 }
 function resetView() {
-  generation++;
+  history=[];latestState=null;$('observations').replaceChildren();$('decision-log').replaceChildren();delete $('decision-log').dataset.signature;
   frame=null;graph=null;revision=null;pinned=null;renderer.graph=null;renderer.layout=null;renderer.frame=null;renderer.focus=null;
   renderer.revision=null;renderer.stream=null;
   renderer.draw();$('empty').hidden=false;$('probabilities').replaceChildren();$('node-select').replaceChildren(new Option('Select a node…',''));
@@ -32,6 +32,7 @@ function setMode(isPreview) {
   $('empty').querySelector('h2').textContent=preview?'Waiting for a preview stream':'Waiting for a policy worker';
   $('empty').querySelector('p').textContent=preview?'Preview uses a real, separate PyTorch network fed synthetic observations. It never connects to the game.':'The first worker with the observer enabled will connect automatically. Your training keeps running independently.';
   $('empty').querySelector('span').textContent=preview?'Start with: .\\visualizer\\start.ps1 -Preview':'Observer integration is required on the next training launch.';
+  connect();
 }
 function inspect(node) {
   if(!node||!frame)return;
@@ -44,7 +45,7 @@ function inspect(node) {
   if(incoming.some(e=>e.kind==='gate-rms'))box.append(element('p','small','GRU connections show unsigned RMS across three gate weights. They are summaries, not individual synapses.'));
 }
 function updateFrame(next) {
-  // Poll promptly, but redraw only when the observer publishes a different sample.
+  // Idle connection updates do not redraw unchanged inference.
   if(frame && frame.stream===next.stream && frame.sequence===next.sequence &&
      frame.timestamp===next.timestamp && frame.model_revision===next.model_revision)return;
   if(next.graph){graph=next.graph;revision=next.model_revision;}
@@ -55,6 +56,9 @@ function updateFrame(next) {
   text('worker',`${frame.worker_pid} / ${frame.episode||'—'}`);
   text('parameters',graph.parameters.toLocaleString());text('phase',friendly(frame.phase).toUpperCase());
   const inputs=graph.layers.find(l=>l.kind==='input'),hidden=graph.layers.find(l=>l.kind==='gru'),heads=graph.layers.filter(l=>['policy','value'].includes(l.kind));
+  $('observations').replaceChildren(...inputs.labels.map((label,index)=>{
+    const row=element('div','data-row');row.append(element('span','',friendly(label)),element('strong','',formatNumber(frame.values?.[inputs.id]?.[index])));return row;
+  }));
   text('architecture',`${inputs.size} → GRU ${hidden.size} → ${heads.map(l=>l.size).join(' / ')}`);
   text('revision',frame.model_revision.slice(0,10));text('graph-note',`${graph.edge_note} Brightness is normalized per layer.`);
   const actionHead=heads.find(l=>l.kind==='policy'),cellHead=heads.find(l=>l.id==='hc');
@@ -72,37 +76,61 @@ function updateFrame(next) {
   if(pinned)inspect(renderer.layout.byId.get(pinned));
   text('footer-state',`${preview?'Synthetic inference':'Observed inference'} · sample ${frame.sequence} · ${renderer.layout.nodes.length} nodes`);
 }
-async function poll() {
-  const requestedGeneration=generation;
-  let delay=50;
-  try {
-    const args=new URLSearchParams();if(preview)args.set('preview','1');if(selectedStream)args.set('stream',selectedStream);if(revision)args.set('revision',revision);
-    const response=await fetch(`/api/state?${args}`,{signal:AbortSignal.timeout(4000)});if(!response.ok)throw new Error(`HTTP ${response.status}`);
-    const data=await response.json();
-    if(requestedGeneration!==generation){setTimeout(poll,0);return;}
+function renderHistory() {
+  const signature=history.map(entry=>`${entry.stream}:${entry.sequence}`).join('|');
+  if($('decision-log').dataset.signature===signature)return;
+  $('decision-log').dataset.signature=signature;
+  $('decision-log').replaceChildren(...history.slice().reverse().map(entry=>{
+    const row=element('li');
+    row.append(element('div','small',`${new Date(entry.timestamp*1000).toLocaleTimeString()} · ${entry.phase} · #${entry.sequence}`));
+    for(const choice of entry.choices){
+      const probability=typeof choice.probability==='number'?` · ${(choice.probability*100).toFixed(1)}%`:'';
+      row.append(element('div','',`${choice.head}: ${friendly(choice.label)}${probability}`));
+    }
+    if(entry.skipped)row.append(element('div','small',`${entry.skipped} published samples not observed between these entries`));
+    return row;
+  }));
+}
+function applyState(data) {
+    if(data.history!==null)history=data.history||[];
+    const retainedGraph=data.frame?.graph||(latestState?.frame?.model_revision===data.frame?.model_revision?latestState?.frame?.graph:null);
+    latestState={...data,frame:data.frame?{...data.frame,graph:retainedGraph}:null};
     const options=[new Option('Automatic attachment',''),...data.streams.map(s=>new Option(`Game ${s.game_pid} · worker ${s.worker_pid}${s.age>15?' · stale':''}`,s.id))];
     if(selectedStream&&!data.streams.some(s=>s.id===selectedStream))options.push(new Option('Selected worker unavailable',selectedStream));
     const optionSignature=options.map(o=>`${o.value}:${o.text}`).join('|');
     if($('stream').dataset.signature!==optionSignature){$('stream').replaceChildren(...options);$('stream').dataset.signature=optionSignature;}
     $('stream').value=selectedStream;
-    const detail=data.status==='live'?`Following game ${data.frame.game_pid}`:data.status==='stale'?'No fresh sample · inference may be idle':data.status==='preview'?'Separate model · synthetic observations':data.status==='error'?data.frame.error:'Auto-attach is armed';
+    const detail=data.status==='live'?`Connected · following game ${data.frame.game_pid}`:data.status==='stale'?'Connected · no fresh sample; inference may be idle':data.status==='preview'?'Connected · synthetic observations':data.status==='error'?data.frame.error:'Connected · waiting for an observer';
     showStatus(data.status,detail);text('age',data.age===undefined?'—':`${data.age.toFixed(1)}s ago`);
-    if(!paused){
-      if(data.frame?.error){resetView();$('empty').querySelector('h2').textContent='Observer unavailable';$('empty').querySelector('p').textContent=data.frame.error;}
-      else if(data.frame)updateFrame(data.frame);
-      else if(frame)resetView();
-    }
-  } catch(error) {showStatus('offline','Server unavailable · retrying');text('age','Disconnected');delay=1000;}
-  // Requests stay sequential; a slow server cannot accumulate outstanding polls.
-  setTimeout(poll,delay);
+    if(!paused)renderState();
+}
+function renderState() {
+  const data=latestState;if(!data)return;
+  if(data.frame?.error){
+    resetView();$('empty').querySelector('h2').textContent='Observer unavailable';$('empty').querySelector('p').textContent=data.frame.error;
+  } else if(data.frame)updateFrame(data.frame);
+  else if(frame){
+    const retainedHistory=history;resetView();history=retainedHistory;
+  }
+  renderHistory();
+}
+function connect() {
+  connection?.close();
+  const args=new URLSearchParams();if(preview)args.set('preview','1');if(selectedStream)args.set('stream',selectedStream);
+  const source=connection=new EventSource(`/api/events?${args}`);
+  source.addEventListener('state',event=>{
+    if(source!==connection)return;
+    applyState(JSON.parse(event.data));
+  });
+  source.onerror=()=>{if(source===connection){showStatus('offline','Connection lost · reconnecting');text('age','Disconnected');}};
 }
 $('live').onclick=()=>setMode(false);$('preview').onclick=()=>setMode(true);
-$('stream').onchange=()=>{selectedStream=$('stream').value;resetView();};
+$('stream').onchange=()=>{selectedStream=$('stream').value;resetView();connect();};
 $('density').onchange=()=>{renderer.count=Number($('density').value);renderer.draw();};
 $('fit').onclick=()=>renderer.fit();
 $('zoom-in').onclick=()=>renderer.zoomAt(renderer.zoom*1.5);
 $('zoom-out').onclick=()=>renderer.zoomAt(renderer.zoom/1.5);
-$('pause').onclick=()=>{paused=!paused;$('pause').setAttribute('aria-pressed',String(paused));text('pause',paused?'▶ Resume':'Ⅱ Pause');$('pause-banner').hidden=!paused;};
+$('pause').onclick=()=>{paused=!paused;$('pause').setAttribute('aria-pressed',String(paused));text('pause',paused?'▶ Resume':'Ⅱ Pause');$('pause-banner').hidden=!paused;if(!paused)renderState();};
 function pin(node){pinned=node?.id||null;renderer.focus=pinned;$('node-select').value=pinned||'';$('unpin').hidden=!pinned;renderer.draw();if(node){$('details').open=true;inspect(node);}}
 $('unpin').onclick=()=>pin(null);$('node-select').onchange=()=>pin(renderer.layout?.byId.get($('node-select').value));
 const stage=$('stage'),pointers=new Map();let drag=null,moved=false;
@@ -139,4 +167,4 @@ stage.addEventListener('pointercancel',e=>releasePointer(e,true));
 stage.addEventListener('lostpointercapture',e=>releasePointer(e,true));
 stage.addEventListener('wheel',e=>{e.preventDefault();const p=point(e);renderer.zoomAt(renderer.zoom*Math.exp(-e.deltaY*.001),p.x,p.y);},{passive:false});
 new ResizeObserver(()=>renderer.draw()).observe(stage);
-poll();
+connect();
