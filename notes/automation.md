@@ -38,6 +38,19 @@ segments plus Enter are a polygon, not a continuous freehand lasso. Do not add r
 wheel: posted wheel passes the anchor check. Win32 raw wheel is usButtonFlags
 0x0400 plus signed usButtonData; 0x0010 is middle-button-down, not wheel.
 
+## Native evidence for the input routing
+REA/Ghidra decompiled the window procedure at 0x1404b96f0. Its WM_INPUT branch
+runs only when the byte at RVA 0x68e6b9 is nonzero and processes movement, not
+button or wheel flags. WM_MOUSEMOVE runs with the opposite gate. Posted button
+and wheel handlers are separate. A live read of the gate returned zero.
+This static control flow corroborates the isolated runtime surface audit; it is
+not itself a runtime trace. Evidence IDs:
+- ev_bc8fd5105c5ededb4956c0d819b6d220656752c11630d0f72dc56f6cdf7783f2 (PE imports)
+- ev_74ec6864cc3252a41cb4ce894dff336311bdcc018c1f4b5e146fe0380a77f533 (raw IAT xrefs)
+- ev_eceeb8e5c5bff6861e26aef51bc7529d345104781444786ac87dea164978be5a (window procedure)
+Saved complete Evidence is under analysis/interface-*.json. The one-shot CLI
+sessions completed and released their engines; no persistent MCP session was opened.
+
 ## Coordinates, keyboard, and state
 - GetClientRect supplies physical client pixels. Menu coordinates are fractions:
   PlayNow (.4245,.844), CAMPAIGN (.207,.368), START OVER (.451,.738).
