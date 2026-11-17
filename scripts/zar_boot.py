@@ -69,12 +69,19 @@ def click_fraction(vi, x, y):
     time.sleep(1.5)
 
 
-def menu_points(width, height):
+def campaign_in_progress(progress):
+    cleared = len(re.findall(r'^stage [1-5]\s*=\s*(?!none\b)\S+', progress, re.M))
+    return 0 < cleared < 5
+
+
+def menu_points(width, height, in_progress=False):
     # shortcut: calibrated English UI scale 1 layouts; calibrate new sizes before use.
     if (width, height) == (1920, 1200):
-        return (.4245, .844), (.207, .368), (.451, .738), (.446, .813)
+        return ((.4245, .844), (.207, .368),
+                (.446, .592) if in_progress else (.451, .738), (.446, .663))
     if (width, height) == (3840, 2160):
-        return (.453, .709), (.16, .454), (.286, .454), (.286, .496)
+        return ((.453, .709), (.16, .454),
+                (.286, .356) if in_progress else (.286, .454), (.286, .394))
     raise ZAREnvError(f'Uncalibrated client layout {width}x{height}')
 
 
@@ -94,6 +101,10 @@ def boot(copy_dir, dest=('campaign', 'stage1')):
     settings = (path / 'steam_cloud/settings.ini').read_text()
     if not re.search(r'^difficulty\s*=\s*normal\s*$', settings, re.M):
         raise ZAREnvError(f'{path.name} must use normal difficulty')
+    progress = path / 'steam_cloud/progress/Boston__MA.progress'
+    in_progress = campaign_in_progress(progress.read_text() if progress.exists() else '')
+    if dest[1] == 'continue' and not in_progress:
+        raise ZAREnvError('CONTINUE requires a partially cleared Boston campaign')
     started = time.monotonic()
     process = subprocess.Popen([str(path / EXE)], cwd=path,
                                creationflags=subprocess.DETACHED_PROCESS,
@@ -116,7 +127,7 @@ def boot(copy_dir, dest=('campaign', 'stage1')):
             raise ZAREnvError('Virtual-input hooks/pump unavailable')
         rect = ctypes.wintypes.RECT()
         user32.GetClientRect(vi.hwnd, ctypes.byref(rect))
-        welcome, campaign, fresh, resume = menu_points(rect.right, rect.bottom)
+        welcome, campaign, fresh, resume = menu_points(rect.right, rect.bottom, in_progress)
         step = 'welcome'
         time.sleep(max(0, 75 - (time.monotonic() - started)))
         click_fraction(vi, *welcome)
