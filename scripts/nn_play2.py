@@ -101,6 +101,21 @@ def masks_for(st):
     return mu, np.ones(NC, dtype=np.float32)
 
 
+def ready_once(env):
+    """START single SPACE; 2nd SPACE only if a confirm dialog actually
+    blocks (double-SPACE pauses the battle = wedge). Verify tick."""
+    env.vi.key_press(0x20, sc=57)
+    time.sleep(3.0)
+    zo = env.obs()
+    if (zo['zomb'] or 0) == 0:
+        env.vi.key_press(0x20, sc=57)
+        time.sleep(3.0)
+    for _ in range(4):
+        zo = env.obs()
+        if (zo['zomb'] or 0) > 0:
+            break
+        time.sleep(2.0)
+
 def run_episode(args):
     pid, sd, eps_rand, tag = args
     from env_zar import ZAREnv
@@ -176,7 +191,7 @@ def run_episode(args):
             m_before = o['money']
             did = False
             if u == 1 and st['planning']:
-                env.ready()            # SPACE + dialog YES + tick verify
+                ready_once(env)
                 st['planning'] = False
                 t0 = time.time()
                 step_at = time.time()
@@ -238,7 +253,7 @@ def run_episode(args):
             # ---------------- termination ----------------
             if st['planning']:
                 if step >= PLAN_STEPS:
-                    env.ready()
+                    ready_once(env)
                     st['planning'] = False
                     t0 = time.time()
                     step_at = time.time()
@@ -247,6 +262,14 @@ def run_episode(args):
                 time.sleep(0.2)
                 continue
             bt = time.time() - t0
+            if (o['civ'], o['zomb']) == (prev_o['civ'], prev_o['zomb']) \
+                    and (o['zomb'] or 0) > 0:
+                st['frz'] = st.get('frz', 0) + 1
+                if st['frz'] >= 2:     # pause wedge: unpause
+                    env.vi.key_press(0x20, sc=57)
+                    st['frz'] = 0
+            else:
+                st['frz'] = 0
             if o['zomb'] == 0 and bt > 25 and fought:
                 win = True
                 break
