@@ -7,6 +7,14 @@ from game_mechanics import UNITS, UNIT_IDS, PERKS
 
 ABILITY_IDS = dict(zip(NATIVE_ABILITIES,
     (9, 1, 12, 11, 10, 18, 19, 23, 24, 25, 34, 35, 36, 29, 37, 38, 39, 40, 41)))
+KEY_ACTIONS = {
+    'officer_mode': (81,16,True), 'officer_paint': (90,44,True),
+    'detonate_all': (84,20,True), 'next_special': (70,33,True),
+    'pan_up': (87,17,False), 'pan_left': (65,30,False),
+    'pan_down': (83,31,False), 'pan_right': (68,32,False),
+    'speed_half': (112,59,False), 'speed_1': (113,60,False),
+    'speed_2': (114,61,False), 'speed_4': (115,62,False),
+}
 
 
 def wait_until(predicate, description, timeout=.8):
@@ -136,6 +144,32 @@ class Controls:
         if name not in panel['actions']:
             raise ZAREnvError('Unavailable native HUD action: '+name)
         self.env.vi.click(*panel['actions'][name])
+        self.frames()
+
+    def key_action(self, name):
+        vk,sc,shift = KEY_ACTIONS[name]
+        vi = self.env.vi
+        if shift: vi.key_down(16,sc=42)
+        try: vi.key_press(vk,sc=sc,hold=.15 if name.startswith('pan_') else .05)
+        finally:
+            if shift: vi.key_up(16,sc=42)
+        self.frames()
+
+    def gesture(self, point, end=None, shift=False, right=False):
+        """Continue an armed tool or edit a native handle; selection is preserved."""
+        vi = self.env.vi
+        if shift: vi.key_down(16,sc=42)
+        try:
+            if end is None: vi.click(*point,right=right)
+            elif right: raise ValueError('Right drag is not a gameplay gesture')
+            else: vi.drag(*point,*end)
+        finally:
+            if shift: vi.key_up(16,sc=42)
+        self.frames()
+
+    def zoom(self, steps, point):
+        if steps not in (-1,1): raise ValueError('Expected one zoom step')
+        self.env.vi.wheel(steps,*point,gap=0)
         self.frames()
 
     def planning_roster(self):

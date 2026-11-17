@@ -106,8 +106,11 @@ class NativeState:
     def selection(self):
         e = self.env
         return dict(units=e.array(0x65c490,'<u8'),
-                    helicopter=e.scalar(0x65c4e0,'<q'),
-                    vehicle=e.scalar(0x65c4e8,'<q'),
+                    walls=e.array(0x65c4b8,'<i8'),
+                    zones=e.array(0x65c4f8,'<i8'),
+                    evac=e.array(0x65c520,'<i8'),
+                    zone=e.scalar(0x65c4e0,'<q'),
+                    edge=e.scalar(0x65c4e8,'<q'),
                     gate=e.scalar(0x65c4f0,'<q')-1,
                     building=e.scalar(0x6593b0,'<q')-1,
                     polygon=e.array(0x65ccd8,VEC,limit=10000),
@@ -150,6 +153,7 @@ class NativeState:
                         ('rect',0x656680,('<f4',4)), ('destroyed',0x6566d8,'u1'),
                         ('damage',0x656700,'<f4'), ('max_hp',0x656728,'<f4'),
                         ('class',0x658f00,'u1'), ('ability',0x658f50,'u1'),
+                        ('officer_kind',0x658f78,'u1'),
                         ('area',0x658d70,'<f4'), ('center',0x658d98,VEC))},
                     camera=[e.scalar(rva,'<f') for rva in (0x6553ac,0x6553b0,0x6553b4)],
                     tick=tick)

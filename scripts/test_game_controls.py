@@ -7,6 +7,14 @@ from game_mechanics import UNITS
 
 
 class ControlsTests(unittest.TestCase):
+    def test_gesture_preserves_selection_and_releases_modifier_on_failure(self):
+        c=Controls(Mock());c.frames=Mock();c.cancel=Mock()
+        c.env.vi.drag.side_effect=RuntimeError('input failure')
+        with self.assertRaisesRegex(RuntimeError,'input failure'):
+            c.gesture((10,20),(30,40),shift=True)
+        c.cancel.assert_not_called()
+        c.env.vi.key_up.assert_called_once_with(16,sc=42)
+
     def test_cancel_never_issues_move_order_without_active_tool(self):
         env = Mock()
         c = Controls(env)

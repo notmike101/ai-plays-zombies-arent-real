@@ -112,3 +112,11 @@ SP upgrade buttons remain absent under shipped hide_unit_upgrades=true.
 An existing progress file containing only version/resume/perks is still unplayed.
 Boot now chooses its menu by actual stage scores, not file existence. Live inst13
 reboot reproduced failure with old predicate and passed with corrected layout.
+
+Native control follow-up: corridor/hold each produced an EVAC record, with
+selection at65c520. Pan changed camera x; wheel changed zoom/anchor. A four-corner
+zone produced8 physical wall segments; HUD level-up/refund changed levels1->2->1.
+Selection corrections from native selcycle and live edge selection:65c4f8 contains
+zone indices,65c4e0/65c4e8 are selected zone/edge (NOT helicopter/vehicle indices).
+65c4b8 is the standalone-wall selection array. Gate placement on the tested zone
+edge did not produce a gate, and roof-unit RMB moves still need investigation.
