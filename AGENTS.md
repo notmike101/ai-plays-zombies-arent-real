@@ -231,3 +231,9 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
 - Trainer attachments discard only newly generated .state companions after reading
   their text dump, and only within owned game-copies. Keep .txt receipts, session
   logs and all pre-existing replay evidence; diagnostic attachments retain states.
+
+## Learning credit by phase
+- Planning consumes policy decisions without advancing the simulation. Keep
+  planning GAE discount/trace at1 so battle credit reaches early placements;
+  battle retains its separately recorded gamma/lambda. This is credit assignment,
+  not a reward for buying units, choosing READY, or spending resources.

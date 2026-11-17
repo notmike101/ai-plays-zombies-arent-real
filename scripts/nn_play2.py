@@ -34,6 +34,8 @@ except ImportError:
 MODEL = os.path.join(ROOT, 'sessions', 'nn_policy3.pt')
 HIST = os.path.join(ROOT, 'analysis', 'nn_hist3.jsonl')
 NOBS, HID = 332, 128
+PLANNING_INDEX = INPUT_LABELS.index('Planning phase')
+BATTLE_GAMMA, BATTLE_LAMBDA = .99, .95
 NU, NC = 72, 48
 TOOLS = ['wait', 'ready', 'garrison', 'mortar', 'napalm', 'turret', 'mine',
          'c4', 'gas_mortar', 'upgrade_unit', 'zone_rect', 'heli', 'cta',
@@ -558,12 +560,18 @@ def run_episode(args):
                 env.close()
 
 
-def gae(rews, vals, lam=0.95, gamma=0.99, bootstrap=0.0):
+def gae(rews, vals, lam=BATTLE_LAMBDA, gamma=BATTLE_GAMMA, bootstrap=0.0,
+        planning=None):
+    planning = [False]*len(rews) if planning is None else planning
+    if len(rews) != len(vals) or len(rews) != len(planning):
+        raise ValueError('Rewards, values and phases must have equal lengths')
     adv, last = [], 0.0
     next_value = bootstrap
-    for r, v in zip(rews[::-1], vals[::-1]):
-        delta = r + gamma * next_value - v
-        last = delta + gamma * lam * last
+    for r, v, is_planning in zip(rews[::-1], vals[::-1], planning[::-1]):
+        # Planning consumes decisions, not simulation time: preserve battle credit.
+        discount, trace = (1., 1.) if is_planning else (gamma, lam)
+        delta = r + discount * next_value - v
+        last = delta + discount * trace * last
         adv.append(last)
         next_value = v
     adv = list(reversed(adv))
@@ -597,7 +605,8 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015):
         with torch.no_grad():
             _, _, v, _ = net(X)
         vals = v.squeeze(0).numpy()
-        adv, ret = gae(list(RW), list(vals), bootstrap=t.get('bootstrap', 0.0))
+        adv, ret = gae(list(RW), list(vals), bootstrap=t.get('bootstrap', 0.0),
+                       planning=X[0, :, PLANNING_INDEX].bool().tolist())
         seqs.append((X, U, C, ULP, CLP, MU,
                      torch.tensor(adv, dtype=torch.float32),
                      torch.tensor(ret, dtype=torch.float32), MC))

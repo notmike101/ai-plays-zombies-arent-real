@@ -13,6 +13,20 @@ import nn_play2 as train
 
 
 class LearningTests(unittest.TestCase):
+    def test_battle_credit_survives_long_planning_prefix(self):
+        for n in (0, 20, 60):
+            rews, vals = [0.]*n+[2.], [.3]*n+[.5]
+            adv, ret = train.gae(rews, vals, planning=[True]*n+[False])
+            self.assertAlmostEqual(ret[0], 2.)
+            self.assertAlmostEqual(adv[0], 2.-vals[0])
+
+    def test_phase_aware_gae_preserves_battle_discount_and_bootstrap(self):
+        _, ret = train.gae([0., 0.], [0., 0.], planning=[True, False],
+                           gamma=.5, lam=1., bootstrap=4.)
+        np.testing.assert_allclose(ret, [2., 2.])
+        with self.assertRaises(ValueError):
+            train.gae([1.], [0.], planning=[])
+
     def test_spatial_actions_cannot_click_the_planning_hud(self):
         st = dict(planning=True, deck=[])
         for tool in range(2, 34):
