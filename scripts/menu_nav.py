@@ -52,10 +52,7 @@ class MenuDriver:
         self.key(vk, sc, ext=True, n=n)
 
     def wheel(self, steps, gap=0.5, drain=1.0):
-        for _ in range(abs(steps)):
-            d = 120 if steps > 0 else -120
-            user32.PostMessageW(self.H, 0x020A, (d & 0xFFFF) << 16, 0)
-            time.sleep(gap)
+        self.vi.wheel(steps, gap=gap)
         time.sleep(drain)
 
     def click_cap(self, cx, cy, foreground=True):

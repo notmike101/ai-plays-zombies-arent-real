@@ -297,6 +297,7 @@ class VirtualInput:
         if version != VERSION:
             self.close()
             raise RuntimeError(f"DLL version {version}, expected {VERSION}; restart this copy")
+        self._last_cx, self._last_cy = struct.unpack_from('<ii', self.buf, OFF['cx'])
         # raw-input pump: where to post WM_INPUT (DLL v2+; older DLLs ignore it)
         self._w64(OFF["raw_hwnd"], int(self.hwnd))
 
