@@ -1,6 +1,17 @@
 # ZAR Tracker (live state — update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — deterministic interface complete)
+## CURRENT STATE (2026-11-17 — telemetry transport assessment)
+- Read-only source assessment: observer publishes latest-only JSON at <=5 Hz;
+  browser polls /api/state with a 50 ms delay after each completed request.
+  Server re-reads runtime snapshots per request; no persistent event/log stream.
+- Proposed direction for discussion: SSE for browser telemetry/log delivery;
+  retain nonblocking observation and give logs bounded history/replay distinct
+  from replaceable activation snapshots. WebSocket depends on whether actual
+  bidirectional commands are wanted. No transport implementation authorized yet.
+- No trainer/game/server launched, stopped or modified in this assessment;
+  runtime/process state below is prior interface evidence, not revalidated here.
+
+## Prior verified state (2026-11-17 — deterministic interface complete)
 - Interface only: no ML/trainer source changes, subagents, console commands,
   physical cursor input or game-install writes. Unrelated training artifacts
   remain uncommitted and untouched by this work.
@@ -72,6 +83,9 @@ dense crowds + Battleship water AOE = path to silver. (notes/game-rules.md)
   24980,23776,49320-old etc]; user game pid 19588-era = user's own (untouched).
 
 ## HISTORY (dated run summaries)
+- 2026-11-17: Assessed persistent telemetry and log streaming from current
+  observer/server/browser source; discussed SSE versus bidirectional WebSocket.
+  Product code unchanged; no live latency measurements or game tests performed.
 - 2026-11-15: L5 RE + scripted WIN x2 bronze (RE phase complete).
 - 2026-11-16: env_zar memory channel FAST mode, parallel CEM, F5 speed,
   loadout file model, 4-board L3 farm; CEM plateaued (board-bound).
