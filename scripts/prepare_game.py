@@ -77,6 +77,17 @@ def sha256(path):
         return hashlib.file_digest(f, 'sha256').hexdigest()
 
 
+def full_unlock_profile(source):
+    """User-authorized training availability; does not buy levels or change budgets."""
+    entries = set(re.findall(r'^(unit|ability|upgrade|perk)\s+(\w+)\s*(?:#.*)?$',
+                             (Path(source)/'unlocks.ini').read_text(), re.M))
+    if not entries:
+        raise ValueError('No unlock definitions found in the supported game')
+    entries.add(('perk', 'Extra_Zones'))  # Verified native perk in this supported build.
+    return ('# Full-availability training profile; not a record of earned progression.\n'
+            'breach_restarts = 0\n'+''.join(f'unlock = {kind} {name}\n' for kind, name in sorted(entries))).encode()
+
+
 def prepare_copy(source, name, unlocks=None):
     source = Path(source)
     if not re.fullmatch(r'inst\d+', name):
@@ -91,11 +102,12 @@ def prepare_copy(source, name, unlocks=None):
     target = copies/name
     if target.exists():
         raise FileExistsError(f'Refusing to overwrite {target}; choose a new copy')
-    earned = Path(unlocks).read_bytes() if unlocks is not None else None
+    profile = Path(unlocks).read_bytes() if unlocks is not None else None
     files = checked_files(source)
     expected = expected_hash()
     if sha256(source/'zombies-arent-real.exe') != expected:
         raise ValueError('Unsupported game build; revalidate native offsets before copying')
+    if profile is None: profile = full_unlock_profile(source)
     needed = sum(f.stat().st_size for f in files)
     if shutil.disk_usage(ROOT).free < needed + 2*2**30:
         raise ValueError('Not enough disk headroom for the copy plus 2 GiB reserve')
@@ -111,8 +123,7 @@ def prepare_copy(source, name, unlocks=None):
             raise ValueError('Game build changed during copying')
         (stage/'steam_cloud').mkdir()
         (stage/'steam_cloud/settings.ini').write_text(SETTINGS, encoding='utf-8')
-        if earned is not None:
-            (stage/'steam_cloud/unlocks.ini').write_bytes(earned)
+        (stage/'steam_cloud/unlocks.ini').write_bytes(profile)
         (stage/'steam_appid.txt').write_text('5185890\n', encoding='ascii')
         stage.rename(target)
     return target

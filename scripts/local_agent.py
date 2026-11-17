@@ -150,9 +150,12 @@ def preflight(copy='inst1'):
         kit = 'Garrison Mortar Napalm Nest Mine C4 GasMortar'
         if not re.search(r'^roster_plan\s*=\s*'+kit+r'\s*$', settings, re.M):
             raise ValueError('Planning roster differs from the trained hotkey layout')
+        from prepare_game import full_unlock_profile
         unlocks = (path/'steam_cloud/unlocks.ini').read_text()
-        if any(not re.search(r'^unlock\s*=\s*unit\s+'+unit+r'\s*$', unlocks, re.M) for unit in kit.split()):
-            raise ValueError('Planning kit is locked: use existing earned unlocks via prepare-game --unlocks-from; never fabricate unlocks')
+        wanted = set(re.findall(r'^unlock\s*=\s*(\w+\s+\w+)\s*$', full_unlock_profile(path).decode(), re.M))
+        actual = set(re.findall(r'^unlock\s*=\s*(\w+\s+\w+)\s*$', unlocks, re.M))
+        if wanted-actual:
+            raise ValueError('Incomplete training availability; prepare a new full-availability copy: '+', '.join(sorted(wanted-actual)))
         return dict(copy=copy, sha256=digest)
     check('game', game)
 
