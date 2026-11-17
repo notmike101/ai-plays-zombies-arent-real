@@ -51,10 +51,11 @@ def nav(pid):
     env = ZAREnv(pid)          # self-injects once per boot (sentinel)
     vi = env.vi
     time.sleep(25)             # boot to menu
-    # PlayNow -> ENTER -> CAMPAIGN -> NORMAL -> CONTINUE(level from file)
+    # PlayNow -> ENTER -> CAMPAIGN -> NORMAL -> START OVER (fresh L1 run;
+    # MAP-COMPLETE campaign screen layout, shot px 2026-11-17)
     for step, (x, y), k in [(0, (627, 821), 4), (1, (0, 0), 0),
-                            (2, (424, 453), 3), (3, (866, 742), 3),
-                            (4, (857, 976), 8)]:
+                            (2, (424, 453), 3), (3, (705, 765), 2),
+                            (4, (705, 926), 12)]:
         if x:
             vi.move_to(x, y)
             time.sleep(0.5)
@@ -66,7 +67,8 @@ def nav(pid):
         o = env.obs()
     except Exception:
         return 'OBSFAIL'
-    return 'READY' if (o.get('civ') or 0) > 90000 else f'civ{o.get("civ")}'
+    return 'READY' if (o.get('civ') or 0) > 0 and o.get('money') \
+        is not None else f'civ{o.get("civ")}'
 
 
 if __name__ == '__main__':
