@@ -93,6 +93,9 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   Keep `/api/state` for diagnostics; do not restore browser polling. The server
   samples the existing runtime JSON files through a shared 200 ms cache, even
   with no viewers. This is a server-to-browser stream, not a trainer socket.
+  The sampler wakes SSE viewers after sampling; do not add a second viewer poll
+  delay. Cache decoded files by actual bytes, not only size/mtime. Keep decision
+  count/interval distinct from published sequence and telemetry age.
 - Recent decisions are sampled telemetry: 200 compact records in server memory
   across all workers/modes, latest 50 for the selected stream in the Inspector.
   Reconnect sends current topology and retained history; restart clears history.

@@ -39,6 +39,8 @@ class Observer:
         self._revision = None
         self._last_publish = 0
         self.sequence = 0
+        self.decision = 0
+        self._last_decision = None
         try:
             self.directory.mkdir(parents=True, exist_ok=True)
             self._thread = threading.Thread(target=self._write_loop, daemon=True, name='policy-telemetry')
@@ -152,12 +154,18 @@ class Observer:
 
     def publish(self, **kwargs):
         """Best effort, <=5 Hz, latest frame only. Failure never propagates to training."""
-        if self._closed or time.monotonic() - self._last_publish < .2:
+        now = time.monotonic()
+        interval = (now-self._last_decision)*1000 if self._last_decision is not None else None
+        self._last_decision = now
+        self.decision += 1
+        if self._closed or now - self._last_publish < .2:
             return False
         try:
             frame = self.snapshot(**kwargs)
             if frame is None or self._thread is None:
                 return False
+            frame['decision'] = self.decision
+            frame['decision_interval_ms'] = interval
             self.sequence += 1
             self._last_publish = time.monotonic()
             try:
@@ -172,12 +180,23 @@ class Observer:
     def _write_loop(self):
         destination = self.directory / f'{self.stream}.json'
         temporary = self.directory / f'{self.stream}.tmp'
+        graph, encoded_graph = None, None
         while True:
             frame = self._queue.get()
             if frame is None:
                 break
             try:
-                data = json.dumps(frame, allow_nan=False, separators=(',', ':'))
+                current = frame.get('graph')
+                if current is not None:
+                    if current is not graph:
+                        encoded_graph = json.dumps(current, allow_nan=False, separators=(',', ':'))
+                        graph = current
+                    # Topology dominates file size and is immutable between revisions.
+                    data = json.dumps({k: v for k, v in frame.items() if k != 'graph'},
+                                      allow_nan=False, separators=(',', ':'))
+                    data = data[:-1]+',"graph":'+encoded_graph+'}'
+                else:
+                    data = json.dumps(frame, allow_nan=False, separators=(',', ':'))
                 temporary.write_text(data, encoding='utf-8')
                 os.replace(temporary, destination)
             except (OSError, ValueError, TypeError):

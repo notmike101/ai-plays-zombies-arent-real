@@ -68,6 +68,19 @@ class FeedTests(unittest.TestCase):
         os.utime(path, ns=(stamp, stamp))
         self.assertEqual(self.feed.state(now=121)['status'], 'live')
 
+    def test_unchanged_bytes_skip_decode_but_deleted_files_release_cache(self):
+        self.write(frame('one', 100))
+        with patch('server.json.loads', wraps=json.loads) as decode:
+            self.feed.state(now=100)
+            self.feed.state(now=101)
+            self.assertEqual(decode.call_count, 1)
+            self.write(frame('one', 102))
+            self.feed.state(now=102)
+            self.assertEqual(decode.call_count, 2)
+        (self.root / 'one.json').unlink()
+        self.feed.state(now=103)
+        self.assertEqual(self.feed.decoded, {})
+
     def test_old_crash_files_cannot_crowd_out_new_stream(self):
         for i in range(130):
             data = frame(f'z-old-{i:03}', 0)

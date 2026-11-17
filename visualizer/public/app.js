@@ -56,9 +56,12 @@ function updateFrame(next) {
   text('worker',`${frame.worker_pid} / ${frame.episode||'—'}`);
   text('parameters',graph.parameters.toLocaleString());text('phase',friendly(frame.phase).toUpperCase());
   const inputs=graph.layers.find(l=>l.kind==='input'),hidden=graph.layers.find(l=>l.kind==='gru'),heads=graph.layers.filter(l=>['policy','value'].includes(l.kind));
-  $('observations').replaceChildren(...inputs.labels.map((label,index)=>{
-    const row=element('div','data-row');row.append(element('span','',friendly(label)),element('strong','',formatNumber(frame.values?.[inputs.id]?.[index])));return row;
+  if(changed)$('observations').replaceChildren(...inputs.labels.map(label=>{
+    const row=element('div','data-row');row.append(element('span','',friendly(label)),element('strong'));return row;
   }));
+  [...$('observations').children].forEach((row,index)=>{
+    row.lastChild.textContent=formatNumber(frame.values?.[inputs.id]?.[index]);
+  });
   text('architecture',`${inputs.size} → GRU ${hidden.size} → ${heads.map(l=>l.size).join(' / ')}`);
   text('revision',frame.model_revision.slice(0,10));text('graph-note',`${graph.edge_note} Brightness is normalized per layer.`);
   const actionHead=heads.find(l=>l.kind==='policy'),cellHead=heads.find(l=>l.id==='hc');
@@ -74,7 +77,8 @@ function updateFrame(next) {
   const val=heads.find(l=>l.kind==='value');text('value',formatNumber(frame.values?.[val?.id]?.[0]));
   if(changed){const options=[new Option('Select a node…',''),...renderer.layout.nodes.map(n=>new Option(`${n.layer} / ${friendly(n.label)}`,n.id))];$('node-select').replaceChildren(...options);if(pinned&&!renderer.layout.byId.has(pinned))pinned=null;$('node-select').value=pinned||'';}
   if(pinned)inspect(renderer.layout.byId.get(pinned));
-  text('footer-state',`${preview?'Synthetic inference':'Observed inference'} · sample ${frame.sequence} · ${renderer.layout.nodes.length} nodes`);
+  const cadence=Number.isFinite(frame.decision_interval_ms)?` · decision interval ${Math.round(frame.decision_interval_ms)} ms`:'';
+  text('footer-state',`${preview?'Synthetic inference':'Observed inference'} · sample ${frame.sequence}${frame.decision===undefined?'':` / decision ${frame.decision}`}${cadence} · ${renderer.layout.nodes.length} nodes`);
 }
 function renderHistory() {
   const signature=history.map(entry=>`${entry.stream}:${entry.sequence}`).join('|');

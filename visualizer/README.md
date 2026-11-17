@@ -74,6 +74,15 @@ The browser holds one **server-sent events (SSE)** connection to `/api/events` u
 
 The server samples the existing observer files through one shared **200 ms cache** for all viewers, including while no browser is open. There is no network dependency in inference. This replaces repeated HTTP requests/file reads; it does not increase model decision frequency or promise lower end-to-end latency than the former 50 ms polling. The observer still publishes at most five snapshots/second. Actual values remain still between decisions.
 
+The sampler wakes SSE viewers immediately after each sample, avoiding a second
+200 ms polling interval per viewer. Unchanged file bytes reuse decoded JSON;
+byte comparison deliberately catches same-size writes with unchanged timestamps.
+The writer serializes immutable topology once per revision, and the input table
+reuses its rows. The footer separates published sample number from decision
+number and reports the interval between the worker's consecutive publish calls.
+That interval includes game actions and observation work, not just neural-network
+inference. Sample age measures telemetry freshness; it is not inference duration.
+
 The Inspector now lists **Current observations** with their exact feature labels and formatted values, plus **Recent sampled decisions** with timestamps, phase, published sequence, chosen head labels and probabilities. A sampled choice is not proof that the game executed it. Cell choices may be unused for wait/ready. Pause freezes the graph, input list and decision log while telemetry collection continues; Resume displays the latest retained state.
 
 History is **bounded, in-memory sampled telemetry**: the server retains 200 compact records total across all workers/modes and returns the latest 50 for the selected stream. Reconnecting replaces the displayed list from that retained history, avoiding duplicates. History survives observer file removal for a manually selected stream, but is cleared by a server restart and older entries are evicted. Preview records never appear in Live. Published sequence gaps are shown when detectable; the observer's own dropped/throttled samples are not recoverable. This is neither trainer stdout nor a durable, complete event journal. Original trainer logs remain in their existing locations.

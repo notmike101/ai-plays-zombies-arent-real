@@ -88,9 +88,23 @@ class ObserverTests(unittest.TestCase):
         data = json.loads(files[0].read_text())
         self.assertEqual(data['game_pid'], 123)
         self.assertEqual(data['phase'], 'planning')
+        self.assertEqual(data['decision'], 1)
+        self.assertIsNone(data['decision_interval_ms'])
         self.assertEqual(self.observer._queue.maxsize, 1)
         self.observer.close()
         self.assertFalse(self.net.gru._forward_hooks)
+
+    def test_decision_counter_includes_throttled_decisions(self):
+        with torch.no_grad():
+            self.net(torch.ones(1, 1, 3))
+        with patch('observer.time.monotonic', return_value=10.):
+            self.assertTrue(self.observer.publish())
+        with patch('observer.time.monotonic', return_value=10.01):
+            self.assertFalse(self.observer.publish())
+        with patch('observer.time.monotonic', return_value=10.25):
+            self.assertTrue(self.observer.publish())
+        self.assertEqual(self.observer.decision, 3)
+        self.assertEqual(self.observer.sequence, 2)
 
     def test_write_failure_does_not_break_inference(self):
         self.observer.directory = Path(self.tmp.name) / 'missing' / 'child'

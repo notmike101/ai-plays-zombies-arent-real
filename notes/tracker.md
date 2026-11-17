@@ -8,7 +8,7 @@
   automatic undo restored the board. Launcher cleaned game528. Last saved policy
   c46cf2f2f5696822 and Adam remain in sessions/nn_policy3.pt. Do not overwrite this
   checkpoint with diagnostic evaluation. Resume only after validated changes.
-- Owned diagnostic inst13 game40520(created1794951944.5121891), no trainer,
+- Owned diagnostic inst13 game44708(created1794952873.5403793), no trainer,
   below-normal CPUs0-7. Revalidate process identity before action. Native reads
   and virtual input only. Installed game remains read-only. Clean probe at end.
 - Visualizer22604(created1794931712.9690397) remains on8765. Preserve/reuse.
@@ -16,12 +16,12 @@
   interval0.918s, server observation delay0.254s. Main delays: native action
   sleeps/dumps/loadout scrolling. No browser-render or battle latency claim yet.
 - Full availability corrected from52 to59 entries:16 units,19 abilities,
-  16 upgrades,8 perks. Existing inst12/13 profiles predate the perk correction;
-  prepare again while stopped before final acceptance. SP tower upgrades are
+  16 upgrades,8 perks. inst13 was prepared/rebooted with all59 entries; inst12 still predates
+  the perk correction, so prepare it while stopped before use. SP tower upgrades are
   hidden/disabled in shipped config, distinct from their unlock availability.
 - New native picker controls select every16 roster unit with extended-arrow
-  scan codes and receipts. Intermittent picker-open race still being investigated;
-  not yet integrated into policy or claimed production-ready.
+  scan codes and receipts. Two advancing UI frames fix the picker layout race;48 consecutive
+  selections passed. Not yet integrated into policy.
 - Portability, pinned reproducible DLL and guarded checkpoint sharing remain.
   Local Codex share-zar-checkpoints automation enabled every6h, changed models
   only. First release checkpoint-35a8148ff8948406 on repository GitHub Releases.

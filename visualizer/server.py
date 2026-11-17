@@ -27,6 +27,7 @@ class Feed:
         self.sampled_at = float('-inf')
         self.history = deque(maxlen=200)
         self.seen = {}
+        self.decoded = {}
 
     def _refresh(self, now):
         if 0 <= now - self.sampled_at < SAMPLE_SECONDS:
@@ -68,6 +69,7 @@ class Feed:
 
     def _read(self, now):
         frames = []
+        decoded = {}
         paths = []
         for path in self.directory.glob('*.json'):
             try:
@@ -81,8 +83,13 @@ class Feed:
                 stat = path.stat()
                 if stat.st_size > 2 * 1024 * 1024:
                     continue
-                data = json.loads(path.read_text(encoding='utf-8'),
-                                  parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
+                raw = path.read_bytes()
+                cached = self.decoded.get(path)
+                if cached is not None and cached[0] == raw:
+                    data = cached[1]
+                else:
+                    data = json.loads(raw,
+                                      parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
                 if (not isinstance(data, dict) or data.get('schema') != 1 or
                         not isinstance(data.get('stream'), str) or len(data['stream']) > 128 or
                         not isinstance(data.get('timestamp'), (int, float)) or
@@ -93,8 +100,10 @@ class Feed:
                     continue
                 if -5 <= now - data['timestamp'] <= 120:
                     frames.append(data)
+                    decoded[path] = (raw, data)
             except (OSError, ValueError, TypeError):
                 continue
+        self.decoded = decoded
         return frames
 
     def state(self, *, now=None, preview=False, stream=None, revision=None):
@@ -141,6 +150,8 @@ def make_server(host, port, feed=None):
                 self.wfile.write(b'retry: 1000\n\n')
                 self.wfile.flush()
                 while not self.server.stopped.is_set():
+                    with self.server.sample_ready:
+                        generation = self.server.generation
                     result = feed.state(preview=args.get('preview') == ['1'],
                                         stream=args.get('stream', [None])[0], revision=revision)
                     frame = result['frame'] or {}
@@ -158,7 +169,9 @@ def make_server(host, port, feed=None):
                         self.wfile.flush()
                         revision = frame.get('model_revision')
                         signature, history_signature, sent_at = current, history_key, clock
-                    self.server.stopped.wait(SAMPLE_SECONDS)
+                    with self.server.sample_ready:
+                        self.server.sample_ready.wait_for(lambda:
+                            self.server.generation != generation or self.server.stopped.is_set(), timeout=1)
             except (OSError, ValueError):
                 pass
 
@@ -212,15 +225,22 @@ def make_server(host, port, feed=None):
         def sample(self):
             while not self.stopped.is_set():
                 feed.state()
+                with self.sample_ready:
+                    self.generation += 1
+                    self.sample_ready.notify_all()
                 self.stopped.wait(SAMPLE_SECONDS)
 
         def server_close(self):
             self.stopped.set()
+            with self.sample_ready:
+                self.sample_ready.notify_all()
             self.sampler.join(timeout=4)
             super().server_close()
 
     server = Server((host, port), Handler)
     server.stopped = threading.Event()
+    server.sample_ready = threading.Condition()
+    server.generation = 0
     server.stream_slots = threading.BoundedSemaphore(16)
     server.sampler = threading.Thread(target=server.sample, daemon=True, name='telemetry-sampler')
     server.sampler.start()

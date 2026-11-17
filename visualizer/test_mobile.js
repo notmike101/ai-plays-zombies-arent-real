@@ -1,5 +1,6 @@
 // Run against a server started with --preview using playwright-cli run-code --filename=visualizer/test_mobile.js.
 async page => {
+  const base=new URL(page.url()).origin;
   const expect=(condition,message)=>{if(!condition)throw new Error(message);};
   const results=[];
   const cdp=await page.context().newCDPSession(page);
@@ -11,7 +12,7 @@ async page => {
   try {
     for(const fallback of [false,true]){
       await page.setViewportSize({width:390,height:844});
-      await page.goto(`http://localhost:8765/${fallback?'?canvas2d=1':''}`);
+      await page.goto(`${base}/${fallback?'?canvas2d=1':''}`);
       await page.waitForFunction(()=>document.querySelector('#status').textContent!=='CONNECTING');
       await page.locator('#preview').click();
       await page.waitForFunction(()=>document.querySelector('#status').textContent==='SYNTHETIC PREVIEW' && document.querySelector('#footer-state').textContent.includes('nodes'));
@@ -84,7 +85,7 @@ async page => {
   } finally {
     await cdp.detach();
     await page.setViewportSize({width:1280,height:720});
-    await page.goto('http://localhost:8765/');
+    await page.goto(`${base}/`);
   }
   return results;
 }

@@ -16,7 +16,9 @@ async page => {
     const values=await page.locator('#observations .data-row').count();
     expect(values>0,'Actual input values must be readable without selecting each node');
     const countBefore=await page.locator('#decision-log').getAttribute('data-signature');
+    await page.locator('#observations .data-row').first().evaluate(el=>el.dataset.reused='yes');
     await page.waitForFunction(previous=>document.querySelector('#decision-log').dataset.signature!==previous,countBefore);
+    expect(await page.locator('#observations .data-row').first().getAttribute('data-reused')==='yes','Input rows must be reused across decisions');
     await page.locator('#pause').click();
     const frozen=await page.locator('#decision-log').innerText();
     const sample=await page.locator('#footer-state').innerText();
