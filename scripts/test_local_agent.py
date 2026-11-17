@@ -95,6 +95,39 @@ class LifecycleTests(unittest.TestCase):
                 ops.train(args)
             launch.assert_not_called()
 
+    def test_background_start_uses_hidden_operator_with_explicit_run_options(self):
+        import subprocess
+        args = SimpleNamespace(copy='inst1', rounds=2, seed=42, foreground=False)
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root/'analysis').mkdir()
+            with patch.object(ops, 'ROOT', root), \
+                 patch.object(ops, 'inventory', return_value=[]), \
+                 patch.object(ops, 'preflight', return_value=dict(ok=True)), \
+                 patch('subprocess.Popen') as launch:
+                launch.return_value.pid = 123
+                result = ops.train(args)
+                self.assertEqual(result['status'], 'starting')
+                self.assertEqual(result['pid'], 123)
+                self.assertTrue(Path(result['log']).is_file())
+                argv = launch.call_args.args[0]
+                self.assertIn('--foreground', argv)
+                self.assertEqual(argv[argv.index('--copy')+1], 'inst1')
+                self.assertEqual(argv[argv.index('--seed')+1], '42')
+                self.assertEqual(launch.call_args.kwargs['creationflags'], subprocess.CREATE_NO_WINDOW)
+
+    def test_insufficient_resources_never_launches_game_or_trainer(self):
+        args = SimpleNamespace(copy='inst1', rounds=1, seed=42, foreground=True)
+        with tempfile.TemporaryDirectory() as d, \
+             patch.object(ops, 'LOCK', Path(d)/'lock'), \
+             patch.object(ops, 'inventory', return_value=[]), \
+             patch.object(ops, 'preflight', return_value=dict(ok=True)), \
+             patch.object(ops, 'limit_resources', side_effect=ValueError('Insufficient headroom')), \
+             patch('subprocess.call') as launch:
+            with self.assertRaisesRegex(ValueError, 'headroom'):
+                ops.train(args)
+            launch.assert_not_called()
+
     def test_foreground_training_passes_explicit_resume_paths_and_limits_before_launch(self):
         args = SimpleNamespace(copy='inst1', rounds=2, seed=42, foreground=True)
         with tempfile.TemporaryDirectory() as d, \
