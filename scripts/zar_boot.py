@@ -69,6 +69,15 @@ def click_fraction(vi, x, y):
     time.sleep(1.5)
 
 
+def menu_points(width, height):
+    # shortcut: calibrated English UI scale 1 layouts; calibrate new sizes before use.
+    if (width, height) == (1920, 1200):
+        return (.4245, .844), (.207, .368), (.451, .738), (.446, .813)
+    if (width, height) == (3840, 2160):
+        return (.453, .709), (.16, .454), (.286, .454), (.286, .496)
+    raise ZAREnvError(f'Uncalibrated client layout {width}x{height}')
+
+
 def boot(copy_dir, dest=('campaign', 'stage1')):
     """Launch, inject once, navigate with client fractions, verify planning.
 
@@ -105,18 +114,21 @@ def boot(copy_dir, dest=('campaign', 'stage1')):
         time.sleep(0.1)
         if vi.patches() < 4 or vi.diagnostics()['pump_ticks'] == tick:
             raise ZAREnvError('Virtual-input hooks/pump unavailable')
+        rect = ctypes.wintypes.RECT()
+        user32.GetClientRect(vi.hwnd, ctypes.byref(rect))
+        welcome, campaign, fresh, resume = menu_points(rect.right, rect.bottom)
         step = 'welcome'
         time.sleep(max(0, 75 - (time.monotonic() - started)))
-        click_fraction(vi, .4245, .844)
+        click_fraction(vi, *welcome)
         step = 'campaign'
-        click_fraction(vi, .207, .368)
+        click_fraction(vi, *campaign)
         # memscan.module_base installs a per-call ctypes Structure signature.
         # Serialize attachments so concurrent copies cannot replace that type.
         with _ENV_ATTACH_LOCK:
             env = ZAREnv(process.pid)
         # Boston is the persisted/default first campaign. Verify its identity below.
         step = dest[1]
-        target = (.451, .738) if dest[1] == 'stage1' else (.446, .813)
+        target = fresh if dest[1] == 'stage1' else resume
         click_fraction(vi, *target)
         if not env.obs()['civ']:
             vi.key_press(0x0D, sc=28, hold=.15)
