@@ -39,6 +39,9 @@ class Observer:
         self._last_publish = 0
         self.sequence = 0
         try:
+            self.directory.mkdir(parents=True, exist_ok=True)
+            self._thread = threading.Thread(target=self._write_loop, daemon=True, name='policy-telemetry')
+            self._thread.start()
             children = dict(net.named_children())
             self.gru_name, self.gru = next((n, m) for n, m in children.items() if isinstance(m, nn.GRU))
             self.heads = {n: m for n, m in children.items() if isinstance(m, nn.Linear)}
@@ -49,9 +52,6 @@ class Observer:
             self._hooks.append(self.gru.register_forward_hook(self._capture_gru))
             for name, head in self.heads.items():
                 self._hooks.append(head.register_forward_hook(self._capture_head(name)))
-            self.directory.mkdir(parents=True, exist_ok=True)
-            self._thread = threading.Thread(target=self._write_loop, daemon=True, name='policy-telemetry')
-            self._thread.start()
         except Exception as exc:
             self.error = f'Unsupported or unavailable observer: {type(exc).__name__}: {exc}'
             for hook in self._hooks:
