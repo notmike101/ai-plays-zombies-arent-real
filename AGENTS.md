@@ -47,6 +47,48 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 - `scripts/launch_boards.py <instN...>` — kill/relaunch/nav boards to planning.
 - `notes/automation.md` — verified input matrix + traps; `notes/memory-map.md` —
   RVAs; `notes/game-rules.md` — mechanics; `notes/engine.md` — binary notes.
+- `visualizer/` — Signal web app, optional policy observer, maintenance tests
+  and `README.md`. Runtime telemetry/logs are ignored under `visualizer/runtime/`.
+
+## Keep the live neural-network visualizer working
+- Launch `./visualizer/start.ps1` from the deployed checkout; open
+  `http://localhost:8765` (binds `0.0.0.0:8765`). `-Preview` starts a separate,
+  clearly labeled synthetic network, not a game. Reuse an existing server;
+  do not start competing servers or trainers. WebGPU needs localhost/trusted
+  HTTPS; plain HTTP LAN access can use the Canvas 2D fallback.
+- `scripts/nn_play2.py` creates an optional `Observer` after loading/evaluating
+  each episode's actual policy. Preserve its `publish` call AFTER masking and
+  sampling, with the actual probabilities, selected tool/cell and phase.
+  Preserve `close()` in `finally`, including early returns and failed episodes.
+  Random-policy runs have no neural activations and should not impersonate one.
+- Keep observation labels in `visualizer/labels.py` in EXACT `make_obs` order.
+  Update supplied tool/cell labels with action meanings. Dimensions and weights
+  refresh automatically; feature semantics do not. Never silently reuse old
+  labels when reordering/replacing features, even if the feature count matches.
+- The observer supports one single-layer, unidirectional GRU directly feeding
+  linear heads. If architecture/forward behavior changes (new layers, gates,
+  functional transforms, bidirectionality, multiple steps), update the observer,
+  renderer and tests in the SAME change. Unsupported models must be reported
+  explicitly. GRU edges are unsigned gate-weight RMS summaries, not individual
+  synapses. Maintain the distinction between raw outputs, masked probabilities,
+  sampled actions and the value head's predicted reward.
+- Keep telemetry read-only, detached, bounded and best-effort. Never mutate
+  model tensors, consume policy RNG, block inference on disk/network, or add
+  game controls to the visualizer. Do not replace missing live data with preview
+  data. A stale stream can mean paused/idle inference; check worker activity and
+  telemetry before diagnosing a hang. Auto-attach needs an instrumented worker's
+  first decision, not merely a spawned game process.
+- Serve the visualizer from the same deployed checkout as the observer's runtime
+  directory. Existing workers must be relaunched normally to pick up integration
+  changes. Coordinate source updates/restarts with the training owner; never
+  edit live trainer code or stop another agent's workers for visualizer work.
+- After changing policy architecture, features, action heads or telemetry, run:
+  `$zarPython = "$env:LOCALAPPDATA\Python\pythoncore-3.14-64\python.exe"`, then
+  `& $zarPython -B -m unittest discover -s visualizer -p 'test_*.py'`,
+  `& $zarPython -B visualizer/verify_model.py`, and
+  `node visualizer/test_graph.mjs`. The integration tests use a fake game and
+  must never target live game PIDs. Check a real fresh worker sample at the next
+  coordinated launch; a preview or isolated test does not prove live attachment.
 
 ## Standing input traps (detail in notes/automation.md)
 - `key_press` needs scan codes (zar_input SC table); READY = SPACE (stray SPACE =
