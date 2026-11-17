@@ -26,7 +26,7 @@ WebGPU is preferred. It works on a supported browser at localhost or over truste
 
 ## Connect real training
 
-**The observer integration is included in this branch's `scripts/nn_play2.py`. An already-running, uninstrumented worker cannot provide these values.** The app will wait until a worker launched with this version makes its first decision. The active `D:\zar-scratch` checkout was deliberately left unchanged while its training processes were live; bring this branch into that checkout at the training owner's next safe restart.
+**The observer integration is already included in `scripts/nn_play2.py` in this checkout. An already-running, uninstrumented worker cannot provide these values.** Launch training normally; the app waits for an instrumented worker's first decision. No alternate trainer launcher or integration patch is needed.
 
 The 22-line integration in `scripts/nn_play2.py`:
 
@@ -35,7 +35,7 @@ The 22-line integration in `scripts/nn_play2.py`:
 3. Publishes the masked probabilities and selected tool/cell immediately after the existing sampling code.
 4. Removes the hooks and closes the writer in `finally`, including failed episodes.
 
-**The user authorized the integration. Bring it into the active checkout only during trainer downtime coordinated with the agent running training. Do not edit `scripts/*.py` while workers are live. Do not stop or restart another agent's workers for this visualizer.** Preserve the training agent's newer changes when integrating the branch.
+**Coordinate any future observer/trainer changes with the training owner. Do not edit `scripts/*.py` while workers are live. Do not stop or restart another agent's workers for this visualizer.** A server/frontend-only change requires restarting the visualizer server and refreshing browsers, not restarting training.
 
 The old standalone patch has been removed now that it is applied; do not apply it a second time. Launch training normally after integration. No alternate trainer launcher is required. Existing training behavior, checkpoints, sampling, optimization and game controls are retained. See the maintenance contract in root `AGENTS.md` before changing the model or feature meanings.
 
@@ -55,17 +55,25 @@ On mobile, pinch to zoom around your fingers and drag with one finger to pan. Th
 
 Automatic attachment stays on the selected fresh stream. After 15 seconds without a sample, it switches to another fresh stream if one exists; otherwise it labels the retained frame stale. A paused game or slow inference can therefore look stale without the process having crashed. Streams older than 120 seconds are omitted. Manual selection holds the requested stream rather than silently switching.
 
-The browser checks for new telemetry 50 ms after each completed request and redraws only when the sample, worker or model revision changes. Requests never overlap; an unavailable server is retried after one second. This reduces display delay without changing the model's decision rate. The current trainer makes battle decisions about every 2.5 seconds, so the graph holds the actual last values between decisions instead of generating artificial activity. The observer still caps publication at five frames/second.
+The browser holds one **server-sent events (SSE)** connection to `/api/events` using native `EventSource`; it does not poll. A disconnected connection automatically retries with a one-second retry interval. Mode/worker changes close the old connection; every new connection receives current topology. Idle updates arrive about once per second so sample age and connection health stay visible. The graph redraws only for new samples or view changes. A connected but stale worker is distinct from an offline server.
+
+The server samples the existing observer files through one shared **200 ms cache** for all viewers, including while no browser is open. There is no network dependency in inference. This replaces repeated HTTP requests/file reads; it does not increase model decision frequency or promise lower end-to-end latency than the former 50 ms polling. The observer still publishes at most five snapshots/second. Actual values remain still between decisions.
+
+The Inspector now lists **Current observations** with their exact feature labels and formatted values, plus **Recent sampled decisions** with timestamps, phase, published sequence, chosen head labels and probabilities. A sampled choice is not proof that the game executed it. Cell choices may be unused for wait/ready. Pause freezes the graph, input list and decision log while telemetry collection continues; Resume displays the latest retained state.
+
+History is **bounded, in-memory sampled telemetry**: the server retains 200 compact records total across all workers/modes and returns the latest 50 for the selected stream. Reconnecting replaces the displayed list from that retained history, avoiding duplicates. History survives observer file removal for a manually selected stream, but is cleared by a server restart and older entries are evicted. Preview records never appear in Live. Published sequence gaps are shown when detectable; the observer's own dropped/throttled samples are not recoverable. This is neither trainer stdout nor a durable, complete event journal. Original trainer logs remain in their existing locations.
+
+The stream supports at most 16 active viewers per server, with a three-second socket write timeout; excess connections get HTTP 503. Slow viewers cannot queue unlimited frames or block training. Browser per-origin connection limits may be lower. No commands, training controls, observation injection, or checkpoint/reward changes are accepted.
 
 ## Model changes and limits
 
 Dimensions, head names, weights and values come from the running model. Each episode reports its own model revision, derived from full parameter values. Normal in-place parameter updates and checkpoint loads refresh the graph; later worker instances publish their current weights automatically. This observes the weights the worker actually uses, which may lag the trainer's newest checkpoint until its next episode.
 
-Supported topology: **one single-layer, unidirectional GRU directly feeding one or more linear heads**, as in the current v1/v2 policies. Different widths and output sizes are discovered. New module types need an observer adapter; unsupported structures report an error rather than inventing a graph. Functional transformations between those modules are not inferred. Feature/action meaning cannot be deduced from tensor dimensions: the training owner must maintain the supplied labels when changing feature order or semantics. `labels.py` documents the current 22-feature order.
+Supported topology: **one single-layer, unidirectional GRU directly feeding one or more linear heads**, as in the current v1/v2 policies. Different widths and output sizes are discovered. New module types need an observer adapter; unsupported structures report an error rather than inventing a graph. Functional transformations between those modules are not inferred. Feature/action meaning cannot be deduced from tensor dimensions: the training owner must maintain the supplied labels when changing feature order or semantics. `labels.py` documents the current 32-feature order; the label tests and `verify_model.py` enforce the trainer contract.
 
 Observer hooks capture only single-step, gradient-disabled forward passes. PPO sequence updates and gradients are not visualized. It never consumes random numbers or modifies tensors. Copies are detached, and outputs are copied before the trainer can mask them in place. A single-slot queue writes latest-only JSON in a background thread, capped at five frames/second. Disk/serialization failure drops the frame rather than interrupting the decision loop. Current decisions occur much less frequently than that cap.
 
-All telemetry, logs and local screenshots stay in ignored `visualizer/runtime/`. Normal observer shutdown removes its own frame file; abrupt termination can leave a stale file that the server ages out. The server serves only four explicit frontend files and `/api/state`; it does not expose source files, checkpoints, directory listings or control endpoints. Anyone who can reach this port can view the telemetry; there is no login or TLS termination built in.
+Observer snapshots and local test screenshots stay in ignored `visualizer/runtime/`; recent decision history lives only in server memory. Normal observer shutdown removes its own frame file; abrupt termination can leave a stale file that the server ages out. The server serves only four explicit frontend files, `/api/events`, and the cached `/api/state` diagnostic endpoint; it does not expose source files, trainer log files, checkpoints, directory listings or control endpoints. Anyone who can reach this port can view the telemetry; there is no login or TLS termination built in.
 
 ## Checks
 
@@ -82,16 +90,29 @@ For touch/layout regression checks, start the server with `-Preview`, then run t
 
 ```powershell
 npx --yes --package @playwright/cli playwright-cli -s=zar-mobile open http://localhost:8765
+npx --yes --package @playwright/cli playwright-cli -s=zar-mobile run-code --filename=test_stream.js
 npx --yes --package @playwright/cli playwright-cli -s=zar-mobile run-code --filename=test_mobile.js
 npx --yes --package @playwright/cli playwright-cli -s=zar-mobile close
 ```
 
 The browser check sends multi-touch events, verifies pinch anchoring, pinch-to-pan transitions, cancellation, tap inspection, zoom controls, complete action probabilities and scroll access at 320×568, 390×844 and 844×390. It covers WebGPU (when available), forced Canvas 2D and desktop mouse interaction. It uses the separate preview model and never controls a game. Screenshots go to ignored `runtime/`. Browser emulation does not replace testing on physical iOS/Android devices.
 
+`test_stream.js` checks real SSE requests (no snapshot polling), readable inputs,
+new decision records, view pause/resume, worker changes, offline reconnect and
+preview isolation. Run it only with synthetic preview and no real workers; its
+Live check expects waiting. Stop the test preview afterwards and leave the normal
+read-only server available. Server tests use temporary directories and ephemeral
+loopback ports; integration/watchdog fixtures use PID -1, never real games.
+
 The model check imports the current trainer source without running its main function or opening a game. It checks exact recurrent outputs and sampled decisions, then reports a warm CPU inference benchmark. It does not establish end-to-end gameplay overhead.
 
 Verified on 2026-11-16 before trainer integration: 16 Python tests; Node graph/layout/filter/clear assertions; the current 61,980-parameter PolicyNet2 gives identical outputs and sampled decisions for 12 recurrent steps. One warm CPU run measured median 0.074 ms plain versus 0.122 ms observed including snapshot creation, excluding first topology extraction and background disk writes. Edge displayed the WebGPU graph and Canvas 2D fallback, live synthetic updates, node inspection, pause/resume and waiting state. The responsive view was checked at a 390-pixel viewport. Two additional integration tests now exercise the real episode function against a fake game, checking captured decisions, unchanged results and cleanup on success/failure. Real-game attachment awaits deployment at a safe trainer restart.
 
-## Collaboration handoff
+## Current maintenance handoff
 
-The original application is confined to `visualizer`. The user subsequently authorized the 22-line trainer integration and root `AGENTS.md` maintenance guidance. Those changes were made on `codex/visualizer-integration` in `D:\worktrees\zar-visualizer-integration`, preserving the active checkout and the other agent's uncommitted work. Training's dirty logs/checkpoints were not staged. No game processes were launched, stopped, resized or controlled. Root `notes/tracker.md` was read but not edited because that file remains outside the authorized edit scope. This README and PLAN.md hold this work's handoff.
+Current guidance is root `AGENTS.md`, this README and `notes/tracker.md`.
+`PLAN.md` records historical work; `notes/telemetry-plan.md` records the streaming
+change. The old integration branch and original directory-only scope are historical,
+not pending deployment instructions. Keep telemetry read-only, bounded and detached;
+maintain label semantics with the trainer, and verify real attachment at the next
+coordinated worker launch. Synthetic/fake-game checks do not prove live attachment.

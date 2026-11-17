@@ -1,5 +1,21 @@
 # Live policy visualizer — design and implementation plan
 
+## Current guidance (2026-11-17)
+
+The sections below are historical design/evidence, including old branch, scope,
+label fallback and polling instructions. They do not override current AGENTS.md,
+README.md or notes/tracker.md. Integration is in the deployed checkout; there is
+no patch to reapply. Label semantics must match the trainer exactly.
+
+The current browser uses read-only SSE at /api/events, backed by shared 200 ms
+file sampling and bounded in-memory decision history (200 global / 50 displayed).
+The server keeps /api/state for diagnostics. Current observations and sampled
+decisions appear in the Inspector; no training or game controls are permitted.
+History is sampled, incomplete and cleared on server restart, not durable logs.
+See ../notes/telemetry-plan.md for implementation scope and README.md for tests.
+
+## Historical implementation
+
 Goal: show actual inference activity and sampled decisions for one automatically selected ZAR worker in a dark browser canvas, served on 0.0.0.0:8765.
 
 Architecture: optional PyTorch layer observers copy detached inference values into a bounded background writer. Atomic, latest-only JSON files stay in visualizer/runtime. A standard-library Python HTTP server selects one fresh stream and serves the UI and a read-only state endpoint. Native WebGPU renders the graph, with Canvas 2D fallback. No extra frontend dependencies.

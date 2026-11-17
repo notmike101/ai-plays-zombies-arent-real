@@ -51,6 +51,24 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   and `README.md`. Runtime telemetry/logs are ignored under `visualizer/runtime/`.
 
 ## Keep the live neural-network visualizer working
+- The visualizer is observation-only: display the model's actual inputs, outputs
+  and sampled decisions. Never use it to train, change rewards/checkpoints,
+  inject observations, select actions, or control the trainer/game.
+- Browser delivery uses one `EventSource` connection to `/api/events` (SSE).
+  Keep `/api/state` for diagnostics; do not restore browser polling. The server
+  samples the existing runtime JSON files through a shared 200 ms cache, even
+  with no viewers. This is a server-to-browser stream, not a trainer socket.
+- Recent decisions are sampled telemetry: 200 compact records in server memory
+  across all workers/modes, latest 50 for the selected stream in the Inspector.
+  Reconnect sends current topology and retained history; restart clears history.
+  Published sequence gaps are shown, but earlier observer drops are unknowable.
+  Do not call this complete/durable logging, stdout capture or execution proof.
+  Preview and real history stay separate. Pause freezes the view only.
+- Keep viewer handling bounded (16 active SSE streams, 3-second write timeout),
+  automatic reconnect, idle status updates, and connection-vs-inference status.
+  A slow/disconnected viewer must never block a worker. Run `test_stream.js`
+  and `test_mobile.js` via Playwright for transport/UI changes, using synthetic
+  preview only; close test previews afterwards. See visualizer/README.md.
 - Launch `./visualizer/start.ps1` from the deployed checkout; open
   `http://localhost:8765` (binds `0.0.0.0:8765`). `-Preview` starts a separate,
   clearly labeled synthetic network, not a game. Reuse an existing server;
