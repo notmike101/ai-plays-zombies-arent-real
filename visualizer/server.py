@@ -1,5 +1,6 @@
 """Read-only, dependency-free HTTP service for the local policy observer."""
 import argparse
+from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import math
@@ -12,6 +13,7 @@ from urllib.parse import parse_qs, urlsplit
 
 ROOT = Path(__file__).resolve().parent
 FRESH_SECONDS = 15
+SAMPLE_SECONDS = .2
 PUBLIC = {'/': ('index.html', 'text/html'), '/style.css': ('style.css', 'text/css'),
           '/app.js': ('app.js', 'text/javascript'), '/graph.js': ('graph.js', 'text/javascript')}
 
@@ -21,6 +23,48 @@ class Feed:
         self.directory = Path(directory)
         self.lock = threading.Lock()
         self.active = {False: None, True: None}
+        self.frames = []
+        self.sampled_at = float('-inf')
+        self.history = deque(maxlen=200)
+        self.seen = {}
+
+    def _refresh(self, now):
+        if 0 <= now - self.sampled_at < SAMPLE_SECONDS:
+            return
+        self.frames = self._read(now)
+        self.sampled_at = now
+        present = set()
+        for frame in sorted(self.frames, key=lambda f: f['timestamp']):
+            stream = frame['stream']
+            present.add(stream)
+            sequence = frame.get('sequence')
+            if 'error' in frame or not isinstance(sequence, int) or sequence < 0:
+                continue
+            previous = self.seen.get(stream)
+            if previous is not None and sequence <= previous:
+                continue
+            self.seen[stream] = sequence
+            try:
+                layers = {layer['id']: layer for layer in frame['graph']['layers']}
+                choices = []
+                for head, index in list(frame['selected'].items())[:16]:
+                    labels = layers.get(head, {}).get('labels', [])
+                    probabilities = frame['probabilities'].get(head, [])
+                    if not isinstance(index, int) or index < 0:
+                        continue
+                    choices.append({'head': str(head)[:64], 'index': index,
+                                    'label': str(labels[index] if index < len(labels) else f'{head} {index}')[:256],
+                                    'probability': probabilities[index] if index < len(probabilities) else None})
+                self.history.append({
+                    'stream': stream, 'sequence': sequence, 'timestamp': frame['timestamp'],
+                    'preview': bool(frame.get('preview')), 'worker_pid': frame.get('worker_pid'),
+                    'game_pid': frame.get('game_pid'), 'episode': str(frame.get('episode', ''))[:128],
+                    'phase': str(frame.get('phase', 'unknown'))[:64], 'choices': choices,
+                    'skipped': max(0, sequence - previous - 1) if previous is not None else 0})
+            except (KeyError, TypeError, IndexError, AttributeError):
+                # A malformed optional summary must not stop other workers' telemetry.
+                continue
+        self.seen = {key: value for key, value in self.seen.items() if key in present}
 
     def _read(self, now):
         frames = []
@@ -40,7 +84,7 @@ class Feed:
                 data = json.loads(path.read_text(encoding='utf-8'),
                                   parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
                 if (not isinstance(data, dict) or data.get('schema') != 1 or
-                        not isinstance(data.get('stream'), str) or
+                        not isinstance(data.get('stream'), str) or len(data['stream']) > 128 or
                         not isinstance(data.get('timestamp'), (int, float)) or
                         not math.isfinite(data['timestamp'])):
                     continue
@@ -56,7 +100,8 @@ class Feed:
     def state(self, *, now=None, preview=False, stream=None, revision=None):
         now = time.time() if now is None else now
         with self.lock:
-            frames = [f for f in self._read(now) if bool(f.get('preview')) == preview]
+            self._refresh(now)
+            frames = [f for f in self.frames if bool(f.get('preview')) == preview]
             frames.sort(key=lambda f: (f['timestamp'], f['stream']))
             available = {f['stream']: f for f in frames}
             fresh = [f for f in frames if now - f['timestamp'] <= FRESH_SECONDS]
@@ -66,21 +111,62 @@ class Feed:
                 self.active[preview] = chosen['stream'] if chosen else None
             streams = [{'id': f['stream'], 'game_pid': f.get('game_pid'),
                         'worker_pid': f.get('worker_pid'), 'age': max(0, now - f['timestamp'])} for f in frames]
+            history_stream = stream or (chosen['stream'] if chosen else self.active[preview])
+            history = [entry for entry in self.history
+                       if entry['stream'] == history_stream and entry['preview'] == preview][-50:]
             if chosen is None:
-                return {'status': 'waiting', 'frame': None, 'streams': streams}
+                return {'status': 'waiting', 'frame': None, 'streams': streams, 'history': history}
             age = max(0, now - chosen['timestamp'])
             status = 'stale' if age > FRESH_SECONDS else 'error' if 'error' in chosen else 'preview' if preview else 'live'
             frame = dict(chosen)
             if revision == frame.get('model_revision'):
                 frame.pop('graph', None)
-            return {'status': status, 'age': age, 'frame': frame, 'streams': streams}
+            return {'status': status, 'age': age, 'frame': frame, 'streams': streams, 'history': history}
 
 
 def make_server(host, port, feed=None):
     feed = feed or Feed()
     class Handler(BaseHTTPRequestHandler):
+        def events(self, args):
+            self.connection.settimeout(3)
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('X-Accel-Buffering', 'no')
+            self.send_header('X-Content-Type-Options', 'nosniff')
+            self.end_headers()
+            revision, signature, history_signature = None, None, None
+            sent_at = 0
+            try:
+                self.wfile.write(b'retry: 1000\n\n')
+                self.wfile.flush()
+                while not self.server.stopped.is_set():
+                    result = feed.state(preview=args.get('preview') == ['1'],
+                                        stream=args.get('stream', [None])[0], revision=revision)
+                    frame = result['frame'] or {}
+                    current = (result['status'], frame.get('stream'), frame.get('sequence'),
+                               frame.get('timestamp'), frame.get('model_revision'),
+                               tuple((s['id'], s['age'] > FRESH_SECONDS) for s in result['streams']))
+                    clock = time.monotonic()
+                    if current != signature or clock - sent_at >= 1:
+                        # Idle updates keep sample age honest and detect broken connections.
+                        history_key = tuple((e['stream'], e['sequence']) for e in result['history'])
+                        if history_key == history_signature:
+                            result['history'] = None
+                        body = json.dumps(result, allow_nan=False, separators=(',', ':')).encode()
+                        self.wfile.write(b'event: state\ndata: ' + body + b'\n\n')
+                        self.wfile.flush()
+                        revision = frame.get('model_revision')
+                        signature, history_signature, sent_at = current, history_key, clock
+                    self.server.stopped.wait(SAMPLE_SECONDS)
+            except (OSError, ValueError):
+                pass
+
         def do_GET(self):
             url = urlsplit(self.path)
+            if url.path == '/api/events':
+                self.events(parse_qs(url.query))
+                return
             if url.path == '/api/state':
                 args = parse_qs(url.query)
                 result = feed.state(preview=args.get('preview') == ['1'],
@@ -112,8 +198,23 @@ def make_server(host, port, feed=None):
         def log_message(self, fmt, *args):
             if args and str(args[1]) != '200':
                 super().log_message(fmt, *args)
-    server = ThreadingHTTPServer((host, port), Handler)
-    server.daemon_threads = True
+    class Server(ThreadingHTTPServer):
+        daemon_threads = True
+
+        def sample(self):
+            while not self.stopped.is_set():
+                feed.state()
+                self.stopped.wait(SAMPLE_SECONDS)
+
+        def server_close(self):
+            self.stopped.set()
+            self.sampler.join(timeout=4)
+            super().server_close()
+
+    server = Server((host, port), Handler)
+    server.stopped = threading.Event()
+    server.sampler = threading.Thread(target=server.sample, daemon=True, name='telemetry-sampler')
+    server.sampler.start()
     return server
 
 
