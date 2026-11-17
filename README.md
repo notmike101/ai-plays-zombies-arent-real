@@ -25,6 +25,34 @@ for the first command. The environment does not install the game or recover weig
 
 Read [AGENTS.md](AGENTS.md), then run these from PowerShell in this checkout:
 
+For a **new checkout**, also copy `zar.example.toml` to ignored `zar.local.toml`
+and set `[game].install_dir` to your supported read-only game source. It can be
+an installed game or an existing compatible owned copy. Configure the sharing
+repository and identity-helper path if you will publish checkpoints. Then:
+
+```powershell
+.\local.ps1 build-input
+.\local.ps1 prepare-game --copy inst1
+```
+
+The DLL build requires Rustup and MSVC C++/Windows SDK tools; see
+[the source-only build guide](scripts/hookdll/README.md). Never rebuild with owned
+games running. Copy preparation refuses existing destinations and unsupported
+executable hashes. It copies assets, creates normal/low-graphics settings, opts
+out of usage sharing, and enables the **full training unlock profile** by default:
+16 units,19 abilities,16 upgrades and Extra_Zones in this supported build. It does
+not copy campaign progress, buy levels, spend SP or pre-place defenses. The model
+still controls strategy; its action interface does not yet expose every mechanic.
+
+Download and import a compatible checkpoint using
+[checkpoint sharing/restore](notes/checkpoint-sharing.md). The active trainer now
+derives paths from its checkout; `D:\zar-scratch` is this deployment, not a required
+directory on another machine. On this machine the installed game hash differs
+from the supported build, so local config uses compatible `game-copies/inst4` as
+the read-only source. Never bypass the build check for a different game version.
+
+Once prerequisites exist:
+
 ```powershell
 .\local.ps1 status
 .\local.ps1 check
@@ -61,4 +89,5 @@ The read-only [visualizer](visualizer/README.md) normally uses port 8765.
 
 **A Git clone alone cannot resume this model.** Current weights, their backup,
 training history and owned game copies are local, ignored runtime artifacts.
-Do not silently start from random weights when a resume checkpoint is missing.
+Current model snapshots are available through GitHub Releases every six hours
+when changed. Do not silently start random training when a checkpoint is missing.

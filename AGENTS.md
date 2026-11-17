@@ -27,10 +27,17 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 - Active trainer/environment paths derive from this checkout. Copy zar.example.toml
   to ignored zar.local.toml and configure the read-only source game installation.
   `local.ps1 prepare-game --copy instN` creates a NEW owned copy; never overwrites
-  one or imports user progress. Native build/checkpoint prerequisites still apply.
+  one or imports campaign progress. User directive: fresh training copies MUST
+  have full unit/ability/upgrade/perk availability. The default profile enables
+  these options without purchases, SP, placements or difficulty changes. This is
+  a training profile, not evidence of earned progression. Preflight enforces it.
 - Build the input DLL with `local.ps1 build-input` while owned games are stopped.
   Preserve rust-toolchain.toml/Cargo.lock and protocol3. Two clean builds must match;
   generated DLL/PDB/build manifests stay ignored. See scripts/hookdll/README.md.
+- Checkpoint sharing is authorized every6h to this repository's GitHub Releases.
+  Use local.ps1 checkpoint-publish; no duplicate release for unchanged bytes.
+  Preserve checksum/schema validation and identity helper. Do not publish game
+  assets/DLLs/saves/logs/configuration. See notes/checkpoint-sharing.md.
 
 ## Process rules (every turn)
 - TRACKER: live state, evidence, PIDs and next steps live in `notes/tracker.md`.
@@ -48,8 +55,8 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   a long run.
 
 ## Hard rules (safety + fairness)
-- NEVER modify `C:\Games\...` (read-only install). Work only in `D:\zar-scratch`
-  copies (`game-copies\instN\`, each with `steam_appid.txt`=5185890; copies' own
+- NEVER modify the configured source install (`C:\Games\...` here). Work only in
+  this checkout's owned copies (`game-copies\instN\`, steam_appid.txt=5185890; copies' own
   ini files MAY be edited). NEVER write the user's game install.
 - Admin console = CHEAT: manual one-off human-driven diagnostics ONLY. NEVER in
   training/automation loops.

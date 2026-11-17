@@ -1,11 +1,16 @@
 # Zero-context operator runbook
 
-Read `../AGENTS.md` first. This guide operates the existing Windows deployment at
-`D:\zar-scratch`. CURRENT STATE in `tracker.md` is a dated handoff; always inspect
+Read `../AGENTS.md` first. This guide operates a Windows checkout (this deployment
+is `D:\zar-scratch`). CURRENT STATE in `tracker.md` is a dated handoff; always inspect
 actual processes. `local-environment.md` records dependencies and recovery steps.
 Both launchers now default to `.venv\Scripts\python.exe`; follow README.md for
 first-time setup. Existing workers retain their original interpreter until their
 next normal restart. Never recreate/update an environment while it has workers.
+For a new checkout, configure zar.local.toml, run build-input and prepare-game,
+then import a verified checkpoint as described in README.md. Fresh copies use
+full availability as requested: unlocked options, but no purchases or placements.
+For sharing/restore use notes/checkpoint-sharing.md; the six-hour local automation
+publishes changed snapshots only and never restarts training.
 
 ## 1. Inspect and check
 
