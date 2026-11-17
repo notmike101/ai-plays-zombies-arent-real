@@ -73,6 +73,8 @@ class LifecycleTests(unittest.TestCase):
                              'inst1', self_pid=999)
         ops.require_idle([dict(pid=999, role='operator')], 'inst1', self_pid=999)
         ops.require_idle([dict(pid=888, role='operator')], 'inst1', self_pid=999, parent_pid=888)
+        ops.require_idle([dict(pid=888, role='operator'), dict(pid=887, role='operator')],
+                         'inst1', self_pid=999, ancestor_pids=[888, 887])
         with self.assertRaisesRegex(ValueError, 'already active'):
             ops.require_idle([dict(pid=888, role='trainer')], 'inst1', self_pid=999, parent_pid=888)
 
@@ -155,6 +157,39 @@ class LifecycleTests(unittest.TestCase):
                 ops.start_visualizer(8765, '127.0.0.1')
             launch.assert_not_called()
 
+    def test_visualizer_accepts_its_venv_redirector_child_as_listener(self):
+        server = dict(pid=321, create_time=100., role='visualizer', port=8766)
+        parent = Mock()
+        parent.pid = 123
+        parent.children.return_value = [SimpleNamespace(pid=321)]
+        parent.create_time.return_value = 99.
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root/'analysis').mkdir()
+            with patch.object(ops, 'ROOT', root), \
+                 patch.object(ops, 'listener', side_effect=[None, server]), \
+                 patch('subprocess.Popen') as launch, \
+                 patch('psutil.Process', return_value=parent):
+                launch.return_value.pid = 123
+                launch.return_value.poll.return_value = None
+                self.assertEqual(ops.start_visualizer(8766, '127.0.0.1')['pid'], 321)
+
+    def test_stop_accepts_venv_and_base_python_children(self):
+        p = Mock()
+        p.create_time.return_value = 100.
+        p.cmdline.return_value = ['python', str(ops.ROOT/'visualizer/server.py')]
+        p.cwd.return_value = str(ops.ROOT)
+        p.exe.return_value = 'C:/Python/python.exe'
+        child = Mock()
+        child.exe.return_value = 'D:/zar-scratch/.venv/Scripts/python.exe'
+        p.children.return_value = [child]
+        with patch('psutil.Process', return_value=p), \
+             patch('psutil.wait_procs', return_value=([], [])), \
+             patch.object(ops.sys, 'executable', child.exe()), \
+             patch.object(ops.sys, '_base_executable', p.exe()):
+            self.assertTrue(ops.stop_process(123, 100., 'visualizer')['ok'])
+            p.kill.assert_called_once()
+            child.kill.assert_called_once()
     def test_stop_rejects_reused_pid_foreign_script_and_unknown_child(self):
         p = Mock()
         p.create_time.return_value = 100.

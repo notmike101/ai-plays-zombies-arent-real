@@ -181,12 +181,12 @@ def status():
                           'See notes/operator-runbook.md. History is a snapshot, not monitoring.')
 
 
-def require_idle(rows, copy, self_pid=None, parent_pid=None):
+def require_idle(rows, copy, self_pid=None, parent_pid=None, ancestor_pids=()):
     for row in rows:
         if row['pid'] == self_pid:
             continue
-        if row['pid'] == parent_pid and row['role'] == 'operator':
-            continue  # The brief background-launch parent may not have exited yet.
+        if row['role'] == 'operator' and (row['pid'] == parent_pid or row['pid'] in ancestor_pids):
+            continue  # Windows venv redirectors and our background-launch ancestors.
         if row['role'] in ('operator', 'launcher', 'trainer'):
             raise ValueError(f"Training already active: {row['role']} PID {row['pid']}; reuse it")
     for row in rows:
@@ -224,10 +224,12 @@ def limit_resources():
 
 
 def train(args):
+    import psutil
     owned_copy(args.copy)
     if args.rounds < 1:
         raise ValueError('Rounds must be positive')
-    require_idle(inventory(), args.copy, os.getpid(), os.getppid() if args.foreground else None)
+    ancestors = [p.pid for p in psutil.Process().parents()]
+    require_idle(inventory(), args.copy, os.getpid(), ancestor_pids=ancestors)
     report = preflight(args.copy)
     if not report['ok']:
         raise ValueError('; '.join(report['errors']))
@@ -243,7 +245,7 @@ def train(args):
         return dict(ok=True, status='starting', pid=p.pid, log=str(log),
                     next_step='Read this log and run status. Starting is not proof of a completed update.')
     with training_lock(LOCK):
-        require_idle(inventory(), args.copy, os.getpid(), os.getppid())
+        require_idle(inventory(), args.copy, os.getpid(), ancestor_pids=ancestors)
         limit_resources()  # Applied before the launcher can spawn any game or worker.
         command = [sys.executable, '-B', str(ROOT/'scripts/train_run.py'),
                    '--copies', args.copy, '--eps', '2', '--rounds', str(args.rounds),
@@ -279,12 +281,14 @@ def start_visualizer(port, host):
                               '--host', host, '--port', str(port)], cwd=ROOT, stdout=f, stderr=f,
                              creationflags=subprocess.CREATE_NO_WINDOW)
     import psutil
-    created = psutil.Process(p.pid).create_time()
+    launched = psutil.Process(p.pid)
+    created = launched.create_time()
     for _ in range(40):
         if p.poll() is not None:
             raise ValueError(f'Visualizer exited; inspect {log}')
         current = listener(port)
-        if current and current['pid'] == p.pid:
+        owned = {p.pid, *(c.pid for c in launched.children(recursive=True))}
+        if current and current['pid'] in owned and current['role'] == 'visualizer':
             return dict(ok=True, status='listening', **current,
                         url=f'http://localhost:{port}', log=str(log))
         time.sleep(.1)
@@ -301,7 +305,8 @@ def stop_process(pid, created, role):
     if script_role(p.cmdline(), p.cwd()) != role:
         raise ValueError('Wrong script/checkout; refusing to stop it')
     children = p.children(recursive=True)
-    allowed = {Path(p.exe()).resolve(),
+    allowed = {Path(p.exe()).resolve(), Path(sys.executable).resolve(),
+               Path(sys._base_executable).resolve(),
                (Path(os.environ['SystemRoot'])/'System32/conhost.exe').resolve()}
     if any(Path(c.exe()).resolve() not in allowed for c in children):
         raise ValueError('Unexpected child process; inspect before stopping')
