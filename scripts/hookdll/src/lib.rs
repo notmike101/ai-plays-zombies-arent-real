@@ -157,6 +157,8 @@ unsafe fn key_down(s: &Shared, vk: i32) -> bool {
     if vk < 0 || vk > 255 {
         return false;
     }
+    let mouse_bit = match vk { 1 => 1, 2 => 2, 4 => 4, _ => 0 };
+    if mouse_bit != 0 { return s.buttons & mouse_bit != 0; }
     (s.keys[(vk >> 5) as usize] >> (vk & 31)) & 1 == 1
 }
 // --- raw mouse pump ------------------------------------------------------------------
@@ -235,15 +237,6 @@ unsafe fn pump(s: &Shared) {
                 LAST_Y = s.cursor_y;
                 ABS_DIRTY = 0;
                 LAST_HB = s.heartbeat;
-            }
-            if ch & 1 != 0 {
-                emit_abs(s.raw_hwnd, if btn & 1 != 0 { 0x0001 } else { 0x0002 }, s.cursor_x, s.cursor_y);
-            }
-            if ch & 2 != 0 {
-                emit_abs(s.raw_hwnd, if btn & 2 != 0 { 0x0004 } else { 0x0008 }, s.cursor_x, s.cursor_y);
-            }
-            if ch & 4 != 0 {
-                emit_abs(s.raw_hwnd, if btn & 4 != 0 { 0x0010 } else { 0x0020 }, s.cursor_x, s.cursor_y);
             }
             PREV_BTN = btn;
         }

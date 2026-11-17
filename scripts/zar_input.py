@@ -362,52 +362,61 @@ class VirtualInput:
         self._wi32(OFF["cy"], int(cy))
         if post:
             lp = ((cy & 0xFFFF) << 16) | (cx & 0xFFFF)
-            user32.PostMessageW(self.hwnd, WM_MOUSEMOVE, 0, lp)
+            user32.PostMessageW(self.hwnd, WM_MOUSEMOVE, self._mouse_flags(), lp)
         self._heartbeat()
+
+    def _mouse_flags(self):
+        b = struct.unpack_from("<I", self.buf, OFF["buttons"])[0]
+        return (b & 3) | (0x10 if b & 4 else 0)
+
+    def _post_button(self, btn, down):
+        message = {1: 0x201, 2: 0x204, 4: 0x207}[btn] + (0 if down else 1)
+        lp = ((self._last_cy & 0xFFFF) << 16) | (self._last_cx & 0xFFFF)
+        if not user32.PostMessageW(self.hwnd, message, self._mouse_flags(), lp):
+            raise OSError("PostMessage mouse edge failed")
 
     def click(self, cx=None, cy=None, hold=0.08, right=False):
-        """Virtual press+release: serves the polled GetAsyncKeyState bit AND posts the
-        WM_LBUTTONDOWN/UP messages so message-driven UI sees it too."""
+        """One posted press/release at the DLL's virtual client cursor."""
         if cx is not None:
             self.move_to(cx, cy)
-        b = OFF["buttons"]
-        btn = (1 << 1) if right else 1
-        cur = struct.unpack_from("<I", self.buf, b)[0]
-        self._w32(b, cur | btn)
-        self._heartbeat()
-        # post the message path as well (UI hit-testing is message-driven)
-        lp = ((self._last_cy & 0xFFFF) << 16) | (self._last_cx & 0xFFFF)
-        wp = 2 if right else 1  # MK_RBUTTON / MK_LBUTTON
-        down_msg, up_msg = (0x204, 0x205) if right else (0x201, 0x202)
-        user32.PostMessageW(self.hwnd, down_msg, wp, lp)
-        time.sleep(hold)  # several sim frames at 30Hz+
-        user32.PostMessageW(self.hwnd, up_msg, 0, lp)
-        self._w32(b, cur)
-        self._heartbeat()
+        btn = 2 if right else 1
+        self.button_down(btn)
+        try:
+            time.sleep(hold)
+        finally:
+            self.button_up(btn)
 
     def button_down(self, btn=1):
+        if btn not in (1, 2, 4):
+            raise ValueError("button must be 1 (left), 2 (right), or 4 (middle)")
         cur = struct.unpack_from("<I", self.buf, OFF["buttons"])[0]
         self._w32(OFF["buttons"], cur | btn)
         self._heartbeat()
+        self._post_button(btn, True)
 
     def button_up(self, btn=1):
+        if btn not in (1, 2, 4):
+            raise ValueError("button must be 1 (left), 2 (right), or 4 (middle)")
         cur = struct.unpack_from("<I", self.buf, OFF["buttons"])[0]
         self._w32(OFF["buttons"], cur & ~btn)
         self._heartbeat()
+        self._post_button(btn, False)
 
     def drag(self, x1, y1, x2, y2, steps=8, hold=0.05):
         """Virtual drag for zone drawing / deployable drags."""
+        if steps < 1 or hold < 0:
+            raise ValueError("drag requires steps >= 1 and hold >= 0")
         self.move_to(x1, y1)
         time.sleep(hold)
         self.button_down()
-        time.sleep(hold)
-        for i in range(1, steps + 1):
-            x = x1 + (x2 - x1) * i // steps
-            y = y1 + (y2 - y1) * i // steps
-            self.move_to(x, y)
+        try:
             time.sleep(hold)
-        self.button_up()
-        self._heartbeat()
+            for i in range(1, steps + 1):
+                self.move_to(x1 + (x2 - x1) * i // steps,
+                             y1 + (y2 - y1) * i // steps)
+                time.sleep(hold)
+        finally:
+            self.button_up()
 
     # ---- virtual keyboard --------------------------------------------------------------
     def key_down(self, vk, sc=0, post=True, async_bit=True):
@@ -456,7 +465,7 @@ class VirtualInput:
             pass
 
 
-# scan codes (subset) — reuse from game_drive
+# scan codes (subset) â€” reuse from game_drive
 SC = {0x20: 0x39, 0x0D: 0x1C, 0x1B: 0x01, 0x11: 0x1D, 0x10: 0x2A, 0x12: 0x38,
       0x46: 0x21, 0x53: 0x1F, 0x57: 0x11, 0x41: 0x1E, 0x44: 0x20, 0x42: 0x30,
       0x47: 0x22, 0x5A: 0x2C, 0x58: 0x2D, 0x43: 0x2E, 0x56: 0x2F, 0x51: 0x10,
