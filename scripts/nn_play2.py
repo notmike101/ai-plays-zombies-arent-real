@@ -302,7 +302,13 @@ def run_episode(args):
             step_at = time.time()
         R_final = (3.0 if win else 0.0) + 5.0 * frac ** 1.5
         if win:
-            env.vi.key_press(0x0D, sc=28)   # CONTINUE chain on win screen
+            # USER DIRECTIVE 2026-11-16: STAY ON LEVEL 1 until told otherwise.
+            # Replay THIS level (R = dialog, 2nd R = YES): keeps placements +
+            # budget, banks the badge, and the pinned-adaptive loop hardens
+            # each good win via outbreak head starts. (ENTER would advance.)
+            env.vi.key_press(0x52, sc=19)
+            time.sleep(2.5)
+            env.vi.key_press(0x52, sc=19)
             time.sleep(6)
         rews[-1] += R_final
         return dict(level=tag, pid=pid, win=bool(win), frac=float(frac),
