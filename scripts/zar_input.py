@@ -35,9 +35,10 @@ MEM_COMMIT, MEM_RESERVE, MEM_RELEASE = 0x1000, 0x2000, 0x8000
 PAGE_READWRITE = 0x04
 INFINITE = 0xFFFFFFFF
 
+VERSION = 3
 MAGIC = 0x5A415249
 OFF = dict(enabled=0x08, cx=0x0C, cy=0x10, buttons=0x14, keys=0x18,
-           toggles=0x38, heartbeat=0x3C, patches=0x40, raw_hwnd=0x48, raw_sent=0x50)
+           toggles=0x38, heartbeat=0x3C, patches=0x40, raw_hwnd=0x48, raw_sent=0x50, monitor_width=0x54, abs_error=0x58, pump_ticks=0x5C)
 
 VK_LBUTTON, VK_RBUTTON, VK_MBUTTON = 0x01, 0x02, 0x04
 VK_SHIFT, VK_CONTROL, VK_MENU = 0x10, 0x11, 0x12
@@ -257,6 +258,10 @@ class VirtualInput:
         magic = struct.unpack_from("<I", self.buf, 0)[0]
         if magic != MAGIC:
             raise RuntimeError(f"bad magic {magic:#x}")
+        version = struct.unpack_from("<I", self.buf, 4)[0]
+        if version != VERSION:
+            self.close()
+            raise RuntimeError(f"DLL version {version}, expected {VERSION}; restart this copy")
         # raw-input pump: where to post WM_INPUT (DLL v2+; older DLLs ignore it)
         self._w64(OFF["raw_hwnd"], int(self.hwnd))
 
@@ -296,21 +301,34 @@ class VirtualInput:
     def raw_sent(self):
         return struct.unpack_from("<I", self.buf, OFF["raw_sent"])[0]
 
+    def diagnostics(self):
+        return {"pid": self.pid, "version": struct.unpack_from("<I", self.buf, 4)[0],
+                **{k: struct.unpack_from("<Q" if k == "raw_hwnd" else "<I", self.buf, off)[0]
+                   for k, off in OFF.items() if k != "keys"}}
+
+    def wheel(self, steps, cx=None, cy=None, gap=0.12):
+        """Wheel detents at the virtual cursor; WM_MOUSEWHEEL uses screen pixels."""
+        if cx is not None:
+            self.move_to(cx, cy)
+        point = wt.POINT(self._last_cx, self._last_cy)
+        if not user32.ClientToScreen(self.hwnd, ctypes.byref(point)):
+            raise OSError("ClientToScreen failed")
+        lp = ((point.y & 0xFFFF) << 16) | (point.x & 0xFFFF)
+        for _ in range(abs(steps)):
+            user32.PostMessageW(self.hwnd, 0x020A, (120 if steps > 0 else -120) << 16, lp)
+            time.sleep(gap)
+
     # ---- virtual mouse ---------------------------------------------------------------
     def move_to(self, cx, cy, post=True):
         """Virtual cursor to client coords (physical px). Also posts WM_MOUSEMOVE so
         the message-driven mouse path agrees."""
         self._last_cx, self._last_cy = cx, cy
-        sl, st, ox, oy, cw, ch = self._origin()
-        self._wi32(OFF["cx"], sl + ox + cx)
-        self._wi32(OFF["cy"], st + oy + cy)
+        self._wi32(OFF["cx"], int(cx))
+        self._wi32(OFF["cy"], int(cy))
         if post:
             lp = ((cy & 0xFFFF) << 16) | (cx & 0xFFFF)
             user32.PostMessageW(self.hwnd, WM_MOUSEMOVE, 0, lp)
         self._heartbeat()
-
-    def _buttons_write(self):
-        pass  # buttons are written by callers directly
 
     def click(self, cx=None, cy=None, hold=0.08, right=False):
         """Virtual press+release: serves the polled GetAsyncKeyState bit AND posts the

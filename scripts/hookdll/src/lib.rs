@@ -9,10 +9,10 @@
 //!
 //! Shared memory layout (little endian):
 //!   0x00 u32 magic  = 0x5A415249 ("ZARI")
-//!   0x04 u32 version = 1
+//!   0x04 u32 version = 3
 //!   0x08 u32 enabled  (0 = passthrough)
-//!   0x0C i32 cursor_screen_x
-//!   0x10 i32 cursor_screen_y
+//!   0x0C i32 cursor_client_x
+//!   0x10 i32 cursor_client_y
 //!   0x14 u32 buttons  (bit0 LMB, bit1 RMB, bit2 MMB)
 //!   0x18 u32 keys[8]  (256-bit virtual-key down table)
 //!   0x38 u32 toggles  (bit0 CAPS, bit1 NUM, bit2 SCROLL)
@@ -24,6 +24,10 @@ use core::ffi::c_void;
 
 const MAGIC: u32 = 0x5A415249;
 const SECTION_SIZE: usize = 0x100;
+const VERSION: u32 = 3;
+const RAW_SIZE: usize = 48;
+const RID_INPUT: u32 = 0x10000003;
+const RID_HEADER: u32 = 0x10000005;
 
 #[repr(C)]
 struct Shared {
@@ -53,13 +57,12 @@ static mut ORIG_ASYNC_KEY: usize = 0;
 static mut ORIG_KEY_STATE: usize = 0;
 static mut ORIG_KB_STATE: usize = 0;
 static mut ORIG_RAW: usize = 0;
-// 64-slot ring of synthesized RAWINPUT records (x64 layout, 40 bytes each).
-static mut RING: [u8; 40 * 64] = [0u8; 40 * 64];
+// 64-slot ring of synthesized RAWINPUT records (x64 layout, 48 bytes each).
+static mut RING: [u8; RAW_SIZE * 64] = [0u8; RAW_SIZE * 64];
 static mut RING_IDX: u32 = 0;
 static mut LAST_X: i32 = 0;
 static mut LAST_Y: i32 = 0;
 static mut PREV_BTN: u32 = 0;
-static mut HAVE_LAST: u32 = 0;
 static mut PREV_ENAB: u32 = 0;
 static mut MON_W: i32 = 0;
 static mut MON_H: i32 = 0;
@@ -142,7 +145,7 @@ unsafe fn shared() -> Option<&'static Shared> {
         return None;
     }
     let s = &*p;
-    if s.magic == MAGIC && s.version == 3 {
+    if s.magic == MAGIC && s.version == VERSION {
         Some(s)
     } else {
         None
@@ -163,23 +166,20 @@ unsafe fn key_down(s: &Shared, vk: i32) -> bool {
 
 #[inline]
 unsafe fn wput(off: usize, val: u32) {
-    core::ptr::write_unaligned(RING.as_mut_ptr().add(off) as *mut u32, val);
+    core::ptr::write_unaligned(core::ptr::addr_of_mut!(RING).cast::<u8>().add(off) as *mut u32, val);
 }
 
 unsafe fn emit(hwnd: u64, flags: u16, bflags: u16, dx: i32, dy: i32) {
     RING_IDX = (RING_IDX + 1) & 63;
-    let off = (RING_IDX as usize) * 40;
+    let off = (RING_IDX as usize) * RAW_SIZE;
     wput(off, 0);            // dwType = RIM_TYPEMOUSE
-    wput(off + 4, 40);       // dwSize
-    core::ptr::write_unaligned(RING.as_mut_ptr().add(off + 8) as *mut u64, hwnd);
-    core::ptr::write_unaligned(RING.as_mut_ptr().add(off + 16) as *mut u16, flags);
-    core::ptr::write_unaligned(RING.as_mut_ptr().add(off + 18) as *mut u16, bflags);
-    wput(off + 20, (bflags & 0x0F) as u32); // RawButtons (pressed state nibble)
-    wput(off + 24, dx as u32);
-    wput(off + 28, dy as u32);
-    wput(off + 32, 0);       // ExtraInfo
-    wput(off + 36, 0);       // Size
-    PostMessageW(hwnd as *mut c_void, 0x00FF, 0, RING.as_ptr().add(off) as *const c_void);
+    wput(off + 4, RAW_SIZE as u32);       // dwSize
+    core::ptr::write_bytes(core::ptr::addr_of_mut!(RING).cast::<u8>().add(off + 8), 0, RAW_SIZE - 8);
+    core::ptr::write_unaligned(core::ptr::addr_of_mut!(RING).cast::<u8>().add(off + 24) as *mut u16, flags);
+    core::ptr::write_unaligned(core::ptr::addr_of_mut!(RING).cast::<u8>().add(off + 28) as *mut u16, bflags);
+    wput(off + 36, dx as u32);
+    wput(off + 40, dy as u32);
+    PostMessageW(hwnd as *mut c_void, 0x00FF, 0, core::ptr::addr_of!(RING).cast::<u8>().add(off) as *const c_void);
     if !SHARED.is_null() {
         (*SHARED).raw_sent = (*SHARED).raw_sent.wrapping_add(1);
     }
@@ -269,16 +269,16 @@ unsafe extern "system" fn Hook_GetRawInputData(
     psize: *mut u32,
     hdrsize: u32,
 ) -> u32 {
-    let base = RING.as_ptr() as usize;
+    let base = core::ptr::addr_of!(RING).cast::<u8>() as usize;
     let h = hraw as usize;
-    if !psize.is_null() && h >= base && h < base + 40 * 64 && (h - base) % 40 == 0 {
-        let need: u32 = if cmd == 0 { 40 } else if cmd == 1 { 16 } else { 0 };
-        if need == 0 {
+    if !psize.is_null() && h >= base && h < base + RAW_SIZE * 64 && (h - base) % RAW_SIZE == 0 {
+        let need: u32 = if cmd == RID_INPUT { RAW_SIZE as u32 } else if cmd == RID_HEADER { 24 } else { 0 };
+        if need == 0 || hdrsize != 24 {
             return 0xFFFF_FFFF;
         }
         if data.is_null() || *psize < need {
             *psize = need;
-            return if data.is_null() { need } else { 0xFFFF_FFFF };
+            return if data.is_null() { 0 } else { 0xFFFF_FFFF };
         }
         core::ptr::copy_nonoverlapping(h as *const u8, data, need as usize);
         *psize = need;
@@ -289,12 +289,12 @@ unsafe extern "system" fn Hook_GetRawInputData(
     // Override real MOUSE records with our virtual cursor (abs) while enabled,
     // so no physical input can desync the game pointer. Keyboard passes through.
     if let Some(s) = shared() {
-        if s.enabled != 0 && cmd == 0 && !data.is_null() && r >= 40 && s.raw_hwnd != 0 {
+        if s.enabled != 0 && cmd == RID_INPUT && !data.is_null() && r >= RAW_SIZE as u32 && s.raw_hwnd != 0 {
             if core::ptr::read_unaligned(data as *const u32) == 0 {
                 if let Some((ax, ay)) = abs_norm(s.raw_hwnd, s.cursor_x, s.cursor_y) {
-                    core::ptr::write_unaligned(data.add(16) as *mut u16, 0x0001);
-                    core::ptr::write_unaligned(data.add(24) as *mut i32, ax);
-                    core::ptr::write_unaligned(data.add(28) as *mut i32, ay);
+                    core::ptr::write_unaligned(data.add(24) as *mut u16, 0x0001);
+                    core::ptr::write_unaligned(data.add(36) as *mut i32, ax);
+                    core::ptr::write_unaligned(data.add(40) as *mut i32, ay);
                 }
             }
         }
@@ -306,14 +306,11 @@ unsafe extern "system" fn Hook_GetRawInputData(
 // --- hooks ---------------------------------------------------------------------------
 
 unsafe extern "system" fn Hook_GetCursorPos(lpPoint: *mut POINT) -> i32 {
-    if let Some(s) = shared() {
-        pump(&s);
-    }
     match shared() {
         Some(s) if s.enabled != 0 && !lpPoint.is_null() => {
             (*lpPoint).x = s.cursor_x;
             (*lpPoint).y = s.cursor_y;
-            1
+            ClientToScreen(s.raw_hwnd as *mut c_void, lpPoint)
         }
         _ => {
             let orig: PGetCursorPos = core::mem::transmute(ORIG_CURSOR_POS);
@@ -323,9 +320,6 @@ unsafe extern "system" fn Hook_GetCursorPos(lpPoint: *mut POINT) -> i32 {
 }
 
 unsafe extern "system" fn Hook_GetAsyncKeyState(vKey: i32) -> i16 {
-    if let Some(s) = shared() {
-        pump(&s);
-    }
     match shared() {
         Some(s) if s.enabled != 0 => {
             if key_down(s, vKey) {
@@ -574,6 +568,7 @@ extern "system" fn DllMain(_hinst: *mut c_void, reason: u32, _reserved: *mut c_v
 }
 
 unsafe fn init() {
+    if !SHARED.is_null() { return; }
     let base = GetModuleHandleW(core::ptr::null());
     if base.is_null() {
         return;
@@ -598,7 +593,7 @@ unsafe fn init() {
     core::ptr::write_bytes(view as *mut u8, 0, SECTION_SIZE);
     let s = view as *mut Shared;
     (*s).magic = MAGIC;
-    (*s).version = 3;
+    (*s).version = VERSION;
     MON_W = GetSystemMetrics(0);
     MON_H = GetSystemMetrics(1);
     (*s).enabled = 0; // passthrough until the driver enables it
@@ -618,7 +613,7 @@ mod tests {
     fn raw_input_matches_win32_x64() {
         unsafe {
             emit(0, 1, 1, 12345, 23456);
-            let handle = RING.as_mut_ptr().add(RING_IDX as usize * 40);
+            let handle = core::ptr::addr_of_mut!(RING).cast::<u8>().add(RING_IDX as usize * RAW_SIZE);
             let mut size = 0;
             assert_eq!(Hook_GetRawInputData(handle.cast(), 0x10000003,
                        core::ptr::null_mut(), &mut size, 24), 0);
