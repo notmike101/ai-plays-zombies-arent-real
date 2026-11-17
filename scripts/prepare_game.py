@@ -8,6 +8,7 @@ import stat
 import tempfile
 
 from project import ROOT, load_config, config_path
+from game_mechanics import PERKS
 
 DIRECTORIES = {'art', 'assets', 'campaigns', 'fonts', 'lang', 'maps', 'mutators', 'sounds'}
 FILES = {'zombies-arent-real.exe', 'steam_api64.dll', 'balance.ini', 'battle_order.txt',
@@ -83,7 +84,7 @@ def full_unlock_profile(source):
                              (Path(source)/'unlocks.ini').read_text(), re.M))
     if not entries:
         raise ValueError('No unlock definitions found in the supported game')
-    entries.add(('perk', 'Extra_Zones'))  # Verified native perk in this supported build.
+    entries.update(('perk', name) for name in PERKS)
     return ('# Full-availability training profile; not a record of earned progression.\n'
             'breach_restarts = 0\n'+''.join(f'unlock = {kind} {name}\n' for kind, name in sorted(entries))).encode()
 

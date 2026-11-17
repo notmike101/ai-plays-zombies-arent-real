@@ -64,6 +64,9 @@ class PortabilityTests(unittest.TestCase):
                 self.assertIn('unlock = ability Police', unlocked)
                 self.assertIn('unlock = upgrade Garrison_Rate', unlocked)
                 self.assertIn('unlock = perk Extra_Zones', unlocked)
+                for perk in ('Flammable_Gas', 'Fall_Gas', 'Officer_Blast', 'Weak_Bridges',
+                             'Blast_Gas', 'Hot_Fire', 'Quick_Deploy'):
+                    self.assertIn('unlock = perk '+perk, unlocked)
                 with self.assertRaises(FileExistsError): prepare.prepare_copy(source, 'inst1')
                 with self.assertRaises(ValueError): prepare.prepare_copy(source, '../outside')
                 with self.assertRaises(ValueError): prepare.prepare_copy(root, 'inst2')
