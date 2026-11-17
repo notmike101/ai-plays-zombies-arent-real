@@ -24,26 +24,20 @@ The launcher uses the existing Python installation at `%LOCALAPPDATA%\Python\pyt
 
 WebGPU is preferred. It works on a supported browser at localhost or over trusted HTTPS. Ordinary HTTP over a LAN address uses Canvas 2D when the browser withholds WebGPU. No insecure browser flags or certificate changes are needed. `/?canvas2d=1` explicitly exercises the fallback.
 
-## Connect real training — pending permission
+## Connect real training
 
-**The trainer has not been modified. An already-running, uninstrumented worker cannot provide these values.** The app will wait until a worker with the observer integration makes its first decision.
+**The observer integration is included in this branch's `scripts/nn_play2.py`. An already-running, uninstrumented worker cannot provide these values.** The app will wait until a worker launched with this version makes its first decision. The active `D:\zar-scratch` checkout was deliberately left unchanged while its training processes were live; bring this branch into that checkout at the training owner's next safe restart.
 
-`integration.patch` is a reviewable, 22-line addition to `scripts/nn_play2.py`, prepared against the source inspected on 2026-11-16. It:
+The 22-line integration in `scripts/nn_play2.py`:
 
 1. Imports the optional observer and feature labels.
 2. Installs an observer on each episode's actual policy instance.
 3. Publishes the masked probabilities and selected tool/cell immediately after the existing sampling code.
 4. Removes the hooks and closes the writer in `finally`, including failed episodes.
 
-**Apply only after the user authorizes this change outside `visualizer`, and only during trainer downtime coordinated with the agent running training. Do not edit `scripts/*.py` while workers are live. Do not stop or restart another agent's workers for this visualizer.** If the source has changed, re-review the patch against it rather than forcing it through.
+**The user authorized the integration. Bring it into the active checkout only during trainer downtime coordinated with the agent running training. Do not edit `scripts/*.py` while workers are live. Do not stop or restart another agent's workers for this visualizer.** Preserve the training agent's newer changes when integrating the branch.
 
-Read-only applicability check:
-
-```powershell
-node D:/github-agent/identity.mjs git apply --check visualizer/integration.patch
-```
-
-After permission and at a safe restart, the training owner can apply the patch using the same helper's `git apply` command, commit that file, and launch training normally. No alternate trainer launcher is required. Existing training behavior, checkpoints, sampling, optimization and game controls are retained.
+The old standalone patch has been removed now that it is applied; do not apply it a second time. Launch training normally after integration. No alternate trainer launcher is required. Existing training behavior, checkpoints, sampling, optimization and game controls are retained. See the maintenance contract in root `AGENTS.md` before changing the model or feature meanings.
 
 ## How to read the view
 
@@ -82,8 +76,8 @@ node visualizer/test_graph.mjs
 
 The model check imports the current trainer source without running its main function or opening a game. It checks exact recurrent outputs and sampled decisions, then reports a warm CPU inference benchmark. It does not establish end-to-end gameplay overhead.
 
-Verified on 2026-11-16: 16 Python tests; Node graph/layout/filter/clear assertions; the current 61,980-parameter PolicyNet2 gives identical outputs and sampled decisions for 12 recurrent steps. One warm CPU run measured median 0.074 ms plain versus 0.122 ms observed including snapshot creation, excluding first topology extraction and background disk writes. Edge displayed the WebGPU graph and Canvas 2D fallback, live synthetic updates, node inspection, pause/resume and waiting state. The responsive view was checked at a 390-pixel viewport. Real-game attachment awaits authorized trainer integration.
+Verified on 2026-11-16 before trainer integration: 16 Python tests; Node graph/layout/filter/clear assertions; the current 61,980-parameter PolicyNet2 gives identical outputs and sampled decisions for 12 recurrent steps. One warm CPU run measured median 0.074 ms plain versus 0.122 ms observed including snapshot creation, excluding first topology extraction and background disk writes. Edge displayed the WebGPU graph and Canvas 2D fallback, live synthetic updates, node inspection, pause/resume and waiting state. The responsive view was checked at a 390-pixel viewport. Two additional integration tests now exercise the real episode function against a fake game, checking captured decisions, unchanged results and cleanup on success/failure. Real-game attachment awaits deployment at a safe trainer restart.
 
 ## Collaboration handoff
 
-All implementation changes are confined to `visualizer`. The active checkout's branch was preserved and only this directory's files were committed. Training's dirty logs/checkpoints were not staged. No game processes were launched, stopped, resized or controlled. Root `notes/tracker.md` was read but not edited because the user's narrower directory boundary takes precedence. This README and PLAN.md hold this work's handoff.
+The original application is confined to `visualizer`. The user subsequently authorized the 22-line trainer integration and root `AGENTS.md` maintenance guidance. Those changes were made on `codex/visualizer-integration` in `D:\worktrees\zar-visualizer-integration`, preserving the active checkout and the other agent's uncommitted work. Training's dirty logs/checkpoints were not staged. No game processes were launched, stopped, resized or controlled. Root `notes/tracker.md` was read but not edited because that file remains outside the authorized edit scope. This README and PLAN.md hold this work's handoff.

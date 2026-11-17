@@ -48,7 +48,8 @@ class IntegrationTests(unittest.TestCase):
         self.run_episode = source['run_episode']
         self.globals = self.run_episode.__globals__
         self.model = source['PolicyNet2']()
-        self.assertIn('Observer', self.globals, 'Trainer must import the optional observer')
+        self.assertTrue('Observer' in self.globals, 'Trainer must import the optional observer')
+        self.assertIsNotNone(self.globals['Observer'], 'The real observer import must succeed')
         self.observers = []
         test = self
 
