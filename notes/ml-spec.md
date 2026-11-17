@@ -42,6 +42,15 @@ choices (19 abilities each). Geometry uses two model-selected cells. Loadout
 controls use actual native ownership receipts; battle bindings use the saved
 roster including gaps. Native stock governs resource availability.
 
+Fresh training copies have full native availability:16 unit types,19 abilities,
+16 upgrades and Extra_Zones, as explicitly requested. These are unlocks only;
+normal campaign money/SP still pay for purchases. The model's current planning
+roster exposes seven unit types plus the native Upgrade Unit action. Unlocking
+the other unit types does not create policy actions for switching that roster.
+All19 ability buy/refund actions already exist. Expanding unit selection needs
+an interface/action/schema change with matching labels and checkpoint migration;
+do not silently remap existing logits to newly unlocked units.
+
 Tool selection cancels the previous tool through virtual right-click before
 pressing a hotkey: hotkeys toggle and undo can leave a tool selected. Geometry
 that violates native land/budget READY gates is undone once, with the prior board
