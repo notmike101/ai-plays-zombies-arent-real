@@ -6,6 +6,12 @@ from zar_boot import COPIES, boot, copy_path, menu_points, campaign_in_progress
 
 
 class BootBoundary(unittest.TestCase):
+    def test_unplayed_campaign_uses_shorter_play_now_panel(self):
+        self.assertEqual(menu_points(1920, 1200, unplayed=True)[2], (.446, .610))
+        self.assertNotEqual(menu_points(1920, 1200)[2], (.446, .610))
+        with self.assertRaisesRegex(RuntimeError, 'Uncalibrated'):
+            menu_points(3840, 2160, unplayed=True)
+
     def test_progress_selects_the_campaign_button_layout(self):
         for count in range(6):
             progress = '\n'.join(f'stage {i} = {"bronze" if i <= count else "none"} 0 played'

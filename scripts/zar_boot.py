@@ -74,12 +74,13 @@ def campaign_in_progress(progress):
     return 0 < cleared < 5
 
 
-def menu_points(width, height, in_progress=False):
+def menu_points(width, height, in_progress=False, unplayed=False):
     # shortcut: calibrated English UI scale 1 layouts; calibrate new sizes before use.
     if (width, height) == (1920, 1200):
         return ((.4245, .844), (.207, .368),
+                (.446, .610) if unplayed else
                 (.446, .592) if in_progress else (.451, .738), (.446, .663))
-    if (width, height) == (3840, 2160):
+    if (width, height) == (3840, 2160) and not unplayed:
         return ((.453, .709), (.16, .454),
                 (.286, .356) if in_progress else (.286, .454), (.286, .394))
     raise ZAREnvError(f'Uncalibrated client layout {width}x{height}')
@@ -127,7 +128,8 @@ def boot(copy_dir, dest=('campaign', 'stage1')):
             raise ZAREnvError('Virtual-input hooks/pump unavailable')
         rect = ctypes.wintypes.RECT()
         user32.GetClientRect(vi.hwnd, ctypes.byref(rect))
-        welcome, campaign, fresh, resume = menu_points(rect.right, rect.bottom, in_progress)
+        welcome, campaign, fresh, resume = menu_points(rect.right, rect.bottom, in_progress,
+                                                       unplayed=not progress.exists())
         step = 'welcome'
         time.sleep(max(0, 75 - (time.monotonic() - started)))
         click_fraction(vi, *welcome)
