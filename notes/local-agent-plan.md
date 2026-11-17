@@ -22,7 +22,7 @@ This is the existing Windows deployment, not a portable distribution project.
   verify identity and descendants; let launcher clean owned games.
   Test refusal paths and launch arguments with fakes; test actual visualizer
   start/reuse/stop on an unused loopback port without preview or game control.
-- [ ] Handoff: README/AGENTS/runbook and local environment record. Make commands
+- [x] Handoff: README/AGENTS/runbook and local environment record. Make commands
   the first entry point, distinguish healthy existing runs from new launches,
   document exit codes and recovery, and record evidence in tracker.
 
@@ -44,3 +44,11 @@ actual training launch/stop is tested with fakes while the real learner is activ
   rejected. Isolated server29688 on8766 started/reused/served HTTP/stopped; stale
   creation time refused without stopping it. Production identities unchanged.
   Parent-launch race and NaN creation time are covered. No live training stop.
+- Final:13 focused tests pass, including background-launch options and resource
+  refusal. Actual PowerShell entry point preflight/reuse pass; documented blocks
+  parse and Markdown entry links resolve. Disposable process verified below-normal
+  priority and CPUs0-7. Production run reached round33 with a fresh332-input frame;
+  no trainer module edits, checkpoint writes by validation, or extra game boots.
+- Limits: no Qwen/new-agent trial, clean-machine install or real training stop/start
+  under the wrapper. Launcher arguments/resource ordering are tested with fakes;
+  the existing live run remains owned by its original launcher. No portability claim.

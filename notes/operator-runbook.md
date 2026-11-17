@@ -129,7 +129,8 @@ training should continue unchanged. Do not delete runtime files to stop processe
 
 ## 5. Exit codes and failures
 
-Commands print JSON. Exit0 means the requested check/action succeeded; `starting`
+Checks/status and action results print JSON; foreground training also streams
+launcher output. Exit0 means the requested check/action succeeded; `starting`
 still needs later verification. Exit1 means a failed check/action with an error;
 exit2 means invalid arguments. Never ignore a nonzero exit and assume success.
 Preflight reports individual failures. Recovery guidance is in

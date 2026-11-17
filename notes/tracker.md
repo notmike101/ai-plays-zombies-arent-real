@@ -1,6 +1,46 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — zero-context handoff verified, training LIVE)
+## CURRENT STATE (2026-11-17 — guarded local agent commands deployed, training LIVE)
+- New entry point: .\local.ps1 status/check/train/visualizer-start/train-stop/
+  visualizer-stop. README+AGENTS direct new agents to these commands; runbook
+  shortened around them. notes/local-environment.md records known Python,
+  packages, local artifacts, contribution helper and recovery. Implementation
+  evidence/decisions: notes/local-agent-plan.md.
+- Existing production run b39316bdad21 left running, unchanged identities:
+  launcher25848(created1794944254.8318655),trainer28856(1794944344.6409335),
+  worker31408,game22828 inst1(1794944255.099634). Seed20261140,eps2,rounds200;
+  below-normal,CPU0-7,normal difficulty,low graphics. Revalidate PIDs before use.
+- Latest observed update round33 checkpoint18675e77dfb089fb. Last pair: planning
+  timeout(saved=null), aborted battle8.74% saved. Model objective remains unmet.
+  Logs remain analysis/nn3_learning_audit_20261117.log and launcher log/.err.
+- Production visualizer22604(created1794931712.9690397),port8765 reused normally.
+  Fresh real frame worker31408/game22828,planning,sequence12,age1.44s;332 input
+  labels,no label warning,preview=false. Worker ancestry matched trainer28856.
+- Validation:13 offline operator tests PASS. Read-only actual preflight PASS for
+  exact schema3, learned weights+10 Adam states, dependencies, supported inst1
+  executable hash and x64 DLL/export. Actual duplicate-training call refused.
+  Isolated server29688 on127.0.0.1:8766 started/reused/served HTTP/rejected stale
+  identity/stopped; port closed. Production process identities remained unchanged.
+  PowerShell wrapper/check/reuse, documentation syntax and links PASS. Disposable
+  process verified below-normal and CPUs0-7. All temporary test processes cleaned;
+  no extra game or preview launched. Tests never target live games for control.
+- Latest headroom sample:CPU8.8%,GPU38%,RAM14.33GiB available,
+  VRAM3215/10240MiB,D:13.09GiB free. Samples are not continuous resource guarantees.
+  New wrapper uses one copy, at most8/half available CPUs, below-normal priority,
+  minimum4GiB available RAM/2GiB disk at launch; no continuous GPU/RAM cap.
+- No changes to loaded trainer/environment/observer modules or reward/schema.
+  No real train-stop/restart test while the original run is healthy; wrapper launch
+  and limits ordering tested with fakes. No Qwen trial or portable-install claim.
+  Wrapper refuses a different checkout while trainer ROOT remains hard-coded.
+- Next session: status -> check -> preserve healthy run; visualizer-start reuses
+  server. If idle, train --rounds N resumes existing weights/Adam; inspect operator
+  log and first completed update. Stop requires fresh PID+create_time. Review
+  ml-spec before model changes; outstanding observation/action/parallel-injection
+  gaps remain. No claim of continuous monitoring after this chat.
+- Existing unrelated policy2/history2 modifications and older untracked run
+  artifacts remain untouched. New runtime operator logs/lock are ignored.
+
+## Prior snapshot (2026-11-17 — zero-context handoff verified, training LIVE)
 - Fresh-clone review (2026-11-17): recommendations only; no runtime/source
   changes. Confirmed hard-coded trainer/env root, no Python dependency manifest,
   source-only Rust hook DLL, tracked legacy checkpoints versus ignored schema3.
