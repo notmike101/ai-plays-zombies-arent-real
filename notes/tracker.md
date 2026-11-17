@@ -1,20 +1,20 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — resuming after native debt fix)
-- First launch exposed a spatial grid row overlapping the planning HUD; fixed
-  c743dc0, regression tests and a 51-decision live probe passed. Probe cleaned.
-- Second run 02b76abde977 completed three valid episodes and saved policy/Adam
-  5279118f147fa614, then stopped because a real -$734 safe-zone balance was
-  treated as missing memory. Native footer proves debt; fixed dc63754.
-- Debt regression RED->GREEN; all 24 learning/state tests PASS. See automation.md.
-- Launcher PID48472 now boots inst1/inst2 for seed20261125, eps2/rounds200,
-  resuming sessions/nn_policy3.pt including optimizer. Low graphics, normal
-  difficulty, BELOW_NORMAL priority, CPU0-7 (8 of24 logical CPUs).
-- Logs: analysis/nn3_resume_debt_20261117.log and nn3_launcher_debt_20261117.log/.err.
-- Prior two-copy samples: total CPU19.7-52.6%, GPU29-37%, available RAM12.16-12.24
-  GiB; process tree RSS1.28-1.29 GiB, VRAM3485-3601/10240 MiB. Point-in-time only.
-- Prior launch45892 and games16380/19596 cleaned automatically on error.
-- Next: verify sustained batches/new checkpoint and current live PIDs/headroom.
+## CURRENT STATE (2026-11-17 — legality fix validated, training restarting)
+- Latest policy/Adam392c6079d5652b95 saved from valid episodes of run26956f65584d.
+  Previous launch48472 cleaned after an oversized safe zone blocked READY.
+- Three verified interface fixes: HUD boundary c743dc0; native debt dc63754;
+  READY-blocking geometry single-undo guard7df4ef6. Strategy remains model-owned.
+- Exact native land/budget gates found in matching-build existing Ghidra functions
+  0x1401c0520/0x1400982c0. Live PID48612 detected an illegal rectangle and restored
+  prior $3037.80/one garrison. All test copies and owned REA probes cleaned.
+- Validation:43 trainer/state/deck/spatial/reporting+34 visualizer tests PASS;
+  model observer parity12 recurrent steps and Node graph assertions PASS.
+- Restarting inst1/inst2, seed20261129, eps2/rounds200, low graphics, normal
+  difficulty, BELOW_NORMAL priority and CPU0-7 (8 of24 logical CPUs).
+- Logs: analysis/nn3_resume_valid_20261117.log and nn3_launcher_valid_20261117.log/.err.
+  Checkpoints sessions/nn_policy3.pt/.previous; history analysis/nn_hist3.jsonl.
+- Next: verify successive batches, current PIDs, observer frames and headroom.
 
 ## Prior snapshot (2026-11-17 — training improvements complete)
 - All four implementation milestones completed. Latest code092552d; earlier
