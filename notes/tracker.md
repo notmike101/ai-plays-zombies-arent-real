@@ -1,15 +1,37 @@
 # ZAR Tracker (live state — update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — telemetry transport assessment)
-- Read-only source assessment: observer publishes latest-only JSON at <=5 Hz;
-  browser polls /api/state with a 50 ms delay after each completed request.
-  Server re-reads runtime snapshots per request; no persistent event/log stream.
-- Proposed direction for discussion: SSE for browser telemetry/log delivery;
-  retain nonblocking observation and give logs bounded history/replay distinct
-  from replaceable activation snapshots. WebSocket depends on whether actual
-  bidirectional commands are wanted. No transport implementation authorized yet.
-- No trainer/game/server launched, stopped or modified in this assessment;
-  runtime/process state below is prior interface evidence, not revalidated here.
+## CURRENT STATE (2026-11-17 — read-only telemetry streaming deployed)
+- User clarified observation-only visualizer, delegated implementation choices,
+  and authorized guidance updates and push. Implementation through e5da13d pushed
+  to origin/main; final tracker/plan completion accompanies it in the next commit.
+- Browser uses persistent SSE /api/events; /api/state remains diagnostic. One
+  shared 200 ms file cache serves all clients, sampled even without viewers.
+  Server retains 200 compact decision summaries globally, displays latest 50 for
+  the selected stream, replays retained list on reconnect, resets on restart.
+  Inputs/outputs remain actual observer data. This is sampled history, not durable
+  trainer stdout or complete decisions, and never proof of game action execution.
+- Current observation values and decision history are in the Inspector; Pause
+  freezes the view only. Preview isolation, reconnect topology and idle status
+  are maintained. At most 16 SSE viewers, with 3-second socket write timeout.
+- Full visualizer suite: 35 tests PASS (including new stream/history tests).
+  Existing eight fake-game integration/watchdog failures were caused by missing
+  newer loadout interfaces; fixtures updated, original assertions preserved.
+- verify_model.py PASS: actual PolicyNet2, 32 inputs / 72,915 parameters; exact
+  outputs and sampled decisions for 12 recurrent steps. Warm CPU medians 0.085 ms
+  plain / 0.160 ms observed (not end-to-end latency or game performance).
+- Node graph assertions and JS syntax PASS. Chromium SSE/no-polling, reconnect,
+  pause/resume, worker switch, 32 displayed inputs and preview isolation PASS.
+  WebGPU/Canvas 2D and mobile portrait/landscape/touch checks PASS; physical mobile
+  devices untested. Self-review performed without subagents, per repo rule.
+- Normal visualizer server PID 22604, port 8765, deployed from D:/zar-scratch.
+  Old server 5624 replaced; test server 29832 and synthetic preview 45212 stopped.
+  Final browser smoke: WAITING FOR WORKER via SSE, no decision history. No game
+  processes found by psutil executable-directory inventory. No trainer/observer
+  source, policy, game process, game install or real input was changed.
+- Evidence (ignored): visualizer/runtime/stream-python-check.log,
+  stream-browser-check.log, stream-mobile-check.log, stream-decision-log.png,
+  stream-mobile-artifacts/ and stream-browser-artifacts/. Unrelated training
+  logs/checkpoint changes remain unstaged. Server log/error files are runtime-only.
 
 ## Prior verified state (2026-11-17 — deterministic interface complete)
 - Interface only: no ML/trainer source changes, subagents, console commands,
@@ -40,6 +62,11 @@
   Fresh dump economy is authoritative; unchanged env.money can read a stale mirror.
 
 ## NEXT STEPS
+- Open/refresh http://localhost:8765. Real attachment requires a normally launched
+  instrumented worker's first decision; none was launched just for visualizer QA.
+  At the next coordinated training launch, verify a fresh real frame and labels.
+- Use AGENTS.md and visualizer/README.md for current streaming maintenance;
+  older PLAN.md polling/integration-branch sections are explicitly historical.
 - No interface acceptance work outstanding. Future build/layout changes require
   calibration and fresh live checks; source/menu matrix is notes/automation.md.
 - Reuse scripts/zar_boot.py for owned copies. Successful API callers own cleanup;
@@ -83,6 +110,9 @@ dense crowds + Battleship water AOE = path to silver. (notes/game-rules.md)
   24980,23776,49320-old etc]; user game pid 19588-era = user's own (untouched).
 
 ## HISTORY (dated run summaries)
+- 2026-11-17: Deployed read-only SSE, shared snapshot sampling, readable inputs
+  and bounded sampled decision history. Tests and docs updated, changes pushed;
+  no trainer/observer or gameplay changes. Synthetic preview cleaned up.
 - 2026-11-17: Assessed persistent telemetry and log streaming from current
   observer/server/browser source; discussed SSE versus bidirectional WebSocket.
   Product code unchanged; no live latency measurements or game tests performed.
