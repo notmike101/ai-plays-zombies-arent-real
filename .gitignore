@@ -10,6 +10,8 @@ analysis/*.bmp
 analysis/*.jpg
 analysis/*.npy
 analysis/*.npz
+analysis/interface-progress-backups/
+analysis/interface-*.pid
 scripts/__pycache__/
 scripts/hookdll/target/
 *.pyc
