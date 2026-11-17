@@ -28,7 +28,7 @@ Drag sends held-button moves and releases in finally. No desktop input is sent.
 | Wall | Z; start press, movement, end press | Drag + endpoint click: $2247.10 -> $2189.93, walls 22 -> 23 |
 | Single freehand stroke | Does not commit zone/wall in this build | Corner/end presses are required |
 | Wheel | vi.wheel(+1/-1), WM_MOUSEWHEEL | Zoom .5795 -> .6374 -> .5795; world cursor unchanged |
-| READY confirmation | SPACE then SPACE, correct scan codes | Zombies >0 |
+| READY confirmation | SPACE; second SPACE only if zombies remain zero | Zombies >0; blind second SPACE can pause |
 | Restart confirmation | Existing env.to_planning() R loop | Planning, placements and budget retained |
 | READY NO dialog button | vi.click at client fraction (.59,.567) | Covered by the acceptance suite; other dialogs use their bound keys |
 | Raw-only menu/world mouse actions | Not the supported action path | Isolated tests produced no successful action |
@@ -53,7 +53,11 @@ sessions completed and released their engines; no persistent MCP session was ope
 
 ## Coordinates, keyboard, and state
 - GetClientRect supplies physical client pixels. Menu coordinates are fractions:
-  PlayNow (.4245,.844), CAMPAIGN (.207,.368), START OVER (.451,.738).
+  1920x1200: PlayNow (.4245,.844), CAMPAIGN (.207,.368), START OVER (.451,.738).
+  3840x2160: PlayNow (.453,.709), CAMPAIGN (.16,.454), fresh-play (.286,.454).
+  English UI scale 1 is calibrated; other client sizes fail loudly. The layout
+  does not scale using one universal fraction set. A completed campaign shows
+  PLAY NOW in place of the start/resume pair when resume_stage is zero.
 - Scan codes: SPACE=57, ENTER=28, ESC=1, R=19, F6=64. Stray SPACE toggles pause.
 - F6 writes only in-world. Menu/dialog silence is not proof of a hang. Filenames
   have one-second precision; wait >=1.1 s between snapshots to avoid overwrites.

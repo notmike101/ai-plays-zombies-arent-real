@@ -103,8 +103,9 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   creation/version validation/client expectation equal (currently 3).
 
 ## Standing input traps (detail in notes/automation.md)
-- Keys require scan codes. READY=SPACE followed by dialog SPACE; stray SPACE pauses.
-- Menu clicks use GetClientRect fractions. Unconditional ESC can back out of the
+- Keys require scan codes. READY=SPACE; confirm with SPACE only when needed; stray SPACE pauses.
+- Menu clicks use calibrated GetClientRect fractions (1920x1200 or 3840x2160,
+  English UI scale 1); the layouts have different fractions. Unconditional ESC can back out of the
   campaign page; dismiss only a blocker. Never resize a running game.
 - Zones need a press at each corner then Enter; segment drags supply corner presses.
   Walls need start/end presses. One freehand stroke does not commit either shape.

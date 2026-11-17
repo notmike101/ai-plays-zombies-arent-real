@@ -164,9 +164,8 @@ unsafe fn key_down(s: &Shared, vk: i32) -> bool {
     (s.keys[(vk >> 5) as usize] >> (vk & 31)) & 1 == 1
 }
 // --- raw mouse pump ------------------------------------------------------------------
-// While enabled, every mouse move/button edge observed in the shared section is
-// synthesized into a RAWINPUT record (posted as WM_INPUT=0x00FF to raw_hwnd) and
-// served back by Hook_GetRawInputData below. Real events pass through untouched.
+// While enabled, virtual movement is posted as WM_INPUT compatibility records.
+// Button/wheel actions use posted messages; real raw mouse positions are overridden.
 
 #[inline]
 unsafe fn wput(off: usize, val: u32) {

@@ -89,4 +89,3 @@ class MenuDriver:
             self.click_cap(*row_center_cap)
             time.sleep(2.0)
         return self.panel_bright()
-
