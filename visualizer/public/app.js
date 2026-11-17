@@ -85,7 +85,8 @@ function renderHistory() {
     row.append(element('div','small',`${new Date(entry.timestamp*1000).toLocaleTimeString()} · ${entry.phase} · #${entry.sequence}`));
     for(const choice of entry.choices){
       const probability=typeof choice.probability==='number'?` · ${(choice.probability*100).toFixed(1)}%`:'';
-      row.append(element('div','',`${choice.head}: ${friendly(choice.label)}${probability}`));
+      const heading=choice.head==='hu'?'Action':choice.head==='hc'?'Map position':friendly(choice.head);
+      row.append(element('div','',`${heading}: ${friendly(choice.label)}${probability}`));
     }
     if(entry.skipped)row.append(element('div','small',`${entry.skipped} published samples not observed between these entries`));
     return row;

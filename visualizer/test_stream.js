@@ -41,7 +41,7 @@ async page => {
     expect(await page.locator('#decision-log li').count()===0,'Preview history must not leak into Live');
     expect(await page.locator('#observations .data-row').count()===0,'Preview inputs must clear on mode change');
     expect(errors.length===0,errors.join('\n'));
-    console.log(JSON.stringify({streaming:true,reconnect:true,pause:true,previewIsolation:true,inputValues:values,requests:requests.filter(p=>p.startsWith('/api/'))}));
+    return {streaming:true,reconnect:true,pause:true,previewIsolation:true,inputValues:values,requests:requests.filter(p=>p.startsWith('/api/'))};
   } finally {
     await page.context().setOffline(false);
     page.off('request',onRequest);page.off('pageerror',onError);
