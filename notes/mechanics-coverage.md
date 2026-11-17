@@ -232,3 +232,17 @@ stay masked. Both old and new two-step geometry gestures can be canceled by the
 policy; cancellation clears the saved anchor as well as the native tool.
 Regression tests cover reduced unlock time, missing binding and cancelability;
 125 script tests pass. No reward or optimizer changes in this milestone.
+
+
+## Modal recovery and remaining battle receipts
+
+L5's first mutation tutorial at sim45.03 opened the native modal at667868,
+freezing the simulation while game_state.paused remained false. PrintWindow
+showed the informational Zombies Are Mutating dialog; Enter cleared it and
+simulation resumed. Schema4 now4262 inputs/183 tools: dialog state plus guarded
+confirm/cancel actions. While modal, masks expose only those two actions and
+HUD reads skip the obscured panel. No blind SPACE/ESC watchdog is introduced.
+126 script tests and37 visualizer tests pass; observer parity and graph pass.
+The fake-game integration now supplies the same perk contract as real refresh.
+Demolition on a240.8m tall building, SeekDestroy on a garrison, Cure, Tank,
+AC130 and Nuke each consumed native stock in scoped normal L5 diagnostics.

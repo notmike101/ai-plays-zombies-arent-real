@@ -312,3 +312,10 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
   group, one56-byte AI record). Do not decode these as tightly packed arrays.
 - Sample queried terrain cells only: L5 storage exceeds91 million cells. Never
   read or allocate the entire terrain grid on every policy decision.
+
+
+## Modal gameplay contract
+- Native modal667868 can pause simulation without changing the pause flag (the
+  first mutation tutorial does this). Preserve explicit dialog observation and
+  model confirm/cancel actions; mask world actions until the dialog is closed.
+  Do not diagnose a static clock alone as a hang or send unconditional SPACE.

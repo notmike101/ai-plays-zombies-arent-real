@@ -21,13 +21,17 @@ NONSPATIAL = set(KEY_ACTIONS)-{'pan_up','pan_left','pan_down','pan_right'} | {
 
 def extra_masks(st):
     masks=np.zeros((len(EXTRA_TOOLS),48),dtype=np.float32)
+    if st.get('dialog'):
+        for name in ('dialog_confirm','dialog_cancel'):masks[EXTRA_TOOLS.index(name),0]=1
+        return masks
     if 'native' not in st:return masks
     sel=st['native']['selection'];planning=st['planning'];polygon=len(sel['polygon'])
     selected=any(len(sel[k]) for k in ('units','zones','helicopters','evac')) or sel['gate']>=0
     for i,name in enumerate(EXTRA_TOOLS):
         mask=masks[i];mask[:]=st.get('world_cells',np.repeat(YF<.70,len(XF)))
         enabled=True
-        if name.startswith('place_'):
+        if name.startswith('dialog_'):enabled=False
+        elif name.startswith('place_'):
             enabled=planning and name[6:] in st['planning_roster']
             if name[6:] in ('Sniper','FireMortar','Railgun','Howitzer','MLRS'):
                 mask *= [p is not None for p in st.get('build_targets',[None]*48)]
@@ -113,7 +117,7 @@ def unit_names(units, maps):
 
 
 def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, width, height,
-                gesture_anchor=None, armed=(0,0,0), paused=False, speed=2):
+                gesture_anchor=None, armed=(0,0,0), paused=False, speed=2, dialog=False):
     s=snapshot;sel=s['selection'];u=s['units'];maps=s['unit_maps']
     camera=s['camera'];g=lambda x:math.log1p(max(float(x),0))
     result=[camera[0]/10000,camera[1]/10000,camera[2]/8,float(paint_mode),float(legal),land_fraction]
@@ -189,6 +193,7 @@ def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, 
         count=np.maximum(np.bincount(bins,minlength=48),1)
         for value in values:
             result.extend(np.bincount(bins,weights=np.asarray(value)[visible],minlength=48)/count)
+    result.append(float(dialog))
     assert len(result)==len(EXTRA_LABELS)
     if not np.isfinite(result).all():raise RuntimeError('Nonfinite mechanics observation')
     return list(map(float,result))
@@ -209,7 +214,9 @@ class Mechanics:
         e=self.env;c=self.controls;s=self.reader.snapshot()
         if e.scalar(0x6553d4,'<f') or e.scalar(0x6553d8,'<f'):
             raise RuntimeError('Policy projection requires top-down camera')
-        hud=read_panel(e);roster=c.planning_roster();perks=c.perks()
+        st['dialog']=bool(e.scalar(0x667868,'<B'))
+        hud=dict(actions={},valid=False) if st['dialog'] else read_panel(e)
+        roster=c.planning_roster();perks=c.perks()
         bounds=hud.get('bounds')
         st['world_cells']=np.repeat(YF<.70,len(XF)) & outside_panel(centers(e.cw,e.ch),bounds)
         legal=e.geometry_legal() if st['planning'] else False
@@ -222,7 +229,7 @@ class Mechanics:
             mechanics_features=observation(s,roster,perks,hud,e.scalar(0x665160,'<B'),legal,
                 covered/max(total,1),e.cw,e.ch,st.get('gesture_anchor'),
                 [e.scalar(rva,'<B') for rva in (0x667060,0x65d2e1,0x65d309)],
-                e.scalar(0x665fa2,'<B'),e.scalar(0x666868,'<q')))
+                e.scalar(0x665fa2,'<B'),e.scalar(0x666868,'<q'),st['dialog']))
         st['playarea_cells']=inside_polygon(centers(e.cw,e.ch),p(s['playarea']))
         kinds=s['units']['kind'];defenders=(kinds>=2)&(kinds!=3)
         targets=dict(unit=s['units']['pos'][defenders],building=s['buildings']['center'],
@@ -241,6 +248,7 @@ class Mechanics:
 
     def execute(self,st,name,cell):
         e=self.env;c=self.controls;xy=(round(XF[cell%8]*e.cw),round(YF[cell//8]*e.ch))
+        if name.startswith('dialog_'):return c.dialog(name=='dialog_confirm')
         if name.startswith('equip_'):return c.equip_unit(name[6:].replace('clear','-'),cell)
         if name.startswith('perk_'):return c.equip_perk(name[5:].replace('clear','-'),cell)
         if name.startswith('panel_'):return c.panel_action(name[6:])

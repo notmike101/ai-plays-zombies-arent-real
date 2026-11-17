@@ -162,6 +162,13 @@ class Controls:
         self.env.vi.click(*panel['actions'][name])
         self.frames()
 
+    def dialog(self, confirm):
+        if not self.env.scalar(0x667868,'<B'):
+            raise ZAREnvError('No active modal dialog')
+        self.env.vi.key_press(13 if confirm else 27,sc=28 if confirm else 1)
+        self.frames()
+        wait_until(lambda:not self.env.scalar(0x667868,'<B'),'dialog closed')
+
     def key_action(self, name):
         vk,sc,shift = KEY_ACTIONS[name]
         vi = self.env.vi

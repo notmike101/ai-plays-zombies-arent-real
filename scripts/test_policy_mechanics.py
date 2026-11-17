@@ -102,6 +102,12 @@ class MechanicsTests(unittest.TestCase):
         self.assertAlmostEqual(sum(channel('medevac carried log1p')),np.log(24))
         self.assertEqual(sum(channel('medevac departure ordered')),1.)
 
+    def test_modal_masks_block_world_actions_and_preserve_policy_confirmation(self):
+        masks=extra_masks({'dialog':True})
+        self.assertEqual(np.flatnonzero(masks.any(axis=1)).tolist(),
+                         [EXTRA_TOOLS.index('dialog_confirm'),EXTRA_TOOLS.index('dialog_cancel')])
+        self.assertEqual(masks.sum(),2)
+
     def test_terrain_codes_bridge_bits_and_outside_sentinel(self):
         s=fixture();s['terrain']['codes'][:3]=[4,0,-1];s['terrain']['bridges'][1]=1
         values=observation(s,['-']*7,[dict(name='-',locked=False)]*3,{'actions':{}},0,True,0,1920,1200)

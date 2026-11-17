@@ -17,7 +17,7 @@ EXTRA_TOOLS = [f'place_{name}' for name in MISSING_UNITS] + [
     'speed_half','speed_1','speed_2','speed_4'] + [f'panel_{name}' for name in PANEL_ACTIONS]
 EXTRA_TOOLS += ['select_helicopter','select_vehicle','select_medevac',
     'drag_corner','drag_edge','insert_corner','remove_corner','pause_toggle']
-EXTRA_TOOLS += ['place_click','place_paint']
+EXTRA_TOOLS += ['place_click','place_paint','dialog_confirm','dialog_cancel']
 
 # Counts retain multiplicity; selected entities expose individual state below.
 GRID_CHANNELS = tuple(f'unit {name}' for name in UNITS if name not in ('Spikes','Oil')) + (
@@ -67,6 +67,8 @@ STATE_CHANNELS = ('wall HP fraction','wall breached cell fraction','wall level /
     'medevac phase / 8','medevac carried log1p','medevac landed log1p','medevac damage log1p','medevac departure ordered',
     'hazard kind / 8','hazard radius / 1000','hazard expiry sim time / 600')
 EXTRA_LABELS += [f'Native state {name} cell {i+1} (mean; 0 empty)' for name in STATE_CHANNELS for i in range(48)]
+
+EXTRA_LABELS += ['Modal dialog open (0/1)']
 
 
 def extra_cell_label(tool, cell):

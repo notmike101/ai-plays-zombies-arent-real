@@ -156,6 +156,9 @@ def slot_castable(st, s):
 def masks_for(st):
     mu = np.zeros(NU, dtype=np.float32)
     mc = np.ones(NC, dtype=np.float32)
+    if st.get('dialog'):
+        mu[72:] = extra_masks(st).any(axis=1)
+        return mu, mc
     if st.get('anchor'):
         u, c = st['anchor']
         mu[u] = 1

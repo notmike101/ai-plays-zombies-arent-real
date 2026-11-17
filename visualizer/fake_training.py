@@ -102,4 +102,5 @@ class FakeMechanics:
 
     def refresh(self,st):
         spatial=self.game.spatial({})
-        st.update(grid=spatial['counts'],build_targets=spatial['build_targets'])
+        st.update(grid=spatial['counts'],build_targets=spatial['build_targets'],
+                  perks=[dict(name='-',locked=False)]*3)
