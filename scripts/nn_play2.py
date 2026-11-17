@@ -306,8 +306,9 @@ def run_episode(args):
             time.sleep(6)
         rews[-1] += R_final
         return dict(level=tag, pid=pid, win=bool(win), frac=float(frac),
-                    t=st['t'], obs=obs, us=us, cs=cs, ulps=ulps, clps=clps,
-                    trail=trail, rews=rews, masks=mus, R=float(sum(rews)))
+                    civ0=int(civ0), t=st['t'], obs=obs, us=us, cs=cs,
+                    ulps=ulps, clps=clps, trail=trail, rews=rews,
+                    masks=mus, R=float(sum(rews)))
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -409,7 +410,7 @@ def main():
                 with open(HIST, 'a') as fh:
                     fh.write(json.dumps({k: tr[k] for k in
                                          ('level', 'pid', 'win', 'frac', 't',
-                                          'R')}) + '\n')
+                                          'R', 'civ0') if k in tr}) + '\n')
                 good.append(tr)
                 wins += tr['win']
                 fracs.append(tr['frac'])
