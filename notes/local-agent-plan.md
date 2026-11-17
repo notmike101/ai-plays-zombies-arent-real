@@ -41,6 +41,20 @@ actual training launch/stop is tested with fakes while the real learner is activ
   read-only preflight and isolated visualizer lifecycle under the new interpreter.
 - Update setup/recovery instructions and AGENTS/tracker. Keep trainer paths/game
   artifacts explicitly local; this does not claim full game-install portability.
+- Completed: new isolated CPython3.14.4 .venv installed from requirements.txt;
+  pip check and package-location checks passed (no system-site-packages). Launchers
+  select .venv; original active processes remain on their previous interpreter.
+- Windows venv redirectors exposed a real lifecycle bug: socket owner is the base
+  Python child, not Popen's redirector PID. Tests first reproduced it; operator now
+  recognizes owned descendants, interpreter children and its own operator ancestry.
+  Initial failed test server31544/redirector23040 cleaned explicitly by identity.
+- Final evidence:15 operator+47 trainer+35 visualizer tests=97 passed in .venv;
+  12-step model/observer output and sampled-decision parity, Node graph pass.
+  Actual preflight and both visualizer launchers passed under .venv. Isolated
+  server8812/redirector11276 stopped; foreground-launch server/shell also cleaned.
+  Duplicate train call still refuses original global-Python run. Port8766 closed.
+  Direct dependency pins are not a complete transitive lockfile. No live trainer
+  restart or new game launch was needed; native/deployment portability is unchanged.
 
 - Reuse `D:\zar-scratch` and its existing Python/artifacts. Refuse a different
   checkout while trainer ROOT remains hard-coded, rather than loading another

@@ -1,6 +1,40 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — guarded local agent commands deployed, training LIVE)
+## CURRENT STATE (2026-11-17 — isolated Python environment verified, training LIVE)
+- New .venv created with Python3.14.4 x64, include-system-site-packages=false;
+  installed requirements.txt (torch2.15.0+cpu,numpy2.4.6,psutil7.2.2,
+  pefile2024.8.26,Pillow12.3.0). Direct dependencies pinned, transitives resolved
+  by pip. pip check PASS. .venv is ignored; README explains recreation.
+- local.ps1 and visualizer/start.ps1 default to .venv\Scripts\python.exe; no
+  activation or user-specific interpreter path needed for future launches.
+  Existing trainer/server remain on their original global Python, untouched.
+  Windows venv redirector ownership fixed/tested in local_agent.py: child owns
+  socket, Python children may use either venv or base exe, own operator ancestors
+  are not competing trainers. Unknown process/identity checks remain enforced.
+- Validation:97 Python tests PASS (15 operator,47 trainer,35 visualizer),12-step
+  exact policy/observer parity and sampled decisions,Node graph PASS. Actual venv
+  checkpoint/game preflight PASS. Both visualizer launchers started/served/stopped
+  isolated servers; all test server/redirector/shell processes cleaned,8766 closed.
+  Initial redirector test failure reproduced then fixed; no extra game was booted.
+- Production identities unchanged: launcher25848(created1794944254.8318655),
+  trainer28856(1794944344.6409335),worker31408,inst1 game22828(1794944255.099634),
+  visualizer22604(1794931712.9690397) on8765. Revalidate before acting.
+- Run b39316bdad21 latest observed update round43 checkpointed8a80ca2ff1ea9e;
+  last battles7.59% and9.76% saved, both aborted. Objective remains unmet.
+  Fresh battle frame sequence44,worker31408/game22828,age0.77s,preview=false,
+  332 labels,no label warning. Logs remain analysis/nn3_learning_audit_20261117.log
+  and its launcher log/.err. RAM14.46GiB available,D:12.32GiB free at final sample.
+- Next session: local.ps1 status -> check; preserve active training; reuse
+  visualizer-start. Next normal train launch uses .venv automatically. Never
+  reinstall/recreate an environment while workers use it. No continuous monitoring
+  after this chat. No live training restart under .venv was performed; offline PPO
+  and checkpoint validation passed. Deployment still Windows/D:\zar-scratch with
+  local supported game copies/input DLL/checkpoint and local contribution helper.
+- README,AGENTS,operator-runbook and local-environment now document setup and
+  remaining portability limits. Evidence: notes/local-agent-plan.md. Existing
+  unrelated policy2/history2 and old untracked artifacts remain untouched.
+
+## Prior snapshot (2026-11-17 — guarded local agent commands deployed, training LIVE)
 - New entry point: .\local.ps1 status/check/train/visualizer-start/train-stop/
   visualizer-stop. README+AGENTS direct new agents to these commands; runbook
   shortened around them. notes/local-environment.md records known Python,
