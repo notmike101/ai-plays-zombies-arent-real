@@ -8,6 +8,12 @@ from zar_input import OFF, VirtualInput
 
 
 class InputContract(unittest.TestCase):
+    def test_inject_reuses_an_existing_section(self):
+        vi = VirtualInput.__new__(VirtualInput)
+        vi.open_section = lambda: None
+        with patch('zar_input.os.path.exists', side_effect=AssertionError('reinjection')):
+            vi.inject()
+
     def test_v3_move_stores_client_coordinates(self):
         vi = VirtualInput.__new__(VirtualInput)
         vi.buf = (ctypes.c_char * 256)()
