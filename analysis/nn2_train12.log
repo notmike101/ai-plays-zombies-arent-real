@@ -1,0 +1,10 @@
+SKIP short traj 30328 win False frac 0.0 t 59.8
+SKIP short traj 30328 win False frac 0.0 t 59.8
+SKIP short traj 44716 win False frac 0.0 t 60.1
+SKIP short traj 44716 win False frac 0.0 t 59.9
+SKIP short traj 39092 win True frac 1.0 t 35.3
+SKIP short traj 39092 win False frac 0.0 t 60.3
+SKIP short traj 10428 win False frac 0.0 t 59.9
+SKIP short traj 10428 win False frac 0.0 t 60.0
+SKIP short traj 29948 win False frac 0.0 t 60.0
+SKIP short traj 29948 win False frac 0.0 t 60.2

@@ -1,0 +1,40 @@
+DECK 17224: EMPTY
+UNPAUSE pid 17224 t 5
+UNPAUSE pid 17224 t 6
+ep pid 17224 win False frac 0.0 R -0.45
+round 0: wins 0/1 meanfrac 0.000
+DECK 17224: EMPTY
+UNPAUSE pid 17224 t 3
+UNPAUSE pid 17224 t 4
+UNPAUSE pid 17224 t 5
+UNPAUSE pid 17224 t 6
+ep pid 17224 win False frac 0.0 R -1.08
+round 1: wins 0/1 meanfrac 0.000
+DECK 17224: EMPTY
+UNPAUSE pid 17224 t 3
+UNPAUSE pid 17224 t 3
+UNPAUSE pid 17224 t 4
+UNPAUSE pid 17224 t 5
+UNPAUSE pid 17224 t 6
+ep pid 17224 win False frac 0.0 R -0.61
+round 2: wins 0/1 meanfrac 0.000
+DECK 17224: EMPTY
+UNPAUSE pid 17224 t 3
+UNPAUSE pid 17224 t 4
+UNPAUSE pid 17224 t 5
+UNPAUSE pid 17224 t 6
+ep pid 17224 win False frac 0.0 R -1.25
+round 3: wins 0/1 meanfrac 0.000
+DECK 17224: EMPTY
+UNPAUSE pid 17224 t 5
+UNPAUSE pid 17224 t 6
+ep pid 17224 win False frac 0.0 R -0.36
+round 4: wins 0/1 meanfrac 0.000
+DECK 17224: EMPTY
+UNPAUSE pid 17224 t 3
+UNPAUSE pid 17224 t 4
+UNPAUSE pid 17224 t 5
+UNPAUSE pid 17224 t 6
+ep pid 17224 win False frac 0.0 R -1.08
+round 5: wins 0/1 meanfrac 0.000
+done

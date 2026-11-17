@@ -1,0 +1,14 @@
+# C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\python.exe -B D:\zar-scratch\scripts\nn_play2.py train --pids 45772 --eps 1 --rounds 1
+DECK 45772: EMPTY
+UNPAUSE pid 45772 t 2
+UNPAUSE pid 45772 t 3
+UNPAUSE pid 45772 t 4
+UNPAUSE pid 45772 t 5
+UNPAUSE pid 45772 t 6
+ep pid 45772 win False frac 0.0 R 0.05
+ppo2 batch loss 85.021
+ppo2 batch loss 84.089
+ppo2 batch loss 83.166
+ppo2 batch loss 82.253
+round 0: wins 0/1 meanfrac 0.000
+done
