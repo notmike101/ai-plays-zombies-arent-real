@@ -176,3 +176,34 @@ probe; subsequent122-388ms receive and42-77ms display. This is scoped planning
 evidence, not battle or worst-case latency. Observer samples at most5Hz; model
 can decide between samples. Exact evidence remains analysis/coverage-latency-live.json
 and coverage-real-latency.js / Playwright output.
+
+## Terrain, later-stage scale and building-special proof
+
+Schema4 now181 tools/2485 inputs. New native terrain code/bridge-bit samples,
+selected building class/ability/officer subtype/damage/area/height, and unit SP
+upgrade levels are labeled. Native code4 is water (known battleship placement and
+bridge-collapse39fd20); other unverified code meanings stay numeric. Bridge
+bitset and cell dimensions come from reflected building-grid structure7760b0.
+Building height lower16 bits are decimetres (native21e70).
+
+Inst13 resumed the existing normal saved post-mvp2 L5 profile solely as a
+diagnostic fixture; source save is untouched and no result is training/evaluation
+evidence. Normal settings are named Adaptive in the native dump. No sandbox,
+admin commands, difficulty change or budget modification. Model/trainer stopped.
+The L5 map has10013x9157 terrain cells,188695 buildings and209867 civilians.
+Reading the whole terrain grid was rejected; the reader now reads just48 cell
+codes and bridge bits, with pointer/count bounds. Native map values of20/56 bytes
+use cache-line groups, not packed arrays; boost activation exposed/fixed that
+layout and tests cover padding. Live speed multiplier0.625 and range1.4 match
+building selections; an absent bonus means multiplier1.
+
+All11 selectable building abilities produced their exact native IDs: Armory
+2/3/4/15, Civic5/6/7/14, Trade10/11/12. Whole-footprint zones and roof units
+were supplied as isolated test prerequisites. Native eligibility remained in
+force; the policy must choose these prerequisites during learning.
+K/J placement mode receipts alternated1/0/1/0 after normal boot.
+L5 steady mechanics refresh213-227ms ->82-84ms after bounded terrain samples,
+linear nearest-target selection, equivalent axis binning, cached unchanged
+building/playarea membership and avoiding civilian string classification.
+122 script tests,37 visualizer tests,12-step observer parity and graph PASS.
+Complete ability/follow-up proofs and final migrated training resume still pending.

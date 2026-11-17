@@ -9,6 +9,7 @@ import numpy as np
 
 import memscan
 from env_zar import ZAREnvError
+from spatial import centers
 
 
 def record(size, fields):
@@ -65,7 +66,7 @@ class NativeState:
         return np.frombuffer(self.read(pointer, count*dtype.itemsize), dtype).copy()
 
     def mapping(self, rva, dtype):
-        """Odin integer-key map: packed pointer/log-capacity, keys, values, hashes."""
+        """Native integer-key map; value groups never straddle64-byte cache lines."""
         header, count = struct.unpack('<Qq', self.read(self.env.base+rva, 16))
         if count == 0:
             return {}
@@ -73,13 +74,17 @@ class NativeState:
         if not 0 <= power <= 20 or not 0 < count <= 1 << power:
             raise ZAREnvError('Invalid native map capacity')
         capacity, dtype = 1 << power, np.dtype(dtype)
+        if not 0<dtype.itemsize<=64:raise ZAREnvError('Unsupported native map value size')
+        per_line=64//dtype.itemsize
+        def offset(index):return (index//per_line)*64+(index%per_line)*dtype.itemsize
         keys = np.frombuffer(self.read(pointer, capacity*8), '<u8')
-        values = np.frombuffer(self.read(pointer+capacity*8, capacity*dtype.itemsize), dtype)
-        hashes = np.frombuffer(self.read(pointer+capacity*(8+dtype.itemsize), capacity*8), '<u8')
+        values = self.read(pointer+capacity*8,offset(capacity))
+        hashes = np.frombuffer(self.read(pointer+capacity*8+offset(capacity), capacity*8), '<u8')
         used = np.flatnonzero(hashes)
         if len(used) != count:
             raise ZAREnvError('Native map changed during read')
-        return {int(keys[i]): values[i].copy() for i in used}
+        return {int(keys[i]): np.frombuffer(values,dtype,count=1,offset=offset(int(i)))[0].copy()
+                for i in used}
 
     def zones(self):
         e = self.env
@@ -116,6 +121,29 @@ class NativeState:
                     polygon=e.array(0x65ccd8,VEC,limit=10000),
                     menu=bool(e.scalar(0x666870,'<B')))
 
+    def terrain(self, points):
+        e=self.env
+        cols,rows=[e.scalar(r,'<q') for r in (0x656a48,0x656a50)]
+        size=e.scalar(0x656a40,'<f')
+        if not (0<cols<=100000 and 0<rows<=100000 and cols*rows<=2**31
+                and np.isfinite(size) and size>0):
+            raise ZAREnvError('Invalid native terrain dimensions')
+        cells,count=struct.unpack('<Qq',self.read(e.base+0x656a58,16))
+        bridges,words=struct.unpack('<Qq',self.read(e.base+0x656a80,16))
+        if count!=cols*rows or words!=(count+63)//64 or min(cells,bridges)<65536:
+            raise ZAREnvError('Invalid native terrain storage')
+        xy=np.floor(np.asarray(points)/size).astype(np.int64)
+        codes=np.full(len(xy),-1,dtype=np.int16);bits=np.zeros(len(xy),dtype='u1')
+        # L5 has91 million cells. Read only queried points, never copy its whole grid.
+        for i,(x,y) in enumerate(xy):
+            if 0<=x<cols and 0<=y<rows:
+                index=int(y*cols+x)
+                codes[i]=self.read(cells+index,1)[0]
+                if codes[i]>5:raise ZAREnvError('Unknown native terrain code')
+                word=struct.unpack('<Q',self.read(bridges+(index//64)*8,8))[0]
+                bits[i]=(word>>(index%64))&1
+        return dict(codes=codes,bridges=bits)
+
     def snapshot(self):
         e = self.env
         for _ in range(5):
@@ -141,7 +169,11 @@ class NativeState:
                 walls = e.array(0x656bb0,WALL,limit=10000)
                 wall_pointer = e.scalar(0x656bb0,'<Q')
                 wall_hp = [self.array_at(wall_pointer+i*192+80,'<f4') for i in range(len(walls))]
-                result = dict(units=units, unit_maps=maps, zones=self.zones(),
+                camera=[e.scalar(rva,'<f') for rva in (0x6553ac,0x6553b0,0x6553b4)]
+                if not np.isfinite(camera).all() or camera[2]<=0:
+                    raise ZAREnvError('Invalid native camera')
+                points=(centers(e.cw,e.ch)-[e.cw/2,e.ch/2])/[camera[2],-camera[2]]+camera[:2]
+                result = dict(units=units, unit_maps=maps, zones=self.zones(),terrain=self.terrain(points),
                     playarea=e.array(0x6652e0,VEC,limit=10000),
                     walls=walls, wall_hp=wall_hp, paint=self.paint(), selection=self.selection(),
                     hazards=e.array(0x654ef0,PATCH,limit=100000),
@@ -154,9 +186,10 @@ class NativeState:
                         ('rect',0x656680,('<f4',4)), ('destroyed',0x6566d8,'u1'),
                         ('damage',0x656700,'<f4'), ('max_hp',0x656728,'<f4'),
                         ('class',0x658f00,'u1'), ('ability',0x658f50,'u1'),
+                        ('height_packed',0x658e48,'<u4'),
                         ('officer_kind',0x658f78,'u1'),
                         ('area',0x658d70,'<f4'), ('center',0x658d98,VEC))},
-                    camera=[e.scalar(rva,'<f') for rva in (0x6553ac,0x6553b0,0x6553b4)],
+                    camera=camera,
                     tick=tick)
                 if tick == e.scalar(0x6514e8,'<q'):
                     return result

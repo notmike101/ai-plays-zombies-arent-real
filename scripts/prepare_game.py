@@ -44,6 +44,8 @@ bind_slot4 = _4
 bind_slot5 = _5
 bind_slot6 = _6
 bind_slot7 = T
+bind_place_click = K
+bind_place_paint = J
 '''
 
 

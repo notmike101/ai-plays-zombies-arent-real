@@ -2,10 +2,18 @@
 import unittest
 from unittest.mock import patch
 
-from zar_boot import COPIES, boot, copy_path, menu_points, campaign_in_progress, campaign_cleared, main
+from zar_boot import COPIES, boot, copy_path, menu_points, campaign_in_progress, campaign_cleared, main, placement_bindings
 
 
 class BootBoundary(unittest.TestCase):
+    def test_placement_bindings_are_idempotent_and_reject_conflicts(self):
+        text=placement_bindings('difficulty = normal\nbind_place_click = NONE\n')
+        self.assertIn('bind_place_click = K',text)
+        self.assertIn('bind_place_paint = J',text)
+        self.assertEqual(placement_bindings(text),text)
+        with self.assertRaisesRegex(RuntimeError,'Expected'):
+            placement_bindings('bind_place_click = B\n')
+
     def test_cli_requires_explicit_preparation_of_missing_copies(self):
         with patch('sys.argv', ['zar_boot.py', 'inst99999']), \
                 patch('zar_boot.Path.exists', return_value=False), \

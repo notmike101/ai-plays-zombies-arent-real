@@ -7,7 +7,7 @@ normal difficulty. All strategy belongs to the policy.
 
 ## Observations
 
-The policy receives2378 floats per decision. The first332 retain schema3 meanings:
+The policy receives2485 floats per decision. The first332 retain schema3 meanings:
 - 32 scalar/legacy features: populations, money, elapsed time, population trends,
   four deck availability slots, previous action, purchase receipt, phase and spend.
   Thirteen legacy crowd features are currently constant because native-grid
@@ -24,7 +24,7 @@ the native read-only snapshot. Inputs, meanings and normalizations are pinned by
 labels/tests. Changes require matching schema metadata; never reuse weights with
 silently different feature meanings.
 
-Schema4 appends2046 features: per-unit variants, selected-unit state, roster/perks,
+Schema4 appends2153 features: per-unit variants, selected-unit state, roster/perks,
 camera/paint mode, native geometry, building classes, hazards, vehicles, HUD
 availability, playable boundary and gesture/tool state. Exact meanings and
 normalizations live in mechanic_contract.py and visualizer/labels.py. Remaining
@@ -33,8 +33,8 @@ yet a claim of complete game coverage. Viewport/grid aiming still limits precisi
 
 ## Policy and actions
 
-One128-unit single-layer GRU feeds179 tool logits,179x48 conditional cell logits
-and a value head (2,094,660 parameters). Sampling uses the legal tool mask, then
+One128-unit single-layer GRU feeds181 tool logits,181x48 conditional cell logits
+and a value head (2,148,390 parameters). Sampling uses the legal tool mask, then
 the selected tool's cell mask. Evaluation can use legal argmax (`greedy`).
 
 The original72 tools comprise34 wait/READY/planning/battle tools and38 buy/refund loadout
@@ -139,7 +139,7 @@ estimator; [OpenAI PPO documentation](https://spinningup.openai.com/en/latest/al
 describes clipping limitations and a KL early-stop option. The phase-specific
 choice here is a project decision, not a claim that those sources validate it.
 
-Schema4 appends107 placement, roster/perk, selection/editing, native HUD, camera
+Schema4 appends109 placement, roster/perk, selection/editing, native HUD, camera
 and timing actions. Migration preserves source schema3 weights and Adam moments
 in a new file; appended GRU input columns and Adam moments start at zero.
 The battle decision floor is0.1s; native action completion can take longer.

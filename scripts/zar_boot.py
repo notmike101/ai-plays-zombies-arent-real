@@ -89,6 +89,17 @@ def menu_points(width, height, in_progress=False, unplayed=False):
     raise ZAREnvError(f'Uncalibrated client layout {width}x{height}')
 
 
+def placement_bindings(settings):
+    """Assign two otherwise unbound player actions on stopped, owned copies."""
+    for name,key in [('bind_place_click','K'),('bind_place_paint','J')]:
+        pattern=rf'^{name}\s*=\s*(\S+)[ \t]*$'
+        match=re.search(pattern,settings,re.M)
+        if match and match[1] not in ('NONE',key):
+            raise ZAREnvError(f'Expected {name}={key} or NONE in owned copy')
+        settings=re.sub(pattern,f'{name} = {key}',settings,flags=re.M) if match else settings+f'\n{name} = {key}\n'
+    return settings
+
+
 def boot(copy_dir, dest=('campaign', 'stage1')):
     """Launch, inject once, navigate with client fractions, verify planning.
 
@@ -105,6 +116,9 @@ def boot(copy_dir, dest=('campaign', 'stage1')):
     settings = (path / 'steam_cloud/settings.ini').read_text()
     if not re.search(r'^difficulty\s*=\s*normal\s*$', settings, re.M):
         raise ZAREnvError(f'{path.name} must use normal difficulty')
+    configured=placement_bindings(settings)
+    if configured!=settings:
+        (path/'steam_cloud/settings.ini').write_text(configured,encoding='utf-8')
     progress = path / 'steam_cloud/progress/Boston__MA.progress'
     progress_text = progress.read_text() if progress.exists() else ''
     in_progress = campaign_in_progress(progress_text)

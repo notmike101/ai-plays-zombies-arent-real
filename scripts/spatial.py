@@ -15,6 +15,25 @@ def centers(width, height):
     return np.array([(x*width, y*height) for y in YF for x in XF])
 
 
+def grid_bins(points,width,height):
+    points=np.asarray(points).reshape(-1,2)
+    def nearest(values,axis):
+        right=np.clip(np.searchsorted(axis,values),0,len(axis)-1)
+        left=np.maximum(right-1,0)
+        return np.where(np.abs(values-axis[left])<=np.abs(values-axis[right]),left,right)
+    return nearest(points[:,1]/height,YF)*8+nearest(points[:,0]/width,XF)
+
+
+def closest_indices(points,bins,xy):
+    """Linear-time nearest target per cell; ties preserve original entity order."""
+    distance=np.square(points-xy[bins]).sum(axis=1)
+    minimum=np.full(NC,np.inf);np.minimum.at(minimum,bins,distance)
+    candidates=np.flatnonzero(distance==minimum[bins])
+    first=np.full(NC,len(points),dtype=np.int64)
+    np.minimum.at(first,bins[candidates],candidates)
+    return first[first<len(points)]
+
+
 def inside_polygon(points, vertices):
     points=np.asarray(points).reshape(-1,2);vertices=np.asarray(vertices).reshape(-1,2)
     inside=np.zeros(len(points),dtype=bool)
@@ -34,9 +53,7 @@ def features(points, kinds, rectangles, zones, width, height):
         pts = np.asarray(pts).reshape(-1, 2)
         valid = ((pts[:, 0] >= .055*width) & (pts[:, 0] <= .935*width) &
                  (pts[:, 1] >= .10*height) & (pts[:, 1] <= .80*height))
-        col = np.abs(pts[:, :1]/width - XF).argmin(axis=1)
-        row = np.abs(pts[:, 1:]/height - YF).argmin(axis=1)
-        return row*8+col, valid
+        return grid_bins(pts,width,height), valid
     bins, visible = indices(points)
     for channel, mask in enumerate((kinds == 0, kinds == 1, (kinds >= 2) & (kinds != 3))):
         counts[channel] = np.bincount(bins[visible & mask], minlength=NC)
@@ -46,9 +63,7 @@ def features(points, kinds, rectangles, zones, width, height):
     points, cells = mids[visible], bins[visible]
     counts[3] = np.bincount(cells, minlength=NC)
     # Stable distance order preserves the first building when distances tie.
-    order = np.argsort(np.square(points-xy[cells]).sum(axis=1), kind='stable')
-    _, first = np.unique(cells[order], return_index=True)
-    for i in order[first]:
+    for i in closest_indices(points,cells,xy):
         targets[cells[i]] = points[i]
     for polygon in zones:
         counts[4, inside_polygon(xy,polygon)] = 1

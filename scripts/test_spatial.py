@@ -4,6 +4,15 @@ import spatial
 
 
 class SpatialTests(unittest.TestCase):
+    def test_fast_grid_matches_original_nearest_axis_at_boundaries(self):
+        rng=np.random.default_rng(13)
+        points=rng.uniform([-1000,-1000],[3000,2500],(100000,2))
+        mid=(spatial.XF[:-1]+spatial.XF[1:])/2*1920
+        boundaries=np.column_stack((np.concatenate([mid,np.nextafter(mid,np.inf),np.nextafter(mid,-np.inf)]),np.full(21,600.)))
+        points=np.concatenate([points,boundaries])
+        expected=np.abs(points[:,1:]/1200-spatial.YF).argmin(1)*8+np.abs(points[:,:1]/1920-spatial.XF).argmin(1)
+        np.testing.assert_array_equal(spatial.grid_bins(points,1920,1200),expected)
+
     def test_world_y_projects_up_and_dpi_is_not_applied_twice(self):
         px = spatial.project(np.array([[1829.2, 1972.4]]), (1631., 1318.6, .5795), 1920, 1200)
         np.testing.assert_allclose(px[0], [1074.8569, 221.1229], atol=.01)

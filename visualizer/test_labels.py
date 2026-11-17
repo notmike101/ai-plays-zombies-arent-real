@@ -73,7 +73,9 @@ LABEL_PINS.update({32: 'grid civilians cell 1', 80: 'grid zombies cell 1',
 LABEL_PINS.update({332:'camera x',335:'placement paint',336:'ready land',
     343:'planning slot 1',356:'selected unit kind',
     332+EXTRA_LABELS.index('Armed turret placement (0/1)'):'armed turret',
-    332+len(EXTRA_LABELS)-2:'simulation paused',332+len(EXTRA_LABELS)-1:'simulation speed'})
+    332+EXTRA_LABELS.index('Simulation paused (0/1)'):'simulation paused',
+    332+EXTRA_LABELS.index('Simulation speed (native half ticks / 8)'):'simulation speed',
+    332+len(EXTRA_LABELS)-1:'selected unit sp upgrade 4'})
 
 
 class Tiny(nn.Module):

@@ -12,20 +12,34 @@ def fixture():
     units=dict(pos=np.array([[100.,100.],[200.,200.]]),kind=np.array([5,1]),
         id=np.array([10,20]),dir=np.array([[1.,0.],[0.,1.]]),hp=np.array([3.,5.]),
         timer=np.array([6.,2.]),contact=np.array([-2.,0.]),converting=np.zeros(2),ztype=np.zeros(2))
-    maps={k:{} for k in ('payload','trap_kind','level','far_first','officer_kind','ai','kills','boosts')}
+    maps={k:{} for k in ('payload','trap_kind','level','far_first','officer_kind','ai','kills','boosts','upgrades')}
     maps['payload'][10]=2
     selection={k:[] for k in ('units','zones','helicopters','evac','polygon')};selection['units']=[10];selection['gate']=-1
+    selection['building']=-1
     s=dict(units=units,unit_maps=maps,selection=selection,camera=[0.,0.,1.],
         playarea=np.array([[-1000.,-1000.],[1000.,-1000.],[1000.,1000.],[-1000.,1000.]]),
         buildings=dict(center=np.array([[100.,100.]]),destroyed=np.array([0]),
                        damage=np.array([3.]),**{'class':np.array([2])}),
-        paint=dict(pos=np.empty((0,2)),kind=np.array([])))
+        paint=dict(pos=np.empty((0,2)),kind=np.array([])),
+        terrain=dict(codes=np.zeros(48,dtype=np.int16),bridges=np.zeros(48,dtype='u1')))
     s.update({name:np.zeros(0,dtype) for name,dtype in [('walls',WALL),('evac',EVAC),
         ('helicopters',HELI),('vehicles',VEHICLE),('medevacs',MEDEVAC),('hazards',PATCH)]})
     return s
 
 
 class MechanicsTests(unittest.TestCase):
+    def test_building_boundary_cache_invalidates_on_geometry_change(self):
+        m=Mechanics.__new__(Mechanics);m.building_membership=None
+        points=np.array([[1.,1.],[4.,4.]])
+        polygon=np.array([[0.,0.],[3.,0.],[3.,3.],[0.,3.]])
+        first=m.building_in_playarea(points,polygon)
+        self.assertEqual(first.tolist(),[True,False])
+        self.assertIs(m.building_in_playarea(points.copy(),polygon.copy()),first)
+        points[0]=[5.,5.]
+        self.assertEqual(m.building_in_playarea(points,polygon).tolist(),[False,False])
+        polygon*=2
+        self.assertEqual(m.building_in_playarea(points,polygon).tolist(),[True,True])
+
     def test_semantic_labels_and_native_variant_receipts(self):
         s=fixture();hud={'actions':{'target_toggle':(1,2)}}
         perks=[dict(name='Extra_Zones',locked=True)]+[dict(name='-',locked=False)]*2
@@ -70,8 +84,16 @@ class MechanicsTests(unittest.TestCase):
     def test_pause_speed_and_gesture_sentinels_have_explicit_meanings(self):
         values=observation(fixture(),['-']*7,[dict(name='-',locked=False)]*3,
                            {'actions':{}},0,True,0,1920,1200,paused=True,speed=8)
-        self.assertEqual(values[-2:],[1.,1.])
+        self.assertEqual(values[EXTRA_LABELS.index('Simulation paused (0/1)')],1.)
+        self.assertEqual(values[EXTRA_LABELS.index('Simulation speed (native half ticks / 8)')],1.)
         self.assertEqual(values[EXTRA_LABELS.index('Gesture anchor cell (/ 48; -1 absent)')],-1.)
+
+    def test_terrain_codes_bridge_bits_and_outside_sentinel(self):
+        s=fixture();s['terrain']['codes'][:3]=[4,0,-1];s['terrain']['bridges'][1]=1
+        values=observation(s,['-']*7,[dict(name='-',locked=False)]*3,{'actions':{}},0,True,0,1920,1200)
+        offset=EXTRA_LABELS.index('Grid terrain cell 1 (native code / 5; -1 outside storage)')
+        self.assertEqual(values[offset:offset+3],[.8,0.,-1.])
+        self.assertEqual(values[offset+49],1.)
 
 
 if __name__=='__main__':unittest.main()

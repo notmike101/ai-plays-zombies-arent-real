@@ -15,6 +15,7 @@ KEY_ACTIONS = {
     'speed_half': (112,59,False), 'speed_1': (113,60,False),
     'speed_2': (114,61,False), 'speed_4': (115,62,False),
     'pause_toggle': (32,57,False),
+    'place_click': (75,37,False), 'place_paint': (74,36,False),
 }
 
 
@@ -169,6 +170,9 @@ class Controls:
         finally:
             if shift: vi.key_up(16,sc=42)
         self.frames()
+        if name in ('place_click','place_paint'):
+            wait_until(lambda:self.env.scalar(0x665160,'<B')==int(name=='place_paint'),
+                       'placement mode receipt')
 
     def gesture(self, point, end=None, shift=False, right=False):
         """Continue an armed tool or edit a native handle; selection is preserved."""

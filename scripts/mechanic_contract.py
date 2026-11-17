@@ -17,6 +17,7 @@ EXTRA_TOOLS = [f'place_{name}' for name in MISSING_UNITS] + [
     'speed_half','speed_1','speed_2','speed_4'] + [f'panel_{name}' for name in PANEL_ACTIONS]
 EXTRA_TOOLS += ['select_helicopter','select_vehicle','select_medevac',
     'drag_corner','drag_edge','insert_corner','remove_corner','pause_toggle']
+EXTRA_TOOLS += ['place_click','place_paint']
 
 # Counts retain multiplicity; selected entities expose individual state below.
 GRID_CHANNELS = tuple(f'unit {name}' for name in UNITS if name not in ('Spikes','Oil')) + (
@@ -35,7 +36,9 @@ SELECTED_FIELDS = ('kind / 10','payload / 5','trap kind / 2','level / 4',
     'hp or magazine stock (log1p nonnegative)','rounds used or reload state / 100',
     'timer / 60','direction X','direction Y','far first (0/1)','officer kind / 2',
     'officer AI mode / 8','kills (log1p count)','converting (0/1)',
-    'range boost','cooldown boost','reload boost','magazine boost','blast boost')
+    'range multiplier (1 unmodified)','cooldown multiplier (1 unmodified)',
+    'reload multiplier (1 unmodified)','magazine multiplier (1 unmodified)',
+    'blast multiplier (1 unmodified)')
 EXTRA_LABELS = GLOBAL_LABELS + [f'Selected unit {field}' for field in SELECTED_FIELDS] + [
     f'Native grid {channel} cell {i+1} (log1p count)' for channel in GRID_CHANNELS for i in range(48)] + [
     f'Native HUD {name} available (0/1)' for name in PANEL_ACTIONS]
@@ -45,6 +48,13 @@ EXTRA_LABELS += [f'Grid play area cell {i+1} (center inside: 0/1)' for i in rang
     'Armed generic placement (native tool ID / 42)',
     'Armed sniper placement (0/1)','Armed turret placement (0/1)']
 EXTRA_LABELS += ['Simulation paused (0/1)','Simulation speed (native half ticks / 8)']
+EXTRA_LABELS += [f'Grid terrain cell {i+1} {field}' for field in (
+    '(native code / 5; -1 outside storage)','bridge bit (0/1)') for i in range(48)]
+EXTRA_LABELS += ['Selected building present (0/1)','Selected building class / 7',
+    'Selected building ability / 15','Selected building officer kind / 2',
+    'Selected building damage / maximum HP','Selected building area (log1p m2)',
+    'Selected building height (native decimetres / 1000)']
+EXTRA_LABELS += [f'Selected unit SP upgrade {i+1} (native level / 4)' for i in range(4)]
 
 
 def extra_cell_label(tool, cell):

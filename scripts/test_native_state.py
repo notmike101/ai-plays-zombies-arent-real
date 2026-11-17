@@ -5,10 +5,25 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 
-from native_state import NativeState, WALL, EVAC, HELI, VEHICLE, MEDEVAC
+from native_state import NativeState, WALL, EVAC, HELI, VEHICLE, MEDEVAC, AI
 
 
 class NativeTests(unittest.TestCase):
+    def test_terrain_requires_matching_storage_and_known_codes(self):
+        e=Mock(base=0);e.scalar.side_effect=lambda r,f:{0x656a48:2,0x656a50:2,0x656a40:2.}[r]
+        state=NativeState(e)
+        memory={0x656a58:struct.pack('<Qq',0x10000,4),0x656a80:struct.pack('<Qq',0x20000,1),
+                0x10000:b'\x04',0x10001:b'\x00',0x10002:b'\x01',0x20000:struct.pack('<Q',2)}
+        state.read=Mock(side_effect=lambda address,size:memory[address])
+        result=state.terrain([(1,1),(3,1),(1,3),(-.1,1),(4,1)])
+        self.assertEqual(result['codes'].tolist(),[4,0,1,-1,-1])
+        self.assertEqual(result['bridges'].tolist(),[0,1,0,0,0])
+        self.assertTrue(all(call.args[1]<=16 for call in state.read.call_args_list))
+        memory[0x10000]=b'\xff'
+        with self.assertRaisesRegex(RuntimeError,'code'):state.terrain([(1,1)])
+        memory[0x656a58]=struct.pack('<Qq',0x10000,3)
+        with self.assertRaisesRegex(RuntimeError,'storage'):state.terrain([])
+
     def test_fixed_record_strides_and_offsets(self):
         for dtype, size in [(WALL,192),(EVAC,52),(HELI,144),(VEHICLE,400),(MEDEVAC,96)]:
             self.assertEqual(dtype.itemsize,size)
@@ -31,6 +46,26 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(state.mapping(100,'u1'),{41:5,99:2})
         memory[100]=struct.pack('<Qq',0x10000|3,3)
         with self.assertRaisesRegex(RuntimeError,'changed'):state.mapping(100,'u1')
+
+    def test_map_values_skip_native_cache_line_padding(self):
+        for dtype,size,per_line in [(('<f4',5),20,3),(AI,56,1)]:
+            with self.subTest(size=size):
+                state=NativeState(Mock(base=0));cap=8
+                extent=(cap//per_line)*64+(cap%per_line)*size
+                raw=bytearray(b'\xff'*extent)
+                index=3;offset=(index//per_line)*64+(index%per_line)*size
+                raw[offset:offset+size]=bytes(size)
+                memory={100:struct.pack('<Qq',0x10000|3,1),
+                    0x10000:struct.pack('<8Q',0,0,0,42,0,0,0,0),
+                    0x10040:bytes(raw),
+                    0x10040+extent:struct.pack('<8Q',0,0,0,71,0,0,0,0)}
+                state.read=lambda address,size:memory[address]
+                result=state.mapping(100,dtype)
+                self.assertEqual(list(result),[42])
+                if np.dtype(dtype).names:
+                    for field in np.dtype(dtype).names:
+                        self.assertTrue(np.all(result[42][field]==0))
+                else:self.assertEqual(result[42].tobytes(),bytes(size))
 
     def test_negative_array_count_and_oversized_map_fail(self):
         state=NativeState(Mock(base=0))

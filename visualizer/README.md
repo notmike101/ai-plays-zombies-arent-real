@@ -93,7 +93,7 @@ The stream supports at most 16 active viewers per server, with a three-second so
 
 Dimensions, head names, weights and values come from the running model. Each episode reports its own model revision, derived from full parameter values. Normal in-place parameter updates and checkpoint loads refresh the graph; later worker instances publish their current weights automatically. This observes the weights the worker actually uses, which may lag the trainer's newest checkpoint until its next episode.
 
-Supported topology: **one single-layer, unidirectional GRU directly feeding one or more linear heads**, as in the current schema-4 policy. Different widths and output sizes are discovered. New module types need an observer adapter; unsupported structures report an error rather than inventing a graph. Functional transformations between those modules are not inferred. Feature/action meaning cannot be deduced from tensor dimensions: the training owner must maintain the supplied labels when changing feature order or semantics. `labels.py` documents the current 2378-feature order; the label tests and `verify_model.py` enforce the trainer contract.
+Supported topology: **one single-layer, unidirectional GRU directly feeding one or more linear heads**, as in the current schema-4 policy. Different widths and output sizes are discovered. New module types need an observer adapter; unsupported structures report an error rather than inventing a graph. Functional transformations between those modules are not inferred. Feature/action meaning cannot be deduced from tensor dimensions: the training owner must maintain the supplied labels when changing feature order or semantics. `labels.py` documents the current 2485-feature order; the label tests and `verify_model.py` enforce the trainer contract.
 
 Observer hooks capture only single-step, gradient-disabled forward passes. PPO sequence updates and gradients are not visualized. It never consumes random numbers or modifies tensors. Copies are detached, and outputs are copied before the trainer can mask them in place. A single-slot queue writes latest-only JSON in a background thread, capped at five frames/second. Disk/serialization failure drops the frame rather than interrupting the decision loop. Current decisions occur much less frequently than that cap.
 
@@ -130,7 +130,7 @@ loopback ports; integration/watchdog fixtures use PID -1, never real games.
 
 The model check imports the current trainer source without running its main function or opening a game. It checks exact recurrent outputs and sampled decisions, then reports a warm CPU inference benchmark. It does not establish end-to-end gameplay overhead.
 
-The current schema-4 policy has 2,094,660 parameters. Current validation records
+The current schema-4 policy has 2,148,390 parameters. Current validation records
 are [training improvements](../notes/training-improvements.md) and
 [the learning audit](../notes/learning-audit.md): Python checks, 12-step recurrent
 observer parity, graph tests, and scoped live evidence. Historical timings for
@@ -164,5 +164,5 @@ synthetic data, plus the transport/mobile suites. See
 [training improvements](../notes/training-improvements.md).
 
 Schema4 expanded-mechanics validation and measured live browser timings are in
-[mechanics coverage](../notes/mechanics-coverage.md). It currently supplies2378
-inputs and179x48 cell logits. Older332-input records below are historical.
+[mechanics coverage](../notes/mechanics-coverage.md). It currently supplies2485
+inputs and181x48 cell logits. Older332-input records below are historical.

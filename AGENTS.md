@@ -223,7 +223,7 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
 — `graph.layers[input].labels` readable, no `label_warning` key present).
 
 ## Battle input and schema contract (2026-11-17)
-- `nn_play2` schema 4 uses 2378 inputs, 179 tools and 48 conditional cells.
+- `nn_play2` schema 4 uses 2485 inputs, 181 tools and 48 conditional cells.
   Checkpoints default to sessions/nn_policy4.pt. Never silently reinterpret v2
   weights: checkpoint metadata must match labels/action meanings exactly.
 - Battle hotkeys follow steam_cloud/settings.ini roster_battle, including gaps,
@@ -305,3 +305,10 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
   destination and preserves weights/Adam prefixes. Never reset learning silently.
 - Historical live probes have main guards; importing/discovering tests must never
   launch, stop or send input to a game. Live diagnostics require explicit execution.
+
+- Boot assigns previously unbound placement modes K=click/J=paint on stopped owned
+  copies. Conflicting custom bindings fail explicitly. Do not alter a live copy.
+- Native map values use64-byte cache-line groups (e.g. three20-byte boosts per
+  group, one56-byte AI record). Do not decode these as tightly packed arrays.
+- Sample queried terrain cells only: L5 storage exceeds91 million cells. Never
+  read or allocate the entire terrain grid on every policy decision.

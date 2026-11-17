@@ -7,7 +7,7 @@ from game_controls import Controls, KEY_ACTIONS
 from game_mechanics import UNITS, UNIT_IDS, PERKS
 from native_hud import read_panel
 from native_state import NativeState
-from spatial import project, centers, features, inside_polygon, XF, YF
+from spatial import project, centers, features, inside_polygon, grid_bins, closest_indices, XF, YF
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, GRID_CHANNELS, PANEL_ACTIONS
 
 PLACEMENTS = {2:'Garrison',3:'Mortar',4:'Napalm',5:'Nest',6:'Mine',7:'C4',8:'GasMortar'}
@@ -45,6 +45,7 @@ def extra_masks(st):
             mask *= [point is not None for point in st['targets'][name[7:]]]
         elif name=='arm_slot':
             enabled=planning;mask[:]=0;mask[:7]=[n!='-' for n in st['planning_roster']]
+        elif name in ('place_click','place_paint'):enabled=planning
         elif name in ('zone_begin','zone_corner','zone_finish','zone_back'):
             enabled=planning and (name=='zone_begin' or polygon>0)
             if name=='zone_finish':enabled=enabled and polygon>=3
@@ -88,12 +89,9 @@ def nearest_per_cell(points, width, height, bounds=None):
     points=points[visible & outside_panel(points,bounds)]
     result=[None]*48
     if len(points):
-        col=np.abs(points[:,:1]/width-XF).argmin(1)
-        row=np.abs(points[:,1:]/height-YF).argmin(1)
-        bins=row*8+col
-        order=np.argsort(((points-centers(width,height)[bins])**2).sum(1),kind='stable')
-        _,first=np.unique(bins[order],return_index=True)
-        for i in order[first]:result[bins[i]]=tuple(map(int,points[i]))
+        bins=grid_bins(points,width,height)
+        for i in closest_indices(points,bins,centers(width,height)):
+            result[bins[i]]=tuple(map(int,points[i]))
     return result
 
 
@@ -132,16 +130,16 @@ def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, 
             maps['level'].get(uid,1)/4,g(u['hp'][i]),u['contact'][i]/100,u['timer'][i]/60,
             *u['dir'][i],float(maps['far_first'].get(uid,0)),maps['officer_kind'].get(uid,0)/2,
             float(ai['mode'])/8 if ai is not None else 0,g(maps['kills'].get(uid,0)),
-            float(u['converting'][i]),*maps['boosts'].get(uid,[0.]*5)]
+            float(u['converting'][i]),*maps['boosts'].get(uid,[1.]*5)]
     result += detail
     def histogram(points):
         xy=project(points,camera,width,height)
         if not len(xy):return np.zeros(48)
         visible=((xy[:,0]>=0)&(xy[:,0]<width)&(xy[:,1]>=.07*height)&(xy[:,1]<.8*height))
-        col=np.abs(xy[:,:1]/width-XF).argmin(1);row=np.abs(xy[:,1:]/height-YF).argmin(1)
-        return np.bincount((row*8+col)[visible],minlength=48)
-    names=unit_names(u,maps)
-    channels=[u['pos'][names==name] for name in UNITS if name not in ('Spikes','Oil')]
+        return np.bincount(grid_bins(xy[visible],width,height),minlength=48)
+    defenders=np.flatnonzero(u['kind']>=4)
+    names=unit_names({key:u[key][defenders] for key in ('kind','id')},maps)
+    channels=[u['pos'][defenders[names==name]] for name in UNITS if name not in ('Spikes','Oil')]
     channels += [s['paint']['pos'][s['paint']['kind']==kind] for kind in (1,2)]
     buildings=s['buildings'];valid=buildings['destroyed']==0
     channels += [buildings['center'][valid&(buildings['class']==kind)] for kind in range(1,8)]
@@ -159,6 +157,15 @@ def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, 
     result += [EXTRA_TOOLS.index(gesture_anchor[0])/128 if gesture_anchor else -1.,
                gesture_anchor[1]/48 if gesture_anchor else -1.,armed[0]/42,*armed[1:]]
     result += [float(paused),speed/8]
+    codes=s['terrain']['codes']
+    result += [*np.where(codes<0,-1.,codes/5),*s['terrain']['bridges']]
+    bi=sel['building'];detail=[0.]*7
+    if 0<=bi<len(buildings['center']):
+        detail=[1.,buildings['class'][bi]/7,buildings['ability'][bi]/15,
+            buildings['officer_kind'][bi]/2,buildings['damage'][bi]/max(buildings['max_hp'][bi],1),
+            g(buildings['area'][bi]),float(int(buildings['height_packed'][bi])&65535)/1000]
+    result += detail
+    result += [float(v)/4 for v in maps['upgrades'].get(int(u['id'][indices[0]]),[0]*4)] if len(indices) else [0.]*4
     assert len(result)==len(EXTRA_LABELS)
     if not np.isfinite(result).all():raise RuntimeError('Nonfinite mechanics observation')
     return list(map(float,result))
@@ -167,6 +174,13 @@ def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, 
 class Mechanics:
     def __init__(self,env):
         self.env=env;self.controls=Controls(env);self.reader=NativeState(env)
+        self.building_membership=None
+
+    def building_in_playarea(self,buildings,playarea):
+        previous=self.building_membership
+        if previous is None or not np.array_equal(previous[0],buildings) or not np.array_equal(previous[1],playarea):
+            self.building_membership=(buildings.copy(),playarea.copy(),inside_polygon(buildings,playarea))
+        return self.building_membership[2]
 
     def refresh(self,st):
         e=self.env;c=self.controls;s=self.reader.snapshot()
@@ -197,7 +211,7 @@ class Mechanics:
             vehicle=s['vehicles']['pos'][s['vehicles']['alive']!=0],
             medevac=s['medevacs']['pos'][s['medevacs']['alive']!=0])
         st['targets']={key:nearest_per_cell(p(pts),e.cw,e.ch,bounds) for key,pts in targets.items()}
-        b=s['buildings'];valid=(b['destroyed']==0)&inside_polygon(b['center'],s['playarea'])
+        b=s['buildings'];valid=(b['destroyed']==0)&self.building_in_playarea(b['center'],s['playarea'])
         st['build_targets']=nearest_per_cell(p(b['center'][valid]),e.cw,e.ch,bounds)
         for slot in st.get('deck',[]):
             if slot['name']=='Heli':slot['alive']=bool(np.any(s['helicopters']['alive']))
