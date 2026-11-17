@@ -1,15 +1,18 @@
 # Zombies Aren't Real — RE & ML Project Tracker
 
-**Goal (2026-11-15 REFRAME):** I ORCHESTRATE training of an ML model (GRU policy,
+**Goal (2026-11-17 REFRAME):** I ORCHESTRATE training of an ML model (GRU policy,
 notes/ml-spec.md) that PLAYS and CONSISTENTLY WINS Boston, MA — the model plays, not
-the agent. Deliverables: (1) stable obs/action env API over game copies, (2) episode
+the agent, and the MODEL OWNS ALL STRATEGY: unit selection/buys, safe zones,
+placement, deployment, in-battle casts (I do NOT script how to play; my job is
+facilitation: unblock the learner, keep episodes flowing, monitor progress).
+Curriculum L1->L5 (START OVER restarts the campaign, badges persist as BEST).
+Deliverables: (1) stable obs/action env API over game copies, (2) episode
 datasets, (3) trained GRU policy, (4) eval gates beat 0.19% -> 4% bronze -> 13.69%
 silver. **User performance bar: strategy must SAVE >=35% civilians on EVERY level;
-replay the same level (R keeps the board) until max; safe zones + preparation units
-alone are NOT enough — equip SP loadout picks and deploy units (heli/mortar/CTA)
-in-battle.** Game: Steam AppID 5185890 at
-`C:\Games\steam\steamapps\common\Zombies-Arent-Real`, Odin engine (sokol+D3D11),
-build bbbff50f v0.42.1. L5 was CONQUERED by scripted policy (bronze 7.91 x2).
+replay the same level (R keeps board AND leftover budget) until max.** Game: Steam
+AppID 5185890 at `C:\Games\steam\steamapps\common\Zombies-Arent-Real`, Odin engine
+(sokol+D3D11). L5 was CONQUERED by scripted policy (bronze 7.91 x2) — that was the
+RE phase; the ML phase supersedes it.
 
 ## HARD RULES (every agent)
 - NEVER modify `C:\Games\...` (read-only). Work in `D:\zar-scratch`. Test copies live in
@@ -32,6 +35,14 @@ build bbbff50f v0.42.1. L5 was CONQUERED by scripted policy (bronze 7.91 x2).
 - Don't blindly type admin-console strings: the console must be verified open first
   (screenshot), and raw SPACE in typed strings toggles pause.
 - Update this file at the END of every run.
+- GIT (user directive 2026-11-17): local repo at D:\zar-scratch — commit EVERY file
+  update, ALWAYS Conventional Commits (`feat:`/`fix:`/`chore:`/`docs:`/`test:`).
+  Local only, never GitHub. Large artifacts are gitignored (game-copies/, screenshots,
+  .state dumps); never force-add them.
+- I am the FACILITATOR, not the player: do not hand-write strategy the model should
+  learn (buys/zones/placement/casts belong in the action space).
+- Launching extra game instances is ALLOWED when it helps training, but stay
+  reasonable: leave CPU/GPU/RAM headroom for the user's machine (2026-11-17).
 
 ## Directory map
 - `AGENTS.md` — this tracker.
@@ -176,38 +187,58 @@ TOGGLED PAUSE this session, console never visibly opened — treat admin as brok
 - PIDs NOW: inst2=45120 (idle APCx2 board), CEM: inst1=9152 inst3=11872
   inst4=46428 (cem6 running). Enumerate via psutil by exe dirname ALWAYS.
 
-## NEXT STEPS (2026-11-16z)
-1. cem6 (bg_179) -> if best shaped flat again: board IS the bottleneck — widen
-   genome with planning genes (auto_garrison already shared; add zone-draw via
-   lasso genes + wall buys) OR run CEM on the GOOD board (clone inst2 E-zone
-   .prep to copies).
-2. Validate best mu on fresh boards (relaunch_boards -> full run) before BC.
-3. BC -> GRU (train_zar.py) on winning episodes; L4/L5 CONTINUE chain; kill
-   instances + final AGENTS.md update at phase end.
+## CURRENT STATE (end of 2026-11-17f — NN phase live, CEM paused)
+- `scripts/nn_play.py` PPO+GRU (63,282 params; obs 19 feats; 49 acts = wait +
+  4 battle units x 12 grid cells; charge-masked; reward 8*dfrac - 0.02/cast +
+  3*win + 5*frac^1.5; GAE+clip+entropy; ckpt sessions/nn_policy.pt; history
+  analysis/nn_hist.jsonl). forward returns full (T,) sequences; ppo_update
+  verified (synthetic loss 4.21->4.00/epoch).
+- Smoke (random policy, scripted mortar board): L1 frac 1.00 held (win flag needs
+  horde wipe; horizon now 560s). Training service: `train --pids ... --eps 2
+  --rounds 4` on L1 boards (START OVER'd: planning $3111/8142 civ).
+- L1 campaign nav (MAP-COMPLETE layout): NORMAL shot(705,765) -> START OVER
+  (705,926); CONTINUE is greyed once map cleared. Old L3 coords in relaunch_boards
+  only valid pre-start-over.
+- R restart dialog states: KEEPS placements, loadout, LEFTOVER BUDGET — economy
+  persists across episodes on a board; START OVER = full reset.
+- PIDs: L1 boards 49320 49276 49384 39160 (training); 15876 spare (menu); 45120
+  inst2 idle L3 board. Enumerate via psutil by exe dirname.
+- V2 TODO: give the NET the planning phase (tool hotkeys 1 garrison 2 mortar
+  3 napalm 4 turret 5 mine 6 C4 7 gas-tower F upgrade; zone presets; READY when
+  model chooses; phase+money+success-bit in obs). Deck stays para/heli/gas/ac130
+  (SP meta = outer loop). Zone tool key Z unverified (probe pending).
+
+## NEXT STEPS (2026-11-17f)
+1. Monitor NnTrain service (log analysis/nn_train3.log): ppo loss, wins/frac per
+   round; unblock crashes fast; compare vs scripted baseline.
+2. nn_play2: planning actions to the policy (above) + zone probe; then eval
+   greedy; escalate level on wins (ENTER chain on win screen).
+3. Keep >=35% bar per level in mind: L1 wins -> L2 -> ...; BC from best episodes
+   if PPO is slow.
+4. END PHASE: update AGENTS.md+notes, kill test instances, port new Steam build
+   (re-derive memory RVAs!) and re-baseline.
 
 ## CONTINUATION PROMPT (paste as the first message for a fresh agent)
 ```
-Continue the Zombies Aren't Real ML project (mission: TRAIN A MODEL to consistently
-win Boston MA >=35% every level). Read D:\zar-scratch\AGENTS.md CURRENT STATE
-(2026-11-16z) + notes/automation.md traps + notes/memory-map.md RVAs +
-notes/ml-spec.md. Stack: scripts/env_zar.py ZAREnv(pid) (memory RVAs FAST mode,
-ready/cast/battle w/ pause self-heal + auto heli watchdog + 8x F5 speed),
-scripts/parallel_ga.py run = shaped-fitness CEM over cast schedules sharded
-across windowed game copies inst1..inst4 (psutil-enumerate pids by dirname;
-recover.py = inst2 ONLY, relaunch_boards.py = inst1/3/4; NEVER run recover
-while CEM episodes live), train_zar.py (GRU BC/REINFORCE).
-Input traps: virtual DLL input only (key_press needs sc codes; SC table in
-zar_input), vi.click=shot_px*1.24 for HUD/menus, map placement drag
-(button_down/up), lasso B+4 clicks auto-closes, READY=SPACE, NEVER real
-mouse_event, never CHOOSE click, menu virtual clicks DEAD -> edit progress/
-config FILES + restart instead, PrintWindow only in planning/menu, SPACE pause
-trap (ready() self-heals), F6 dumps freeze while dialogs/menus open.
-Config traps: install build != copy builds (Steam auto-updated 11-17): copies
-self-heal own defaults; anchor per-section when regexing config.ini; battle
-speed = F1..F5 runtime buttons only.
-Rules: copies only (never C:\Games — read-only), admin=manual one-offs ONLY,
-difficulty pinned normal, kill test instances at phase end, no subagents,
-R-retry keeps board, civ<10% -> RR immediately, update AGENTS.md at end.
+Continue the Zombies Aren't Real ML project (mission: TRAIN A MODEL to become a
+god-tier player, consistently winning Boston MA >=35% every level; you FACILITATE,
+the model learns all strategy — buys, zones, placement, deployment, casts).
+Read D:\zar-scratch\AGENTS.md CURRENT STATE (2026-11-17f) + notes/automation.md
+traps + notes/memory-map.md RVAs + notes/ml-spec.md. Stack: scripts/env_zar.py
+ZAREnv(pid) (memory-RVA obs, ready() R-loop+pause self-heal, cast/placement
+primitives), scripts/nn_play.py (PPO GRU train/play/greedy on parallel windowed
+copies; psutil-enumerate pids by dirname), scripts/launch_boards.py +
+relaunch_boards.py (fresh boards; START OVER nav for L1). CEM (parallel_ga.py) =
+paused legacy baseline.
+Rules: local git repo — commit EVERY file update with Conventional Commits; copies
+only (never C:\Games), admin=manual one-offs ONLY, difficulty pinned normal, no
+real mouse (virtual DLL only), R,R on lost battles, extra instances OK but leave
+system headroom, no subagents, kill test instances at phase end, update AGENTS.md
+at end.
+Input traps: key_press needs scan codes (zar_input table), placements = vi.click
+in CLICK MODE (drags dead), menu clicks = raw screenshot px, READY=SPACE (pause
+trap), never CHOOSE click, PrintWindow planning/menu only, never edit scripts
+while trainer workers reimport, F6 dumps freeze under dialogs.
 ```
 
 
