@@ -1,0 +1,44 @@
+ep pid 30328 win False frac 0.0 R 0.11
+ep pid 30328 win False frac 0.0 R -0.5
+ep pid 44716 win False frac 0.0 R 0.65
+ep pid 44716 win False frac 0.0 R 2.98
+ep pid 39092 win True frac 1.0 R 15.66
+ep pid 39092 win False frac 0.0 R 1.99
+ep pid 10428 win False frac 0.0 R -1.25
+ep pid 10428 win False frac 0.0 R -1.91
+ep pid 29948 win False frac 0.0 R -3.23
+ep pid 29948 win False frac 0.0 R -2.13
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play2.py", line 481, in <module>
+    main()
+    ~~~~^^
+  File "D:\zar-scratch\scripts\nn_play2.py", line 471, in main
+    ppo_update(net, good)
+    ~~~~~~~~~~^^^^^^^^^^^
+  File "D:\zar-scratch\scripts\nn_play2.py", line 397, in ppo_update
+    _, _, v, _ = net(X)
+                 ~~~^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "D:\zar-scratch\scripts\nn_play2.py", line 75, in forward
+    out, h = self.gru(x, h)
+             ~~~~~~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 1438, in forward
+    self.check_forward_args(input, hx, batch_sizes)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 380, in check_forward_args
+    self.check_input(input, batch_sizes)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 329, in check_input
+    raise RuntimeError(
+        f"input.size(-1) must be equal to input_size. Expected {self.input_size}, got {input.size(-1)}"
+    )
+RuntimeError: input.size(-1) must be equal to input_size. Expected 32, got 0

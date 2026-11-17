@@ -457,6 +457,11 @@ def main():
                 if 'err' in tr:
                     print('ERR', tr['pid'], tr['err'][:120], flush=True)
                     continue
+                if len(tr.get('obs', [])) < 2:
+                    print('SKIP short traj', tr['pid'], 'win', tr['win'],
+                          'frac', tr['frac'], 't', round(tr.get('t', 0), 1),
+                          flush=True)
+                    continue
                 with open(HIST, 'a') as fh:
                     fh.write(json.dumps({k: tr[k] for k in
                                          ('level', 'pid', 'win', 'frac', 't',
