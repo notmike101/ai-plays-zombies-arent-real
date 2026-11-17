@@ -56,6 +56,13 @@ def exercise(env):
     check('fresh L1', env.obs()['money'] == 3111 and env.obs()['civ'] > 5000
           and money(initial) == 3111 and initial['where']['phase'] == 'planning', env.obs())
     point = lambda x, y: (round(x * env.cw), round(y * env.ch))
+    # The empty board guarantees the low-shelter confirmation exists.
+    vi.key_press(0x20, sc=57, hold=.15)
+    time.sleep(.4)
+    vi.click(*point(.59, .567), hold=.15)
+    cancelled = snapshot(env)
+    check('dialog NO click', cancelled['where']['phase'] == 'planning'
+          and env.obs()['zomb'] == 0, 'posted click cancels READY, no battle')
     vi.key_press(0x31, sc=2)
     time.sleep(.25)
     vi.click(*point(.5, .5), hold=.15)
@@ -108,13 +115,8 @@ def exercise(env):
     vi.key_press(0x70, sc=59)  # Normal 1x speed; inherited dev speed is not a difficulty setting.
     vi.key_press(0x20, sc=57, hold=.15)
     time.sleep(.4)
-    vi.click(*point(.59, .567), hold=.15)  # NO on the READY confirmation.
-    cancelled = snapshot(env)
-    check('dialog NO click', cancelled['where']['phase'] == 'planning'
-          and env.obs()['zomb'] == 0, 'posted click cancels READY, no battle')
-    vi.key_press(0x20, sc=57, hold=.15)
-    time.sleep(.4)
-    vi.key_press(0x20, sc=57, hold=.15)
+    if not env.obs()['zomb']:
+        vi.key_press(0x20, sc=57, hold=.15)
     deadline = time.monotonic() + 8
     obs = env.obs()
     while not obs['zomb'] and time.monotonic() < deadline:
