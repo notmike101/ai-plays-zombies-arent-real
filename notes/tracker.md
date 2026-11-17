@@ -1,55 +1,33 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 15:17 local — full-availability training LIVE, sharing enabled)
-- Active module roots now derive from their checkout. Ignored zar.local.toml
-  configures the supported read-only asset source and GitHub App helper. Local
-  source is game-copies/inst4: the installed EXE differs from the supported hash;
-  never bypass the guard. Setup/build/copy/restore commands are in README.md.
-- User clarified ALL availability on fresh training copies. Preparation always
-  enables16 units/19 abilities/16 upgrades +Extra_Zones, no campaign progress,
-  purchases, SP spending or placements. inst12 is the new full-profile copy.
-  Use local.ps1 check --copy inst12 and train --copy inst12 on this deployment;
-  legacy inst1 lacks upgrades and deliberately fails the new profile preflight.
-- Fresh inst12 boot verified Boston L1,8142 civilians,$3111,normal/planning.
-  All52 availability entries persisted after native startup. A4-decision actual
-  policy probe completed without optimization; checkpoint SHA remained
-  35a8148ff8948406a40cc16951539d858b35617eeadedf6b789e8514326fc396.
-  All probe games cleaned. Distinct never-played menu layout fixed from captured
-  evidence; initial failed probes and fixture correction are in portability-plan.
-- Input DLL built twice clean with pinned Rust1.96.0/locked Cargo, matching SHA
-  2d2f160e53c26c521984727c922e7629bd6718e5010642d23f9db49bdcd8d848.
-  Rust ABI +Python checks PASS; new DLL hooks and virtual actions worked in native
-  boot/policy probe. DLL/targets/manifest remain ignored, source/build docs committed.
-- Checkpoint published and downloaded/verified:
-  https://github.com/notmike101/ai-plays-zombies-arent-real/releases/tag/checkpoint-35a8148ff8948406
-  Repeat publish returned already_published. Local Codex heartbeat
-  share-zar-checkpoints ACTIVE every6h, changed snapshots only. See checkpoint-sharing.md.
-- Offline checks:82 trainer/operator/interface +35 visualizer Python tests PASS
-  across milestone runs;12-step actual-policy parity and Node graph PASS. No
-  schema/reward/action changes. Full availability does NOT imply complete policy
-  action coverage; gameplay goal remains unmet.
-- Old run b39316bdad21 stopped at saved update46,policy e9c9e765b8f64cf9.
-  New .venv run83bfa5642d1d is LIVE on inst12,200 rounds,2 episodes,seed20261172.
-  Completed update0: policy86937deddc7dabc2,10 Adam states; SHA256
-  e1dbc34654777ba335351ce4b22af4fcfaaa223ce42b71c4d0c54432eca7a647.
-  First two L1 battles saved7.6%/6.9%,both aborted. No strong-play claim.
-- Live identities: operator7924(created1794949994.8707004),venv redirector29272
-  (1794949994.8510892); launcher34720(1794949997.99964),redirector47252
-  (1794949997.9919803); trainer43344(1794950087.7209148),redirector45860
-  (1794950087.7134013);worker28516(1794950089.7673914);game528
-  (1794949998.1934192). Revalidate before any stop; redirectors are not extra runs.
-  Original visualizer22604(created1794931712.9690397) preserved on8765.
-- Logs: analysis/nn3_operator_20261117-151314-9df84d.log and
-  analysis/nn3_20261117-151317-555255.log. Actual worker/server frame matched
-  game528/worker28516,episode r1/ep0,332 labels,no label warning,preview=false,
-  live age1.85s; trainer ancestry verified. Server HTTP200. Browser UI unchanged.
-- One game, below-normal and CPUs0-7. SampleCPU7.6%,GPU33%,RAM11.77GiB available,
-  GPU3392/10240MiB,D:12.31GiB free. These are samples/startup limits,not quotas.
-  Preserve this run. Six-hour sharing is scheduled; no continuous gameplay
-  supervision after this chat. Next agent should inspect status/check --copy inst12,
-  reuse visualizer-start and review learning/action gaps in ml-spec.md.
-- Source/docs committed conventionally and pushed at milestones. Preserved unrelated legacy
-  policy2/history2 modifications and old untracked analysis artifacts.
+## CURRENT STATE (2026-11-17 — complete-mechanics work in progress; training stopped)
+- User requires complete supported-game mechanic/action coverage and measured
+  decision/visualizer speed improvements. Work is ongoing; schema3 is incomplete.
+  Plan and explicit gaps: notes/mechanics-coverage-plan.md and mechanics-coverage.md.
+- Production run83bfa5642d1d ended after round3: finish_geometry could not verify
+  automatic undo restored the board. Launcher cleaned game528. Last saved policy
+  c46cf2f2f5696822 and Adam remain in sessions/nn_policy3.pt. Do not overwrite this
+  checkpoint with diagnostic evaluation. Resume only after validated changes.
+- Owned diagnostic inst13 game40520(created1794951944.5121891), no trainer,
+  below-normal CPUs0-7. Revalidate process identity before action. Native reads
+  and virtual input only. Installed game remains read-only. Clean probe at end.
+- Visualizer22604(created1794931712.9690397) remains on8765. Preserve/reuse.
+- Measured actual20-decision planning evaluation:27.04s; median published
+  interval0.918s, server observation delay0.254s. Main delays: native action
+  sleeps/dumps/loadout scrolling. No browser-render or battle latency claim yet.
+- Full availability corrected from52 to59 entries:16 units,19 abilities,
+  16 upgrades,8 perks. Existing inst12/13 profiles predate the perk correction;
+  prepare again while stopped before final acceptance. SP tower upgrades are
+  hidden/disabled in shipped config, distinct from their unlock availability.
+- New native picker controls select every16 roster unit with extended-arrow
+  scan codes and receipts. Intermittent picker-open race still being investigated;
+  not yet integrated into policy or claimed production-ready.
+- Portability, pinned reproducible DLL and guarded checkpoint sharing remain.
+  Local Codex share-zar-checkpoints automation enabled every6h, changed models
+  only. First release checkpoint-35a8148ff8948406 on repository GitHub Releases.
+- Preserve unrelated policy2/history2 changes and old analysis artifacts.
+  Current diagnostic evidence is under analysis/coverage-*; source/docs are
+  committed conventionally at tested milestones. No subagents.
 
 ## Prior snapshot (2026-11-17 — isolated Python environment verified, training LIVE)
 - New .venv created with Python3.14.4 x64, include-system-site-packages=false;
