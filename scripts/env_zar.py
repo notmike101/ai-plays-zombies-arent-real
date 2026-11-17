@@ -140,6 +140,7 @@ class ZAREnv:
         SPACE (unpause) + ENTER (dismiss OK/loss) before R (verified seq).
         Menu/dead states raise."""
         last = None
+        lost = 0
         for _ in range(max_r):
             o = self.obs()
             if (o['civ'] or 0) > 0 and (o['zomb'] or 0) == 0 \
@@ -147,9 +148,11 @@ class ZAREnv:
                 return o
             sig = (o['civ'], o['zomb'])
             if (o['zomb'] or 0) > 0:
-                if sig == last:      # pause-modal / loss popup: unpause +
+                if sig == last:      # pause-modal: unpause, close menu,
                     self.vi.key_press(0x20, sc=57, hold=0.25)   # dismiss,
                     time.sleep(1.2)  # then double-R below
+                    self.vi.key_press(0x1B, sc=1, hold=0.25)    # ESC menu
+                    time.sleep(1.2)
                     self.vi.key_press(0x0D, sc=28, hold=0.25)
                     time.sleep(1.2)
                 # 1st R opens 'Restart this level? YES(R)/NO', 2nd R = YES
@@ -157,7 +160,13 @@ class ZAREnv:
                 time.sleep(2.5)
                 self.vi.key_press(0x52, sc=19, hold=0.25)
             elif (o['civ'] or 0) == 0 and o.get('money') is None:
-                self.vi.key_press(0x0D, sc=28, hold=0.25)   # loss screen OK
+                if lost < 3:         # retry level = KEEPS placements+budget
+                    self.vi.key_press(0x52, sc=19, hold=0.25)
+                    time.sleep(2.5)  # (START OVER wipes: last resort only)
+                    self.vi.key_press(0x52, sc=19, hold=0.25)
+                else:
+                    self.vi.key_press(0x0D, sc=28, hold=0.25)   # START OVER
+                lost += 1
             last = sig
             time.sleep(4.0)
         o = self.obs()

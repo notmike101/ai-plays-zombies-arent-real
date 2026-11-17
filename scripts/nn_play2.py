@@ -54,7 +54,7 @@ BATTLE_U_ALLOWED = [0, 11, 12, 13, 14]
 XS = [500, 767, 1033, 1300]
 YS = [260, 500, 740]
 CELLS = [(x, y) for y in YS for x in XS]
-PLAN_STEPS = 45            # harness bound on planning phase (cap, not strategy)
+PLAN_STEPS = 60            # harness bound on planning phase (cap, not strategy)
 BATTLE_T = 560.0
 STEP_S = 2.5               # battle step period (seconds of game attention)
 
@@ -263,6 +263,8 @@ def run_episode(args):
                           o.get('money'), u, c))
             if did:
                 r -= 0.01
+                if st['planning'] and u not in (0, 1):
+                    r += 0.12    # shapes board-building: money fell = bought
             rews.append(r)
             if o['zomb'] > 0:
                 fought = True
