@@ -154,6 +154,49 @@ class FeedTests(unittest.TestCase):
             thread.join(timeout=2)
         self.assertFalse(server.sampler.is_alive())
 
+    def test_sampler_captures_without_viewers_and_survives_bad_summary(self):
+        data = frame('bad', time.time())
+        data.update(sequence=1, graph={'layers': None})
+        self.write(data)
+        server = make_server('127.0.0.1', 0, self.feed)
+        try:
+            good = frame('good', time.time())
+            good['sequence'] = 1
+            self.write(good)
+            deadline = time.monotonic() + 3
+            while time.monotonic() < deadline:
+                with self.feed.lock:
+                    captured = [e['stream'] for e in self.feed.history]
+                if 'good' in captured:
+                    break
+                time.sleep(.02)
+            self.assertIn('good', captured)
+            self.assertTrue(server.sampler.is_alive())
+        finally:
+            server.server_close()
+
+    def test_stream_capacity_is_bounded_and_released(self):
+        server = make_server('127.0.0.1', 0, self.feed)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        url = f'http://127.0.0.1:{server.server_port}/api/events'
+        try:
+            acquired = 0
+            while server.stream_slots.acquire(blocking=False):
+                acquired += 1
+            self.assertLessEqual(acquired, 16)
+            with self.assertRaises(HTTPError) as error:
+                urlopen(url, timeout=3)
+            self.assertEqual(error.exception.code, 503)
+            error.exception.close()
+            server.stream_slots.release()
+            with urlopen(url, timeout=3) as response:
+                self.assertEqual(response.headers.get_content_type(), 'text/event-stream')
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
     def test_http_allowlist(self):
         server = make_server('127.0.0.1', 0, self.feed)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
