@@ -1,0 +1,3 @@
+start obs {'civ': 97957, 'zomb': 3006, 'converting': 54, 'corpses': 0, 'police': 0, 'money': 4223.0380859375}
+CAST1 t 48 zomb 32339
+RESULT {'win': False, 'civ_end': 3397, 'civ0': 97957, 'frac': 0.03467848137448064, 't': 103.70646095275879}

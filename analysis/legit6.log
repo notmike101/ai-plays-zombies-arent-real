@@ -1,0 +1,49 @@
+planning {'civ': 80011, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 4223.0380859375}
+start {'civ': 78302, 'zomb': 2829, 'converting': 44, 'corpses': 0, 'police': 0, 'money': 4223.0380859375}
+t 0 zomb 2829 civ 78302 corp 0 conv 44 cpu 0.0
+t 3 zomb 3674 civ 77359 corp 99 conv 21 cpu 252.4
+t 5 zomb 4290 civ 76556 corp 291 conv 24 cpu 264.3
+t 8 zomb 4932 civ 75780 corp 428 conv 21 cpu 261.2
+t 10 zomb 6203 civ 74509 corp 428 conv 42 cpu 264.9
+t 13 zomb 7539 civ 72795 corp 809 conv 46 cpu 269.3
+t 15 zomb 9493 civ 70576 corp 1081 conv 77 cpu 256.8
+t 18 zomb 12197 civ 67629 corp 1327 conv 72 cpu 289.9
+t 20 zomb 14527 civ 64940 corp 1692 conv 66 cpu 265.6
+t 23 zomb 16002 civ 62615 corp 2553 conv 70 cpu 274.3
+t 25 zomb 18033 civ 59605 corp 3544 conv 66 cpu 280.6
+t 28 zomb 18990 civ 57319 corp 4887 conv 59 cpu 280.5
+t 30 zomb 20594 civ 55027 corp 5584 conv 48 cpu 307.4
+t 33 zomb 21852 civ 53172 corp 6187 conv 39 cpu 303.1
+t 35 zomb 22947 civ 51509 corp 6761 conv 37 cpu 309.3
+t 38 zomb 23949 civ 50021 corp 7255 conv 35 cpu 301.2
+t 40 zomb 25293 civ 48383 corp 7549 conv 56 cpu 317.4
+t 43 zomb 26988 civ 46266 corp 7972 conv 54 cpu 304.3
+t 45 zomb 28618 civ 44376 corp 8232 conv 38 cpu 355.5
+t 48 zomb 30009 civ 42690 corp 8528 conv 54 cpu 325.5
+CAST 46 at (742, 415)
+t 51 zomb 32421 civ 39561 corp 9245 conv 54 cpu 375.8
+CAST 47 at (784, 468)
+t 55 zomb 35161 civ 36106 corp 9962 conv 47 cpu 380.9
+CAST 48 at (815, 416)
+t 59 zomb 37638 civ 33061 corp 10530 conv 52 cpu 346.1
+CAST 50 at (827, 455)
+t 62 zomb 41159 civ 29105 corp 10965 conv 66 cpu 373.4
+CAST 52 at (742, 415)
+t 66 zomb 44048 civ 25693 corp 11489 conv 60 cpu 395.0
+t 68 zomb 45443 civ 23938 corp 11849 conv 36 cpu 412.9
+t 71 zomb 46936 civ 22197 corp 12097 conv 69 cpu 393.0
+t 73 zomb 48092 civ 20684 corp 12455 conv 34 cpu 389.9
+t 76 zomb 49049 civ 19474 corp 12710 conv 41 cpu 386.7
+t 78 zomb 49948 civ 18296 corp 12990 conv 39 cpu 378.6
+t 81 zomb 51005 civ 17038 corp 13191 conv 32 cpu 373.0
+t 83 zomb 51689 civ 15792 corp 13755 conv 31 cpu 378.7
+t 86 zomb 52087 civ 14698 corp 14452 conv 33 cpu 394.1
+t 88 zomb 53454 civ 13133 corp 14650 conv 48 cpu 364.2
+t 91 zomb 54958 civ 11521 corp 14758 conv 46 cpu 385.5
+t 93 zomb 56043 civ 10070 corp 15124 conv 40 cpu 384.9
+t 96 zomb 56600 civ 9046 corp 15591 conv 34 cpu 379.9
+t 98 zomb 57381 civ 7793 corp 16063 conv 37 cpu 376.8
+t 101 zomb 58403 civ 6460 corp 16374 conv 68 cpu 398.0
+t 103 zomb 58846 civ 5599 corp 16793 conv 31 cpu 390.5
+t 106 zomb 59743 civ 4271 corp 17224 conv 56 cpu 381.2
+RESULT {'win': False, 'civ_end': 3125, 'civ0': 78302, 'frac': 0.039909580853618044, 't': 108.44230437278748}

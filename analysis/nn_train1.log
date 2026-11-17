@@ -1,0 +1,4 @@
+usage: nn_play.py [-h] [--pids PIDS] [--pid PID] [--eps EPS] [--rounds ROUNDS]
+                  [--random]
+                  {play,greedy}
+nn_play.py: error: argument mode: invalid choice: 'train' (choose from play, greedy)

@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "<stdin>", line 3, in <module>
+  File "D:\zar-scratch\scripts\recover.py", line 13, in <module>
+    from env_zar import ZarGame
+ImportError: cannot import name 'ZarGame' from 'env_zar' (D:\zar-scratch\scripts\env_zar.py)

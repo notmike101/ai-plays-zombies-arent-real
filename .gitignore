@@ -1,0 +1,17 @@
+# Large/runtime artifacts — never commit
+game-copies/
+sessions/inst2/
+sessions/.zarvi_*
+*.state
+analysis/decomp/
+analysis/civ_candidates.json
+analysis/*.png
+analysis/*.bmp
+analysis/*.jpg
+analysis/*.npy
+analysis/*.npz
+scripts/__pycache__/
+scripts/hookdll/target/
+*.pyc
+.omp/
+*.tmp

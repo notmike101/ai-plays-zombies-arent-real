@@ -1,0 +1,581 @@
+THREAD 46924 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe9f26e4be d3d11.dll+0x4e4be
+0x7ffe9f281174 d3d11.dll+0x61174
+0x7ffe9f269f9d d3d11.dll+0x49f9d
+0x7ffe9f24a5af d3d11.dll+0x2a5af
+0x7ffe9f26dcfd d3d11.dll+0x4dcfd
+0x7ffe9f25d1e6 d3d11.dll+0x3d1e6
+0x7ffe9f23f602 d3d11.dll+0x1f602
+0x7ffe9f495c73 dxgi.dll+0x5c73
+0x7ffe9f23ffcf d3d11.dll+0x1ffcf
+0x7ffe9f23f856 d3d11.dll+0x1f856
+0x7ffe9f23e3eb d3d11.dll+0x1e3eb
+0x7ffea4b9f900 ntdll.dll+0x12f900
+0x7ffe9f497127 dxgi.dll+0x7127
+0x7ffe9f493f0a dxgi.dll+0x3f0a
+0x7ffe9dc38655 dwmapi.dll+0x8655
+===
+THREAD 44048 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffd94b65128 steamclient64.dll+0xfd5128
+0x7ffd946a03ff steamclient64.dll+0xb103ff
+0x7ffd9467b646 steamclient64.dll+0xaeb646
+0x7ffd946a1483 steamclient64.dll+0xb11483
+0x7ffd9469b10b steamclient64.dll+0xb0b10b
+0x7ffd94b93063 steamclient64.dll+0x1003063
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 26024 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffea1e85b00 KERNELBASE.dll+0x75b00
+0x7ffe89d45a51 nvwgf2umx.dll+0xa55a51
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 25072 running
+0x7ffea1e2ab53 KERNELBASE.dll+0x1ab53
+0x7ffea1e2aa21 KERNELBASE.dll+0x1aa21
+0x7ffe89510e46 nvwgf2umx.dll+0x220e46
+0x7ffea1e8530f KERNELBASE.dll+0x7530f
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 41396 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffea4bda424 ntdll.dll+0x16a424
+0x7ffe89d9125f nvwgf2umx.dll+0xaa125f
+0x7ffea3242a26 KERNEL32.DLL+0x12a26
+0x7ffe8a2d70ed nvwgf2umx.dll+0xfe70ed
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 41320 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 16080 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 21664 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 41120 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 41272 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 37076 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 5644 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 13804 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 32408 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 43212 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 33452 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 42116 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 33652 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe899b8aaf nvwgf2umx.dll+0x6c8aaf
+0x7ffe89994db3 nvwgf2umx.dll+0x6a4db3
+0x7ffe896d7ffd nvwgf2umx.dll+0x3e7ffd
+0x7ffe899b9185 nvwgf2umx.dll+0x6c9185
+0x7ffe899966ff nvwgf2umx.dll+0x6a66ff
+0x7ffe895fb485 nvwgf2umx.dll+0x30b485
+0x7ffe899ec73e nvwgf2umx.dll+0x6fc73e
+0x7ffe895fb485 nvwgf2umx.dll+0x30b485
+0x7ffe899ed433 nvwgf2umx.dll+0x6fd433
+0x7ffe89994a57 nvwgf2umx.dll+0x6a4a57
+0x7ffe89994725 nvwgf2umx.dll+0x6a4725
+0x7ffe899891ad nvwgf2umx.dll+0x6991ad
+0x7ffe89e8430a nvwgf2umx.dll+0xb9430a
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+===
+THREAD 40664 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 39236 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 33360 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 42292 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 45416 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 4388 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 39820 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 38176 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 34792 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 28444 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 33968 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 19900 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 23028 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 14128 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ff70aecb7b3 zombies-arent-real.exe+0x4bb7b3
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 6860 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 30716 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 21660 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 48876 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 35788 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 14232 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 25036 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 34636 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 49956 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 31556 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 3204 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 10740 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 40028 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 13596 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 36752 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 33628 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 25552 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 27684 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 49468 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70abd1e0f zombies-arent-real.exe+0x1c1e0f
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 13728 running
+0x7ffea4af8fd3 ntdll.dll+0x88fd3
+0x7ff70aa57e98 zombies-arent-real.exe+0x47e98
+0x7ff70ae97194 zombies-arent-real.exe+0x487194
+0x7ff70aa21030 zombies-arent-real.exe+0x11030
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 25916 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 26284 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 29304 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 22948 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 34844 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 9496 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 44692 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 47652 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 29612 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 34416 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 628 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 34236 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 31392 running
+0x7ffea4a94d0e ntdll.dll+0x24d0e
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 14324 running
+0x7ffea1e2ab53 KERNELBASE.dll+0x1ab53
+0x7ffea1e2aa21 KERNELBASE.dll+0x1aa21
+0x7ffea1ecc95b KERNELBASE.dll+0xbc95b
+0x7ffe89d8c857 nvwgf2umx.dll+0xa9c857
+0x7ffe89e84302 nvwgf2umx.dll+0xb94302
+0x7ffe89e842dc nvwgf2umx.dll+0xb942dc
+0x7ffea3242a26 KERNEL32.DLL+0x12a26
+0x7ffe89e8430a nvwgf2umx.dll+0xb9430a
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 41104 running
+0x7ffea4a94d0e ntdll.dll+0x24d0e
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 7916 running
+0x7ffea4a94d0e ntdll.dll+0x24d0e
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 42128 running
+0x7ffea4a94d0e ntdll.dll+0x24d0e
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 39856 running
+0x7ffea1e2427f KERNELBASE.dll+0x1427f
+0x7ffe89d220d8 nvwgf2umx.dll+0xa320d8
+0x7ffe89d21fff nvwgf2umx.dll+0xa31fff
+0x7ffe8a2c36d6 nvwgf2umx.dll+0xfd36d6
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c
+===
+THREAD 29204 running
+0x7ffea4a94d0e ntdll.dll+0x24d0e
+0x7ffea325dda7 KERNEL32.DLL+0x2dda7
+0x7ffea4b39c5c ntdll.dll+0xc9c5c

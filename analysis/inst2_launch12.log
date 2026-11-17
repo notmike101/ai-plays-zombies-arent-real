@@ -1,0 +1,8 @@
+balance.ini found: its keys override config.ini's
+Setting breakpad minidump AppID = 5185890
+SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561198002516655 [API loaded no]
+Steam: connected (leaderboards on)
+co-op log: logs/coop-20261115-040359.txt
+debug dump: debug_dumps/20261115-040956-Boston__MA.txt and debug_dumps/20261115-040956-Boston__MA.state (240.1 MB state) in 837 ms
+debug dump: debug_dumps/20261115-041940-Boston__MA.txt and debug_dumps/20261115-041940-Boston__MA.state (240.7 MB state) in 855 ms
+debug dump: debug_dumps/20261115-043738-Boston__MA.txt and debug_dumps/20261115-043738-Boston__MA.state (293.9 MB state) in 1022 ms

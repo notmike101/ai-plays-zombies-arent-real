@@ -1,0 +1,1974 @@
+# Zombies Aren't Real debug dump
+# The .state file beside this one is the whole sim state at this tick: `tools/dumpreplay <file.state>`
+# steps it on headlessly. Positions are in the LIVE frame (the installed world); add map_origin for the map file's.
+
+[build]
+version = bbbff50f
+os = windows
+dev = true
+written_utc = 2026-11-16 05:14:13
+state_file = (not written)
+
+[where]
+app_mode = play
+phase = planning
+mode = Command
+map_key = Boston, MA
+map_path = maps\custom_us_boston_d13ba0.map
+campaign = Boston, MA
+campaign_active = true
+stage = 2 (stage 3 of 5)
+custom_map = false
+hardcore = false
+ultra_hardcore = false
+difficulty = Challenging
+assist_level = 0
+crowd_keep_permille = 1000
+world = 9144.0 9994.0
+map_origin = 5158.000 6600.000
+
+[clock]
+outbreak_seed = 0
+outbreak_repeat = false
+sim_time = 0.000
+tick = 0
+half_done = false
+rng = 2987093502
+roll_seed = 0
+speed_mult = 2
+paused = false
+horde_coordination = 0.0000
+
+[view]
+cursor = 3422.01 2822.21
+cursor_map = 8580.01 9422.21
+camera_center = 4571.94 3669.92
+camera_zoom = 0.1357
+camera_pitch = 0.0000
+camera_yaw = 0.0000
+cursor_cell = 6454214 (col 1711 row 1411) obstacle = 0
+
+[economy]
+money = 4223.04
+loadout SeekDestroy = 3
+
+[counts]
+count = 99973
+civilians = 99843
+converting = 0
+zombies = 0
+police = 0
+corpses = 0
+snipers = 0
+mortars = 0
+garrisons = 4
+turrets = 12
+mines = 114
+c4 = 0
+battleships = 0
+helicopters = 0
+apcs = 0
+walls = 174
+levelled_buildings = 0
+infections = 0
+wall_chews = 0
+zombie_deaths = 0
+kills Paratrooper = 0
+kills Sniper = 0
+kills Garrison = 0
+kills Nest = 0
+kills Mine = 0
+kills C4 = 0
+kills Mortar = 0
+kills Heli = 0
+kills Bomber = 0
+kills Fire = 0
+kills APC = 0
+kills Battleship = 0
+kills Station = 0
+kills Militia = 0
+kills Medic = 0
+kills Gas = 0
+kills Fire_Mortar = 0
+kills Missile = 0
+kills Howitzer = 0
+kills MLRS = 0
+kills Railgun = 0
+kills Cure = 0
+kills Napalm = 0
+kills Oil = 0
+kills Dozer = 0
+kills Tank = 0
+kills Nuke = 0
+kills Demolition = 0
+kills Seek_Destroy = 0
+kills Cluster = 0
+kills AC130 = 0
+kills Call_To_Arms = 0
+
+[plan] (map file's frame)
+board garrison = 7839.292 12557.497 1
+board garrison = 8066.046 10454.336 1
+board garrison = 9333.077 10956.522 1
+board garrison = 10161.018 10888.547 1
+board nest = 9607.791 11448.516 1.00000 0.00000 1
+board nest = 9971.865 11279.668 1.00000 0.00000 1
+board nest = 10325.796 11338.551 1.00000 0.00000 1
+board nest = 10477.738 11199.597 1.00000 0.00000 1
+board nest = 8759.313 11842.594 1.00000 0.00000 1
+board nest = 8624.709 11935.406 1.00000 0.00000 1
+board nest = 8698.411 11681.810 1.00000 0.00000 1
+board nest = 9567.318 11731.419 1.00000 0.00000 1
+board nest = 9665.523 11655.725 1.00000 0.00000 1
+board nest = 9999.910 11701.348 1.00000 0.00000 1
+board nest = 10205.954 11690.939 1.00000 0.00000 1
+board nest = 10342.033 11658.632 1.00000 0.00000 1
+board mine = 8839.947 12334.668
+board mine = 8762.413 12689.113
+board mine = 8762.413 12661.422
+board mine = 8762.413 12633.730
+board mine = 8762.413 12606.040
+board mine = 8762.413 12578.350
+board mine = 8762.413 12495.276
+board mine = 8762.413 12467.585
+board mine = 8762.413 12356.821
+board mine = 8762.413 12329.130
+board mine = 8762.413 12301.439
+board mine = 8762.413 12273.748
+board mine = 8762.413 12246.057
+board mine = 8762.413 12190.675
+board mine = 8762.413 12135.293
+board mine = 8762.413 12107.602
+board mine = 8762.413 12079.911
+board mine = 8762.413 12024.529
+board mine = 8873.177 10916.889
+board mine = 8873.177 10889.198
+board mine = 8873.177 10861.507
+board mine = 8873.177 10806.125
+board mine = 8873.177 10778.434
+board mine = 8873.177 10695.361
+board mine = 8873.177 10639.979
+board mine = 8873.177 10584.598
+board mine = 8873.177 10501.523
+board mine = 8873.177 10473.833
+board mine = 8873.177 10446.143
+board mine = 8873.177 10390.760
+board mine = 9260.852 11149.494
+board mine = 9288.542 11149.494
+board mine = 9316.232 11149.494
+board mine = 9371.615 11149.494
+board mine = 9454.688 11149.494
+board mine = 9482.379 11149.494
+board mine = 9510.070 11149.494
+board mine = 9620.834 11149.494
+board mine = 9648.525 11149.494
+board mine = 9676.216 11149.494
+board mine = 9703.906 11149.494
+board mine = 9731.598 11149.494
+board mine = 9842.361 11149.494
+board mine = 9870.053 11149.494
+board mine = 9925.436 11149.494
+board mine = 9953.126 11149.494
+board mine = 10008.508 11149.494
+board mine = 10063.891 11149.494
+board mine = 10091.581 11149.494
+board mine = 10119.271 11149.494
+board mine = 10146.963 11149.494
+board mine = 10174.654 11149.494
+board mine = 10230.036 11149.494
+board mine = 10285.418 11149.494
+board mine = 10313.109 11149.494
+board mine = 10368.491 11149.494
+board mine = 9083.629 11027.653
+board mine = 9083.629 10999.962
+board mine = 9083.629 10972.271
+board mine = 9083.629 10944.580
+board mine = 9083.629 10916.889
+board mine = 9083.629 10889.198
+board mine = 9083.629 10861.507
+board mine = 9083.629 10833.816
+board mine = 9083.629 10778.434
+board mine = 9083.629 10723.053
+board mine = 9083.629 10667.670
+board mine = 9083.629 10612.288
+board mine = 9083.629 10556.906
+board mine = 9083.629 10529.215
+board mine = 9083.629 10473.833
+board mine = 9083.629 10418.451
+board mine = 9083.629 10390.760
+board mine = 9127.934 10329.840
+board mine = 9161.163 10329.840
+board mine = 9294.080 10329.840
+board mine = 9360.539 10329.840
+board mine = 9393.768 10329.840
+board mine = 9593.143 10329.840
+board mine = 9626.372 10329.840
+board mine = 9692.830 10329.840
+board mine = 9726.060 10329.840
+board mine = 9792.518 10329.840
+board mine = 9925.436 10329.840
+board mine = 10091.581 10329.840
+board mine = 10158.039 10329.840
+board mine = 10191.269 10329.840
+board mine = 10224.498 10329.840
+board mine = 10357.414 10329.840
+board mine = 10390.644 10329.840
+board mine = 10490.331 11005.500
+board mine = 10490.331 10972.271
+board mine = 10490.331 10872.584
+board mine = 10490.331 10839.354
+board mine = 10490.331 10673.208
+board mine = 10490.331 10507.062
+board mine = 10490.331 10473.833
+board mine = 10490.331 10440.604
+board mine = 10235.574 11326.716
+board mine = 10302.033 11326.716
+board mine = 10368.491 11326.716
+board mine = 10434.949 11326.716
+board mine = 10468.179 11326.716
+board mine = 10501.408 11326.716
+board mine = 10534.637 11326.716
+board mine = 10567.866 11326.716
+board mine = 10601.096 11326.716
+board mine = 10767.241 11326.716
+board mine = 10800.471 11326.716
+board mine = 10833.699 11326.716
+board mine = 10866.929 11326.716
+board mine = 10966.617 11326.716
+board mine = 10999.846 11326.716
+board mine = 11033.075 11326.716
+board zone = 4 7676.926 12722.342 8729.184 12722.342 8729.184 12002.377 7676.926 12002.377 1 1 1 1
+board zone = 4 9836.824 13553.072 10612.172 13553.072 10612.172 12888.488 9836.824 12888.488 1 1 1 1
+board zone = 4 10224.498 12113.141 11055.228 12113.141 11055.228 11337.793 10224.498 11337.793 1 1 1 1
+board zone = 4 6236.994 12334.668 7095.415 12334.668 7095.415 11697.775 6236.994 11697.775 1 1 1 1
+
+[replay] (recording: map file's frame; live: the live frame)
+
+[walls] (live frame: barricade index, cells, a..b, level, gate)
+wall 0 = cells=[11] under=[11] cell_hp=[11] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=6 walk_last=16 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 1 = cells=[46] under=[46] cell_hp=[46] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=47 walk_last=92 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 2 = cells=[6] under=[6] cell_hp=[6] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=96 walk_last=101 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 3 = cells=[2] under=[2] cell_hp=[2] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=109 walk_last=110 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 4 = cells=[1] under=[1] cell_hp=[1] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=114 walk_last=114 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 5 = cells=[6] under=[6] cell_hp=[6] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=122 walk_last=127 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 6 = cells=[7] under=[7] cell_hp=[7] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=133 walk_last=139 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 7 = cells=[8] under=[8] cell_hp=[8] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=146 walk_last=153 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 8 = cells=[10] under=[10] cell_hp=[10] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=159 walk_last=168 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 9 = cells=[9] under=[9] cell_hp=[9] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=175 walk_last=183 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 10 = cells=[7] under=[7] cell_hp=[7] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=190 walk_last=196 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 11 = cells=[1] under=[1] cell_hp=[1] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=200 walk_last=200 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 12 = cells=[1] under=[1] cell_hp=[1] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=202 walk_last=202 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 13 = cells=[2] under=[2] cell_hp=[2] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=206 walk_last=207 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 14 = cells=[5] under=[5] cell_hp=[5] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=211 walk_last=215 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 15 = cells=[70] under=[70] cell_hp=[70] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=218 walk_last=287 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 16 = cells=[34] under=[34] cell_hp=[34] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=303 walk_last=336 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 17 = cells=[3] under=[3] cell_hp=[3] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=352 walk_last=354 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 18 = cells=[4] under=[4] cell_hp=[4] a=[2518.9258, 5402.377] b=[2518.9258, 6122.342] walk_first=357 walk_last=360 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 19 = cells=[59] under=[59] cell_hp=[59] a=[2518.9258, 5402.377] b=[3571.1836, 5402.377] walk_first=10 walk_last=68 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 20 = cells=[15] under=[15] cell_hp=[15] a=[2518.9258, 5402.377] b=[3571.1836, 5402.377] walk_first=85 walk_last=99 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 21 = cells=[70] under=[70] cell_hp=[70] a=[2518.9258, 5402.377] b=[3571.1836, 5402.377] walk_first=117 walk_last=186 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 22 = cells=[37] under=[37] cell_hp=[37] a=[2518.9258, 5402.377] b=[3571.1836, 5402.377] walk_first=195 walk_last=231 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 23 = cells=[21] under=[21] cell_hp=[21] a=[2518.9258, 5402.377] b=[3571.1836, 5402.377] walk_first=253 walk_last=273 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 24 = cells=[163] under=[163] cell_hp=[163] a=[2518.9258, 5402.377] b=[3571.1836, 5402.377] walk_first=279 walk_last=441 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 25 = cells=[11] under=[11] cell_hp=[11] a=[2518.9258, 5402.377] b=[3571.1836, 5402.377] walk_first=515 walk_last=525 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 26 = cells=[3] under=[3] cell_hp=[3] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=1 walk_last=3 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 27 = cells=[13] under=[13] cell_hp=[13] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=12 walk_last=24 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 28 = cells=[22] under=[22] cell_hp=[22] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=43 walk_last=64 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 29 = cells=[7] under=[7] cell_hp=[7] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=82 walk_last=88 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 30 = cells=[67] under=[67] cell_hp=[67] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=100 walk_last=166 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 31 = cells=[5] under=[5] cell_hp=[5] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=169 walk_last=173 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 32 = cells=[31] under=[31] cell_hp=[31] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=182 walk_last=212 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 33 = cells=[4] under=[4] cell_hp=[4] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=224 walk_last=227 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 34 = cells=[31] under=[31] cell_hp=[31] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=251 walk_last=281 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 35 = cells=[4] under=[4] cell_hp=[4] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=288 walk_last=291 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 36 = cells=[12] under=[12] cell_hp=[12] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=301 walk_last=312 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 37 = cells=[7] under=[7] cell_hp=[7] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=317 walk_last=323 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 38 = cells=[52] under=[52] cell_hp=[52] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=341 walk_last=392 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 39 = cells=[1] under=[1] cell_hp=[1] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=397 walk_last=397 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 40 = cells=[2] under=[2] cell_hp=[2] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=408 walk_last=409 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 41 = cells=[1] under=[1] cell_hp=[1] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=416 walk_last=416 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 42 = cells=[5] under=[5] cell_hp=[5] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=420 walk_last=424 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 43 = cells=[8] under=[8] cell_hp=[8] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=432 walk_last=439 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 44 = cells=[18] under=[18] cell_hp=[18] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=445 walk_last=462 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 45 = cells=[5] under=[5] cell_hp=[5] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=469 walk_last=473 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 46 = cells=[1] under=[1] cell_hp=[1] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=478 walk_last=478 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 47 = cells=[45] under=[45] cell_hp=[45] a=[2518.9258, 6122.342] b=[3571.1836, 6122.342] walk_first=482 walk_last=526 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 48 = cells=[69] under=[69] cell_hp=[69] a=[3571.1836, 5402.377] b=[3571.1836, 6122.342] walk_first=2 walk_last=70 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 49 = cells=[24] under=[24] cell_hp=[24] a=[3571.1836, 5402.377] b=[3571.1836, 6122.342] walk_first=78 walk_last=101 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 50 = cells=[14] under=[14] cell_hp=[14] a=[3571.1836, 5402.377] b=[3571.1836, 6122.342] walk_first=106 walk_last=119 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 51 = cells=[4] under=[4] cell_hp=[4] a=[3571.1836, 5402.377] b=[3571.1836, 6122.342] walk_first=122 walk_last=125 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 52 = cells=[7] under=[7] cell_hp=[7] a=[3571.1836, 5402.377] b=[3571.1836, 6122.342] walk_first=132 walk_last=138 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 53 = cells=[4] under=[4] cell_hp=[4] a=[3571.1836, 5402.377] b=[3571.1836, 6122.342] walk_first=148 walk_last=151 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 54 = cells=[1] under=[1] cell_hp=[1] a=[3571.1836, 5402.377] b=[3571.1836, 6122.342] walk_first=154 walk_last=154 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 55 = cells=[25] under=[25] cell_hp=[25] a=[3571.1836, 5402.377] b=[3571.1836, 6122.342] walk_first=161 walk_last=185 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 56 = cells=[13] under=[13] cell_hp=[13] a=[3571.1836, 5402.377] b=[3571.1836, 6122.342] walk_first=209 walk_last=221 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 57 = cells=[13] under=[13] cell_hp=[13] a=[3571.1836, 5402.377] b=[3571.1836, 6122.342] walk_first=245 walk_last=257 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 58 = cells=[16] under=[16] cell_hp=[16] a=[3571.1836, 5402.377] b=[3571.1836, 6122.342] walk_first=282 walk_last=297 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 59 = cells=[47] under=[47] cell_hp=[47] a=[3571.1836, 5402.377] b=[3571.1836, 6122.342] walk_first=313 walk_last=359 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 60 = cells=[7] under=[7] cell_hp=[7] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=0 walk_last=6 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 61 = cells=[20] under=[20] cell_hp=[20] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=27 walk_last=46 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 62 = cells=[50] under=[50] cell_hp=[50] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=49 walk_last=98 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 63 = cells=[31] under=[31] cell_hp=[31] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=127 walk_last=157 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 64 = cells=[16] under=[16] cell_hp=[16] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=166 walk_last=181 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 65 = cells=[1] under=[1] cell_hp=[1] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=191 walk_last=191 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 66 = cells=[1] under=[1] cell_hp=[1] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=195 walk_last=195 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 67 = cells=[2] under=[2] cell_hp=[2] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=199 walk_last=200 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 68 = cells=[1] under=[1] cell_hp=[1] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=205 walk_last=205 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 69 = cells=[10] under=[10] cell_hp=[10] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=211 walk_last=220 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 70 = cells=[7] under=[7] cell_hp=[7] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=231 walk_last=237 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 71 = cells=[1] under=[1] cell_hp=[1] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=245 walk_last=245 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 72 = cells=[11] under=[11] cell_hp=[11] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=253 walk_last=263 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 73 = cells=[2] under=[2] cell_hp=[2] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=271 walk_last=272 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 74 = cells=[18] under=[18] cell_hp=[18] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=280 walk_last=297 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 75 = cells=[5] under=[5] cell_hp=[5] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=304 walk_last=308 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 76 = cells=[9] under=[9] cell_hp=[9] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=315 walk_last=323 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 77 = cells=[3] under=[3] cell_hp=[3] a=[4678.824, 6288.4883] b=[4678.824, 6953.0723] walk_first=330 walk_last=332 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 78 = cells=[16] under=[16] cell_hp=[16] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=1 walk_last=16 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 79 = cells=[4] under=[4] cell_hp=[4] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=19 walk_last=22 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 80 = cells=[3] under=[3] cell_hp=[3] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=31 walk_last=33 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 81 = cells=[16] under=[16] cell_hp=[16] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=47 walk_last=62 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 82 = cells=[4] under=[4] cell_hp=[4] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=72 walk_last=75 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 83 = cells=[1] under=[1] cell_hp=[1] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=78 walk_last=78 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 84 = cells=[20] under=[20] cell_hp=[20] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=86 walk_last=105 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 85 = cells=[9] under=[9] cell_hp=[9] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=114 walk_last=122 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 86 = cells=[18] under=[18] cell_hp=[18] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=134 walk_last=151 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 87 = cells=[7] under=[7] cell_hp=[7] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=162 walk_last=168 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 88 = cells=[2] under=[2] cell_hp=[2] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=171 walk_last=172 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 89 = cells=[14] under=[14] cell_hp=[14] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=181 walk_last=194 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 90 = cells=[17] under=[17] cell_hp=[17] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=207 walk_last=223 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 91 = cells=[7] under=[7] cell_hp=[7] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=233 walk_last=239 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 92 = cells=[2] under=[2] cell_hp=[2] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=246 walk_last=247 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 93 = cells=[11] under=[11] cell_hp=[11] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=252 walk_last=262 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 94 = cells=[74] under=[74] cell_hp=[74] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=269 walk_last=342 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 95 = cells=[41] under=[41] cell_hp=[41] a=[4678.824, 6288.4883] b=[5454.172, 6288.4883] walk_first=348 walk_last=388 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 96 = cells=[7] under=[7] cell_hp=[7] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=1 walk_last=7 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 97 = cells=[15] under=[15] cell_hp=[15] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=22 walk_last=36 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 98 = cells=[1] under=[1] cell_hp=[1] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=44 walk_last=44 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 99 = cells=[17] under=[17] cell_hp=[17] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=50 walk_last=66 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 100 = cells=[16] under=[16] cell_hp=[16] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=77 walk_last=92 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 101 = cells=[8] under=[8] cell_hp=[8] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=107 walk_last=114 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 102 = cells=[4] under=[4] cell_hp=[4] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=119 walk_last=122 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 103 = cells=[2] under=[2] cell_hp=[2] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=129 walk_last=130 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 104 = cells=[5] under=[5] cell_hp=[5] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=138 walk_last=142 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 105 = cells=[1] under=[1] cell_hp=[1] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=152 walk_last=152 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 106 = cells=[6] under=[6] cell_hp=[6] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=163 walk_last=168 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 107 = cells=[33] under=[33] cell_hp=[33] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=176 walk_last=208 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 108 = cells=[13] under=[13] cell_hp=[13] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=211 walk_last=223 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 109 = cells=[18] under=[18] cell_hp=[18] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=230 walk_last=247 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 110 = cells=[16] under=[16] cell_hp=[16] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=249 walk_last=264 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 111 = cells=[9] under=[9] cell_hp=[9] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=274 walk_last=282 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 112 = cells=[33] under=[33] cell_hp=[33] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=286 walk_last=318 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 113 = cells=[2] under=[2] cell_hp=[2] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=322 walk_last=323 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 114 = cells=[7] under=[7] cell_hp=[7] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=329 walk_last=335 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 115 = cells=[13] under=[13] cell_hp=[13] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=340 walk_last=352 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 116 = cells=[13] under=[13] cell_hp=[13] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=360 walk_last=372 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 117 = cells=[7] under=[7] cell_hp=[7] a=[4678.824, 6953.0723] b=[5454.172, 6953.0723] walk_first=381 walk_last=387 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 118 = cells=[79] under=[79] cell_hp=[79] a=[5066.498, 4737.793] b=[5066.498, 5513.1406] walk_first=0 walk_last=78 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 119 = cells=[13] under=[13] cell_hp=[13] a=[5066.498, 4737.793] b=[5066.498, 5513.1406] walk_first=93 walk_last=105 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 120 = cells=[8] under=[8] cell_hp=[8] a=[5066.498, 4737.793] b=[5066.498, 5513.1406] walk_first=123 walk_last=130 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 121 = cells=[11] under=[11] cell_hp=[11] a=[5066.498, 4737.793] b=[5066.498, 5513.1406] walk_first=135 walk_last=145 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 122 = cells=[15] under=[15] cell_hp=[15] a=[5066.498, 4737.793] b=[5066.498, 5513.1406] walk_first=148 walk_last=162 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 123 = cells=[13] under=[13] cell_hp=[13] a=[5066.498, 4737.793] b=[5066.498, 5513.1406] walk_first=200 walk_last=212 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 124 = cells=[9] under=[9] cell_hp=[9] a=[5066.498, 4737.793] b=[5066.498, 5513.1406] walk_first=235 walk_last=243 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 125 = cells=[5] under=[5] cell_hp=[5] a=[5066.498, 4737.793] b=[5066.498, 5513.1406] walk_first=252 walk_last=256 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 126 = cells=[10] under=[10] cell_hp=[10] a=[5066.498, 4737.793] b=[5066.498, 5513.1406] walk_first=278 walk_last=287 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 127 = cells=[21] under=[21] cell_hp=[21] a=[5066.498, 4737.793] b=[5066.498, 5513.1406] walk_first=302 walk_last=322 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 128 = cells=[5] under=[5] cell_hp=[5] a=[5066.498, 4737.793] b=[5066.498, 5513.1406] walk_first=384 walk_last=388 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 129 = cells=[1] under=[1] cell_hp=[1] a=[5066.498, 4737.793] b=[5897.2275, 4737.793] walk_first=1 walk_last=1 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 130 = cells=[15] under=[15] cell_hp=[15] a=[5066.498, 4737.793] b=[5897.2275, 4737.793] walk_first=28 walk_last=42 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 131 = cells=[23] under=[23] cell_hp=[23] a=[5066.498, 4737.793] b=[5897.2275, 4737.793] walk_first=59 walk_last=81 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 132 = cells=[71] under=[71] cell_hp=[71] a=[5066.498, 4737.793] b=[5897.2275, 4737.793] walk_first=97 walk_last=167 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 133 = cells=[31] under=[31] cell_hp=[31] a=[5066.498, 4737.793] b=[5897.2275, 4737.793] walk_first=170 walk_last=200 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 134 = cells=[20] under=[20] cell_hp=[20] a=[5066.498, 4737.793] b=[5897.2275, 4737.793] walk_first=204 walk_last=223 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 135 = cells=[7] under=[7] cell_hp=[7] a=[5066.498, 4737.793] b=[5897.2275, 4737.793] walk_first=231 walk_last=237 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 136 = cells=[18] under=[18] cell_hp=[18] a=[5066.498, 4737.793] b=[5897.2275, 4737.793] walk_first=307 walk_last=324 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 137 = cells=[42] under=[42] cell_hp=[42] a=[5066.498, 4737.793] b=[5897.2275, 4737.793] walk_first=361 walk_last=402 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 138 = cells=[9] under=[9] cell_hp=[9] a=[5066.498, 4737.793] b=[5897.2275, 4737.793] walk_first=407 walk_last=415 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 139 = cells=[70] under=[70] cell_hp=[70] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=1 walk_last=70 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 140 = cells=[36] under=[36] cell_hp=[36] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=100 walk_last=135 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 141 = cells=[2] under=[2] cell_hp=[2] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=144 walk_last=145 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 142 = cells=[6] under=[6] cell_hp=[6] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=156 walk_last=161 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 143 = cells=[29] under=[29] cell_hp=[29] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=175 walk_last=203 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 144 = cells=[3] under=[3] cell_hp=[3] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=213 walk_last=215 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 145 = cells=[17] under=[17] cell_hp=[17] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=237 walk_last=253 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 146 = cells=[2] under=[2] cell_hp=[2] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=275 walk_last=276 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 147 = cells=[9] under=[9] cell_hp=[9] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=279 walk_last=287 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 148 = cells=[2] under=[2] cell_hp=[2] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=294 walk_last=295 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 149 = cells=[4] under=[4] cell_hp=[4] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=317 walk_last=320 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 150 = cells=[19] under=[19] cell_hp=[19] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=328 walk_last=346 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 151 = cells=[1] under=[1] cell_hp=[1] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=349 walk_last=349 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 152 = cells=[19] under=[19] cell_hp=[19] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=358 walk_last=376 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 153 = cells=[3] under=[3] cell_hp=[3] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=385 walk_last=387 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 154 = cells=[16] under=[16] cell_hp=[16] a=[5066.498, 5513.1406] b=[5897.2275, 5513.1406] walk_first=391 walk_last=406 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 155 = cells=[60] under=[60] cell_hp=[60] a=[5454.172, 6288.4883] b=[5454.172, 6953.0723] walk_first=1 walk_last=60 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 156 = cells=[42] under=[42] cell_hp=[42] a=[5454.172, 6288.4883] b=[5454.172, 6953.0723] walk_first=65 walk_last=106 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 157 = cells=[2] under=[2] cell_hp=[2] a=[5454.172, 6288.4883] b=[5454.172, 6953.0723] walk_first=110 walk_last=111 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 158 = cells=[7] under=[7] cell_hp=[7] a=[5454.172, 6288.4883] b=[5454.172, 6953.0723] walk_first=115 walk_last=121 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 159 = cells=[95] under=[95] cell_hp=[95] a=[5454.172, 6288.4883] b=[5454.172, 6953.0723] walk_first=124 walk_last=218 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 160 = cells=[60] under=[60] cell_hp=[60] a=[5454.172, 6288.4883] b=[5454.172, 6953.0723] walk_first=248 walk_last=307 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 161 = cells=[3] under=[3] cell_hp=[3] a=[5454.172, 6288.4883] b=[5454.172, 6953.0723] walk_first=328 walk_last=330 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 162 = cells=[2] under=[2] cell_hp=[2] a=[5897.2275, 4737.793] b=[5897.2275, 5513.1406] walk_first=1 walk_last=2 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 163 = cells=[6] under=[6] cell_hp=[6] a=[5897.2275, 4737.793] b=[5897.2275, 5513.1406] walk_first=4 walk_last=9 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 164 = cells=[63] under=[63] cell_hp=[63] a=[5897.2275, 4737.793] b=[5897.2275, 5513.1406] walk_first=35 walk_last=97 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 165 = cells=[27] under=[27] cell_hp=[27] a=[5897.2275, 4737.793] b=[5897.2275, 5513.1406] walk_first=106 walk_last=132 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 166 = cells=[13] under=[13] cell_hp=[13] a=[5897.2275, 4737.793] b=[5897.2275, 5513.1406] walk_first=139 walk_last=151 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 167 = cells=[7] under=[7] cell_hp=[7] a=[5897.2275, 4737.793] b=[5897.2275, 5513.1406] walk_first=166 walk_last=172 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 168 = cells=[29] under=[29] cell_hp=[29] a=[5897.2275, 4737.793] b=[5897.2275, 5513.1406] walk_first=195 walk_last=223 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 169 = cells=[6] under=[6] cell_hp=[6] a=[5897.2275, 4737.793] b=[5897.2275, 5513.1406] walk_first=237 walk_last=242 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 170 = cells=[1] under=[1] cell_hp=[1] a=[5897.2275, 4737.793] b=[5897.2275, 5513.1406] walk_first=250 walk_last=250 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 171 = cells=[31] under=[31] cell_hp=[31] a=[5897.2275, 4737.793] b=[5897.2275, 5513.1406] walk_first=256 walk_last=286 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 172 = cells=[2] under=[2] cell_hp=[2] a=[5897.2275, 4737.793] b=[5897.2275, 5513.1406] walk_first=317 walk_last=318 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+wall 173 = cells=[42] under=[42] cell_hp=[42] a=[5897.2275, 4737.793] b=[5897.2275, 5513.1406] walk_first=339 walk_last=380 full_hp=1200 level=0 build_left=0 build_total=0 last_chew=0 last_chew_slot=0 
+
+[near_cursor] 23 units within 40 m of the cursor (live frame)
+# index id kind x y dir_x dir_y dist hp timer contact converting cell obstacle level
+52390 52390 Civilian 3420.277 2820.119 0.0380 -0.9993 2.72 0.000 0.000 0.000 false 6449640 0 0
+52393 52393 Civilian 3412.481 2808.145 0.2700 -0.9629 16.99 0.000 0.000 0.000 false 6422198 0 0
+52392 52392 Civilian 3408.573 2809.545 -0.9613 0.2755 18.47 0.000 0.000 0.000 false 6422196 0 0
+52398 52398 Civilian 3403.113 2827.078 -0.1925 -0.9813 19.52 0.000 0.000 0.000 false 6463350 0 0
+52388 52388 Civilian 3405.713 2833.566 0.9448 -0.3276 19.86 0.000 0.000 0.000 false 6477070 0 0
+52397 52397 Civilian 3424.487 2802.219 -0.9792 0.2028 20.14 0.000 0.000 0.000 false 6408485 0 0
+52391 52391 Civilian 3408.839 2806.861 0.0377 0.9993 20.23 0.000 0.000 0.000 false 6417623 0 0
+52396 52396 Civilian 3424.151 2801.831 -0.9564 0.2922 20.49 0.000 0.000 0.000 false 6403912 0 0
+52389 52389 Civilian 3408.104 2837.879 0.7915 -0.6112 20.95 0.000 0.000 0.000 false 6486218 0 0
+52387 52387 Civilian 3414.900 2842.739 -0.6327 0.7744 21.72 0.000 0.000 0.000 false 6499940 0 0
+52395 52395 Civilian 3425.975 2798.495 -0.8951 0.4458 24.04 0.000 0.000 0.000 false 6399339 0 0
+52399 52399 Civilian 3397.529 2815.227 0.9699 -0.2434 25.46 0.000 0.000 0.000 false 6435909 0 0
+52394 52394 Civilian 3419.132 2796.643 -0.9768 0.2140 25.73 0.000 0.000 0.000 false 6394763 0 0
+52464 52464 Civilian 3430.198 2795.189 -0.9961 -0.0884 28.23 0.000 0.000 0.000 false 6390196 0 0
+52426 52426 Civilian 3408.028 2791.458 -0.4156 -0.9095 33.78 0.000 0.000 0.000 false 6381039 0 0
+52419 52419 Civilian 3408.494 2790.535 -0.0895 0.9960 34.44 0.000 0.000 0.000 false 6381039 0 0
+52465 52465 Civilian 3429.525 2788.225 -0.8286 0.5599 34.81 0.000 0.000 0.000 false 6376476 0 0
+52418 52418 Civilian 3415.115 2788.013 0.9176 0.3974 34.89 0.000 0.000 0.000 false 6376469 0 0
+52427 52427 Civilian 3424.845 2785.787 0.9851 -0.1722 36.53 0.000 0.000 0.000 false 6367328 0 0
+52425 52425 Civilian 3415.804 2785.866 -0.6575 -0.7535 36.87 0.000 0.000 0.000 false 6367323 0 0
+52432 52432 Civilian 3433.046 2786.450 -0.1046 0.9945 37.42 0.000 0.000 0.000 false 6371905 0 0
+52417 52417 Civilian 3419.363 2783.374 0.9970 -0.0772 38.93 0.000 0.000 0.000 false 6362752 0 0
+52431 52431 Civilian 3440.803 2787.298 0.9027 0.4303 39.65 0.000 0.000 0.000 false 6371909 0 0
+
+[params] (sim.Params for the next tick)
+zombie_speed = 26
+zombie_move_every = 2
+infection_touch_radius = 3
+infection_pause_seconds = 0.1
+police_range = 120
+police_fire_cooldown = 1
+police_damage = 5
+police_accuracy = 1
+police_speed = 40
+police_kite_distance = 45
+police_fire_lookahead = 6
+zombie_hp = 1
+zombie_hp_growth = 0.05
+zombie_hp_growth_delay = 60
+zombie_hp_max = 30
+mutated_hp_mult = 3
+giant_hp_mult = 9
+explosive_blast_radius = 9
+explosive_damage = 200
+explosive_wall_share = 0.1
+explosive_color = 33509551
+cure_duration = 15
+cure_wane_seconds = 60
+cure_cloud_seconds = 10
+cure_cloud_look_seconds = 0.5
+cure_spread_seconds = 0.5
+cure_spread_chance = 1
+cure_contact_radius = 5
+cure_max_generations = 0
+cure_color = 18116096
+cure_dead_color = 16777216
+mosh_chance = 0.1
+mosh_check_seconds = 15
+mosh_duration = 10
+mosh_max_zombies = 150
+mosh_max_live = 4
+mosh_pull_radius = 50
+mosh_radius = 15
+mosh_wall_clearance = 80
+mosh_weight_explosive = 2
+mosh_weight_shielded = 1
+mosh_weight_giant = 0
+shielded_shield = 3
+shielded_color = 16831231
+giant_merge_count = 10
+mosh_weight_swimmer = 2
+swimmer_color = 28600831
+swimmer_water_slow = 0.4
+swimmer_shortcut = 20
+swimmer_field_cell = 48
+swimmer_field_seconds = 10
+corpse_fade_seconds = 0
+bullet_speed = 700
+sniper_bullet_speed = 2400
+sniper_range = 400
+sniper_min_range = 50
+sniper_fire_cooldown = 0.4
+sniper_level_up = bit_set[Level_Stat; u8]{Range}
+sniper_level_fire_cooldown = [0.4, 0.4, 0.4]
+sniper_magazine = 20
+sniper_reload_seconds = 5
+sniper_level_reload_seconds = [5, 5, 5]
+sniper_damage = 80
+sniper_accuracy = 1
+sniper_cone_angle = 30
+sniper_reaim_seconds = 7
+sniper_max_reloads = 10
+mortar_range = 600
+mortar_min_range = 160
+mortar_fire_cooldown = 12
+mortar_level_up = bit_set[Level_Stat; u8]{Damage}
+mortar_level_fire_cooldown = [12, 12, 12]
+mortar_blast_radius = 40
+mortar_flight_seconds = 0.8
+mortar_damage = 10
+mortar_max_reloads = 3
+mortar_magazine = 4
+mortar_reload_seconds = 20
+mortar_level_reload_seconds = [20, 20, 20]
+gas_mortar_gun = Mortar_Gun{range = 600, min_range = 160, range_per_roof_m = 2, fire_cooldown = 12, reload_seconds = 20, flight_seconds = 0.8, magazine = 4, max_reloads = 3, level_up = bit_set[Level_Stat; u8]{Magazine}, level_fire_cooldown = [12, 12, 12], level_reload_seconds = [20, 20, 20]}
+fire_mortar_gun = Mortar_Gun{range = 600, min_range = 160, range_per_roof_m = 2, fire_cooldown = 12, reload_seconds = 20, flight_seconds = 0.8, magazine = 4, max_reloads = 3, level_up = bit_set[Level_Stat; u8]{Magazine}, level_fire_cooldown = [12, 12, 12], level_reload_seconds = [20, 20, 20]}
+gas_mortar_radius = 50
+gas_mortar_duration = 6
+fire_mortar_radius = 20
+fire_mortar_burn_seconds = 8
+howitzer_gun = Mortar_Gun{range = 6500, min_range = 500, range_per_roof_m = 0, fire_cooldown = 15, reload_seconds = 30, flight_seconds = 4, magazine = 2, max_reloads = 3, level_up = bit_set[Level_Stat; u8]{Damage}, level_fire_cooldown = [15, 15, 15], level_reload_seconds = [30, 30, 30]}
+howitzer_blast_radius = 140
+howitzer_damage = 50
+mlrs_gun = Mortar_Gun{range = 900, min_range = 200, range_per_roof_m = 2, fire_cooldown = 0.25, reload_seconds = 60, flight_seconds = 1.5, magazine = 12, max_reloads = 2, level_up = bit_set[Level_Stat; u8]{Damage}, level_fire_cooldown = [0.25, 0.25, 0.25], level_reload_seconds = [60, 60, 60]}
+mlrs_blast_radius = 22
+mlrs_damage = 10
+mlrs_scatter = 18
+fire_damage_per_second = 2
+fire_unit_health = 10
+fire_spread_speed = 5.5
+fire_spread_burn_seconds = 60
+fire_spread_jitter = 0.5
+battleship_range = 1400
+battleship_min_range = 200
+battleship_fire_cooldown = 0.5
+battleship_blast_radius = 50
+battleship_flight_seconds = 0.8
+battleship_length = 150
+battleship_damage = 10
+battleship_magazine = 12
+battleship_reload_seconds = 10
+battleship_max_reloads = -1
+sniper_range_per_roof_m = 4.7
+mortar_range_per_roof_m = 2
+roof_height_cap = 150
+sniper_height_cap = 450
+sniper_min_range_per_roof_m = 1
+garrison_range = 0
+garrison_fire_cooldown = 0.05
+garrison_damage = 5
+garrison_accuracy = 1
+garrison_magazine = 180
+garrison_reload_seconds = 6
+garrison_level_up = bit_set[Level_Stat; u8]{Magazine}
+garrison_level_fire_cooldown = [0.05, 0.05, 0.05]
+garrison_level_reload_seconds = [6, 6, 6]
+garrison_max_reloads = 10
+nest_range = 75
+nest_fire_cooldown = 0.01
+nest_damage = 4
+nest_accuracy = 1
+nest_magazine = 1000
+nest_reload_seconds = 4
+nest_level_up = bit_set[Level_Stat; u8]{Magazine}
+nest_level_fire_cooldown = [0.01, 0.01, 0.01]
+nest_level_reload_seconds = [4, 4, 4]
+nest_max_reloads = 0
+railgun_gun = Nest_Gun{range = 420, fire_cooldown = 1, reload_seconds = 12, damage = 10, accuracy = 1, magazine = 1, max_reloads = 10, pierce = 0, line_width = 5, round_speed = 3000, retarget_seconds = 0.25, cone_angle = 10, level_up = bit_set[Level_Stat; u8]{Magazine}, level_fire_cooldown = [1, 1, 1], level_reload_seconds = [12, 12, 12]}
+mine_trigger_radius = 3
+mine_fuse_seconds = 3
+mine_blast_radius = 65
+mine_damage = 40
+chem_mine_gas_radius = 45
+chem_mine_gas_seconds = 8
+spike_speed_mult = 0.4
+oil_burn_seconds = 12
+oil_spread_speed = 100
+rubble_slow = 0.3
+building_hp = 100
+building_hp_per_m = 20
+building_unknown_height = 9
+barricade_decay_per_zombie_second = 1
+barricade_pressure_per_zombie_second = 0.05
+barricade_pressure_radius = 16
+barricade_pressure_max_zombies = 60
+barricade_passive_decay = 0
+barricade_breach_radius = 3
+danger_decay_per_second = 1.5
+danger_spread = 0.25
+danger_zombie_weight = 1
+danger_corpse_weight = 0.3
+danger_panic_weight = 0.25
+danger_update_hz = 20
+panic_danger = 0.6
+panic_rise_per_second = 2.5
+panic_fade_per_second = 0.6
+panic_threshold = 0.5
+calm_speed = 3
+civilian_flee_below = 1
+civilian_flee_above = 3
+civilian_flee_fast_percent = 15
+panic_wander = 0.25
+civilian_flee_strength = 0.8
+calm_move_every = 8
+flock_cell_size = 60
+flock_align = 0.3
+flock_cohesion = 0
+flock_chase_radius = 45
+flock_chase = 2
+flock_momentum = 0.5
+flock_momentum_jitter = 0.1
+flock_heading_jitter = 12
+flock_separation = 1
+flock_crowd_disperse = 12
+flock_update_hz = 15
+far_steer_meters = 480
+far_steer_every = 16
+zombie_lod_meters = 250
+zombie_lod_every = 4
+zombie_pile_rest_ticks = 3
+horde_coordination = 0
+scent_cell_size = 12
+scent_decay = 0.6
+scent_spread = 0.7
+scent_civilian_weight = 1
+scent_strength = 1
+scent_update_hz = 15
+scent_blur_passes = 2
+flow_cell_size = 12
+flow_rebuild_seconds = 2
+flow_strength = 1
+flow_crowd_bias = 1
+flow_lean = 2
+flow_react_delay = 30
+evac_funnel_strength = 0.7
+evac_attract_strength = 0.7
+evac_corridor_flee = 1
+evac_hold_speed_mult = 1
+heli_speed = 260
+heli_turn_rate = 1.6
+heli_accel = 200
+heli_fire_rate = 50
+heli_max_reloads = 3
+heli_rearm_seconds = 30
+heli_magazine = 200
+heli_reload_seconds = 3
+heli_leash_radius = 560
+heli_reticle_radius = 14
+heli_damage = 10
+heli_reticle_speed = 120
+apc_speed = 45
+apc_turn_rate = 2.5
+apc_accel = 60
+apc_seek_radius = 400
+apc_range = 160
+apc_fire_cooldown = 0.15
+apc_damage = 10
+apc_accuracy = 0.9
+apc_max_reloads = 3
+apc_rearm_seconds = 10
+apc_magazine = 600
+apc_reload_seconds = 5
+bus_speed = 40
+bus_turn_rate = 2.5
+bus_accel = 50
+bus_seek_radius = 500
+bus_pickup_radius = 6
+bus_capacity = 400
+medevac_speed = 180
+medevac_accel = 150
+medevac_turn_rate = 1.6
+medevac_capacity = 200
+medevac_pickup_radius = 40
+dozer_speed = 30
+dozer_turn_rate = 2
+dozer_accel = 40
+dozer_seek_radius = 400
+dozer_crush_radius = 5
+dozer_damage = 250
+dozer_max_building_area = 400
+tank_speed = 30
+tank_turn_rate = 1.8
+tank_accel = 40
+tank_seek_radius = 400
+tank_range = 220
+tank_min_range = 30
+tank_fire_cooldown = 2.5
+tank_blast_radius = 30
+tank_damage = 60
+tank_flight_seconds = 0.4
+tank_max_reloads = 2
+tank_magazine = 12
+tank_reload_seconds = 8
+tank_turret_turn_rate = 1.5
+vehicle_zgrid = false
+zombie_spacing = 1
+zombie_speed_jitter = 12
+supply_radius = 834
+supply_reload_percent = 30
+supply_stack_percent = 15
+repair_radius = 278
+repair_hp_per_second = 40
+repair_stack_hp_per_second = 20
+medic_radius = 556
+airlift_radius = 209
+airlift_seconds = 6
+airlift_count = 5
+evacuate_radius = 278
+evacuate_seconds = 1
+evacuate_count = 5
+broadcast_radius = 834
+broadcast_strength = 0.8
+broadcast_civilian_speed = 23.4
+police_seconds = 2
+police_max = 100
+militia_radius = 348
+militia_fraction = 0.35
+radio_radius = 904
+radio_range_percent = 50
+radio_stack_percent = 25
+command_radius = 904
+command_speed_percent = 25
+command_stack_percent = 12.5
+perk_gas_fire_seconds = 0
+perk_blast_gas_seconds = 0
+perk_officer_blast_radius = 0
+
+[config] (config.ini + balance.ini + the stage's overrides, as resolved)
+unit_size = 6
+unit_min_pixels = 1
+unit_max_pixels = 6
+unit_round_dots = true
+font_file_height = 1.3
+unit_smooth = true
+initial_civilians = 200000
+max_civilians = 500000
+max_civilians_per_land_km2 = 3150
+zombie_spawns = 0
+zombies_per_spawn = 200
+zombies_per_spawn_per_level = 40
+zombie_speed = 26
+zombie_speed_jitter = 12
+zombie_move_every = 2
+zombie_lod_meters = 250
+zombie_lod_every = 4
+zombie_pile_rest_ticks = 3
+infection_touch_radius = 3
+infection_pause_seconds = 0.1
+zombie_spacing = 1
+sim_speed_steps = 8
+worker_threads = 0
+sim_own_thread = true
+sim_frame_budget_ms = 50
+sim_raise_priority = true
+spawn_radius = 0
+spawns_at_1km2 = 2.15
+spawn_radius_at_1km2 = 105
+spawn_separation = 400
+spawn_zone_gap = 150
+outbreak_island_pct = 5
+outbreak_split_pct = 1
+spawn_core_share = 0.7
+spawn_core_radius = 0.5
+edge_spawn = false
+edge_spawn_zombies = 250
+edge_spawn_interval = 20
+edge_spawn_waves = 10
+edge_spawn_points = 5
+edge_spawn_radius = 30
+crosshair_size = 48
+safezone_stripe_width = 40
+safezone_stripe_gap = 0
+safezone_corner_grab_m = 5
+safezone_alt_stripe_opacity = 0.22
+safezone_corner_grab_max_px = 40
+safezone_glow_core_width = 3
+safezone_glow_core_opacity = 1
+safezone_glow_inner_width = 30
+safezone_glow_inner_opacity = 0.6
+safezone_glow_outer_width = 12
+safezone_glow_outer_opacity = 0.5
+safezone_land_cost = 0.5
+safezone_max_land_percent = 45
+safezone_max_land_percent_large = 40
+safezone_land_cap_small_km2 = 1
+safezone_land_cap_large_km2 = 159
+safezone_land_merge_gap = 10
+safezone_free_zones = 4
+safezone_free_zones_per_level = 1
+safezone_start_fee = 100
+safezone_building_units_inside_only = false
+safezone_outside_price_mult = 1.2
+safezone_outside_first_shot_seconds = 12
+last_zombies_below = 10
+last_zombies_ring_px = 20
+range_fill_max_layers = 3
+cleanup_quiet_seconds = 3
+cleanup_seconds = 15
+stray_horde_percent = 10
+tips_crowd_radius = 40
+tips_crowd_min = 30
+tips_wall_share_percent = 40
+tips_shelter_margin_percent = 10
+tips_unspent_money_min = 100
+tips_unspent_money_percent = 10
+tips_sniper_roof_min = 20
+tips_garrison_width_min = 20
+tips_small_zone_percent = 20
+tips_horde_percent = 50
+tips_general_max_shows = 3
+tips_zone_big_lead_shows = 3
+tips_speed_nudge_seconds = 60
+tips_speed_nudge_show_seconds = 8
+tips_show_glow_seconds = 2
+tips_show_glow_radius = 30
+perftest_warmup_seconds = 5
+perftest_seconds = 60
+perftest_speed = 2
+scenario_fade_distance = 550
+scenario_edge_reveal_px = 200
+scenario_crop_margin = 800
+scenario_view_percent = 75
+scenario_outside_saturation = 0
+scenario_outside_brightness = 0.7
+scenario_outside_ramp = 20
+city_blocks_x = 24
+city_blocks_y = 24
+block_size = 120
+street_width = 30
+building_density = 0.55
+police_range = 120
+police_fire_cooldown = 1
+police_damage = 5
+police_accuracy = 1
+police_speed = 40
+police_kite_distance = 45
+police_fire_lookahead = 6
+zombie_hp = 1
+zombie_hp_growth_per_minute = 3
+zombie_hp_growth_delay = 60
+zombie_hp_max = 30
+mutated_hp_multiplier = 3
+explosive_blast_radius = 9
+explosive_damage = 200
+explosive_wall_percent = 10
+explosive_glow_radius_px = 9
+explosive_glow_alpha = 0.7
+mosh_buffer_stages = 1
+mosh_chance_percent_last_stage = 20
+mosh_check_seconds = 15
+mosh_duration_seconds = 10
+mosh_max_zombies = 150
+mosh_max_live = 4
+mosh_pull_radius = 50
+mosh_radius = 15
+mosh_wall_clearance = 80
+mosh_ring_width_px = 3
+mosh_ring_alpha = 0.9
+mosh_marker_radius_px = 30
+mosh_marker_min_zoom = 0.3
+mosh_toast_seconds = 5
+mosh_weight_explosive = 2
+mosh_weight_shielded = 1
+mosh_weight_giant = 0
+mosh_weight_swimmer = 2
+swimmer_water_slow = 0.4
+swimmer_shortcut = 20
+swimmer_field_cell = 48
+swimmer_field_seconds = 10
+shielded_shield = 3
+giant_merge_count = 10
+giant_hp_multiplier = 9
+giant_size = 14
+giant_min_px = 5
+giant_max_px = 14
+corpse_fade_seconds = 0
+bullet_speed = 700
+bullet_length = 2
+bullet_width_px = 2
+bullet_thin_zoom = 0.45
+bullet_hide_zoom = 0.25
+bullet_width_m = 0.6
+bullet_width_max_px = 5
+bullet_min_length_px = 6
+bullet_glow_alpha = 0.45
+muzzle_flash_seconds = 0.08
+muzzle_flash_m = 1.6
+muzzle_flash_min_px = 5
+muzzle_flash_ground_m = 0.8
+muzzle_flash_ground_min_px = 2.5
+police_squad_size = 20
+police_spray_radius = 3
+police_spray_rate = 10
+police_spray_rate_per_officer = 0.15
+police_spray_rate_max = 100
+police_unlock_seconds = 0
+police_arrival_seconds = 8
+sniper_range = 400
+sniper_min_range = 50
+sniper_fire_cooldown = 0.4
+sniper_magazine = 20
+sniper_max_reloads = 10
+sniper_reload_seconds = 5
+sniper_damage = 80
+sniper_accuracy = 1
+sniper_cone_angle = 30
+sniper_reaim_seconds = 7
+sniper_bullet_speed = 2400
+sniper_bullet_length = 4
+sniper_first_shot_spread = 0.5
+mortar_range = 600
+mortar_min_range = 160
+mortar_fire_cooldown = 12
+mortar_first_shot_spread = 6
+mortar_damage = 10
+mortar_magazine = 4
+mortar_reload_seconds = 20
+mortar_max_reloads = 3
+mortar_blast_radius = 40
+mortar_flight_seconds = 0.8
+mortar_shell_size = 1
+mortar_apex_scale = 2.2
+shell_arc_height = 0.3
+shell_trail_seconds = 0.6
+shell_trail_width_px = 2.4
+shell_trail_glow_px = 10.8
+shell_trail_glow_alpha = 0.55
+battleship_range = 1400
+battleship_min_range = 200
+battleship_fire_cooldown = 0.5
+battleship_first_shot_spread = 3
+battleship_blast_radius = 50
+battleship_damage = 10
+battleship_magazine = 12
+battleship_reload_seconds = 10
+battleship_max_reloads = -1
+battleship_flight_seconds = 0.8
+battleship_length = 150
+battleship_beam = 18
+garrison_range_base = 30
+garrison_range_per_meter = 2.625
+garrison_range_max = 262.5
+sniper_range_per_roof_m = 4.7
+mortar_range_per_roof_m = 2
+sniper_min_range_per_roof_m = 1
+sniper_height_cap = 450
+building_height_cap = 150
+building_place_snap_m = 15
+building_type_priority = police_station fire_station hospital pharmacy drugstore gun_and_ammo_store auto_parts_store hardware_store gas_station grocery_store convenience_store
+building_hp = 100
+building_hp_per_m = 20
+building_rubble_speed_percent = 70
+class_fuel = gas_station truck_stop propane_supplier b2b_oil_and_gas chemical_plant fireworks_store b2b_mining demolition_service natural_gas_utility_provider b2b_power_plants_and_power_plant_service
+class_armory = gun_and_ammo_store hunting_and_fishing_store tactical_supply_store shooting_range wildlife_hunting_range firearm_training military_site pawn_shop sporting_goods_store
+class_civic = police_station courthouse jail_or_prison government_office town_hall civic_center community_center library fire_station radio_station television_station
+class_medic = hospital emergency_or_urgent_care_facility doctors_office primary_care_or_general_clinic pediatric_clinic
+class_airlift = airport
+class_evacuate = train_station metro_station light_rail_and_subway_station bus_station
+class_trade = hardware_store building_supply_store electrical_supply_store building_or_construction_service contractor manufacturer self_storage_facility b2b_storage machine_and_tool_rental wholesaler bank_or_credit_union hotel shopping_mall department_store superstore warehouse_club_store
+class_density_cell = 1000
+class_density_max = 2
+class_money_discount_percent = 20
+class_money_radius = 300
+class_money_radius_large = 750
+class_money_discount_stack_percent = 10
+class_radius_small_km2 = 1
+class_radius_large_km2 = 159
+unpicked_glow_width_px = 22
+unpicked_glow_core_px = 3
+unpicked_glow_alpha_min = 0.35
+unpicked_glow_alpha_max = 1
+unpicked_glow_pulse_seconds = 1.2
+unpicked_glow_body_alpha_min = 0.15
+unpicked_glow_body_alpha_max = 0.45
+class_reduced_cost_percent = 60
+class_range_percent = 40
+class_speed_percent = 60
+supply_radius = 600
+supply_radius_large = 1500
+supply_reload_percent = 30
+supply_stack_percent = 15
+repair_radius = 200
+repair_radius_large = 500
+repair_hp_per_second = 40
+repair_stack_hp_per_second = 20
+medic_radius = 400
+medic_radius_large = 1000
+airlift_radius = 150
+airlift_radius_large = 375
+airlift_seconds = 6
+airlift_count = 5
+evacuate_radius = 200
+evacuate_radius_large = 500
+evacuate_seconds = 1
+evacuate_count = 5
+broadcast_radius = 600
+broadcast_radius_large = 1500
+broadcast_strength = 0.8
+broadcast_civilian_speed = 23.4
+police_seconds = 2
+police_max = 100
+militia_radius = 250
+militia_radius_large = 625
+militia_fraction = 0.35
+radio_radius = 650
+radio_radius_large = 1625
+radio_range_percent = 50
+radio_stack_percent = 25
+command_radius = 650
+command_radius_large = 1625
+command_speed_percent = 25
+command_stack_percent = 12.5
+fuel_blast_radius_base = 55
+fuel_blast_radius_per_meter = 4
+fuel_blast_radius_max = 350
+fuel_blast_fuse_seconds = 0.5
+fuel_blast_damage = 100
+topple_min_height = 12
+topple_slenderness = 0.6
+topple_spread_degrees = 25
+topple_fall_seconds = 1.6
+topple_damage = 100
+topple_sound_full_height = 100
+topple_sound_min_gain = 0.2
+topple_fire_chance = 0.35
+topple_fire_radius = 14
+topple_fire_seconds = 25
+topple_fire_patches = 3
+col_coop_host = [0.27450982, 0.6666667, 1, 1]
+col_coop_guest = [1, 0.54901963, 0.15686275, 1]
+coop_ping_seconds = 2
+coop_ping_radius = 90
+coop_cursor_send_hz = 15
+daily_plan_units = 5
+daily_battle_abilities = 4
+daily_min_civilians = 60000
+daily_max_civilians = 200000
+perk_extra_safe_zones = 3
+perk_gas_fire_seconds = 12
+perk_fall_gas_seconds = 10
+perk_fall_gas_radius = 12
+perk_officer_blast_radius = 4
+perk_bridge_hp_percent = 28
+perk_blast_gas_seconds = 3
+perk_fire_damage_per_second = 6
+perk_fire_spread_speed = 8.25
+perk_unlock_cut_percent = 33
+perk_campaign = [.Extra_Zones = "Boston_MA", .Flammable_Gas = "Seattle_WA", .Fall_Gas = "New_York_City", .Officer_Blast = "Capitol_Hill_Washington_DC", .Weak_Bridges = "Venice_Italy", .Blast_Gas = "Detroit_MI", .Hot_Fire = "San_Francisco_CA", .Quick_Deploy = "Miami_FL"]
+demolition_unlock_seconds = 20
+demolition_arrival_seconds = 0
+demolition_min_height = 60
+demolition_aim_width_px = 2
+demolition_aim_fill_alpha = 0.35
+seek_destroy_unlock_seconds = 10
+seek_destroy_arrival_seconds = 0
+seek_destroy_police = 10
+garrison_fire_cooldown = 0.05
+garrison_first_shot_spread = 1
+garrison_damage = 5
+garrison_accuracy = 1
+garrison_magazine = 180
+garrison_reload_seconds = 6
+garrison_max_reloads = 10
+nest_range = 75
+nest_fire_cooldown = 0.01
+nest_first_shot_spread = 1
+nest_damage = 4
+nest_accuracy = 1
+nest_magazine = 1000
+nest_max_reloads = 0
+nest_reload_seconds = 4
+mine_trigger_radius = 3
+mine_fuse_seconds = 3
+mine_blast_radius = 65
+mine_damage = 40
+mine_paint_spacing = 20
+mine_brush_radius = 40
+mine_paint_rate = 6
+mine_paint_delay = 0.2
+paint_brush_radius = 12.5
+paint_brush_start_px = 6
+c4_blast_radius = 160
+c4_damage = 200
+barricade_hp = 1200
+barricade_cost = 0.75
+wall_max_level = 4
+barricade_upgrade_cost_mult = 0.9
+wall_line_max_total = 300
+wall_line_max_per_level = 100
+gate_cost = 50
+wall_start_fee = 25
+globe_dive_seconds = 2.4
+globe_reveal_seconds = 0.7
+globe_select_seconds = 0.8
+globe_level_seconds = 0.6
+globe_spin_friction = 2.5
+globe_country_borders = false
+globe_nuke_height_km = 500
+globe_nuke_min_px = 40
+globe_nuke_max_px = 260
+globe_nuke_sound_volume = 0.8
+globe_nuke_sound_hz = 350
+globe_satellite_low_km = 800
+globe_satellite_high_km = 3000
+globe_satellite_orbit_seconds = 40
+globe_satellite_trail_seconds = 6
+globe_satellite_dot_px = 4
+globe_campaigns_open_start = 2
+globe_campaigns_open_first_win = 2
+globe_campaigns_open_per_win = 1
+globe_lock_px = 20
+globe_size_medium_km2 = 75
+globe_size_large_km2 = 120
+globe_size_extra_large_km2 = 200
+gate_width = 20
+gate_band_extra = 0.75
+gate_post_extra = 1.5
+gate_post_height = 5
+gate_lure_radius = 80
+barricade_decay_per_zombie_second = 1
+barricade_pressure_per_zombie_second = 0.05
+barricade_pressure_radius = 16
+barricade_pressure_max_zombies = 60
+barricade_passive_decay = 0
+barricade_breach_radius = 3
+barricade_width_level1 = 1
+barricade_width_level5 = 5
+barricade_build_seconds = 3
+barricade_flag_merge_radius = 40
+barricade_flag_fade_seconds = 90
+barricade_flag_min_alpha = 0.25
+barricade_weak_glow_below = 0.4
+barricade_weak_glow_radius_min_px = 14
+barricade_weak_glow_radius_max_px = 34
+barricade_weak_glow_alpha_min = 0.5
+barricade_weak_glow_alpha_max = 0.95
+barricade_weak_glow_pulse_seconds = 1.2
+barricade_weak_glow_pulse = 0.35
+barricade_breach_markers_per_zone = 3
+barricade_breach_marker_merge_radius = 25
+barricade_breach_marker_radius_px = 30
+barricade_breach_marker_width_px = 2
+barricade_breach_marker_min_zoom = 0.4
+danger_cell_size = 40
+danger_decay_per_second = 1.5
+danger_spread = 0.25
+danger_zombie_weight = 1
+danger_corpse_weight = 0.3
+danger_panic_weight = 0.25
+danger_update_hz = 20
+panic_danger = 0.6
+panic_rise_per_second = 2.5
+panic_fade_per_second = 0.6
+panic_threshold = 0.5
+calm_speed = 3
+civilian_flee_below = 1
+civilian_flee_above = 3
+civilian_flee_fast_percent = 15
+panic_wander = 0.25
+civilian_flee_strength = 0.8
+calm_move_every = 8
+flock_cell_size = 60
+flock_align = 0.3
+flock_cohesion = 0
+flock_chase_radius = 45
+flock_chase = 2
+flock_momentum = 0.5
+flock_momentum_jitter = 0.1
+flock_heading_jitter = 12
+flock_separation = 1
+flock_crowd_disperse = 12
+flock_update_hz = 15
+far_steer_meters = 480
+far_steer_every = 16
+coordination_ramp_start = 20
+coordination_ramp_full = 120
+coordination_max = 0.75
+scent_cell_size = 12
+scent_decay = 0.6
+scent_spread = 0.7
+scent_civilian_weight = 1
+scent_strength = 1
+scent_update_hz = 15
+scent_blur_passes = 2
+flow_cell_size = 12
+flow_rebuild_seconds = 2
+flow_strength = 1
+flow_crowd_bias = 1
+flow_lean = 2
+flow_react_delay = 30
+osm_bbox_km = 1.5
+people_per_building_area = 0.02
+osm_timeout_seconds = 30
+osm_cache_dir = cache
+osm_maps_dir = maps
+osm_scenarios_dir = scenarios
+osm_campaigns_dir = campaigns
+overpass_endpoints = https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter,https://overpass.private.coffee/api/interpreter
+osm_region = 
+art_heli_sprite = art/vehicles/helicopter-body.png
+art_heli_blades_sprite = art/vehicles/helicopter-blades.png
+art_bomber_sprite = art/vehicles/b2-bomber.png
+art_para_plane_sprite = art/vehicles/paratrooper-plane.png
+art_ac130_sprite = art/vehicles/ac-130.png
+art_bomb_sprite = 
+art_flag_sprite = art/red-flag.png
+art_logo_sprite = art/game-logo-horizontal.png
+art_lock_sprite = art/lock.png
+art_discord_sprite = art/discord-logo.png
+art_apc_sprite = art/vehicles/APC.png
+art_tank_sprite = art/vehicles/tank_body.png
+art_tank_turret_sprite = art/vehicles/tank_top.png
+art_shell_sprite = art/mortar-shell.png
+art_missile_sprite = art/cruise-missile.png
+art_battleship_sprite = art/vehicles/battleship.png
+art_smoke_sprite = art/particle-smoke.png
+art_mushroom_sprite = art/particle-smoke.png
+art_satellite_sprite = 
+art_satellite_px = 28
+fetch_retry_base_seconds = 5
+fetch_retry_max_seconds = 120
+fetch_max_attempts = 6
+seal_erode_cells = 0
+auto_bridge = true
+auto_bridge_max_span = 50
+editor_crowd_target = 250000
+editor_cost_base_ms = 0.58
+editor_cost_per_100k_ms = 4.84
+editor_cost_light_ms = 8.3
+editor_cost_heavy_ms = 16.7
+custom_data_url = https://server-hub-d2b2v.ondigitalocean.app/nombies-maps/v2
+custom_cache_dir = cache/geo
+custom_maps_dir = custom
+custom_timeout_seconds = 30
+custom_max_search_km = 25
+custom_match_step = 10
+custom_stage1_radius = 800
+custom_min_stage1_civilians = 2000
+custom_stage_area_growth = 3
+custom_max_radius = 7800
+custom_min_final_radius = 1500
+custom_max_stages = 20
+custom_boundary_points = 6
+heli_speed = 260
+heli_hp = 40
+heli_turn_rate = 1.6
+heli_accel = 200
+heli_fire_rate = 50
+heli_max_reloads = 3
+heli_rearm_seconds = 30
+heli_magazine = 200
+heli_reload_seconds = 3
+heli_leash_radius = 560
+heli_reticle_radius = 14
+heli_damage = 10
+heli_reticle_speed = 120
+heli_bullet_speed = 1400
+heli_unlock_seconds = 30
+heli_arrival_seconds = 10
+apc_speed = 45
+apc_hp = 40
+apc_turn_rate = 2.5
+apc_accel = 60
+apc_seek_radius = 400
+apc_range = 160
+apc_fire_cooldown = 0.15
+apc_damage = 10
+apc_accuracy = 0.9
+apc_max_reloads = 3
+apc_rearm_seconds = 10
+apc_magazine = 600
+apc_reload_seconds = 5
+apc_unlock_seconds = 15
+apc_arrival_seconds = 10
+rally_radius = 200
+rally_duration = 10
+rally_attack_speed_percent = 50
+rally_unlock_seconds = 20
+rally_arrival_seconds = 0
+sandbox_unit_cap = 500000
+bus_speed = 40
+bus_hp = 40
+bus_turn_rate = 2.5
+bus_accel = 50
+bus_seek_radius = 500
+bus_pickup_radius = 6
+bus_capacity = 400
+bus_unlock_seconds = 15
+bus_arrival_seconds = 10
+medevac_speed = 180
+medevac_hp = 40
+medevac_accel = 150
+medevac_turn_rate = 1.6
+medevac_capacity = 200
+medevac_pickup_radius = 40
+medevac_unlock_seconds = 20
+medevac_arrival_seconds = 10
+dozer_speed = 30
+dozer_hp = 40
+dozer_turn_rate = 2
+dozer_accel = 40
+dozer_seek_radius = 400
+dozer_crush_radius = 5
+dozer_damage = 250
+dozer_max_building_area = 400
+dozer_unlock_seconds = 20
+dozer_arrival_seconds = 10
+tank_speed = 30
+tank_hp = 250
+tank_turn_rate = 1.8
+tank_accel = 40
+tank_seek_radius = 400
+tank_range = 220
+tank_min_range = 30
+tank_fire_cooldown = 2.5
+tank_blast_radius = 30
+tank_damage = 60
+tank_flight_seconds = 0.4
+tank_max_reloads = 2
+tank_magazine = 12
+tank_reload_seconds = 8
+tank_turret_turn_rate = 1.5
+tank_unlock_seconds = 30
+tank_arrival_seconds = 10
+missile_unlock_seconds = 30
+missile_flight_seconds = 2.5
+missile_speed = 800
+missile_blast_radius = 56
+missile_damage = 100
+missile_building_destroy_fraction = 0.3
+cluster_unlock_seconds = 45
+cluster_arrival_seconds = 12
+cluster_count = 72
+cluster_radius = 22
+cluster_scatter = 30
+cluster_damage = 40
+ac130_unlock_seconds = 45
+ac130_arrival_seconds = 8
+ac130_count = 30
+ac130_radius = 35
+ac130_seek_radius = 150
+ac130_damage = 60
+ac130_plane_speed = 220
+ac130_fire_ahead = 450
+ac130_missile_seconds = 1
+cure_radius = 20
+cure_cloud_seconds = 10
+cure_cloud_look_seconds = 0.5
+cure_duration = 15
+cure_wane_seconds = 60
+cure_spread_seconds = 0.5
+cure_spread_chance = 1
+cure_max_generations = 0
+cure_contact_radius = 5
+cure_unlock_seconds = 20
+cure_arrival_seconds = 12
+nuke_unlock_seconds = 90
+nuke_delay_seconds = 45
+nuke_radius = 1980
+nuke_wave_speed = 800
+nuke_damage = 40000
+nuke_damage_edge = 800
+nuke_shake_px = 6
+nuke_shake_seconds = 1.2
+nuke_cloud_scale = 3
+nuke_fall_seconds = 1.5
+nuke_fall_height = 1500
+money_base = 1000
+money_grant_max = 6000
+money_half_civilians = 15000
+shift_start_civilians = 20000
+shift_end_civilians = 80000
+sp_base = 1
+sp_per_root_10k = 1
+sp_per_root_10k_commander = 9
+sp_bonus_percent = 0
+money_bonus_percent = 0
+ability_level_recharge_percent = 25
+ability_cooldown = [.Bomber = 0, .Police = 0, .Heli = 0, .Stungas = 0, .Firebomb = 0, .CallArms = 0, .APC = 0, .Rally = 0, .Bus = 0, .Missile = 0, .Medevac = 0, .Dozer = 0, .Tank = 0, .Cure = 0, .Nuke = 0, .Demolition = 0, .SeekDestroy = 0, .Cluster = 0, .AC130 = 0]
+ability_charges = [.Bomber = 1, .Police = 1, .Heli = 1, .Stungas = 1, .Firebomb = 1, .CallArms = 1, .APC = 1, .Rally = 1, .Bus = 1, .Missile = 1, .Medevac = 1, .Dozer = 1, .Tank = 1, .Cure = 1, .Nuke = 1, .Demolition = 3, .SeekDestroy = 1, .Cluster = 1, .AC130 = 1]
+ability_charges_per_level = [.Bomber = 1, .Police = 1, .Heli = 1, .Stungas = 1, .Firebomb = 1, .CallArms = 1, .APC = 1, .Rally = 1, .Bus = 1, .Missile = 3, .Medevac = 1, .Dozer = 1, .Tank = 1, .Cure = 1, .Nuke = 1, .Demolition = 3, .SeekDestroy = 1, .Cluster = 1, .AC130 = 1]
+unspent_bonus_percent = 0
+cost_sniper = 50
+cost_mortar = 75
+cost_garrison_base = 15
+cost_garrison_per_meter = 2.25
+cost_garrison_max = 225
+garrison_level_price_percent = 50
+garrison_label_radius = 260
+garrison_level_up = bit_set[Level_Stat; u8]{Magazine}
+sniper_level_up = bit_set[Level_Stat; u8]{Range}
+mortar_level_up = bit_set[Level_Stat; u8]{Damage}
+nest_level_up = bit_set[Level_Stat; u8]{Magazine}
+cost_nest = 90
+cost_mine = 15
+cost_increase = [.Police = 0, .Garrison = 0, .Nest = 0, .Mine = 0, .C4 = 0, .Sniper = 0, .Mortar = 1, .Heli = 0, .Bomber = 0, .Firebomb = 0, .Stungas = 0, .Corridor = 0, .Hold = 0, .Decoy = 0, .CallArms = 0, .Wall = 0, .APC = 0, .Battleship = 550, .GasMortar = 0, .FireMortar = 0, .Rally = 0, .Bus = 0, .Missile = 0, .Howitzer = 200, .MLRS = 0, .Railgun = 0, .Cure = 0, .ChemMine = 0, .Spikes = 0, .Oil = 0, .Napalm = 0, .Medevac = 0, .Dozer = 0, .Tank = 0, .Nuke = 0, .Demolition = 0, .SeekDestroy = 0, .Cluster = 0, .AC130 = 0]
+cost_c4 = 500
+cost_battleship = 750
+cost_gas_mortar = 90
+cost_fire_mortar = 120
+gas_mortar_radius = 50
+gas_mortar_duration = 6
+fire_mortar_radius = 20
+fire_mortar_burn_seconds = 8
+gas_mortar_gun = Mortar_Gun_Cfg{set = bit_set[Mortar_Gun_Key]{Level_Up}, gun = Mortar_Gun{range = 0, min_range = 0, range_per_roof_m = 0, fire_cooldown = 0, reload_seconds = 0, flight_seconds = 0, magazine = 0, max_reloads = 0, level_up = bit_set[Level_Stat; u8]{Magazine}, level_fire_cooldown = [0, 0, 0], level_reload_seconds = [0, 0, 0]}}
+fire_mortar_gun = Mortar_Gun_Cfg{set = bit_set[Mortar_Gun_Key]{Level_Up}, gun = Mortar_Gun{range = 0, min_range = 0, range_per_roof_m = 0, fire_cooldown = 0, reload_seconds = 0, flight_seconds = 0, magazine = 0, max_reloads = 0, level_up = bit_set[Level_Stat; u8]{Magazine}, level_fire_cooldown = [0, 0, 0], level_reload_seconds = [0, 0, 0]}}
+cost_chem_mine = 10
+chem_mine_gas_radius = 45
+chem_mine_gas_seconds = 8
+chem_mine_paint_spacing = 20
+cost_spike = 1
+spike_brush_radius = 12
+spike_speed_percent = 40
+cost_oil = 1
+oil_brush_radius = 12
+oil_erase_radius = 24
+oil_burn_seconds = 12
+oil_spread_speed = 100
+cost_napalm = 100
+napalm_radius = 40
+napalm_burn_seconds = 20
+cost_howitzer = 400
+cost_mlrs = 200
+howitzer_blast_radius = 140
+howitzer_damage = 50
+mlrs_blast_radius = 22
+mlrs_damage = 10
+mlrs_scatter = 18
+howitzer_gun = Mortar_Gun_Cfg{set = bit_set[Mortar_Gun_Key]{Range, Min_Range, Range_Per_Roof, Fire_Cooldown, Reload_Seconds, Flight_Seconds, Magazine, Max_Reloads}, gun = Mortar_Gun{range = 6500, min_range = 500, range_per_roof_m = 0, fire_cooldown = 15, reload_seconds = 30, flight_seconds = 4, magazine = 2, max_reloads = 3, level_up = bit_set[Level_Stat; u8]{}, level_fire_cooldown = [0, 0, 0], level_reload_seconds = [0, 0, 0]}}
+mlrs_gun = Mortar_Gun_Cfg{set = bit_set[Mortar_Gun_Key]{Range, Min_Range, Fire_Cooldown, Reload_Seconds, Flight_Seconds, Magazine, Max_Reloads}, gun = Mortar_Gun{range = 900, min_range = 200, range_per_roof_m = 0, fire_cooldown = 0.25, reload_seconds = 60, flight_seconds = 1.5, magazine = 12, max_reloads = 2, level_up = bit_set[Level_Stat; u8]{}, level_fire_cooldown = [0, 0, 0], level_reload_seconds = [0, 0, 0]}}
+cost_railgun = 100
+railgun_gun = Nest_Gun_Cfg{set = bit_set[Nest_Gun_Key]{Range, Fire_Cooldown, Damage, Accuracy, Magazine, Reload_Seconds, Max_Reloads}, gun = Nest_Gun{range = 420, fire_cooldown = 1, reload_seconds = 12, damage = 10, accuracy = 1, magazine = 1, max_reloads = 10, pierce = 0, line_width = 5, round_speed = 3000, retarget_seconds = 0.25, cone_angle = 10, level_up = bit_set[Level_Stat; u8]{}, level_fire_cooldown = [0, 0, 0], level_reload_seconds = [0, 0, 0]}}
+cost_evac_corridor = 0.4
+cost_evac_hold = 0.8
+bronze_percent = 4
+silver_percent = 8
+gold_percent = 17
+diamond_percent = 25
+sapphire_percent = 30
+emerald_percent = 35
+ruby_percent = 40
+silver_percent_per_stage = 1.3
+silver_percent_max = 15
+gold_percent_per_stage = 2.7
+gold_percent_max = 30
+diamond_percent_per_stage = 4
+diamond_percent_max = 45
+sapphire_percent_per_stage = 4.8
+sapphire_percent_max = 54
+emerald_percent_per_stage = 5.6
+emerald_percent_max = 63
+ruby_percent_per_stage = 6.4
+ruby_percent_max = 72
+ruby_substep_percent = 5
+secret_tier_civilians = 8000
+adaptive_crowd_step = 25
+adaptive_crowd_floor = 20
+adaptive_losses = 2
+adaptive_ease_percent = 15
+adaptive_outbreak_percent = [100, 130, 165, 200]
+adaptive_wins = 2
+adaptive_harden_percent = 20
+callarms_fraction = 0.05
+callarms_radius_max = 150
+callarms_unlock_seconds = 0
+callarms_arrival_seconds = 0
+loadout_bomber_cost = 2
+loadout_police_cost = 1
+loadout_heli_cost = 2
+loadout_stungas_cost = 1
+loadout_firebomb_cost = 1
+loadout_callarms_cost = 2
+loadout_apc_cost = 3
+loadout_rally_cost = 2
+loadout_missile_cost = 2
+loadout_cure_cost = 5
+loadout_nuke_cost = 15
+loadout_demolition_cost = 1
+loadout_seek_destroy_cost = 2
+loadout_cluster_cost = 2
+loadout_ac130_cost = 3
+loadout_bomber_max = 0
+loadout_police_max = 0
+loadout_heli_max = 0
+loadout_stungas_max = 0
+loadout_firebomb_max = 0
+loadout_callarms_max = 0
+loadout_apc_max = 0
+loadout_rally_max = 0
+loadout_bus_cost = 3
+loadout_bus_max = 0
+loadout_medevac_cost = 3
+loadout_medevac_max = 0
+loadout_dozer_cost = 3
+loadout_dozer_max = 0
+loadout_tank_cost = 4
+loadout_tank_max = 0
+loadout_missile_max = 0
+loadout_cure_max = 0
+loadout_nuke_max = 0
+loadout_demolition_max = 0
+loadout_seek_destroy_max = 0
+loadout_cluster_max = 0
+loadout_ac130_max = 0
+upgrade_percent = [.Garrison_Rate = 15, .Garrison_Magazine = 25, .Garrison_Reload = 20, .Garrison_Reach = 10, .Sniper_Rate = 15, .Sniper_Magazine = 100, .Sniper_Reload = 80, .Sniper_Range = 35, .Mortar_Rate = 15, .Mortar_Blast = 10, .Turret_Rate = 15, .Turret_Magazine = 25, .Turret_Reload = 20, .Turret_Range = 10, .Ship_Reload = 80, .Ship_Blast = 35]
+upgrade_cost = [.Garrison_Rate = 1, .Garrison_Magazine = 1, .Garrison_Reload = 1, .Garrison_Reach = 2, .Sniper_Rate = 1, .Sniper_Magazine = 1, .Sniper_Reload = 1, .Sniper_Range = 1, .Mortar_Rate = 2, .Mortar_Blast = 2, .Turret_Rate = 1, .Turret_Magazine = 1, .Turret_Reload = 1, .Turret_Range = 1, .Ship_Reload = 2, .Ship_Blast = 2]
+upgrade_max_level = 5
+upgrade_cost_growth = 1.5
+hide_unit_upgrades = true
+bomber_bomb_count = 6
+bomber_blast_radius = 140
+bomber_damage = 200
+bomber_plane_speed = 640
+bomber_fall_seconds = 0.75
+bomber_building_destroy_fraction = 0.3
+bridge_hp_min = 100
+bridge_hp_max = 2500
+bridge_hp_per_length = 2
+bridge_hp_per_width = 15
+bomber_bridge_collapse_seconds = 0.005
+bomber_unlock_seconds = 45
+bomber_arrival_seconds = 15
+firebomb_count = 30
+firebomb_damage = 10
+firebomb_radius = 48
+firebomb_scatter = 21
+firebomb_burn_seconds = 40
+firebomb_flame_sprite = art/flame.png
+firebomb_smoke_sprite = art/smoke.png
+fire_wind_angle = 60
+fire_wind_speed = 9
+fire_flame_density = 0.1
+fire_flame_size = 3
+fire_flame_life = 0.8
+fire_flame_rise = 2
+fire_flame_additive = 0.6
+fire_smoke_density = 0.015
+fire_smoke_size = 6
+fire_smoke_size_end = 60
+fire_smoke_life = 12
+fire_smoke_alpha = 0.8
+fire_smoke_spread = 1.5
+fire_smoke_rise = 12
+fire_max_flames = 6000
+fire_max_smoke = 3000
+fire_smoke_max_cover = 4
+kill_marks_enabled = true
+kill_marks_seconds = 0.45
+kill_marks_size_px = 8
+kill_marks_gap_px = 4
+kill_marks_thickness_px = 3
+kill_marks_max = 128
+kill_marks_per_tick = 24
+kills_meter_hold = 1.5
+kills_meter_shrink = 1
+kills_meter_max_hold = 4
+firebomb_unlock_seconds = 30
+firebomb_arrival_seconds = 12
+fire_damage_per_second = 2
+fire_unit_health = 10
+fire_spread_speed = 5.5
+fire_spread_burn_seconds = 60
+fire_spread_jitter = 0.5
+stungas_radius = 350
+stungas_duration = 60
+stungas_damage = 0
+stungas_wisp_sprite = art/particle-smoke.png
+stungas_wisp_size = 30
+stungas_spawn_density = 0.0003
+stungas_particle_life = 3
+stungas_max_particles = 4000
+stungas_haze_alpha = 0.01
+stungas_wisp_alpha = 0.16
+stungas_unlock_seconds = 30
+stungas_arrival_seconds = 10
+decoy_spray_radius = 40
+decoy_spray_rate = 3
+decoy_unlock_seconds = 0
+decoy_arrival_seconds = 8
+aircraft_flyin_seconds = 5
+tool_ring_width_px = 3
+tool_ring_fill_alpha = 0.12
+art_heli_scale = 6
+art_bomber_scale = 6
+art_para_plane_scale = 6
+art_ac130_scale = 8
+art_ac130_missile_scale = 0.8
+art_bomb_scale = 1
+art_flag_scale = 1
+art_apc_scale = 2
+art_tank_scale = 2
+art_tank_turret_pivot_x = 370
+art_tank_turret_pivot_y = 400
+art_missile_scale = 2.5
+art_shell_scale = 2
+evac_corridor_width = 150
+evac_funnel_strength = 0.7
+evac_corridor_flee_percent = 100
+evac_hold_speed = 1
+evac_hold_radius_max = 200
+evac_hold_attract_factor = 4
+evac_attract_strength = 0.7
+crt_enabled = false
+crt_warp = 0
+crt_mask_dark = 0.5
+crt_mask_light = 1.5
+crt_mask_size = 1
+crt_brightness = 1.2
+crt_flip_y = true
+glow_enabled = true
+low_fps_prompt_fps = 25
+low_fps_prompt_seconds = 60
+autosave_planning_seconds = 30
+glow_dot_color = [0.1764706, 0.5882353, 0.21568628, 1]
+glow_color = [0.15686275, 0.78431374, 0.23529412, 1]
+glow_hot_color = [0.47058824, 1, 0.50980395, 1]
+glow_core_color = [0.7058824, 1, 0.3529412, 1]
+glow_lone_brightness = 0.25
+glow_crowd_size = 150
+glow_splat_scale = 2
+glow_splat_min_pixels = 2
+glow_halo = 0.04
+glow_dense_halo = 8
+glow_bloom = 1.5
+glow_bloom_levels = 4
+glow_halo_radius = 20
+glow_close_zoom_start = 1
+glow_close_zoom_full = 3
+glow_close_brightness = 0.2
+camera_zoom_min = 0.05
+camera_zoom_max = 8
+camera_pan_speed = 1
+camera_zoom_speed = 16
+camera_key_zoom_speed = 1.2
+camera_key_zoom_ease = 6
+camera_glide_speed = 3
+camera_reveal_hold_seconds = 0
+camera_tilt_max = 60
+camera_fov = 35
+camera_fov_fade_zoom = 0.35
+camera_fov_flat_zoom = 0.25
+camera_tilt_drag_speed = 0.25
+camera_turn_drag_speed = 0.3
+camera_tilt_ease = 8
+camera_intro_seconds = 8
+camera_intro_tilt = 60
+camera_intro_turn = 25
+camera_intro_zoom = 1.8
+view3d_unknown_height = 9
+view3d_wall_shade_lit = 0.9
+view3d_wall_shade_dark = 0.55
+view3d_sun_from = 225
+view3d_sun_elevation = 40
+view3d_shadows = true
+view3d_shadow_strength = 0.3
+view3d_shadow_fade_zoom = 0.4
+view3d_shadow_off_zoom = 0.3
+view3d_lod_px = 1
+view3d_barricade_height = 3
+view3d_plane_altitude = 300
+view3d_heli_altitude = 180
+view3d_overlay_hidden_alpha = 0.3
+view3d_water_depth = 2.5
+view3d_apc_height = 3
+view3d_tank_height = 2.5
+view3d_battleship_height = 5
+view3d_heli_thickness = 6
+view3d_plane_thickness = 6
+collapse_shake_seconds = 0.4
+collapse_sink_seconds = 1.4
+collapse_sink_seconds_tall = 0.6
+collapse_shake_meters = 0.2
+collapse_shake_min_px = 1
+collapse_lean_degrees = 4
+collapse_smoke_seconds = 3.5
+collapse_smoke_spacing = 2.5
+collapse_smoke_radius = 7
+collapse_smoke_radius_tall = 22
+collapse_smoke_max = 2000
+mushroom_duration = 15
+mushroom_fade_seconds = 8
+mushroom_fade_swell = 0.6
+mushroom_rise_seconds = 10
+mushroom_start_height = 15
+mushroom_height = 320
+mushroom_cap_start_radius = 10
+mushroom_cap_radius = 120
+mushroom_cap_start_thickness = 12
+mushroom_cap_thickness = 55
+mushroom_cap_flatten = 0.9
+mushroom_cap_puffs = 140
+mushroom_dome_puffs = 90
+mushroom_roll_speed = 0.12
+mushroom_puff_start_radius = 12
+mushroom_puff_radius = 38
+mushroom_stem_puffs = 70
+mushroom_stem_radius = 42
+mushroom_stem_top_radius = 22.4
+mushroom_stem_puff_radius = 28
+mushroom_stem_speed = 35
+mushroom_skirt_puffs = 140
+mushroom_skirt_radius = 220
+mushroom_skirt_seconds = 6
+mushroom_skirt_height = 12
+mushroom_skirt_puff_radius = 18
+mushroom_jitter = 0.35
+mushroom_puff_scale = 0.5
+mushroom_cool_seconds = 3
+mushroom_flash_seconds = 0.6
+mushroom_glow_share = 0.35
+mushroom_glow_seconds = 12
+mushroom_dome_height = 90
+mushroom_skirt_start_radius = 120
+mushroom_skirt_emit_seconds = 4
+mushroom_skirt_rise_height = 45
+mushroom_skirt_rise_seconds = 6
+mushroom_skirt_cool_seconds = 1.5
+mushroom_skirt_clump = 0.8
+mushroom_glow_clump_size = 70
+mushroom_collar_puffs = 70
+mushroom_collar_start_height = 10
+mushroom_collar_height = 150
+mushroom_collar_start_radius = 25
+mushroom_collar_radius = 85
+mushroom_collar_thickness = 18
+mushroom_collar_puff_radius = 24
+mushroom_bloom_strength = 0.1
+mushroom_bloom_size = 1.5
+mushroom_shade_bottom = 0.55
+mushroom_spin = 0.25
+audio_listener_height = 0.8
+audio_full_volume_distance = 150
+audio_falloff_exp = 2
+audio_muffle_distance = 1400
+audio_muffle_hz = 700
+audio_range_gunfire = 1800
+audio_range_sniper = 2300
+audio_range_aircraft = 2300
+audio_range_plane = 4000
+audio_range_explosion = 9000
+audio_range_wall_pound = 800
+audio_range_wall_breach = 1600
+audio_range_crowd = 1600
+audio_range_reload = 900
+audio_floor_gunfire = 0.04
+audio_floor_sniper = 0.06
+audio_floor_aircraft = 0.05
+audio_floor_plane = 0.06
+audio_floor_explosion = 0.15
+audio_floor_wall_pound = 0.02
+audio_floor_wall_breach = 0.08
+audio_floor_crowd = 0.05
+audio_floor_reload = 0
+audio_gunfire_interval = 0.09
+audio_wall_pound_interval = 0.45
+audio_interval_jitter = 0.4
+audio_pitch_variation = 0.1
+audio_volume_variation = 0.15
+audio_crowd_human_full = 400
+audio_crowd_panic_full = 200
+audio_zombie_a_full = 40
+audio_zombie_b_start = 80
+audio_zombie_fade_below = 100
+audio_zombie_b_full = 1500
+audio_vol_tool_armed = 0.55
+audio_vol_tool_cancel = 1.1
+audio_vol_unit_place = 1.1
+audio_vol_unit_refund = 2.1
+audio_vol_wall_placing = 0.45
+audio_vol_game_start = 0.7
+audio_vol_game_victory = 1
+audio_vol_game_loss = 0.8
+audio_vol_soldier_shot = 1.3
+audio_vol_machine_gun = 1.3
+audio_vol_reload = 0.6
+audio_vol_sniper_shot = 0.8
+audio_vol_heli_gatling = 0.35
+audio_vol_heli_loop = 0.9
+audio_vol_plane_loop = 1.25
+audio_vol_bomb_drop = 1.6
+audio_vol_bomb_drop_firebomb = 0.8
+audio_vol_explosion_bomb = 1.6
+audio_vol_explosion_c4 = 1.6
+audio_vol_explosion_mine = 2.2
+audio_vol_explosion_mortar = 2.2
+audio_vol_explosion_firebomb = 1
+audio_vol_wall_pound = 0.4
+audio_vol_wall_breach = 0.75
+audio_vol_parachute = 1
+audio_vol_crowd_human = 1
+audio_vol_crowd_panic = 0.35
+audio_vol_crowd_zombie_a = 0.45
+audio_vol_crowd_zombie_b = 0.36
+audio_vol_ability_unlock = 0.8
+audio_vol_city_intro = 1
+audio_vol_worldmap_select = 1
+audio_vol_worldmap_whoosh = 0.8
+audio_vol_explosion_nuke = 1.4
+audio_vol_zombie_mutation = 1.5
+audio_range_mutation = 2300
+audio_floor_mutation = 0.06
+col_civilian = [1, 1, 1, 1]
+col_civilian_planning = [0.8156863, 0.8156863, 0.8156863, 1]
+col_zombie = [0.3137255, 0.78431374, 0.3137255, 1]
+col_explosive_zombie = [0.6862745, 0.3137255, 1, 1]
+col_explosive_glow = [0.5882353, 0.19607843, 1, 1]
+col_mosh_pit = [1, 0.15686275, 0.15686275, 1]
+col_shielded_zombie = [1, 0.8235294, 0, 1]
+col_giant_zombie = [0.23529412, 0.74509805, 0.23529412, 1]
+col_swimmer_zombie = [1, 0.4117647, 0.7058824, 1]
+col_cure = [0, 0.43137255, 0.078431375, 1]
+col_cure_gas = [0.27450982, 0.54901963, 1, 1]
+col_nuke = [1, 0.3529412, 0.15686275, 1]
+col_nuke_wave = [1, 0.9411765, 0.8235294, 0.8]
+col_demolition = [1, 0.78431374, 0.23529412, 1]
+col_demolition_target = [1, 0.47058824, 0.15686275, 1]
+col_seek_destroy = [0.5882353, 0.78431374, 1, 1]
+col_seek_destroy_target = [0.27450982, 0.5882353, 1, 1]
+col_cure_dead = [0, 0, 0, 1]
+col_police = [0.3137255, 0.47058824, 1, 1]
+col_corpse = [0.47058824, 0.47058824, 0.47058824, 1]
+col_sniper = [0.61960787, 0.30980393, 0.85882354, 1]
+col_mortar = [0.9098039, 0.24313726, 0.65882355, 1]
+col_mortar_shell = [0.5882353, 0.5882353, 0.5882353, 1]
+col_shell_trail_head = [1, 1, 1, 1]
+col_shell_trail_tail = [1, 1, 1, 1]
+col_garrison = [0.15686275, 0.78431374, 0.78431374, 1]
+col_garrison_roof = [0.14901961, 0.4392157, 0.43137255, 1]
+col_garrison_roof_stacked = [0.18039216, 0.5882353, 0.5686275, 1]
+out_of_ammo_dim = 0.3
+col_out_of_ammo_text = [0.9411765, 0.23529412, 0.23529412, 1]
+out_of_ammo_text_seconds = 2
+out_of_ammo_text_rise = 48
+warning_line_seconds = 2.5
+warning_line_jump_seconds = 0.45
+warning_line_jump_px = 14
+col_sniper_roof = [0.4392157, 0.23921569, 0.61960787, 1]
+col_mortar_roof = [0.61960787, 0.2, 0.45882353, 1]
+col_gas_mortar = [0.6666667, 0.8627451, 0.39215687, 1]
+col_gas_mortar_roof = [0.47058824, 0.5882353, 0.19607843, 1]
+col_fire_mortar = [0.74509805, 0.54901963, 0.11764706, 1]
+col_fire_mortar_roof = [0.7058824, 0.11764706, 0.039215688, 1]
+col_howitzer = [0.5529412, 0.6313726, 1, 1]
+col_howitzer_roof = [0.20392157, 0.6117647, 0.7176471, 1]
+col_mlrs = [0.9607843, 0.6392157, 0.7490196, 1]
+col_mlrs_roof = [0.59607846, 0.827451, 0.16862746, 1]
+col_turret_roof = [0.92156863, 0.3137255, 0.3137255, 1]
+col_railgun_roof = [0.972549, 0.85882354, 0.627451, 1]
+col_railgun = [0.972549, 0.85882354, 0.627451, 1]
+col_railgun_beam = [1, 0.4509804, 0.09803922, 1]
+col_railgun_beam_core = [1, 0.98039216, 0.88235295, 1]
+railgun_beam_width_m = 2.5
+railgun_beam_min_px = 5
+railgun_beam_seconds = 0.8
+col_kill_mark = [0.3529412, 0.6666667, 1, 1]
+col_recent_kills = [0.47058824, 0.78431374, 1, 1]
+col_kill_heat = [1, 0.11764706, 0.11764706, 1]
+col_nest = [0.92156863, 0.3137255, 0.3137255, 1]
+col_mine = [0.98039216, 0.7607843, 0.2, 1]
+col_c4 = [1, 0.4509804, 0.050980393, 1]
+col_chem_mine = [0.60784316, 0.9098039, 0.25490198, 1]
+col_spike = [0.7019608, 0.7490196, 0.81960785, 1]
+col_oil = [0.61960787, 0.41960785, 0.21960784, 1]
+col_napalm = [0.9019608, 0.2, 0.2, 1]
+col_background = [0.12941177, 0.12941177, 0.16078432, 1]
+col_street = [0.12941177, 0.12941177, 0.16078432, 1]
+col_block = [0.2, 0.2, 0.21960784, 1]
+col_bridge = [0.81960785, 0.67058825, 0.34901962, 1]
+col_building = [0.5882353, 0.54901963, 0.47058824, 1]
+col_class_fuel = [0.8117647, 0.31764707, 0.23921569, 1]
+col_class_armory = [0.84705883, 0.5686275, 0.8392157, 1]
+col_class_civic = [0.2784314, 0.4627451, 0.7607843, 1]
+col_class_rescue = [0.36078432, 0.9254902, 0.7607843, 1]
+col_class_trade = [0.9019608, 0.7921569, 0.29803923, 1]
+col_class_view_other = [0.42745098, 0.40392157, 0.36078432, 1]
+class_view_unit_dim = 0.75
+col_height_ramp = [[0.5882353, 0.54901963, 0.47058824, 1], [0.5019608, 0.5254902, 0.5803922, 1], [0.24313726, 0.5254902, 0.84705883, 1], [0.15686275, 0.26666668, 0.7921569, 1], [0.047058824, 0.08627451, 0.4392157, 1]]
+height_ramp_floor = 3
+col_height_unknown = [0.28235295, 0.28235295, 0.30588236, 1]
+col_water = [0.16078432, 0.34117648, 0.52156866, 1]
+col_water_bank = [0.36078432, 0.34901962, 0.3137255, 1]
+water_shallow = [0.22745098, 0.45490196, 0.5882353, 1]
+water_deep = [0.078431375, 0.18039216, 0.34509805, 1]
+water_shore_ramp = 250
+water_band_count = 4
+water_noise_scale = 820
+water_noise_amount = 0.7
+water_open_fade = 300
+water_terrace_depth = 8
+water_wall_shade = 0.7
+water_ripple_strength = 0.03
+water_ripple_length = 18
+water_ripple_speed = 1.5
+col_green_grass = [0.2784314, 0.4, 0.21960784, 1]
+col_green_forest = [0.18039216, 0.2901961, 0.16078432, 1]
+col_burnt_ground = [0.32941177, 0.32941177, 0.32156864, 1]
+col_dried_water = [0.2509804, 0.21960784, 0.18039216, 1]
+col_dead_ground = [0.39215687, 0.3647059, 0.3137255, 1]
+col_tracer = [1, 0.9490196, 0.6, 1]
+col_muzzle_flash = [1, 0.95686275, 0.78431374, 1]
+col_selection = [0.39215687, 1, 0.50980395, 1]
+col_cooldown_shade = [0, 0, 0, 0.4]
+col_barricade = [0.27450982, 0.6666667, 0.92156863, 1]
+col_barricade_full = [0.11764706, 0.3529412, 0.6666667, 1]
+col_wall_weak_glow = [1, 0.15686275, 0.15686275, 1]
+col_wall_breach_marker = [1, 0.078431375, 0.078431375, 1]
+col_unpicked_glow = [1, 0.9254902, 0.54901963, 1]
+col_gate = [1, 0.78431374, 0.23529412, 1]
+col_globe_background = [0.011764706, 0.019607844, 0.03137255, 1]
+col_globe_ocean = [0.023529412, 0.078431375, 0.15686275, 1]
+col_globe_land = [0.11764706, 0.14901961, 0.15686275, 1]
+col_globe_grid = [0.54901963, 0.74509805, 0.84313726, 0.23529412]
+col_globe_border = [0.92156863, 0.9607843, 1, 0.8]
+col_globe_state = [0.92156863, 0.9607843, 1, 0.32156864]
+col_globe_disputed = [0.92156863, 0.9607843, 1, 0.6509804]
+col_globe_pin_new = [0.9490196, 0.96862745, 1, 1]
+col_globe_pin_open = [1, 0.84313726, 0, 1]
+col_globe_pin_progress = [1, 0.6901961, 0, 1]
+col_globe_pin_done = [0.27450982, 0.6666667, 1, 1]
+col_globe_satellite = [1, 1, 1, 1]
+col_globe_satellite_trail = [1, 1, 1, 0.54901963]
+col_heli = [0.8509804, 0.7490196, 0.3529412, 1]
+col_apc = [0.5882353, 0.74509805, 0.8627451, 1]
+col_rally = [1, 0.5882353, 0.78431374, 1]
+col_bus = [0.9607843, 0.78431374, 0.27450982, 1]
+col_medevac = [0.9411765, 0.9411765, 0.9411765, 1]
+col_dozer = [0.92941177, 0.6, 0.14901961, 1]
+col_tank = [0.4509804, 0.54901963, 0.3019608, 1]
+col_battleship = [0.74509805, 0.78431374, 0.8392157, 1]
+col_bomber = [0.9019608, 0.92156863, 0.96862745, 1]
+col_fire = [1, 0.47058824, 0.11764706, 1]
+col_flame_hot = [1, 0.8627451, 0.29803923, 1]
+col_flame_cool = [0.8627451, 0.15686275, 0.0627451, 1]
+col_smoke_light = [0.30588236, 0.29803923, 0.28627452, 1]
+col_smoke_dark = [0.039215688, 0.039215688, 0.03529412, 1]
+col_gas = [0.6862745, 0.88235295, 0.37254903, 1]
+col_missile = [1, 0.88235295, 0.27450982, 1]
+col_ac130 = [1, 1, 1, 1]
+col_ac130_missile = [1, 0.78431374, 0.4509804, 1]
+col_collapse_smoke = [0.69803923, 0.6745098, 0.627451, 0.8]
+col_mushroom_bloom = [1, 0.8784314, 0.6, 1]
+col_mushroom_ember = [0.36078432, 0.14901961, 0.09411765, 0.9019608]
+col_mushroom_smoke_dark = [0.13333334, 0.101960786, 0.09019608, 0.9411765]
+col_mushroom_dust = [0.36078432, 0.3529412, 0.34117648, 0.92156863]
+col_mushroom_dust_dark = [0.22745098, 0.22352941, 0.21568628, 0.9411765]
+col_mushroom_flash = [1, 0.9882353, 0.92156863, 0.9607843]
+col_mushroom_hot = [1, 0.76862746, 0.27450982, 0.92156863]
+col_mushroom_smoke = [0.28235295, 0.20392157, 0.17254902, 0.92156863]
+col_rubble = [0.05490196, 0.05490196, 0.0627451, 1]
+col_evac = [0.9019608, 0.7647059, 0.3529412, 1]
+col_safe_zone_stripe = [0.15686275, 0.6666667, 0.9019608, 0.21960784]
+col_safe_zone_breached = [0.92156863, 0.21960784, 0.18039216, 0.20392157]
+col_safe_zone_glow = [0.2509804, 0.8235294, 1, 1]
+col_safe_zone_edge = [0.3529412, 0.8627451, 1, 1]
+col_flag = [0.8627451, 0.21568628, 0.19607843, 1]
+col_tip_glow = [0.27450982, 0.627451, 1, 1]
+cinematic_full_map = false
+dev = true
+fps_meter = false
+battle_replay = false

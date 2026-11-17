@@ -1,0 +1,288 @@
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play.py", line 130, in run_episode
+    logits, v, h = net(x, h)
+                   ~~~^^^^^^
+  File "D:\zar-scratch\scripts\nn_play.py", line 130, in run_episode
+    logits, v, h = net(x, h)
+                   ~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "D:\zar-scratch\scripts\nn_play.py", line 54, in forward
+    out, h = self.gru(x, h)
+             ~~~~~~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "D:\zar-scratch\scripts\nn_play.py", line 54, in forward
+    out, h = self.gru(x, h)
+             ~~~~~~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 1438, in forward
+    self.check_forward_args(input, hx, batch_sizes)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 380, in check_forward_args
+    self.check_input(input, batch_sizes)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 1438, in forward
+    self.check_forward_args(input, hx, batch_sizes)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 329, in check_input
+    raise RuntimeError(
+        f"input.size(-1) must be equal to input_size. Expected {self.input_size}, got {input.size(-1)}"
+    )
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 380, in check_forward_args
+    self.check_input(input, batch_sizes)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 329, in check_input
+    raise RuntimeError(
+        f"input.size(-1) must be equal to input_size. Expected {self.input_size}, got {input.size(-1)}"
+    )
+RuntimeError: input.size(-1) must be equal to input_size. Expected 18, got 19
+RuntimeError: input.size(-1) must be equal to input_size. Expected 18, got 19
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play.py", line 130, in run_episode
+    logits, v, h = net(x, h)
+                   ~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "D:\zar-scratch\scripts\nn_play.py", line 54, in forward
+    out, h = self.gru(x, h)
+             ~~~~~~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 1438, in forward
+    self.check_forward_args(input, hx, batch_sizes)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 380, in check_forward_args
+    self.check_input(input, batch_sizes)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 329, in check_input
+    raise RuntimeError(
+        f"input.size(-1) must be equal to input_size. Expected {self.input_size}, got {input.size(-1)}"
+    )
+RuntimeError: input.size(-1) must be equal to input_size. Expected 18, got 19
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play.py", line 130, in run_episode
+    logits, v, h = net(x, h)
+                   ~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "D:\zar-scratch\scripts\nn_play.py", line 54, in forward
+    out, h = self.gru(x, h)
+             ~~~~~~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 1438, in forward
+    self.check_forward_args(input, hx, batch_sizes)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 380, in check_forward_args
+    self.check_input(input, batch_sizes)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 329, in check_input
+    raise RuntimeError(
+        f"input.size(-1) must be equal to input_size. Expected {self.input_size}, got {input.size(-1)}"
+    )
+RuntimeError: input.size(-1) must be equal to input_size. Expected 18, got 19
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play.py", line 130, in run_episode
+    logits, v, h = net(x, h)
+                   ~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "D:\zar-scratch\scripts\nn_play.py", line 54, in forward
+    out, h = self.gru(x, h)
+             ~~~~~~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 1438, in forward
+    self.check_forward_args(input, hx, batch_sizes)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 380, in check_forward_args
+    self.check_input(input, batch_sizes)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 329, in check_input
+    raise RuntimeError(
+        f"input.size(-1) must be equal to input_size. Expected {self.input_size}, got {input.size(-1)}"
+    )
+RuntimeError: input.size(-1) must be equal to input_size. Expected 18, got 19
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play.py", line 130, in run_episode
+    logits, v, h = net(x, h)
+                   ~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "D:\zar-scratch\scripts\nn_play.py", line 54, in forward
+    out, h = self.gru(x, h)
+             ~~~~~~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 1438, in forward
+    self.check_forward_args(input, hx, batch_sizes)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 380, in check_forward_args
+    self.check_input(input, batch_sizes)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 329, in check_input
+    raise RuntimeError(
+        f"input.size(-1) must be equal to input_size. Expected {self.input_size}, got {input.size(-1)}"
+    )
+RuntimeError: input.size(-1) must be equal to input_size. Expected 18, got 19
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play.py", line 130, in run_episode
+    logits, v, h = net(x, h)
+                   ~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "D:\zar-scratch\scripts\nn_play.py", line 54, in forward
+    out, h = self.gru(x, h)
+             ~~~~~~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 1438, in forward
+    self.check_forward_args(input, hx, batch_sizes)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 380, in check_forward_args
+    self.check_input(input, batch_sizes)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 329, in check_input
+    raise RuntimeError(
+        f"input.size(-1) must be equal to input_size. Expected {self.input_size}, got {input.size(-1)}"
+    )
+RuntimeError: input.size(-1) must be equal to input_size. Expected 18, got 19
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play.py", line 130, in run_episode
+    logits, v, h = net(x, h)
+                   ~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "D:\zar-scratch\scripts\nn_play.py", line 54, in forward
+    out, h = self.gru(x, h)
+             ~~~~~~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 1438, in forward
+    self.check_forward_args(input, hx, batch_sizes)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 380, in check_forward_args
+    self.check_input(input, batch_sizes)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 329, in check_input
+    raise RuntimeError(
+        f"input.size(-1) must be equal to input_size. Expected {self.input_size}, got {input.size(-1)}"
+    )
+RuntimeError: input.size(-1) must be equal to input_size. Expected 18, got 19
+ERR 49320 input.size(-1) must be equal to input_size. Expected 18, got 19
+ERR 49320 input.size(-1) must be equal to input_size. Expected 18, got 19
+ERR 49276 input.size(-1) must be equal to input_size. Expected 18, got 19
+ERR 49276 input.size(-1) must be equal to input_size. Expected 18, got 19
+ERR 49384 input.size(-1) must be equal to input_size. Expected 18, got 19
+ERR 49384 input.size(-1) must be equal to input_size. Expected 18, got 19
+ERR 39160 input.size(-1) must be equal to input_size. Expected 18, got 19
+ERR 39160 input.size(-1) must be equal to input_size. Expected 18, got 19
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play.py", line 130, in run_episode
+    logits, v, h = net(x, h)
+                   ~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "D:\zar-scratch\scripts\nn_play.py", line 54, in forward
+    out, h = self.gru(x, h)
+             ~~~~~~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 1438, in forward
+    self.check_forward_args(input, hx, batch_sizes)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 380, in check_forward_args
+    self.check_input(input, batch_sizes)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 329, in check_input
+    raise RuntimeError(
+        f"input.size(-1) must be equal to input_size. Expected {self.input_size}, got {input.size(-1)}"
+    )
+RuntimeError: input.size(-1) must be equal to input_size. Expected 18, got 19
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play.py", line 130, in run_episode
+    logits, v, h = net(x, h)
+                   ~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "D:\zar-scratch\scripts\nn_play.py", line 54, in forward
+    out, h = self.gru(x, h)
+             ~~~~~~~~^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 1438, in forward
+    self.check_forward_args(input, hx, batch_sizes)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 380, in check_forward_args
+    self.check_input(input, batch_sizes)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\torch\nn\modules\rnn.py", line 329, in check_input
+    raise RuntimeError(
+        f"input.size(-1) must be equal to input_size. Expected {self.input_size}, got {input.size(-1)}"
+    )
+RuntimeError: input.size(-1) must be equal to input_size. Expected 18, got 19

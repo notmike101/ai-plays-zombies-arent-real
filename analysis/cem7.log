@@ -1,0 +1,93 @@
+seeded from saved best 0.153
+gen 0: fits [0.098, 0.12, 0.121, 0.067, 0.096, 0.108, 0.067, 0.117, 0.091, 0.068, 0.087, 0.08] best 0.121 mu [42.7, 694.5, 403.7, 0.0, 22.7, 765.8, 462.0, 0.0, 35.2, 752.3, 364.7, 0.1, 64.7, 727.2, 485.5, 0.8, 486.9, 524.3, 111.5, 821.0, 255.0, 0.6]
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+gen 1: fits [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0] best 0.121 mu [42.7, 694.5, 403.7, 0.0, 22.7, 765.8, 462.0, 0.0, 35.2, 752.3, 364.7, 0.1, 64.7, 727.2, 485.5, 0.8, 486.9, 524.3, 111.5, 821.0, 255.0, 0.6]
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+gen 2: fits [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0] best 0.121 mu [42.7, 694.5, 403.7, 0.0, 22.7, 765.8, 462.0, 0.0, 35.2, 752.3, 364.7, 0.1, 64.7, 727.2, 485.5, 0.8, 486.9, 524.3, 111.5, 821.0, 255.0, 0.6]
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+gen 3: fits [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0] best 0.121 mu [42.7, 694.5, 403.7, 0.0, 22.7, 765.8, 462.0, 0.0, 35.2, 752.3, 364.7, 0.1, 64.7, 727.2, 485.5, 0.8, 486.9, 524.3, 111.5, 821.0, 255.0, 0.6]
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+gen 4: fits [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0] best 0.121 mu [42.7, 694.5, 403.7, 0.0, 22.7, 765.8, 462.0, 0.0, 35.2, 752.3, 364.7, 0.1, 64.7, 727.2, 485.5, 0.8, 486.9, 524.3, 111.5, 821.0, 255.0, 0.6]
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+gen 5: fits [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0] best 0.121 mu [42.7, 694.5, 403.7, 0.0, 22.7, 765.8, 462.0, 0.0, 35.2, 752.3, 364.7, 0.1, 64.7, 727.2, 485.5, 0.8, 486.9, 524.3, 111.5, 821.0, 255.0, 0.6]
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+gen 6: fits [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0] best 0.121 mu [42.7, 694.5, 403.7, 0.0, 22.7, 765.8, 462.0, 0.0, 35.2, 752.3, 364.7, 0.1, 64.7, 727.2, 485.5, 0.8, 486.9, 524.3, 111.5, 821.0, 255.0, 0.6]
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w48672] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w38188] ERR argument 4: TypeError: Don't know how to convert parameter 4
+[w9820] ERR argument 4: TypeError: Don't know how to convert parameter 4
+gen 7: fits [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0] best 0.121 mu [42.7, 694.5, 403.7, 0.0, 22.7, 765.8, 462.0, 0.0, 35.2, 752.3, 364.7, 0.1, 64.7, 727.2, 485.5, 0.8, 486.9, 524.3, 111.5, 821.0, 255.0, 0.6]

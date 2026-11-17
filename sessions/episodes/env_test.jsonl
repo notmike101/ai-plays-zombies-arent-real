@@ -1,0 +1,40 @@
+{"kind": "obs", "phase": "planning", "civ": "8142", "z": "0", "money": "3111.00", "sim": "0.000", "paused": "false", "t": 1794767616.85}
+{"kind": "obs", "phase": "planning", "civ": "8142", "z": "0", "money": "3111.00", "sim": "0.000", "paused": "false", "t": 1794767619.04}
+{"kind": "obs", "phase": "planning", "civ": "8142", "z": "0", "money": "3111.00", "sim": "0.000", "paused": "false", "t": 1794767725.64}
+{"kind": "obs", "phase": "planning", "civ": "8142", "z": "0", "money": "3111.00", "sim": "0.000", "paused": "false", "t": 1794767729.33}
+{"kind": "obs", "phase": "planning", "civ": "8142", "z": "0", "money": "3111.00", "sim": "0.000", "paused": "false", "t": 1794767733.01}
+{"kind": "obs", "phase": "planning", "civ": "8142", "z": "0", "money": "3111.00", "sim": "0.000", "paused": "false", "t": 1794767749.13}
+{"kind": "key", "vk": 66, "tag": "zone-tool", "t": 1794767749.2}
+{"kind": "click", "tag": "zone-pt", "x": 7969, "y": 8241, "right": false, "t": 1794767749.55}
+{"kind": "click", "tag": "zone-pt", "x": 9047, "y": 8241, "right": false, "t": 1794767750.0}
+{"kind": "click", "tag": "zone-pt", "x": 9047, "y": 7162, "right": false, "t": 1794767750.45}
+{"kind": "click", "tag": "zone-pt", "x": 7969, "y": 7162, "right": false, "t": 1794767750.9}
+{"kind": "key", "vk": 13, "tag": "zone-close", "t": 1794767751.21}
+{"kind": "obs", "phase": "planning", "civ": "8142", "z": "0", "money": "3111.00", "sim": "0.000", "paused": "false", "t": 1794767754.03}
+{"kind": "zone", "ok": false, "before": 3111.0, "after": "3111.00", "t": 1794767754.03}
+{"kind": "obs", "phase": "planning", "civ": "8142", "z": "0", "money": "3111.00", "sim": "0.000", "paused": "false", "t": 1794767845.13}
+{"kind": "key", "vk": 66, "tag": "zone-tool", "t": 1794767845.19}
+{"kind": "click", "tag": "zone-pt", "x": 1487, "y": 1767, "right": false, "t": 1794767845.54}
+{"kind": "click", "tag": "zone-pt", "x": 2566, "y": 1767, "right": false, "t": 1794767846.0}
+{"kind": "click", "tag": "zone-pt", "x": 2566, "y": 689, "right": false, "t": 1794767846.45}
+{"kind": "click", "tag": "zone-pt", "x": 1487, "y": 689, "right": false, "t": 1794767846.9}
+{"kind": "key", "vk": 13, "tag": "zone-close", "t": 1794767847.21}
+{"kind": "key", "vk": 13, "tag": "dialog-close", "t": 1794767898.7}
+{"kind": "obs", "phase": "playing", "civ": "7417", "z": "1125", "money": "3111.00", "sim": "1.200", "paused": "false", "t": 1794767901.92}
+{"kind": "key", "vk": 27, "tag": "pre-esc", "t": 1794767901.98}
+{"kind": "key", "vk": 66, "tag": "B", "t": 1794767902.19}
+{"kind": "click", "tag": "pt0", "x": 1487, "y": 1767, "right": false, "t": 1794767919.03}
+{"kind": "click", "tag": "pt1", "x": 2566, "y": 1767, "right": false, "t": 1794767919.88}
+{"kind": "click", "tag": "pt2", "x": 2566, "y": 689, "right": false, "t": 1794767920.73}
+{"kind": "click", "tag": "pt3", "x": 1487, "y": 689, "right": false, "t": 1794767921.58}
+{"kind": "key", "vk": 13, "tag": "close", "t": 1794767922.29}
+{"kind": "key", "vk": 13, "tag": "dialog-close", "t": 1794767939.38}
+{"kind": "key", "vk": 13, "tag": "dialog-close", "t": 1794767956.68}
+{"kind": "key", "vk": 88, "tag": "dialog-close", "t": 1794767973.97}
+{"kind": "key", "vk": 13, "tag": "dialog-close", "t": 1794768010.28}
+{"kind": "key", "vk": 13, "tag": "dialog-close", "t": 1794768027.58}
+{"kind": "key", "vk": 88, "tag": "dialog-close", "t": 1794768044.87}
+{"kind": "key", "vk": 32, "tag": "dialog-close", "t": 1794768062.16}
+{"kind": "key", "vk": 27, "tag": "esc", "t": 1794768178.03}
+{"kind": "obs", "phase": "playing", "civ": "6522", "z": "2020", "money": "3111.00", "sim": "4.667", "paused": "false", "t": 1794768181.45}
+{"kind": "key", "vk": 82, "tag": "retry", "t": 1794768200.06}

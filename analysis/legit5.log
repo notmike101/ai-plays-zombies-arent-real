@@ -1,0 +1,6 @@
+obs {'civ': 80011, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 4223.0380859375}
+panned south
+start {'civ': 78324, 'zomb': 2807, 'converting': 32, 'corpses': 0, 'police': 0, 'money': 4223.0380859375}
+CAST 0 t 48 zomb 29995 at 742 447
+CAST 1 t 51 zomb 32396 at 784 500
+RESULT {'win': False, 'civ_end': 3025, 'civ0': 78324, 'frac': 0.038621623001889586, 't': 109.88369560241699}

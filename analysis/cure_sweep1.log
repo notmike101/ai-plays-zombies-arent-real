@@ -1,0 +1,52 @@
+READY
+outbreak done zomb 9121 civ 91774
+round0 cast0 at 749,260 zomb=10268 civ=90627
+round0 cast1 at 600,320 zomb=13489 civ=87381
+round0 cast2 at 900,300 zomb=15982 civ=84853
+round0 cast3 at 700,480 zomb=18400 civ=82344
+round0 cast4 at 860,200 zomb=20235 civ=79277
+round0 cast5 at 500,220 zomb=23082 civ=75711
+  poll zomb 27081 civ 69987 corp 3913 conv 67 cpu 0.0
+  poll zomb 26295 civ 66663 corp 8028 conv 58 cpu 418.7
+  poll zomb 28303 civ 61961 corp 10731 conv 60 cpu 423.0
+  poll zomb 28605 civ 59030 corp 13365 conv 42 cpu 421.8
+  poll zomb 28802 civ 56272 corp 15926 conv 54 cpu 414.7
+  poll zomb 29216 civ 52737 corp 19049 conv 58 cpu 402.2
+round1 cast0 at 749,260 zomb=29911 civ=50802
+round1 cast1 at 600,320 zomb=31327 civ=46406
+round1 cast2 at 900,300 zomb=32265 civ=42511
+round1 cast3 at 700,480 zomb=33985 civ=39525
+round1 cast4 at 860,200 zomb=33160 civ=37339
+round1 cast5 at 500,220 zomb=33322 civ=35287
+  poll zomb 35033 civ 31187 corp 34808 conv 31 cpu 387.0
+  poll zomb 36251 civ 27783 corp 37009 conv 61 cpu 366.0
+  poll zomb 37491 civ 25048 corp 38511 conv 48 cpu 375.3
+  poll zomb 37930 civ 22570 corp 40558 conv 54 cpu 350.3
+  poll zomb 41627 civ 18151 corp 41280 conv 47 cpu 358.2
+  poll zomb 43660 civ 15309 corp 42093 conv 67 cpu 346.0
+round2 cast0 at 749,260 zomb=44925 civ=13900
+round2 cast1 at 600,320 zomb=47427 civ=10944
+round2 cast2 at 900,300 zomb=49633 civ=7915
+round2 cast3 at 700,480 zomb=51818 civ=5487
+round2 cast4 at 860,200 zomb=53918 civ=2930
+round2 cast5 at 500,220 zomb=55196 civ=1177
+  poll zomb 55410 civ 513 corp 45146 conv 0 cpu 334.6
+  poll zomb 55422 civ 422 corp 45225 conv 1 cpu 285.0
+  poll zomb 55419 civ 397 corp 45253 conv 0 cpu 290.6
+Traceback (most recent call last):
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\psutil\_pswindows.py", line 666, in wrapper
+    return fun(self, *args, **kwargs)
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\psutil\_pswindows.py", line 940, in cpu_times
+    user, system, _created = cext.proc_times(self.pid)
+                             ~~~~~~~~~~~~~~~^^^^^^^^^^
+ProcessLookupError: [Errno 3] force no such process (originated from GetExitCodeProcess != STILL_ACTIVE)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "<stdin>", line 40, in <module>
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\psutil\__init__.py", line 1079, in cpu_percent
+    pt2 = self._proc.cpu_times()
+  File "C:\Users\me\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\psutil\_pswindows.py", line 668, in wrapper
+    raise convert_oserror(err, pid=self.pid, name=self._name) from err
+psutil.NoSuchProcess: process no longer exists (pid=25224)

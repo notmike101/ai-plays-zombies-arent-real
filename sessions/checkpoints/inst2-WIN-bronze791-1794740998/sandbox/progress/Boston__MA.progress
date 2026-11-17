@@ -1,0 +1,10 @@
+# Zombies Aren't Real campaign progress for "Boston, MA" -- written by the game: the badge and best
+# result per scenario, and where CONTINUE picks the campaign up. Delete it to forget them.
+version = 5
+resume_stage = 5
+perks = Extra_Zones - -
+resume_money = 0.000
+resume_loadout = 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+resume_board = 1
+board_money = 10000000.000
+hist 4 = 0.000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0

@@ -1,0 +1,7 @@
+pass1: 15898
+Traceback (most recent call last):
+  File "<stdin>", line 24, in <module>
+  File "D:\zar-scratch\scripts\memscan.py", line 57, in read
+    ok = kernel32.ReadProcessMemory(h, ctypes.c_void_p(addr), buf, size, ctypes.byref(got))
+                                       ~~~~~~~~~~~~~~~^^^^^^
+TypeError: cannot be converted to pointer

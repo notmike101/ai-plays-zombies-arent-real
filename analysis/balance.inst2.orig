@@ -1,0 +1,77 @@
+# balance.ini -- the balance levers, in one place for playtesting.
+#
+# Every key here is a config.ini key under the same [block]. The game reads this file right
+# after config.ini, so a value here WINS over config.ini's, and it hot-reloads the same way:
+# save it while the game runs and the change is picked up within about half a second (with
+# features.dev on, "CONFIG RELOADED" flashes). A money lever reaches the money at once --
+# planning's balance, and the balance a RETRY restores -- instead of waiting for the next
+# stage. To pull another config.ini key in, copy its line here under its [block]; to fall
+# back to config.ini's value, delete the line (or this whole file). A scenario's own
+# [override] block still wins over both (scenarios/testground.scn pins its badge lines), and
+# a player's mods (SETTINGS > MODS, src/mods.odin) win over all three.
+# Once a balance is settled, tools/balance-commit.sh writes these values into config.ini and
+# clears the key lines from here (--dry-run to preview).
+#
+# How the levers meet: a stage's money (a base plus a rate x its civilians) buys safe-zone
+# outline at walls.cost per 2 m; the safe zones it fences in must shelter the bronze share of the civilians
+# before READY; what is left buys the garrisons and Turrets that hold the walls, whose
+# killing power is their fire rate, cut by their reload -- a garrison's price and reach both
+# growing with the building it holds. Two readouts show the trade-off:
+#   * in the game, the admin console (Ctrl+Space): "balance" -- this stage's money, the
+#     meters of zone outline it buys, and the civilians the bronze line needs; "stage size" --
+#     its land, the civilians it is paid for, grant and carried money;
+#   * for a whole campaign, offline: tools/balancedump (it reads this file too), e.g.
+#     ./balancedump maps/ny.map --campaign campaigns/New_York_City.cmp -- per stage the
+#     money, the money per civilian, and what the cheapest round safe zone holding each
+#     badge line's share costs, plus each gun's sustained fire rate.
+
+[walls]
+
+[economy]
+# MONEY. A stage's money follows its CIVILIANS -- the crowd its buildings seed, up to
+# civilian.max_count -- and levels off as the stage grows, while its skill points grow
+# ([skill_points]). Every stage, first or later, is paid money_base + money_grant_max x C /
+# (C + money_half_civilians): about money_grant_max / money_half_civilians a civilian on a
+# small stage (the placement game), levelling off at money_base + money_grant_max on a big
+# one (the commander's game, fought with battle abilities). A campaign's stages nest, so no
+# stage pays less than the one before it; unspent money carries on top. money_base moves
+# every stage alike; money_grant_max moves where the grant levels off; money_half_civilians
+# moves how soon. New York at the defaults (1000 / 6000 / 15,000): $1,894 / 2,694 / 5,250 /
+# 6,292 on stages 1-4, then $6,434 rising to $6,825 a stage. tools/balancedump prints any
+# campaign's per stage, and its SP.
+
+[badges]
+# SAVE LINES: the % of the starting civilians still alive when the horde is wiped out. Bronze
+# is the win line (a horde wiped out with fewer alive is a loss; 0 would make any wipe a win). Keep them rising bronze -> ruby. (The run is lost outright only once every
+# civilian is dead.) Every line but bronze rises <tier>_percent_per_stage points a campaign
+# stage after the first, up to <tier>_percent_max (config.ini's [badges] comment has the
+# battles behind New York's diamond 25 / 29 / 33 / 37 / 41 / 45%; silver, gold, sapphire,
+# emerald and ruby keep about 0.32x, 0.68x, 1.2x, 1.4x and 1.6x of it).
+
+[safe_zone]
+# LAND PRICE AND LIMITS. On top of its walls, each separate safe area pays land_cost x the
+# square root of its land in m^2, a flat price (src/zoneland.odin). The board holds free_zones
+# zones plus the EXTRA SAFE ZONE levels, and every zone together may cover at most
+# max_land_percent of the stage's land on a small stage, shrinking to max_land_percent_large on
+# a big one (land_cap_small_km2 / land_cap_large_km2). tools/balancedump prices the badge lines with it, and
+# --split with several separate zones.
+
+[garrison]
+# A garrison holds a whole building; its REACH and PRICE both grow with the building's
+# width (the side of a square with its footprint area). Reach = range_base +
+# range_per_meter x width (at most range_max); price = cost_base + cost_per_meter x width
+# (at most cost_max). The UPGRADE tool STACKS it up a level: 3x/6x/12x the magazine, and
+# config.ini's garrison.level_price_percent of the price more a level; the same fire rate,
+# reload and reach.
+
+[building_class]
+# SPECIAL BUILDINGS. A Trade building (a bank, a hotel, a mall, a hardware store ...) on
+# BUDGET inside a safe zone cuts building_class.money_discount_percent off every unit placed
+# within building_class.money_radius of it. The admin console's "special buildings" shows
+# what the zones hold and what the cut is worth on the board. Add
+# `money_discount_percent = ...` or `money_radius = ...` here to tune it.
+
+[turret]                          # the Turret (a machine-gun nest)
+
+[features]
+dev = true

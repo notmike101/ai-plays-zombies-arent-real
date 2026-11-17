@@ -1,0 +1,2 @@
+ready 97248 3690
+RESULT {'win': False, 'civ_end': 1012, 'civ0': 97194, 'frac': 0.010412165360001646, 't': 18.68429732322693, 'alive_int': 0.40595424353221427, 'min_frac': 0.010412165360001646, 'kills': 0, 'police_pk': 0, 'spend_frac': 0.0}
