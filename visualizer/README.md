@@ -4,6 +4,11 @@ A read-only visualizer for a running PyTorch GRU policy. The browser shows actua
 
 ## Run
 
+For a new session, start with the [operator runbook](../notes/operator-runbook.md).
+It covers existing-server detection, background start/stop, process identity
+checks and training resume. Read CURRENT STATE in `../notes/tracker.md` for the
+latest deployment snapshot; revalidate its PIDs before using them.
+
 From PowerShell in `D:\zar-scratch`:
 
 ```powershell
@@ -28,7 +33,7 @@ WebGPU is preferred. It works on a supported browser at localhost or over truste
 
 **The observer integration is already included in `scripts/nn_play2.py` in this checkout. An already-running, uninstrumented worker cannot provide these values.** Launch training normally; the app waits for an instrumented worker's first decision. No alternate trainer launcher or integration patch is needed.
 
-The 22-line integration in `scripts/nn_play2.py`:
+The integration in `scripts/nn_play2.py`:
 
 1. Imports the optional observer and feature labels.
 2. Installs an observer on each episode's actual policy instance.
@@ -69,7 +74,7 @@ The stream supports at most 16 active viewers per server, with a three-second so
 
 Dimensions, head names, weights and values come from the running model. Each episode reports its own model revision, derived from full parameter values. Normal in-place parameter updates and checkpoint loads refresh the graph; later worker instances publish their current weights automatically. This observes the weights the worker actually uses, which may lag the trainer's newest checkpoint until its next episode.
 
-Supported topology: **one single-layer, unidirectional GRU directly feeding one or more linear heads**, as in the current v1/v2 policies. Different widths and output sizes are discovered. New module types need an observer adapter; unsupported structures report an error rather than inventing a graph. Functional transformations between those modules are not inferred. Feature/action meaning cannot be deduced from tensor dimensions: the training owner must maintain the supplied labels when changing feature order or semantics. `labels.py` documents the current 32-feature order; the label tests and `verify_model.py` enforce the trainer contract.
+Supported topology: **one single-layer, unidirectional GRU directly feeding one or more linear heads**, as in the current schema-3 policy. Different widths and output sizes are discovered. New module types need an observer adapter; unsupported structures report an error rather than inventing a graph. Functional transformations between those modules are not inferred. Feature/action meaning cannot be deduced from tensor dimensions: the training owner must maintain the supplied labels when changing feature order or semantics. `labels.py` documents the current 332-feature order; the label tests and `verify_model.py` enforce the trainer contract.
 
 Observer hooks capture only single-step, gradient-disabled forward passes. PPO sequence updates and gradients are not visualized. It never consumes random numbers or modifies tensors. Copies are detached, and outputs are copied before the trainer can mask them in place. A single-slot queue writes latest-only JSON in a background thread, capped at five frames/second. Disk/serialization failure drops the frame rather than interrupting the decision loop. Current decisions occur much less frequently than that cap.
 
@@ -106,17 +111,20 @@ loopback ports; integration/watchdog fixtures use PID -1, never real games.
 
 The model check imports the current trainer source without running its main function or opening a game. It checks exact recurrent outputs and sampled decisions, then reports a warm CPU inference benchmark. It does not establish end-to-end gameplay overhead.
 
-Verified on 2026-11-16 before trainer integration: 16 Python tests; Node graph/layout/filter/clear assertions; the current 61,980-parameter PolicyNet2 gives identical outputs and sampled decisions for 12 recurrent steps. One warm CPU run measured median 0.074 ms plain versus 0.122 ms observed including snapshot creation, excluding first topology extraction and background disk writes. Edge displayed the WebGPU graph and Canvas 2D fallback, live synthetic updates, node inspection, pause/resume and waiting state. The responsive view was checked at a 390-pixel viewport. Two additional integration tests now exercise the real episode function against a fake game, checking captured decisions, unchanged results and cleanup on success/failure. Real-game attachment awaits deployment at a safe trainer restart.
+The current schema-3 policy has 632,649 parameters. Current validation records
+are [training improvements](../notes/training-improvements.md) and
+[the learning audit](../notes/learning-audit.md): Python checks, 12-step recurrent
+observer parity, graph tests, and scoped live evidence. Historical timings for
+the smaller schema-2 model are not performance measurements of this model.
 
 ## Current maintenance handoff
 
-Real-game attachment was verified on 2026-11-17: an isolated normal Boston L1
-game and the current checkpoint produced 15 actual planning frames. The browser
-displayed all 32 inputs and the sampled action/history through SSE; received data
-matched the saved worker frame exactly. Checkpoint hash was unchanged and both
-test processes were stopped. See [the live check record](../notes/visualizer-live-check.md)
-for assertions, evidence, safe repeat instructions and cleanup limits. This proves
-planning-phase attachment, not a complete battle or campaign.
+The [earlier live check record](../notes/visualizer-live-check.md) describes a
+historical 32-input model. The schema-3 attachment evidence is in
+[training improvements](../notes/training-improvements.md); subsequent fresh
+332-label worker checks are recorded in `../notes/tracker.md`. These are scoped
+attachment checks, not proof of complete campaign success. Check fresh frames
+against current worker/game identities when verifying a new deployment.
 
 Current guidance is root `AGENTS.md`, this README and `notes/tracker.md`.
 `PLAN.md` records historical work; `notes/telemetry-plan.md` records the streaming
@@ -133,4 +141,5 @@ probabilities are zero outside the sampled tool row; selected hc is tool*48+cell
 Input and large output layers use compact grids. Select a node or use Inspector
 for its full label/value. Telemetry remains observation-only. Real attachment
 and browser332-input check passed; subsequent grid-layout tests used explicit
-synthetic data, plus the transport/mobile suites. See training-improvements.md.
+synthetic data, plus the transport/mobile suites. See
+[training improvements](../notes/training-improvements.md).
