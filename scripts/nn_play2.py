@@ -100,11 +100,8 @@ def run_episode(args):
     from env_zar import ZAREnv
     try:
         env = ZAREnv(pid)
-        env.ready()                    # to planning (R-loop + pause self-heal)
+        o = env.to_planning()          # R-loop to planning ONLY (net readies)
         env.vi.key_press(0x74, sc=0x3F)  # 8x battle speed (harness, not strat)
-        o = env.obs()
-        if o['zomb'] > 0 or o.get('money') is None:
-            return dict(level=tag, pid=pid, err='not in planning')
         st = {'t': 0.0, 'charges': {'para': 1, 'gas': 1, 'ac130': 3},
               'heli_up': 0.0, 'planning': True, 'spend_frac': 0.0}
         m0 = o['money'] or 0.0

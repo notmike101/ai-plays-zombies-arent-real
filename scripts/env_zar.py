@@ -134,6 +134,25 @@ class ZAREnv:
             prev = o
         return self.obs()
 
+    def to_planning(self, max_r=6):
+        """R-loop back to PLANNING without starting a new battle (v2 episodes:
+        the NET decides when to READY). Menu/dead states raise."""
+        for _ in range(max_r):
+            o = self.obs()
+            if (o['civ'] or 0) > 0 and (o['zomb'] or 0) == 0 \
+                    and o.get('money') is not None:
+                return o
+            if (o['zomb'] or 0) > 0:
+                self.vi.key_press(0x52, sc=19, hold=0.25)
+                time.sleep(4.0)
+                continue
+            time.sleep(3.0)
+        o = self.obs()
+        if (o['civ'] or 0) > 0 and (o['zomb'] or 0) == 0 \
+                and o.get('money') is not None:
+            return o
+        raise ZAREnvError('not planning: %s' % o)
+
 
     # ---------------- actions ----------------
     def cast(self, bar_key, cx, cy):
