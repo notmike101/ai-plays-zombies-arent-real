@@ -11,7 +11,7 @@ dirty policy2/history2 files. Do not modify the installed game or commit DLLs.
   Refuse overwrite/traversal/reparse links/unsupported builds. Copy no user progress
   or identity/log/cache data. Apply calibrated normal/low-graphics settings only to
   new copies. Test temp fixtures and import a relocated source tree.
-- [ ] DLL: pin Rust/target and locked Cargo build; build/test in staging, validate
+- [x] DLL: pin Rust/target and locked Cargo build; build/test in staging, validate
   x64/export contract, record source/compiler/flags/output hash. Verify two clean
   builds match with the current linker. Refuse deployment while owned games run.
   Commit source/toolchain/build instructions only, never generated DLL/PDB/targets.
@@ -39,3 +39,8 @@ dirty policy2/history2 files. Do not modify the installed game or commit DLLs.
   refused it. Local config uses compatible game-copies/inst4 as read-only asset
   source instead. New copies still exclude all progress/identity/runtime data.
   Other game builds require separate native-offset validation, not a bypass.
+- Configured prepare-game created fresh inst10 successfully. Source inst4 untouched.
+- DLL Rust1.96.0/MSVC linker14.44: one ABI unit test and two Python build tests pass;
+  two independent clean builds matched SHA256
+  2d2f160e53c26c521984727c922e7629bd6718e5010642d23f9db49bdcd8d848.
+  Deployed only while no owned game was running; outputs remain ignored.

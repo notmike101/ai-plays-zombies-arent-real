@@ -28,6 +28,9 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   to ignored zar.local.toml and configure the read-only source game installation.
   `local.ps1 prepare-game --copy instN` creates a NEW owned copy; never overwrites
   one or imports user progress. Native build/checkpoint prerequisites still apply.
+- Build the input DLL with `local.ps1 build-input` while owned games are stopped.
+  Preserve rust-toolchain.toml/Cargo.lock and protocol3. Two clean builds must match;
+  generated DLL/PDB/build manifests stay ignored. See scripts/hookdll/README.md.
 
 ## Process rules (every turn)
 - TRACKER: live state, evidence, PIDs and next steps live in `notes/tracker.md`.

@@ -322,7 +322,7 @@ def stop_process(pid, created, role):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['status', 'check', 'prepare-game', 'train', 'train-stop',
+    parser.add_argument('command', choices=['status', 'check', 'prepare-game', 'build-input', 'train', 'train-stop',
                                            'visualizer-start', 'visualizer-stop'])
     parser.add_argument('--copy', default='inst1')
     parser.add_argument('--rounds', type=int, default=6)
@@ -344,6 +344,9 @@ def main():
             from prepare_game import prepare_copy
             from project import load_config, config_path
             result = dict(ok=True, copy=str(prepare_copy(config_path(load_config(), 'game', 'install_dir'), args.copy)))
+        elif args.command == 'build-input':
+            from build_hook import build
+            result = dict(ok=True, build=build())
         elif args.command == 'train':
             result = train(args)
         elif args.command == 'visualizer-start':
