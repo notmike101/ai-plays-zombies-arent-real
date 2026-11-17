@@ -21,10 +21,9 @@ class Feed:
         self.directory = Path(directory)
         self.lock = threading.Lock()
         self.active = {False: None, True: None}
-        self.cache = {}
 
     def _read(self, now):
-        frames, seen = [], set()
+        frames = []
         paths = list(self.directory.glob('*.json'))
         # Abandoned crash files are bounded on read; normal observers remove their own files.
         paths.sort(key=lambda p: p.name)
@@ -33,28 +32,20 @@ class Feed:
                 stat = path.stat()
                 if stat.st_size > 2 * 1024 * 1024:
                     continue
-                signature = (stat.st_mtime_ns, stat.st_size)
-                seen.add(path)
-                cached = self.cache.get(path)
-                if cached and cached[0] == signature:
-                    data = cached[1]
-                else:
-                    data = json.loads(path.read_text(encoding='utf-8'),
-                                      parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
-                    if (not isinstance(data, dict) or data.get('schema') != 1 or
-                            not isinstance(data.get('stream'), str) or
-                            not isinstance(data.get('timestamp'), (int, float)) or
-                            not math.isfinite(data['timestamp'])):
-                        continue
-                    if 'error' not in data and not all(isinstance(data.get(key), dict)
-                                                       for key in ('graph', 'values', 'probabilities', 'selected')):
-                        continue
-                    self.cache[path] = (signature, data)
+                data = json.loads(path.read_text(encoding='utf-8'),
+                                  parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
+                if (not isinstance(data, dict) or data.get('schema') != 1 or
+                        not isinstance(data.get('stream'), str) or
+                        not isinstance(data.get('timestamp'), (int, float)) or
+                        not math.isfinite(data['timestamp'])):
+                    continue
+                if 'error' not in data and not all(isinstance(data.get(key), dict)
+                                                   for key in ('graph', 'values', 'probabilities', 'selected')):
+                    continue
                 if -5 <= now - data['timestamp'] <= 120:
                     frames.append(data)
             except (OSError, ValueError, TypeError):
                 continue
-        self.cache = {p: value for p, value in self.cache.items() if p in seen}
         return frames
 
     def state(self, *, now=None, preview=False, stream=None, revision=None):
