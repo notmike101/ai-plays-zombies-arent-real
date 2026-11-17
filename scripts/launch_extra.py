@@ -82,6 +82,7 @@ def tile(pid, x, y):
 
 def nav(pid):
     env = ZAREnv(pid)          # self-injects once per boot (sentinel)
+    vi = env.vi
     # L1-pinned (MAP-COMPLETE campaign screen) chain from launch_boards.py:
     # PlayNow -> ENTER -> CAMPAIGN -> NORMAL(705,765) -> START OVER(705,926)
     for step, (x, y), k in [(0, (627, 821), 4), (1, (0, 0), 0),

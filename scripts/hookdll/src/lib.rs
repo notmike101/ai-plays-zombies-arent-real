@@ -37,7 +37,10 @@ struct Shared {
     toggles: u32,
     heartbeat: u32,
     patch_count: u32,
-    _pad: [u32; 46],
+    _pad0: u32,
+    raw_hwnd: u64,
+    raw_sent: u32,
+    _pad: [u32; 44],
 }
 
 static mut SHARED: *mut Shared = core::ptr::null_mut();
@@ -45,6 +48,28 @@ static mut ORIG_CURSOR_POS: usize = 0;
 static mut ORIG_ASYNC_KEY: usize = 0;
 static mut ORIG_KEY_STATE: usize = 0;
 static mut ORIG_KB_STATE: usize = 0;
+static mut ORIG_RAW: usize = 0;
+// 64-slot ring of synthesized RAWINPUT records (x64 layout, 40 bytes each).
+static mut RING: [u8; 40 * 64] = [0u8; 40 * 64];
+static mut RING_IDX: u32 = 0;
+static mut LAST_X: i32 = 0;
+static mut LAST_Y: i32 = 0;
+static mut PREV_BTN: u32 = 0;
+static mut HAVE_LAST: u32 = 0;
+static mut PREV_ENAB: u32 = 0;
+
+#[link(name = "user32")]
+extern "system" {
+    fn PostMessageW(hwnd: *mut c_void, msg: u32, wparam: usize, lparam: *const c_void) -> i32;
+}
+
+type PGetRawInputData = unsafe extern "system" fn(
+    hraw: *mut c_void,
+    cmd: u32,
+    data: *mut u8,
+    psize: *mut u32,
+    hdrsize: u32,
+) -> u32;
 
 // --- kernel32 FFI (manual decls, no external crates) --------------------------------
 #[link(name = "kernel32")]
@@ -101,10 +126,105 @@ unsafe fn key_down(s: &Shared, vk: i32) -> bool {
     }
     (s.keys[(vk >> 5) as usize] >> (vk & 31)) & 1 == 1
 }
+// --- raw mouse pump ------------------------------------------------------------------
+// While enabled, every mouse move/button edge observed in the shared section is
+// synthesized into a RAWINPUT record (posted as WM_INPUT=0x00FF to raw_hwnd) and
+// served back by Hook_GetRawInputData below. Real events pass through untouched.
+
+#[inline]
+unsafe fn wput(off: usize, val: u32) {
+    core::ptr::write_unaligned(RING.as_mut_ptr().add(off) as *mut u32, val);
+}
+
+unsafe fn emit(hwnd: u64, flags: u16, bflags: u16, dx: i32, dy: i32) {
+    RING_IDX = (RING_IDX + 1) & 63;
+    let off = (RING_IDX as usize) * 40;
+    wput(off, 0);            // dwType = RIM_TYPEMOUSE
+    wput(off + 4, 40);       // dwSize
+    core::ptr::write_unaligned(RING.as_mut_ptr().add(off + 8) as *mut u64, hwnd);
+    core::ptr::write_unaligned(RING.as_mut_ptr().add(off + 16) as *mut u16, flags);
+    core::ptr::write_unaligned(RING.as_mut_ptr().add(off + 18) as *mut u16, bflags);
+    wput(off + 20, (bflags & 0x0F) as u32); // RawButtons (pressed state nibble)
+    wput(off + 24, dx as u32);
+    wput(off + 28, dy as u32);
+    wput(off + 32, 0);       // ExtraInfo
+    wput(off + 36, 0);       // Size
+    PostMessageW(hwnd as *mut c_void, 0x00FF, 0, RING.as_ptr().add(off) as *const c_void);
+    if !SHARED.is_null() {
+        (*SHARED).raw_sent = (*SHARED).raw_sent.wrapping_add(1);
+    }
+}
+
+unsafe fn pump(s: &Shared) {
+    let en = s.enabled;
+    if en != 0 && PREV_ENAB == 0 {
+        HAVE_LAST = 0;
+    }
+    PREV_ENAB = en;
+    if en == 0 || s.raw_hwnd == 0 {
+        return;
+    }
+    if HAVE_LAST == 0 {
+        LAST_X = s.cursor_x;
+        LAST_Y = s.cursor_y;
+        PREV_BTN = s.buttons;
+        HAVE_LAST = 1;
+        return;
+    }
+    let dx = s.cursor_x - LAST_X;
+    let dy = s.cursor_y - LAST_Y;
+    if dx != 0 || dy != 0 {
+        emit(s.raw_hwnd, 0, 0, dx, dy);
+        LAST_X = s.cursor_x;
+        LAST_Y = s.cursor_y;
+    }
+    let btn = s.buttons;
+    let ch = btn ^ PREV_BTN;
+    if ch & 1 != 0 {
+        emit(s.raw_hwnd, 0, if btn & 1 != 0 { 0x0001 } else { 0x0002 }, 0, 0);
+    }
+    if ch & 2 != 0 {
+        emit(s.raw_hwnd, 0, if btn & 2 != 0 { 0x0004 } else { 0x0008 }, 0, 0);
+    }
+    if ch & 4 != 0 {
+        emit(s.raw_hwnd, 0, if btn & 4 != 0 { 0x0010 } else { 0x0020 }, 0, 0);
+    }
+    PREV_BTN = btn;
+}
+
+unsafe extern "system" fn Hook_GetRawInputData(
+    hraw: *mut c_void,
+    cmd: u32,
+    data: *mut u8,
+    psize: *mut u32,
+    hdrsize: u32,
+) -> u32 {
+    let base = RING.as_ptr() as usize;
+    let h = hraw as usize;
+    if !psize.is_null() && h >= base && h < base + 40 * 64 && (h - base) % 40 == 0 {
+        let need: u32 = if cmd == 0 { 40 } else if cmd == 1 { 16 } else { 0 };
+        if need == 0 {
+            return 0xFFFF_FFFF;
+        }
+        if data.is_null() || *psize < need {
+            *psize = need;
+            return if data.is_null() { need } else { 0xFFFF_FFFF };
+        }
+        core::ptr::copy_nonoverlapping(h as *const u8, data, need as usize);
+        *psize = need;
+        return need;
+    }
+    let orig: PGetRawInputData = core::mem::transmute(ORIG_RAW);
+    orig(hraw, cmd, data, psize, hdrsize)
+}
+
 
 // --- hooks ---------------------------------------------------------------------------
 
 unsafe extern "system" fn Hook_GetCursorPos(lpPoint: *mut POINT) -> i32 {
+    if let Some(s) = shared() {
+        pump(&s);
+    }
     match shared() {
         Some(s) if s.enabled != 0 && !lpPoint.is_null() => {
             (*lpPoint).x = s.cursor_x;
@@ -119,6 +239,9 @@ unsafe extern "system" fn Hook_GetCursorPos(lpPoint: *mut POINT) -> i32 {
 }
 
 unsafe extern "system" fn Hook_GetAsyncKeyState(vKey: i32) -> i16 {
+    if let Some(s) = shared() {
+        pump(&s);
+    }
     match shared() {
         Some(s) if s.enabled != 0 => {
             if key_down(s, vKey) {
@@ -215,17 +338,19 @@ unsafe fn patch_iat(base: *mut c_void) -> usize {
     }
     let import_dir = base.byte_add(import_dir_rva);
 
-    const TARGETS: [&[u8]; 4] = [
+    const TARGETS: [&[u8]; 5] = [
         b"GetCursorPos\0",
         b"GetAsyncKeyState\0",
         b"GetKeyState\0",
         b"GetKeyboardState\0",
+        b"GetRawInputData\0",
     ];
-    let hook_addrs: [usize; 4] = [
+    let hook_addrs: [usize; 5] = [
         Hook_GetCursorPos as *const () as usize,
         Hook_GetAsyncKeyState as *const () as usize,
         Hook_GetKeyState as *const () as usize,
         Hook_GetKeyboardState as *const () as usize,
+        Hook_GetRawInputData as *const () as usize,
     ];
 
     let mut patched = 0usize;
@@ -259,7 +384,7 @@ unsafe fn patch_iat(base: *mut c_void) -> usize {
             }
             if ord_name & 0x8000_0000_0000_0000 == 0 {
                 let fname_ptr = base.byte_add((ord_name as usize) + 2) as *const u8;
-                for t in 0..4 {
+                for t in 0..5 {
                     if cstr_eq(fname_ptr, TARGETS[t].as_ptr()) {
                         let entry = iat.byte_add(8 * j);
                         let old = core::ptr::read_volatile(entry) as usize;
@@ -272,6 +397,7 @@ unsafe fn patch_iat(base: *mut c_void) -> usize {
                                     1 => ORIG_ASYNC_KEY = old,
                                     2 => ORIG_KEY_STATE = old,
                                     3 => ORIG_KB_STATE = old,
+                                    4 => ORIG_RAW = old,
                                     _ => {}
                                 }
                                 core::ptr::write_volatile(entry, hook_addrs[t] as u64);

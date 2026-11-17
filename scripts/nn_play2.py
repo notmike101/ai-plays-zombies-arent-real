@@ -16,6 +16,7 @@ import math
 import multiprocessing as mp
 import os
 import sys
+import re
 import time
 
 import numpy as np
@@ -36,10 +37,13 @@ except ImportError:
 MODEL = os.path.join(ROOT, 'sessions', 'nn_policy2.pt')
 HIST = os.path.join(ROOT, 'analysis', 'nn_hist2.jsonl')
 NOBS, HID = 32, 128
-NU, NC = 20, 48
+NU, NC = 34, 48
 TOOLS = ['wait', 'ready', 'garrison', 'mortar', 'napalm', 'turret', 'mine',
          'c4', 'gas_mortar', 'upgrade_unit', 'zone_rect', 'heli', 'cta',
-         'rally', 'medevac', 'wall', 'gate', 'corridor', 'hold', 'seek']
+         'rally', 'medevac', 'wall', 'gate', 'corridor', 'hold', 'seek',
+         'bomber', 'stungas', 'firebomb', 'apc', 'demolition', 'bus',
+         'missile', 'dozer', 'cluster', 'tank', 'ac130', 'cure', 'nuke',
+         'police_drop']
 # planning DEPLOY/BUILD hotkeys READ OFF HUD screenshot probe 2026-11-16r:
 # [1] Garrison $18-270 | [2] Mortar $75 | [3] Napalm $100 | [4] Turret $90 |
 # [5] Mine Field $15 | [6] C4 $500 | [T] Gas Mortar $90 | [Q] Corridor
@@ -50,17 +54,25 @@ U_HOTKEY = {2: (0x31, 2), 3: (0x32, 3), 4: (0x33, 4), 5: (0x34, 5),
             15: (0x5A, 44), 16: (0x47, 46), 17: (0x51, 16), 18: (0x45, 18)}
 
 
-# KEYBIND CONTRACT (user directive 2026-11-16s): battle bar slots are bound
-# BY THE RUN LOADOUT (SP picks rebind keys 1-5). These entries are valid ONLY
-# for the pinned WIN-board kit (0/2 SP spent): key1 = heli (redeployable),
-# 2 = CTA x2, 3 = Rally x3, 4 = MEDEVAC x4, 5 = Seek x1 (it17 evidence).
-# ANY loadout change: read the live battle HUD bar screenshot, update
-# BATTLE_U + st['charges'] + TOOLS battle names in the SAME change — a stale
-# binding is a silent no-op key press. See AGENTS.md 'keybind contract'.
-BATTLE_U = {11: ('1', 'heli', 1), 12: ('2', 'cta', 2), 13: ('3', 'rally', 3),
-            14: ('4', 'medevac', 4), 19: ('5', 'seek', 1)}
+# BATTLE DECK (2026-11-17, replaces the pinned-BATTLE_U keybind contract):
+# per-board deck TRUTH comes from the F6 dump: [economy] echoes
+# 'loadout <Name> = lvl' (what SP actually bought), [counts] echoes the
+# balance rules (*_unlock_seconds, *_arrival_seconds,
+# ability_charges_per_level = [.Heli = 1, ...]). Bar slots bind to
+# bind_slot1..7 (settings.ini) in battle_order.txt order (DECK_ORDER).
+# Old stale binding = silent no-op key press; now bindings are READ, never
+# assumed. charges = level x per_level (it17 kit verified: cta2 rally3
+# medevac4 seek1).
+ABILITY_U = {'Police': 33, 'Bomber': 20, 'Heli': 11, 'Stungas': 21,
+             'Firebomb': 22, 'CallArms': 12, 'APC': 23, 'Demolition': 24,
+             'Rally': 13, 'SeekDestroy': 19, 'Bus': 25, 'Missile': 26,
+             'Medevac': 14, 'Dozer': 27, 'Cluster': 28, 'Tank': 29,
+             'AC130': 30, 'Cure': 31, 'Nuke': 32}
+DECK_ORDER = ['Police', 'Bomber', 'Heli', 'Stungas', 'Firebomb', 'CallArms',
+              'APC', 'Demolition', 'Rally', 'SeekDestroy', 'Bus', 'Missile',
+              'Medevac', 'Dozer', 'Cluster', 'Tank', 'AC130', 'Cure', 'Nuke']
+U2ABILITY = {v: k for k, v in ABILITY_U.items()}
 PLANNING_U = list(range(11)) + [15, 16, 17, 18]
-BATTLE_U_ALLOWED = [0, 11, 12, 13, 14, 19]
 XF = [0.11 + 0.77 * i / 7 for i in range(8)]   # grid as FRACTIONS of the
 YF = [0.16 + 0.44 * j / 5 for j in range(6)]   # client window: the game
 # resizes itself after tiling (probe: client 1920x1200 despite SetWindowPos),
@@ -93,15 +105,24 @@ class PolicyNet2(nn.Module):
         return self.hu(out), self.hc(out), self.val(out).squeeze(-1), h
 
 
+def slot_castable_frac(st, s):
+    """Deck-slot availability for obs: fraction of max charges still
+    castable; a flying heli counts as one free re-aim."""
+    add = 1.0 if (s['name'] == 'Heli' and s['alive']) else 0.0
+    return min(s['charges'] + add, s['max_charges']) / \
+        max(s['max_charges'], 1.0)
+
+
 def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
     g = lambda v: math.log1p(max(v or 0, 0))
-    ch = st['charges']
     money = o['money'] or 0.0
+    deck = st.get('deck') or []
+    slots = [slot_castable_frac(st, s) for s in deck[:4]]
+    slots += [0.0] * (4 - len(slots))
     return [g(o['civ']), g(o['zomb']), g(o['converting']), g(o['corpses']),
             g(o['police']), money / 1000.0, min(st['t'] / 300.0, 2),
             frac, max(-3, min(3, trend / 1000.0)), max(-1, min(1, slope)),
-            ch['cta'] / 2.0, float(st['heli_up']), ch['rally'] / 3.0,
-            (ch['medevac'] + 4 * ch['seek']) / 8.0,
+            slots[0], slots[1], slots[2], slots[3],
             *[v / s for bv in (blobs or [])[:4]
               for v, s in ((bv[0], 1.0), (bv[1], 1.0), (bv[2], 6000.0))],
             *([-1.0] * (12 - 3 * min(len(blobs or []), 4))),
@@ -111,6 +132,19 @@ def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
             min(st['spend_frac'], 1.0)]
 
 
+def slot_castable(st, s):
+    """Battle mask rule: sim clock past unlock, not awaiting arrival, and
+    either charges left or (Heli) one already flying = free re-aim."""
+    t = st['sim']
+    if t + 0.5 < s['unlock']:
+        return False
+    if s['pending'] and t < s['ready_t']:
+        return False
+    if s['charges'] > 0:
+        return True
+    return s['name'] == 'Heli' and s['alive']
+
+
 def masks_for(st):
     mu = np.zeros(NU, dtype=np.float32)
     if st['planning']:
@@ -118,28 +152,143 @@ def masks_for(st):
             mu[u] = 1
     else:
         mu[0] = 1
-        for u in BATTLE_U:
-            key, name, _ = BATTLE_U[u]
-            avail = st['heli_up'] if name == 'heli' else st['charges'][name]
-            if avail > 0:
+        for s in (st.get('deck') or []):
+            u = ABILITY_U.get(s['name'])
+            if u is not None and slot_castable(st, s):
                 mu[u] = 1
     return mu, np.ones(NC, dtype=np.float32)
 
 
 def ready_once(env):
-    """START single SPACE; 2nd SPACE only if a confirm dialog actually
-    blocks (double-SPACE pauses the battle = wedge). Verify tick."""
+    """START single SPACE; VERIFY phase='playing' via DUMP (memory counters
+    lie on lost screens). SPACE again only while a dialog/pause blocks."""
     env.vi.key_press(0x20, sc=57)
     time.sleep(3.0)
-    zo = env.obs()
-    if (zo['zomb'] or 0) == 0:
-        env.vi.key_press(0x20, sc=57)
-        time.sleep(3.0)
-    for _ in range(4):
-        zo = env.obs()
-        if (zo['zomb'] or 0) > 0:
-            break
+    for _ in range(6):
+        d = env.dump()
+        if d:
+            ph = d['where'].get('phase')
+            if ph == 'playing':
+                if d['clock'].get('paused') == 'true':
+                    env.vi.key_press(0x20, sc=57)   # stray pause
+                return d
+            if ph == 'planning':
+                env.vi.key_press(0x20, sc=57)      # ready_short warning YES
+                time.sleep(2.5)
+                continue
+        else:
+            env.vi.key_press(0x20, sc=57)          # dialog blocks: YES
         time.sleep(2.0)
+    return None
+
+
+_CPL_RE = re.compile(r'\.([A-Za-z]+)\s*=\s*([\d.]+)')
+
+
+def _rule(counts, name, suffix):
+    """Look up '<key><suffix>' in the dumped rules echo trying the naming
+    variants (SeekDestroy -> seek_destroy_*, AC130 -> ac130_*)."""
+    snake = re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
+    for k in (snake, name.lower(), snake.replace('_', '')):
+        v = counts.get(k + suffix)
+        if v is not None:
+            try:
+                return float(v)
+            except ValueError:
+                pass
+    return 0.0
+
+
+def load_bind_keys(env):
+    """Battle bar keys READ from this copy's settings.ini (bind_slot1..7:
+    '_1' -> '1', 'T' -> 'T'); never assumed (keybind contract)."""
+    with open(os.path.join(env.copy_dir(), 'steam_cloud', 'settings.ini'),
+              encoding='utf-8', errors='ignore') as fh:
+        txt = fh.read()
+    keys = []
+    for i in range(1, 8):
+        m = re.search(r'^bind_slot%d\s*=\s*(\S+)' % i, txt, re.M)
+        if m:
+            keys.append(m.group(1)[-1])
+    return keys
+
+
+def _slot(name, lvl, pl, counts, keys, i):
+    mx = max(1.0, lvl * float(pl.get(name, 1.0)))
+    return {'name': name, 'lvl': lvl, 'max_charges': mx, 'charges': mx,
+            'unlock': _rule(counts, name, '_unlock_seconds'),
+            'arrival': _rule(counts, name, '_arrival_seconds'),
+            'pending': False, 'ready_t': 0.0, 'alive': False,
+            'key': keys[i] if i < len(keys) else None}
+
+
+def build_deck(dump, keys):
+    """Deck = what SP actually BOUGHT: only the [economy] 'loadout <Name> =
+    lvl' echo proves a purchase. The kit file (resume_loadout) is NOT truth:
+    kit probe 2026-11-17 on an SP-starved L1 board consumed the file and
+    bought ZERO (economy echo empty), while ability_charges shows unowned
+    defaults (.Police = 1) — either would fabricate casts. Charges + timing
+    from the [counts] rules echo; bar keys bind in deck (battle_order)
+    order; refresh_battle_state re-syncs charges from the live dump."""
+    if not dump:
+        return []
+    econ = dump.get('economy', {})
+    counts = dump.get('counts', {})
+    pl = dict(_CPL_RE.findall(counts.get('ability_charges_per_level', '')))
+    bought = {}
+    for k, v in econ.items():
+        if k.startswith('loadout '):
+            try:
+                lv = int(float(v))
+            except ValueError:
+                continue
+            if lv > 0:
+                bought[k[len('loadout '):].strip()] = lv
+    deck = []
+    for name in DECK_ORDER:
+        if name in bought and name in ABILITY_U:
+            deck.append(_slot(name, bought[name], pl, counts, keys,
+                              len(deck)))
+    return deck
+
+
+_AB_RE = re.compile(r'\.([A-Za-z0-9]+)\s*=\s*([\d.]+)')
+
+
+def refresh_battle_state(st, dump):
+    """Re-sync sim clock, charges, cooldowns + heli liveness from a periodic
+    battle dump: [counts] 'ability_charges'/'ability_cooldown' bracket lines
+    are the GAME'S OWN deck truth (drift-corrects the sim);
+    counts.helicopters is the only heli truth (the optimistic post-arrival
+    'alive' gets cleared here once the aircraft left)."""
+    if not dump:
+        return
+    cl = dump.get('clock', {})
+    try:
+        st['sim'] = float(cl.get('sim_time', st['sim']))
+        st['mult'] = float(cl.get('speed_mult', st['mult']) or 1)
+    except (TypeError, ValueError):
+        pass
+    counts = dump.get('counts', {})
+    ch = dict(_AB_RE.findall(counts.get('ability_charges', '')))
+    cd = dict(_AB_RE.findall(counts.get('ability_cooldown', '')))
+    try:
+        heli_n = int(float(counts.get('helicopters', 0)))
+    except (TypeError, ValueError):
+        heli_n = 0
+    for s in st.get('deck') or []:
+        if s['name'] in ch:
+            s['charges'] = min(float(ch[s['name']]), s['max_charges'])
+        if s['name'] != 'Heli' and float(cd.get(s['name'], 0)) > 0:
+            # game-side cooldown: exact until-time (heli ignores it: a
+            # flying heli is RE-AIMED free, it17-verified)
+            s['ready_t'] = (st['sim'] + float(cd[s['name']])
+                            if not s['pending'] else s['ready_t'])
+            s['pending'] = True
+        if s['name'] == 'Heli':
+            s['alive'] = heli_n > 0
+            if heli_n > 0:
+                s['pending'] = False
 
 def q_saved(pid, dur):
     """Game's own saved_pct from its battle telemetry (queue.jsonl); the
@@ -188,11 +337,12 @@ def run_episode(args):
         env = ZAREnv(pid)
         cell_of = lambda c: cell_of_px(c, env.cw, env.ch)
         o = env.to_planning()          # R-loop to planning ONLY (net readies)
+        kit = {0: 1}                   # Police lvl1 (1 SP — cheapest pick;
+        env.set_loadout(kit)           # the econ echo verifies the buy)
+        bind_keys = load_bind_keys(env)
         env.vi.key_press(0x74, sc=0x3F)  # 8x battle speed (harness, not strat)
-        st = {'t': 0.0, 'charges': {'cta': 2, 'rally': 3, 'medevac': 4,
-                                    'seek': 1},
-              'heli_up': 0.0, 'planning': True, 'spend_frac': 0.0,
-              'frz': 0}
+        st = {'t': 0.0, 'planning': True, 'spend_frac': 0.0, 'frz': 0,
+              'deck': [], 'sim': 0.0, 'mult': 8.0, 'last_dump': 0.0}
         m0 = o['money'] or 0.0
         civ0 = max(o['civ'] or 1, 1)
         net = None
@@ -276,8 +426,12 @@ def run_episode(args):
             m_before = o['money']
             did = False
             if u == 1 and st['planning']:
-                ready_once(env)
+                d = ready_once(env)
                 st['planning'] = False
+                st['deck'] = build_deck(d, bind_keys)
+                print(f"DECK {pid}: " + (', '.join(
+                    f"{s['name']}x{int(s['charges'])}@{s['key']}u{int(s['unlock'])}"
+                    for s in st['deck']) or 'EMPTY'), flush=True)
                 t0 = time.time()
                 step_at = time.time()
                 prev_o = env.obs()
@@ -310,16 +464,19 @@ def run_episode(args):
                 env.vi.key_press(0x0D, sc=28)  # CLOSE loop: ENTER or no zone
                 time.sleep(0.8)
                 did = True        # fee charges on close; receipt gates bonus
-            elif not st['planning'] and u in BATTLE_U:
-                key, name, _ = BATTLE_U[u]
-                cx, cy = cell_of(c)
-                if name == 'heli':
-                    env.cast(key, cx, cy)
-                    st['heli_up'] = 1.0
-                elif st['charges'][name] > 0:
-                    env.cast(key, cx, cy)
-                    st['charges'][name] -= 1
-                did = True
+            elif not st['planning'] and u in U2ABILITY:
+                s = next((x for x in st['deck']
+                          if x['name'] == U2ABILITY[u]), None)
+                if s and s['key'] and slot_castable(st, s):
+                    was_alive = s['alive']
+                    cx, cy = cell_of(c)
+                    env.cast(s['key'], cx, cy)
+                    if not (s['name'] == 'Heli' and was_alive):
+                        s['charges'] -= 1.0
+                        if s['arrival'] > 0:
+                            s['pending'] = True
+                            s['ready_t'] = st['sim'] + s['arrival']
+                    did = True
             m_after = env.obs()['money'] if did and st['planning'] else None
             if m_after is not None and m_before is not None:
                 succ = 1.0 if m_after < m_before - 0.5 else 0.0
@@ -329,7 +486,17 @@ def run_episode(args):
             if not st['planning']:
                 r = 8.0 * ((o['civ'] or 0) - (prev_o['civ'] or 0)) / civ0
                 r += min(kills, 20000) * 2e-6
-            if did and u in BATTLE_U:
+            if not st['planning']:
+                st['sim'] += dt * st['mult']
+                for s in st['deck']:
+                    if s['pending'] and st['sim'] >= s['ready_t']:
+                        s['pending'] = False
+                        if s['name'] == 'Heli':
+                            s['alive'] = True   # optimistic; dump verifies
+                if time.time() - st['last_dump'] > 20:
+                    st['last_dump'] = time.time()
+                    refresh_battle_state(st, env.dump())
+            if did and u in U2ABILITY:
                 # it17 winning lever shaping: a cast placed INS the
                 # detected horde outearns a blind cast (heli redeploys).
                 fx, fy = cell_of(c)                      # compare in client
@@ -354,9 +521,13 @@ def run_episode(args):
             # ---------------- termination ----------------
             if st['planning']:
                 if step >= PLAN_STEPS:
-                    ready_once(env)
+                    d = ready_once(env)
                     st['planning'] = False
+                    st['deck'] = build_deck(d, bind_keys)
                     t0 = time.time()
+                    print(f"DECK {pid}: " + (', '.join(
+                        f"{s['name']}x{int(s['charges'])}@{s['key']}u{int(s['unlock'])}"
+                        for s in st['deck']) or 'EMPTY'), flush=True)
                     step_at = time.time()
                     prev_o = env.obs()
                     prev_t = time.time()
@@ -386,7 +557,8 @@ def run_episode(args):
             if o['zomb'] == 0 and bt > 25 and fought:
                 win = True
                 break
-            if frac <= 0.02 and fought and bt > 60:
+            if fought and (frac <= 0.02 and bt > 60 or
+                           (o['civ'] or 0) == 0 and bt > 6):
                 break
             if bt > BATTLE_T:
                 break

@@ -76,18 +76,71 @@ class ZAREnv:
                     converting=self._gv('converting'), corpses=self._gv('corpses'),
                     police=self._gv('police'), money=self.money())
 
+    # ---------------- F6 state-dump channel ----------------
+    def copy_dir(self):
+        import psutil
+        return os.path.dirname(psutil.Process(self.pid).exe())
+
+    def dump_parse(text):
+        out = {}
+        sec = out
+        for ln in text.splitlines():
+            s = ln.strip()
+            if not s:
+                continue
+            if s.startswith('[') and s.endswith(']') and ' ' not in s:
+                sec = out.setdefault(s[1:-1], {})
+                continue
+            if '=' in s:
+                k, v = s.split('=', 1)
+                sec[k.strip()] = v.strip()
+        return out
+
+    def dump(self, wait_s=3.5):
+        """Press F6, wait for the NEW debug_dumps txt, parse sections.
+        Returns None when the writer never ran (menu/title/workshop)."""
+        d = os.path.join(self.copy_dir(), 'debug_dumps')
+        before = set(os.listdir(d)) if os.path.isdir(d) else set()
+        self.vi.key_press(0x75, sc=64, hold=0.1)
+        t0 = time.time()
+        while time.time() - t0 < wait_s:
+            time.sleep(0.35)
+            if not os.path.isdir(d):
+                continue
+            new = sorted(f for f in set(os.listdir(d)) - before
+                         if f.endswith('.txt'))
+            if new:
+                p = os.path.join(d, new[-1])
+                time.sleep(0.25)          # let the writer flush
+                with open(p, encoding='utf-8', errors='ignore') as fh:
+                    txt = fh.read()
+                return ZAREnv.dump_parse(txt)
+        return None
+
+    def phase_now(self):
+        """DUMP truth for game phase: memory counters can look 'planning'
+        while the LOST screen still owns input (verified 2026-11-17)."""
+        d = self.dump()
+        if not d:
+            return None
+        return d.get('where', {}).get('phase')
+
     # ---------------- episode setup ----------------
-    @staticmethod
-    def set_loadout(idx_levels):
-        """Edit resume_loadout ints (idx15..21 = battle keys 1..6,T; value = level).
-        Game assigns default abilities by unlock order when a level appears."""
-        s = open(PROGRESS).read()
+    def set_loadout(self, idx_levels):
+        """Edit resume_loadout ints (19 per-ability levels in battle_order
+        file order). The game reads the file at READY and greedily buys the
+        list up to the board's SP; the deck IS CONSUMED (SP spent) when the
+        battle starts -> re-set every episode before READY (probe
+        2026-11-17). Instance-bound: each copy has its own save."""
+        path = os.path.join(self.copy_dir(), 'steam_cloud', 'progress',
+                            'Boston__MA.progress')
+        s = open(path).read()
         line = [l for l in s.split('\n') if l.startswith('resume_loadout')][0]
         tok = line.split('=')[1].split()
         for i, v in idx_levels.items():
             tok[i] = str(v)
         new = 'resume_loadout = ' + ' '.join(tok)
-        open(PROGRESS, 'w').write(s.replace(line, new))
+        open(path, 'w').write(s.replace(line, new))
         return new
 
     @staticmethod
@@ -99,31 +152,29 @@ class ZAREnv:
         return int(out.split('RECOVERED pid ')[1].split()[0])
 
     def ready(self):
-        """READY + YES; self-heal: recover to planning if needed, verify tick,
-        press SPACE if the sim is frozen (stray-SPACE pause)."""
-        for _ in range(4):
-            o = self.obs()
-            if o['zomb'] > 0:            # any live/lost battle: R-restart to
-                for _y in range(4):      # planning ("Restart this level?
-                    self.vi.key_press(0x52, sc=19, hold=0.25)
-                    time.sleep(4.0)
-                    o2 = self.obs()
-                    # planning: horde gone AND money visible (menu has none)
-                    if o2['zomb'] == 0 and (o2['civ'] or 0) > 0 \
-                            and o2.get('money') is not None:
-                        break
-                continue
-            if o['zomb'] > 0:
-                break                            # battle already underway
-            self.vi.key_press(0x20, sc=57); time.sleep(1.2)   # READY
-            self.vi.key_press(0x20, sc=57); time.sleep(3.0)   # dialog SPACE=YES
-            if self.obs()['zomb'] > 0:
+        """READY + YES; DUMP phase is truth: planning -> SPACE(S) until
+        phase becomes 'playing' (BATTLE phase's phase string); lost screen
+        -> R-loop first. Self-heal stray-SPACE pause."""
+        if self.phase_now() == 'lost':
+            self.to_planning()
+        for _ in range(5):
+            p = self.phase_now()
+            if p == 'playing':
                 break
-        prev = self.obs(); frozen = 0
+            if p == 'planning':
+                self.vi.key_press(0x20, sc=57, hold=0.25)
+                time.sleep(2.5)
+                self.vi.key_press(0x20, sc=57, hold=0.25)
+                time.sleep(3.0)
+            else:
+                self.to_planning()
+        prev = self.obs()
+        frozen = 0
         for _ in range(6):
             time.sleep(2.2)
             o = self.obs()
-            moved = (o['zomb'] != prev['zomb']) or (o['civ'] != prev['civ']) or (o['converting'] != prev['converting'])
+            moved = (o['zomb'] != prev['zomb']) or (o['civ'] != prev['civ']) \
+                or (o['converting'] != prev['converting'])
             if moved or o['zomb'] > 0:
                 return o
             frozen += 1
@@ -134,20 +185,19 @@ class ZAREnv:
             prev = o
         return self.obs()
 
-    def to_planning(self, max_r=10):
-        """R-loop back to PLANNING without starting a new battle (v2 episodes:
-        the NET decides when to READY). Frozen counters = wedge: escalate
-        SPACE (unpause) + ENTER (dismiss OK/loss) before R (verified seq).
-        Menu/dead states raise."""
+    def to_planning(self, max_r=12):
+        """R-loop back to PLANNING (DUMP phase is the only truth).
+        Frozen battle counters = pause-modal wedge: SPACE + ESC + ENTER
+        escalate, then double-R. Menu/dead states raise."""
         last = None
         lost = 0
         for _ in range(max_r):
+            p = self.phase_now()
+            if p == 'planning':
+                return self.obs()
             o = self.obs()
-            if (o['civ'] or 0) > 0 and (o['zomb'] or 0) == 0 \
-                    and o.get('money') is not None:
-                return o
             sig = (o['civ'], o['zomb'])
-            if (o['zomb'] or 0) > 0:
+            if p == 'playing':
                 if sig == last:      # pause-modal: unpause, close menu,
                     self.vi.key_press(0x20, sc=57, hold=0.25)   # dismiss,
                     time.sleep(1.2)  # then double-R below
@@ -159,7 +209,7 @@ class ZAREnv:
                 self.vi.key_press(0x52, sc=19, hold=0.25)
                 time.sleep(2.5)
                 self.vi.key_press(0x52, sc=19, hold=0.25)
-            elif (o['civ'] or 0) == 0 and o.get('money') is None:
+            elif (o['civ'] or 0) == 0 and o.get('money') is None and p is None:
                 if lost < 3:         # retry level = KEEPS placements+budget
                     self.vi.key_press(0x52, sc=19, hold=0.25)
                     time.sleep(2.5)  # (START OVER wipes: last resort only)
@@ -167,13 +217,14 @@ class ZAREnv:
                 else:
                     self.vi.key_press(0x0D, sc=28, hold=0.25)   # START OVER
                 lost += 1
+            else:                    # phase 'lost' (or None with live money):
+                self.vi.key_press(0x52, sc=19, hold=0.25)       # R = dialog
+                time.sleep(2.5)
+                self.vi.key_press(0x52, sc=19, hold=0.25)       # R = YES
             last = sig
-            time.sleep(4.0)
-        o = self.obs()
-        if (o['civ'] or 0) > 0 and (o['zomb'] or 0) == 0 \
-                and o.get('money') is not None:
-            return o
-        raise ZAREnvError('not planning: %s' % o)
+            time.sleep(3.5)
+        raise ZAREnvError('not planning: phase=%s obs=%s' % (self.phase_now(),
+                                                             self.obs()))
 
 
     # ---------------- actions ----------------

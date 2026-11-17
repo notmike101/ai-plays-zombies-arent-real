@@ -26,9 +26,11 @@ def trainer():
 # One unambiguous value per feature slot, independent of make_obs internals.
 PROBE_O = dict(civ=7, zomb=11, converting=13, corpses=17, police=19,
                money=2500.0)
-PROBE_ST = dict(t=450, charges={'cta': 2, 'rally': 3, 'medevac': 4,
-                                'seek': 1}, heli_up=1.0, planning=True,
-                                spend_frac=0.5)
+PROBE_ST = dict(t=450, planning=True, spend_frac=0.5, sim=100.0,
+                deck=[{'name': n, 'charges': c, 'max_charges': c,
+                       'alive': False}
+                      for n, c in (('Police', 20), ('Bomber', 1),
+                                   ('Heli', 1), ('Stungas', 1))])
 # blob x/y arrive from run_episode already normalized to client fractions
 PROBE_BLOBS = [(0.5, 0.5, 3000), (1.0, 1.0, 6000)]
 # EXPECT[i] must equal make_obs(...)[i] AND describe INPUT_LABELS[i].
@@ -40,7 +42,7 @@ EXPECT = [
     0.75,  # civilian fraction
     2.5,   # trend 2500 k/s / 1000 (clip +-3)
     -0.25,  # slope clip +-1
-    1.0, 1.0, 1.0, 1.0,  # cta/2, heli, rally/3, (medevac+4*seek)/8
+    1.0, 1.0, 1.0, 1.0,  # deck slots 1-4 full charges (charges / max)
     0.5, 0.5, 0.5,   # crowd 1: 960/1920, 600/1200, 3000/6000
     1.0, 1.0, 1.0,   # crowd 2: full-scale probe
     -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,  # crowd 3-4 missing sentinel
@@ -52,7 +54,8 @@ EXPECT = [
 # Keyword pins: position i of the probe must belong to a label whose meaning
 # matches — catches same-width reorders that element-wise tests can't see.
 LABEL_PINS = {0: 'civilians', 5: 'money', 6: 'elapsed', 8: 'trend',
-              9: 'slope', 13: 'medevac', 14: 'crowd 1 x', 16: 'crowd 1 weight',
+              9: 'slope', 10: 'deck slot 1', 13: 'deck slot 4',
+              14: 'crowd 1 x', 16: 'crowd 1 weight',
               23: 'crowd 4 x', 26: 'extent', 27: 'previous tool',
               30: 'planning', 31: 'budget'}
 

@@ -37,7 +37,7 @@ INFINITE = 0xFFFFFFFF
 
 MAGIC = 0x5A415249
 OFF = dict(enabled=0x08, cx=0x0C, cy=0x10, buttons=0x14, keys=0x18,
-           toggles=0x38, heartbeat=0x3C, patches=0x40)
+           toggles=0x38, heartbeat=0x3C, patches=0x40, raw_hwnd=0x48, raw_sent=0x50)
 
 VK_LBUTTON, VK_RBUTTON, VK_MBUTTON = 0x01, 0x02, 0x04
 VK_SHIFT, VK_CONTROL, VK_MENU = 0x10, 0x11, 0x12
@@ -257,6 +257,8 @@ class VirtualInput:
         magic = struct.unpack_from("<I", self.buf, 0)[0]
         if magic != MAGIC:
             raise RuntimeError(f"bad magic {magic:#x}")
+        # raw-input pump: where to post WM_INPUT (DLL v2+; older DLLs ignore it)
+        self._w64(OFF["raw_hwnd"], int(self.hwnd))
 
     def _patch_count_hint(self):
         return "unknown"
@@ -267,6 +269,9 @@ class VirtualInput:
 
     def _wi32(self, off, val):
         struct.pack_into("<i", self.buf, off, val)
+
+    def _w64(self, off, val):
+        struct.pack_into("<Q", self.buf, off, val & 0xFFFFFFFFFFFFFFFF)
 
     def _heartbeat(self):
         self._hb = (self._hb + 1) & 0xFFFFFFFF
@@ -287,6 +292,9 @@ class VirtualInput:
 
     def patches(self):
         return struct.unpack_from("<I", self.buf, OFF["patches"])[0]
+
+    def raw_sent(self):
+        return struct.unpack_from("<I", self.buf, OFF["raw_sent"])[0]
 
     # ---- virtual mouse ---------------------------------------------------------------
     def move_to(self, cx, cy, post=True):
