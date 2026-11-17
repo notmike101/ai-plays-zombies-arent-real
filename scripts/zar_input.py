@@ -15,6 +15,7 @@ Usage:
     vi.disable()
 """
 import ctypes, ctypes.wintypes as wt, time, struct, os
+from pathlib import Path
 
 user32 = ctypes.windll.user32
 kernel32 = ctypes.windll.kernel32
@@ -141,9 +142,36 @@ class VirtualInput:
 
     # ---- injection ---------------------------------------------------------------
     def inject(self):
+        try:
+            self.open_section()
+            return
+        except OSError:
+            pass
         if not os.path.exists(DLL_PATH):
             raise FileNotFoundError(DLL_PATH)
+        import psutil
+        sentinel = Path(__file__).resolve().parents[1] / 'sessions' / f'.zarvi_{self.pid}'
+        sentinel.parent.mkdir(exist_ok=True)
+        born = psutil.Process(self.pid).create_time()
+        if sentinel.exists() and sentinel.stat().st_mtime < born:
+            sentinel.unlink()  # PID was reused by a new process.
+        try:
+            with sentinel.open('x') as f:
+                f.write(f'injecting {born}')
+        except FileExistsError:
+            for _ in range(50):
+                time.sleep(0.1)
+                try:
+                    self.open_section()
+                    return
+                except OSError:
+                    pass
+            raise RuntimeError(f'Injection already attempted for {self.pid}; restart this copy')
         # exact FFI types (default c_int truncates 64-bit handles/addresses!)
+        kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+        kernel32.WaitForSingleObject.argtypes = [ctypes.c_void_p, ctypes.c_uint]
+        kernel32.GetExitCodeThread.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong)]
+        kernel32.CreateRemoteThread.restype = ctypes.c_void_p
         kernel32.OpenProcess.restype = ctypes.c_void_p
         kernel32.OpenProcess.argtypes = [ctypes.c_uint, ctypes.c_int, ctypes.c_uint]
         kernel32.GetModuleHandleW.restype = ctypes.c_void_p
@@ -183,7 +211,9 @@ class VirtualInput:
                                                  ctypes.byref(tid))
             if not thread:
                 raise OSError(f"CreateRemoteThread failed: {ctypes.GetLastError()}")
-            kernel32.WaitForSingleObject(thread, INFINITE)
+            if kernel32.WaitForSingleObject(thread, 15000) != 0:
+                kernel32.CloseHandle(thread)
+                raise TimeoutError('LoadLibrary timed out; restart this copy, never reinject')
             exit_code = ctypes.c_ulong(0)
             kernel32.GetExitCodeThread(thread, ctypes.byref(exit_code))
             kernel32.CloseHandle(thread)
@@ -202,13 +232,16 @@ class VirtualInput:
                                                   None, 0, ctypes.byref(tid))
             if not thread2:
                 raise OSError(f"CreateRemoteThread(zar_init) failed: {ctypes.GetLastError()}")
-            kernel32.WaitForSingleObject(thread2, INFINITE)
+            if kernel32.WaitForSingleObject(thread2, 15000) != 0:
+                kernel32.CloseHandle(thread2)
+                raise TimeoutError('zar_init timed out; restart this copy, never reinject')
             kernel32.GetExitCodeThread(thread2, ctypes.byref(exit_code))
             kernel32.CloseHandle(thread2)
             self.init_patches = exit_code.value
         finally:
             kernel32.CloseHandle(hproc)
         self.open_section()
+        sentinel.write_text(f'ready {born}')
 
     def _remote_module_base(self, hproc, modname):
         TH32CS_SNAPMODULE = 0x8
@@ -251,12 +284,14 @@ class VirtualInput:
                           f"(DLL loaded? patches={self._patch_count_hint()})")
         view = kernel32.MapViewOfFile(hmap, 0xF001F, 0, 0, 0x100)
         if not view:
+            kernel32.CloseHandle(ctypes.c_void_p(hmap))
             raise OSError("MapViewOfFile failed")
         self.section = hmap
         self.view = view
         self.buf = (ctypes.c_char * 0x100).from_address(view)
         magic = struct.unpack_from("<I", self.buf, 0)[0]
         if magic != MAGIC:
+            self.close()
             raise RuntimeError(f"bad magic {magic:#x}")
         version = struct.unpack_from("<I", self.buf, 4)[0]
         if version != VERSION:
