@@ -130,6 +130,14 @@ class Controls:
         self.env.vi.combo_press([17],90,sc=44)
         self.frames()
 
+    def panel_action(self, name):
+        from native_hud import read_panel
+        panel = read_panel(self.env)
+        if name not in panel['actions']:
+            raise ZAREnvError('Unavailable native HUD action: '+name)
+        self.env.vi.click(*panel['actions'][name])
+        self.frames()
+
     def planning_roster(self):
         names = {value: key for key, value in UNIT_IDS.items()} | {0: '-'}
         try:

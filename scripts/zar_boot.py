@@ -69,8 +69,12 @@ def click_fraction(vi, x, y):
 
 
 def campaign_in_progress(progress):
-    cleared = len(re.findall(r'^stage [1-5]\s*=\s*(?!none\b)\S+', progress, re.M))
-    return 0 < cleared < 5
+    return 0 < campaign_cleared(progress) < 5
+
+
+def campaign_cleared(progress):
+    return sum(value != 'none' for value in re.findall(
+        r'^stage [1-5][ \t]*=[ \t]*(\S+)', progress, re.M))
 
 
 def menu_points(width, height, in_progress=False, unplayed=False):
@@ -102,7 +106,8 @@ def boot(copy_dir, dest=('campaign', 'stage1')):
     if not re.search(r'^difficulty\s*=\s*normal\s*$', settings, re.M):
         raise ZAREnvError(f'{path.name} must use normal difficulty')
     progress = path / 'steam_cloud/progress/Boston__MA.progress'
-    in_progress = campaign_in_progress(progress.read_text() if progress.exists() else '')
+    progress_text = progress.read_text() if progress.exists() else ''
+    in_progress = campaign_in_progress(progress_text)
     if dest[1] == 'continue' and not in_progress:
         raise ZAREnvError('CONTINUE requires a partially cleared Boston campaign')
     started = time.monotonic()
@@ -128,7 +133,7 @@ def boot(copy_dir, dest=('campaign', 'stage1')):
         rect = ctypes.wintypes.RECT()
         user32.GetClientRect(vi.hwnd, ctypes.byref(rect))
         welcome, campaign, fresh, resume = menu_points(rect.right, rect.bottom, in_progress,
-                                                       unplayed=not progress.exists())
+                                                       unplayed=campaign_cleared(progress_text) == 0)
         step = 'welcome'
         time.sleep(max(0, 75 - (time.monotonic() - started)))
         click_fraction(vi, *welcome)

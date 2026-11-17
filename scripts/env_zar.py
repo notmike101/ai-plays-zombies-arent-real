@@ -22,7 +22,7 @@ from zar_input import VirtualInput
 BASE_RVA = dict(civ=0x650f10, zomb=0x650f18, police=0x650f20, corpses=0x650f28,
                 count=0x650438, converting=0x650f80)
 MONEY_F32_RVAS = (0x6563c0, 0x65d9c0, 0x665ef0)
-BUILD_SHA256 = 'a1bd5913ed3905aaaadfb5a14781004d28990f433ff1621c658c10f1795469d2'
+from game_mechanics import BUILD_SHA256
 NATIVE_ABILITIES = ['Bomber', 'Police', 'Heli', 'Stungas', 'Firebomb', 'CallArms',
                     'APC', 'Rally', 'Bus', 'Missile', 'Medevac', 'Dozer', 'Tank',
                     'Cure', 'Nuke', 'Demolition', 'SeekDestroy', 'Cluster', 'AC130']

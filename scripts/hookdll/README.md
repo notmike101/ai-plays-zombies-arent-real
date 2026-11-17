@@ -30,3 +30,12 @@ reasons to copy an unknown DLL. Do not distribute the proprietary game with buil
 
 Reference: [Rustup toolchain files](https://rust-lang.github.io/rustup/overrides.html),
 [Cargo environment flags](https://doc.rust-lang.org/cargo/reference/environment-variables.html).
+
+The supported-build HUD observer is a separate protocol1 mapping (`ZARHUD_<pid>`).
+Python checks the complete game EXE hash before injection; the DLL additionally
+checks PE identity and the exact world-panel call bytes. Installation is permitted
+only before world entry. A near stub redirects one UI builder call, invokes the
+original exactly once, preserves its result, and copies the finished descriptor
+under a sequence lock. It does not invoke extra game logic or write simulation
+state. Python maps this section read-only; stale/invalid layouts fail explicitly.
+Input remains protocol3 and all gameplay commands remain virtual player input.

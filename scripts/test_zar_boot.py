@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from zar_boot import COPIES, boot, copy_path, menu_points, campaign_in_progress, main
+from zar_boot import COPIES, boot, copy_path, menu_points, campaign_in_progress, campaign_cleared, main
 
 
 class BootBoundary(unittest.TestCase):
@@ -21,10 +21,12 @@ class BootBoundary(unittest.TestCase):
             menu_points(3840, 2160, unplayed=True)
 
     def test_progress_selects_the_campaign_button_layout(self):
+        self.assertEqual(campaign_cleared('version = 5\nresume_stage = 0\nperks = Extra_Zones - -'), 0)
         for count in range(6):
             progress = '\n'.join(f'stage {i} = {"bronze" if i <= count else "none"} 0 played'
                                  for i in range(1, 6))
             self.assertEqual(campaign_in_progress(progress), 0 < count < 5)
+            self.assertEqual(campaign_cleared(progress), count)
         for size in ((1920, 1200), (3840, 2160)):
             self.assertLess(menu_points(*size, True)[2][1], menu_points(*size)[2][1])
 

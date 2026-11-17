@@ -21,6 +21,7 @@
 
 #![allow(non_snake_case)]
 use core::ffi::c_void;
+mod hud;
 
 const MAGIC: u32 = 0x5A415249;
 const SECTION_SIZE: usize = 0x100;
@@ -597,6 +598,7 @@ unsafe fn init() {
 
     let n = patch_iat(base);
     (*s).patch_count = n as u32;
+    hud::init(base);
 }
 
 #[cfg(test)]

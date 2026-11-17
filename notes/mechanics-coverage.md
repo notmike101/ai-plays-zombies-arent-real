@@ -97,3 +97,18 @@ in1.34ms on inst13. Native unit field `hp` is overloaded: gun units use it for
 magazines remaining; contact encodes rounds used/reload state. Do not label it
 uniformly as health. Sniper placement drag and Shift+RMB changed native direction.
 Garrison RMB move attempts still did not change position; unresolved.
+
+## Passive native HUD milestone
+
+Pinned world-panel builder call at RVA36a570 is observed once per draw, preserving
+its original execution/result. Live selected-garrison panel matched native button
+positions; target toggle, level up and one-level refund each changed native state
+in0.094-0.100s. Empty selection yields valid=false. HUD reader rejects menu/stale
+frames and unknown layouts;4 parser/seqlock tests,9 control tests,7 boot tests pass.
+Rust3 tests and two identical clean release builds passed (DLL stays ignored).
+Panel coordinates derive from actual rectangles, including wrapped descriptions.
+SP upgrade buttons remain absent under shipped hide_unit_upgrades=true.
+
+An existing progress file containing only version/resume/perks is still unplayed.
+Boot now chooses its menu by actual stage scores, not file existence. Live inst13
+reboot reproduced failure with old predicate and passed with corrected layout.

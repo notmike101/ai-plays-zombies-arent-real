@@ -1,5 +1,7 @@
 """Named mechanics of the SHA-pinned native build; keep native names, not UI labels."""
 
+BUILD_SHA256 = 'a1bd5913ed3905aaaadfb5a14781004d28990f433ff1621c658c10f1795469d2'
+
 # Native perk-name table at VA0x14077e000, corroborated by en.lang/config.ini.
 PERKS = ('Extra_Zones', 'Flammable_Gas', 'Fall_Gas', 'Officer_Blast',
          'Weak_Bridges', 'Blast_Gas', 'Hot_Fire', 'Quick_Deploy')

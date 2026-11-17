@@ -36,6 +36,9 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 - Build the input DLL with `local.ps1 build-input` while owned games are stopped.
   Preserve rust-toolchain.toml/Cargo.lock and protocol3. Two clean builds must match;
   generated DLL/PDB/build manifests stay ignored. See scripts/hookdll/README.md.
+  The separate HUD observer protocol1 copies the native selection panel after its
+  original builder call. Preserve build/call-site pins, original-call semantics,
+  seqlock and read-only Python mapping. Never use it to alter simulation state.
 - Checkpoint sharing is authorized every6h to this repository's GitHub Releases.
   Use local.ps1 checkpoint-publish; no duplicate release for unchanged bytes.
   Preserve checksum/schema validation and identity helper. Do not publish game

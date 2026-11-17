@@ -133,6 +133,7 @@ class VirtualInput:
         self.section = None
         self.view = None
         self.buf = None
+        self.hud_section = self.hud_view = None
         self.enabled = False
         self._hb = 0
         if inject:
@@ -150,6 +151,11 @@ class VirtualInput:
         if not os.path.exists(DLL_PATH):
             raise FileNotFoundError(DLL_PATH)
         import psutil
+        import hashlib
+        from game_mechanics import BUILD_SHA256
+        with open(psutil.Process(self.pid).exe(), 'rb') as source:
+            if hashlib.file_digest(source, 'sha256').hexdigest() != BUILD_SHA256:
+                raise RuntimeError('Unsupported game build; input/HUD hook not installed')
         sentinel = Path(__file__).resolve().parents[1] / 'sessions' / f'.zarvi_{self.pid}'
         sentinel.parent.mkdir(exist_ok=True)
         born = psutil.Process(self.pid).create_time()
@@ -455,6 +461,13 @@ class VirtualInput:
 
     def close(self):
         try:
+            if self.hud_view:
+                kernel32.UnmapViewOfFile.argtypes = [ctypes.c_void_p]
+                kernel32.UnmapViewOfFile(self.hud_view)
+                self.hud_view = None
+            if self.hud_section:
+                kernel32.CloseHandle(ctypes.c_void_p(self.hud_section))
+                self.hud_section = None
             if self.view:
                 kernel32.UnmapViewOfFile.argtypes = [ctypes.c_void_p]
                 kernel32.UnmapViewOfFile(self.view)
@@ -464,6 +477,29 @@ class VirtualInput:
                 self.section = None
         except Exception:
             pass
+
+    def hud_snapshot(self):
+        """Read-only, seqlocked copy of the native panel; never invokes game code."""
+        if self.hud_view is None:
+            section = kernel32.OpenFileMappingA(4, False, f'ZARHUD_{self.pid}'.encode())
+            if not section:
+                raise RuntimeError('HUD observer unavailable; build input DLL and restart this copy')
+            view = kernel32.MapViewOfFile(section, 4, 0, 0, 4096)
+            if not view:
+                kernel32.CloseHandle(ctypes.c_void_p(section))
+                raise OSError('Cannot map read-only HUD observer')
+            self.hud_section, self.hud_view = section, view
+        for _ in range(5):
+            first = ctypes.string_at(self.hud_view, 32)
+            magic, version, sequence, frame, valid, status = struct.unpack('<IIQQII', first)
+            if magic != 0x5a485544 or version != 1 or status != 2:
+                raise RuntimeError('HUD observer build/layout validation failed')
+            if sequence == 0 or sequence & 1:
+                continue
+            panel = ctypes.string_at(self.hud_view+32, 0x868)
+            if ctypes.string_at(self.hud_view+8, 8) == first[8:16]:
+                return dict(frame=frame, valid=bool(valid), panel=panel)
+        raise RuntimeError('No consistent HUD observer frame')
 
 
 # scan codes (subset) — reuse from game_drive

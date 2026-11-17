@@ -8,8 +8,8 @@
   automatic undo restored the board. Launcher cleaned game528. Last saved policy
   c46cf2f2f5696822 and Adam remain in sessions/nn_policy3.pt. Do not overwrite this
   checkpoint with diagnostic evaluation. Resume only after validated changes.
-- Owned diagnostic inst13 game44708(created1794952873.5403793), no trainer,
-  below-normal CPUs0-7. Revalidate process identity before action. Native reads
+- Owned diagnostic inst13 game49076(created1794955122.3567407), no trainer,
+  below-normal CPUs0-7. Revalidate process identity before action. Passive HUD observation
   and virtual input only. Installed game remains read-only. Clean probe at end.
 - Visualizer22604(created1794931712.9690397) remains on8765. Preserve/reuse.
 - Measured actual20-decision planning evaluation:27.04s; median published
