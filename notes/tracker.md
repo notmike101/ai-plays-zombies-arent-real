@@ -1,31 +1,44 @@
 # ZAR Tracker (live state — update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17k — kit-corrected PPO, 7 boards)
-- Git: pushed thru 0417638. KEYBIND CONTRACT (AGENTS.md): battle keys 1-5 are
-  loadout-bound; pinned WIN kit = 1 heli, 2 CTA x2, 3 Rally x3, 4 MEDEVAC x4,
-  5 Seek x1 (0/2 SP). cc8ef9f wired this + obs kit slots + labels (24/24).
-- 0417638: pause watchdog FIXED (compared o against prev_o=dict(o) copy of
-  itself -> false SPACE every 2nd battle iteration; now dedicated wprev
-  snapshot, phase resets, 2-comparison threshold, UNPAUSE log line) +
-  restored lost obs.append (all episodes were SKIP short traj = PPO dead) +
-  scripts/launch_extra.py (clone boot). visualizer/test_watchdog.py 6 tests
-  drive real run_episode w/ fake env (5 fail on cc8ef9f, 30/30 after).
-  LIMITATION: stationary counters can't distinguish pause vs dialog/menu.
-- Boards: inst1..inst6 live L1 (pids per psutil dirname; DLL injected);
-  inst7/inst8 clones (from inst6) booting via launch_boards.py; tile new
-  pids into SLOTS (0,301)/(1265,301) 1295x837 via launch_extra.tile().
-- L1 facts: civ0 8142, money 3111, naked board dies <4 s (t=4 end screen,
-  no HUD bar visible = kit bar probe needs a surviving board).
-- Trainer: python -u scripts/nn_play2.py train --pids <7 pids> --eps 2
-  --rounds 14 | tee analysis/nn2_train_kit2.log. NEVER edit scripts/*.py
-  while workers live. First-round audit: 'ep pid' lines (no SKIP), no
-  UNPAUSE during falling zomb curve, runtime frames labels-ok.
+## CURRENT STATE (2026-11-17t — SP-honest deck model, kit5 trainer live)
+- Git HEAD 888b1a8 UNPUSHED (deck model + env_zar dump channel + hookdll v2 +
+  probe/test scripts; shim git only). Tests 17/17 green
+  (scripts/test_deck.py 11 + visualizer/test_labels.py 6).
+- DECK MODEL (nn_play2): deck built ONLY from battle-dump [economy]
+  'loadout <Name> = lvl' echo = what SP actually bought. KIT TRUTH (probe
+  2026-11-17, kit_probe.py): SP-starved L1 board CONSUMES resume_loadout and
+  buys ZERO (economy echo empty); ability_charges shows UNOWNED defaults
+  (.Police = 1) and loadout_police_cost = 1/level; R-retry boards NEVER earn
+  SP (6/6 EMPTY on the once-won board) -> SP comes from SAVINGS (sp_base=1 +
+  sp_per_root_10k=1 per 10k saved) -> decks exist only after good outcomes
+  (it17 L5 kit proves purchases at scale). Deck keys READ from settings.ini
+  bind_slot1..7 ('_1'->'1', T). Charges + *_unlock/_arrival_seconds from the
+  [counts] rules echo; refresh_battle_state re-syncs charges + game
+  ability_cooldown -> exact blocked window (HELI exempt: free re-aim while
+  flying, counts.helicopters = liveness truth). ready_once verifies
+  phase='playing' via F6 dump (memory counters LIE on lost screens).
+- L1 reality: civ0 8142 naked board dies ~6 s wall @8x -> early-loss break
+  (civ==0 bt>6). Win is possible (kit2 hist: one r3 win frac 1.0) — trainer
+  must find defense; battle mask when deck EMPTY = wait-only HONESTLY (old
+  code cast phantom abilities for reward: fixed).
+- Dump channel (env_zar.dump/phase_now): raw debug_dumps txt = plain
+  '[section]' headers, parses to build/where/clock/view/economy/counts;
+  analysis/dump-plan-44716.txt copy was re-formatted to '== [x] ==' by the
+  earlier session (live files differ).
+- Trainer RUNNING: TrainerKit5 = train --pids 39092,10428,29948,17224
+  --eps 2 --rounds 14 > analysis/nn2_train_kit5.log (started ~04:10).
+  kit2 (01:06, pre-fix) = all frac 0 + UNPAUSE flood: superseded.
+- Instances idle/live: 39092 10428 29948 17224 (inst4/5/6/8, L1) in trainer;
+  44716 inst3 lost screen; 3588 inst7 wedged welcome page (kill at end).
+  NO Subagents rule stands (this run).
 ## NEXT STEPS
-1. Monitor kit2 log: wins/meanfrac trend; UNPAUSE lines only on true wedges.
-2. Kit receipts audit: garrison money drops (succ rows), heli zomb drops,
-   charges decrement vs reality; badge>=35% goal per ml-spec gates.
-3. BC from best episodes (winners + it17 recipe) -> PPO warm start.
-4. Phase end: kill instances, update tracker + AGENTS, push.
+1. Monitor kit5 log: planning defense quality (money receipts), early-loss
+   breaks ~6-9 s, one L1 win -> SP>0 -> DECK lines become non-EMPTY = the
+   final live proof of purchase+cast (todo item 5's tail).
+2. Deck-live proof audit: 'DECK <pid>: <name>xN@key' lines vs economy echo;
+   kills Paratrooper/Heli counters move after casts.
+3. BC from winners + it17 recipe -> PPO warm start (ml-spec gates 4/13.69/35%).
+4. Phase end: kill instances (incl 3588/44716), update tracker + push.
 
 ## VERIFIED CAPABILITIES (condensed; details notes/automation.md)
 1. Parallel unfocused copies; virtual input per instance (DLL): clicks, keys,

@@ -128,19 +128,26 @@ class ZAREnv:
     # ---------------- episode setup ----------------
     def set_loadout(self, idx_levels):
         """Edit resume_loadout ints (19 per-ability levels in battle_order
-        file order). The game reads the file at READY and greedily buys the
-        list up to the board's SP; the deck IS CONSUMED (SP spent) when the
-        battle starts -> re-set every episode before READY (probe
-        2026-11-17). Instance-bound: each copy has its own save."""
+        file order). The game reads the file at READY, greedily buys the
+        list up to the board's SP and CONSUMES the deck at battle start ->
+        re-set every episode before READY. After a WIN screen the game
+        DROPS the line entirely (probe 2026-11-17: IndexError) -> re-append
+        it as 19 zeros when missing. Instance-bound: each copy has its own
+        save."""
         path = os.path.join(self.copy_dir(), 'steam_cloud', 'progress',
                             'Boston__MA.progress')
-        s = open(path).read()
-        line = [l for l in s.split('\n') if l.startswith('resume_loadout')][0]
-        tok = line.split('=')[1].split()
+        with open(path, encoding='utf-8', errors='ignore') as fh:
+            s = fh.read()
+        hit = [l for l in s.split('\n') if l.startswith('resume_loadout')]
+        tok = (hit[0].split('=')[1].split()[:19] if hit else [])
+        tok = (tok + ['0'] * 19)[:19]
         for i, v in idx_levels.items():
             tok[i] = str(v)
         new = 'resume_loadout = ' + ' '.join(tok)
-        open(path, 'w').write(s.replace(line, new))
+        s = (s.replace(hit[0], new) if hit
+             else s.rstrip('\n') + '\n' + new + '\n')
+        with open(path, 'w', encoding='utf-8') as fh:
+            fh.write(s)
         return new
 
     @staticmethod
@@ -191,12 +198,25 @@ class ZAREnv:
         escalate, then double-R. Menu/dead states raise."""
         last = None
         lost = 0
+        healed = 0
         for _ in range(max_r):
             p = self.phase_now()
             if p == 'planning':
                 return self.obs()
             o = self.obs()
             sig = (o['civ'], o['zomb'])
+            if p is None and healed < 2:
+                # writer frozen = modal surface over the world: the PAUSE
+                # menu (RESUME|SETTINGS|GIVE FEEDBACK|REPORT BUG|MAIN MENU)
+                # or a dialog. One click on RESUME (client-fraction spot;
+                # inst6 wedge healed live 2026-11-17 this way) restores the
+                # sim; keyboard-modal dialogs ignore clicks, so the R-loop
+                # below still works for them.
+                healed += 1
+                self.vi.click(int(0.2035 * max(self.cw, 1)),
+                              int(0.2192 * max(self.ch, 1)))
+                time.sleep(2.0)
+                continue
             if p == 'playing':
                 if sig == last:      # pause-modal: unpause, close menu,
                     self.vi.key_press(0x20, sc=57, hold=0.25)   # dismiss,

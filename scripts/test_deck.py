@@ -200,5 +200,42 @@ class RefreshTests(unittest.TestCase):
         self.assertTrue(t()['slot_castable'](st, st['deck'][0]))
 
 
+class SetLoadoutTests(unittest.TestCase):
+    def _env(self, body):
+        import env_zar
+        d = tempfile.TemporaryDirectory()
+        self.addCleanup(d.cleanup)
+        os.makedirs(os.path.join(d.name, 'steam_cloud', 'progress'))
+        with open(os.path.join(d.name, 'steam_cloud', 'progress',
+                               'Boston__MA.progress'), 'w') as f:
+            f.write(body)
+        e = env_zar.ZAREnv.__new__(env_zar.ZAREnv)
+        e.copy_dir = lambda: d.name
+        return e, os.path.join(d.name, 'steam_cloud', 'progress',
+                               'Boston__MA.progress')
+
+    def test_missing_line_reappended(self):
+        # after a WIN screen the game drops the line (2026-11-17 IndexError)
+        e, p = self._env('some_key = 1\n')
+        new = e.set_loadout({0: 1})
+        self.assertEqual(new, 'resume_loadout = ' +
+                         ' '.join(['1'] + ['0'] * 18))
+        with open(p) as f:
+            txt = f.read()
+        self.assertIn(new, txt)
+        self.assertIn('some_key = 1', txt)
+
+    def test_existing_line_edited_and_padded(self):
+        e, p = self._env('resume_loadout = 2 3\nother = x\n')
+        new = e.set_loadout({2: 5})
+        toks = new.split('=')[1].split()
+        self.assertEqual(toks[:3], ['2', '3', '5'])
+        self.assertEqual(len(toks), 19)
+        with open(p) as f:
+            txt = f.read()
+        self.assertIn(new, txt)
+        self.assertIn('other = x', txt)
+
+
 if __name__ == '__main__':
     unittest.main()
