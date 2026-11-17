@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import tempfile
 import threading
@@ -56,6 +57,15 @@ class FeedTests(unittest.TestCase):
         self.assertNotIn('graph', result['frame'])
         self.assertIn('graph', self.feed.state(now=101)['frame'])
 
+    def test_same_size_timestamp_collision_does_not_hide_new_sample(self):
+        self.write(frame('one', 100))
+        self.feed.state(now=101)
+        path = self.root / 'one.json'
+        stamp = path.stat().st_mtime_ns
+        self.write(frame('one', 120))
+        os.utime(path, ns=(stamp, stamp))
+        self.assertEqual(self.feed.state(now=121)['status'], 'live')
+
     def test_http_allowlist(self):
         server = make_server('127.0.0.1', 0, self.feed)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -68,6 +78,7 @@ class FeedTests(unittest.TestCase):
                 with self.assertRaises(HTTPError) as error:
                     urlopen(base + path)
                 self.assertEqual(error.exception.code, 404)
+                error.exception.close()
         finally:
             server.shutdown()
             server.server_close()
