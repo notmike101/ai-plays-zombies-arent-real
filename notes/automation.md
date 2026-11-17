@@ -404,3 +404,17 @@ planning footer with `stats.money = -734`. This is a valid game balance, not
 a failed memory read. `ZAREnv.money()` preserves signed finite balances within
 the existing magnitude bound; never substitute stale positive mirrors or zero.
 The regression covers debt, NaN, infinity and both magnitude limits.
+
+## READY land cap and single undo (2026-11-17)
+
+The model-seeded READY failure (policy5279118f147fa614, seed20261125) reproduced
+in owned inst1 PID31248. Screenshot `visualizer/runtime/ready-failure.png`
+shows 49% coverage against30%, READY disabled; three extra SPACE presses did
+not start battle. The copy's shipped config.ini lines300-324 confirms that
+oversized zones may be placed but block READY, and can create debt.
+
+A separate owned inst1 PID48612 probe placed one garrison ($3037.80 remaining),
+then a large rectangle ($520.86). Exactly ONE Ctrl+Z via virtual input restored
+$3037.80, removed that zone and retained the one garrison. This supersedes the
+old blanket claim that a single undo wipes everything: repeated undo can clear
+the board. Rollback must be one action with a verified planning receipt.
