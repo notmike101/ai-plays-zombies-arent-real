@@ -7,6 +7,14 @@ I FACILITATE: unblock the learner, keep episodes flowing, monitor progress. Neve
 hand-script strategy the model should learn. Curriculum L1->L5 (START OVER restarts
 the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 
+## New session entry point
+- With zero prior context, follow `notes/operator-runbook.md` for status checks,
+  checkpoint resume and training/visualizer start/stop. Then read CURRENT STATE
+  in `notes/tracker.md`; revalidate PIDs and creation times before acting.
+- Current training uses `scripts/train_run.py` -> `scripts/nn_play2.py`, schema3,
+  `sessions/nn_policy3.pt`. A fresh clone does not include this ignored checkpoint.
+  Missing resume weights are an error, never permission to start random training.
+
 ## Process rules (every turn)
 - TRACKER: live state, evidence, PIDs and next steps live in `notes/tracker.md`.
   Read it at the START of a run; UPDATE it at the END of every run (replace
