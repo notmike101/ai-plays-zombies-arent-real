@@ -60,3 +60,7 @@ No claim of stronger gameplay yet. The30-decision live probe stayed in planning;
 full battle evidence comes from the subsequent resumed training, separately.
 The largest remaining limitations are the incomplete carried-board observations,
 missing recovery actions, and approximate rollout continuation described in ml-spec.
+
+Resumed run b39316bdad21 completed two real battles (7.44%,4.95% saved), one
+PPO update with learning revision1 and optimizer persistence, then entered
+round1. This verifies deployment, not improvement versus a controlled baseline.

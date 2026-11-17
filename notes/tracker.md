@@ -1,6 +1,6 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — learning audit complete, training restarting)
+## CURRENT STATE (2026-11-17 — learning audit complete, training LIVE)
 - Prior run99adb97241d2 ended after4 updates/8 records (6 aborted battles,1 timeout,
   1 interface error); launcher/game cleaned. Latest checkpointc42691fb23e296d7.
 - Root cause reproduced: undo leaves safe-zone tool selected; its hotkey toggles
@@ -12,11 +12,17 @@
 - Tests:82 core Python+additional input checks PASS,12-step observer parity and
   Node graph PASS. Live30-decision rollout+isolated PPO PASS, user checkpoints
   byte-identical; probe26456 cleaned. See notes/learning-audit.md.
-- Restarting one inst1 from saved schema3 policy/Adam: seed20261140,eps2,rounds200.
-  BELOW_NORMAL priority,CPU0-7,low graphics,normal difficulty. Launcher PID25848.
+- Active runb39316bdad21: launcher25848,trainer28856,worker31408,game22828(inst1).
+  Resumed schema3 policy/Adam; seed20261140,eps2,rounds200. BELOW_NORMAL,CPU0-7,
+  low graphics,normal difficulty. Round0 completed two battles:7.44%,4.95% saved;
+  checkpoint7e51f12f76e78de3 includes learning revision1 and10 Adam states.
+  Round1 planning observed live;332 input labels and no label warning.
+- Headroom samples:CPU9.7-12.6%,GPU25-35%,RAM13.51-13.61GiB available,
+  VRAM3345-3361/10240MiB,D:13.22GiB free. Samples are not hard GPU/RAM caps.
 - Logs: analysis/nn3_learning_audit_20261117.log and
   nn3_learning_audit_launcher_20261117.log/.err. Native replay cleanup remains active.
-- Next: verify resumed update/worker telemetry/headroom, then leave training live.
+- Training left running with per-batch checkpoints and launcher cleanup on exit.
+  No claim of continuous monitoring after this chat. Next review later outcomes.
   Unresolved: exact recurrent continuation, richer carried-board state, missing
   refund/repair/reposition/detonation/camera actions, parallel injection failure,
   and consistent fresh-board >=35% outcomes on all5 levels.
