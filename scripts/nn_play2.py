@@ -29,15 +29,21 @@ ROOT = r'D:\zar-scratch'
 MODEL = os.path.join(ROOT, 'sessions', 'nn_policy2.pt')
 HIST = os.path.join(ROOT, 'analysis', 'nn_hist2.jsonl')
 NOBS, HID = 22, 128
-NU, NC = 14, 12
-TOOLS = ['wait', 'ready', 'garrison', 'mortar', 'napalm', 'turret', 'mine',
-         'c4', 'gas_tower', 'upgrade', 'para', 'heli', 'gas_bomb', 'ac130']
+NU, NC = 15, 12
+TOOLS = ['wait', 'ready', 'napalm', 'mortar', 'sniper', 'turret', 'mine',
+         'c4', 'gas_mortar', 'upgrade_unit', 'zone_rect', 'para', 'heli',
+         'gas_bomb', 'ac130', 'wall']
+# planning DEPLOY/BUILD hotkeys VERIFIED from HUD bottom bar 2026-11-17:
+# 1 Napalm $100 | 2 Mortar $79 | 3 Sniper $50 | 4 Turret $90 | 5 Mine $15
+# 6 C4 $500 | T Gas Mortar $90 | B Safe Zone (click wall start/end) |
+# F Upgrade Unit | G Gate | Z Wall | Q Corridor | E Hold
 U_HOTKEY = {2: (0x31, 2), 3: (0x32, 3), 4: (0x33, 4), 5: (0x34, 5),
-            6: (0x35, 6), 7: (0x36, 7), 8: (0x37, 8), 9: (0x46, 33)}
-BATTLE_U = {10: ('1', 'para', 1), 11: ('2', 'heli', 1), 12: ('3', 'gas', 1),
-            13: ('4', 'ac130', 3)}
-PLANNING_U = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-BATTLE_U_ALLOWED = [0, 10, 11, 12, 13]
+            6: (0x35, 6), 7: (0x36, 7), 8: (0x54, 20), 9: (0x46, 33),
+            14: (0x5A, 44)}
+BATTLE_U = {11: ('1', 'para', 1), 12: ('2', 'heli', 1), 13: ('3', 'gas', 1),
+            14: ('4', 'ac130', 3)}
+PLANNING_U = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+BATTLE_U_ALLOWED = [0, 11, 12, 13, 14]
 XS = [500, 767, 1033, 1300]
 YS = [260, 500, 740]
 CELLS = [(x, y) for y in YS for x in XS]
@@ -87,7 +93,7 @@ def masks_for(st):
             mu[u] = 1
     else:
         mu[0] = 1
-        for u in (10, 11, 12, 13):
+        for u in (11, 12, 13, 14):
             key, name, _ = BATTLE_U[u]
             avail = st['heli_up'] if name == 'heli' else st['charges'][name]
             if avail > 0:
@@ -112,7 +118,7 @@ def run_episode(args):
             net.load_state_dict(sd)
             net.eval()
         h = None
-        obs, us, cs, ulps, clps, rews, mus = [], [], [], [], [], [], []
+        obs, us, cs, ulps, clps, rews, mus, trail = [], [], [], [], [], [], [], []
         prev_o = dict(o)
         prev_t = time.time()
         prev_u, prev_c, succ = 0.0, 0.0, 0.0
@@ -177,6 +183,8 @@ def run_episode(args):
                 prev_o = env.obs()
                 prev_t = time.time()
                 rews.append(-0.05)
+                trail.append((round(st['t'], 1), (prev_o.get('civ') or 0),
+                              prev_o.get('zomb'), prev_o.get('money'), u, c))
                 step += 1
                 continue
             if st['planning'] and u in U_HOTKEY:
@@ -187,6 +195,16 @@ def run_episode(args):
                 time.sleep(0.12)
                 env.vi.click()
                 time.sleep(0.25)
+                did = True
+            elif st['planning'] and u == 10:
+                x1, y1 = cell_of(c)
+                x2, y2 = cell_of((c + 4) % 12)
+                env._arm(0x42, 48)
+                for px, py in ((x1, y1), (x2, y1), (x2, y2), (x1, y2)):
+                    env.vi.move_to(px, py)
+                    time.sleep(0.12)
+                    env.vi.click()
+                    time.sleep(0.18)
                 did = True
             elif not st['planning'] and u in BATTLE_U:
                 key, name, _ = BATTLE_U[u]
@@ -207,6 +225,8 @@ def run_episode(args):
             if not st['planning']:
                 r = 8.0 * ((o['civ'] or 0) - (prev_o['civ'] or 0)) / civ0
                 r += min(kills, 20000) * 2e-6
+            trail.append((round(st['t'], 1), o.get('civ'), o.get('zomb'),
+                          o.get('money'), u, c))
             if did:
                 r -= 0.01
             rews.append(r)
@@ -230,7 +250,7 @@ def run_episode(args):
             if o['zomb'] == 0 and bt > 25 and fought:
                 win = True
                 break
-            if frac <= 0.02 and fought:
+            if frac <= 0.02 and fought and bt > 60:
                 break
             if bt > BATTLE_T:
                 break
@@ -243,7 +263,7 @@ def run_episode(args):
         rews[-1] += R_final
         return dict(level=tag, pid=pid, win=bool(win), frac=float(frac),
                     t=st['t'], obs=obs, us=us, cs=cs, ulps=ulps, clps=clps,
-                    rews=rews, masks=mus, R=float(sum(rews)))
+                    trail=trail, rews=rews, masks=mus, R=float(sum(rews)))
     except Exception as e:
         import traceback
         traceback.print_exc()
