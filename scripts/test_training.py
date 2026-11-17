@@ -82,7 +82,7 @@ class LearningTests(unittest.TestCase):
     def test_geometry_endpoint_cannot_wrap_or_repeat_anchor(self):
         st = dict(planning=True, anchor=(10, 47), deck=[])
         mu, mc = train.masks_for(st)
-        self.assertEqual(list(np.flatnonzero(mu)), [10])
+        self.assertEqual(list(np.flatnonzero(mu)), [10, train.TOOLS.index('cancel_tool')])
         self.assertEqual(mc[47], 0)
 
     def test_zero_reward_terminal_returns(self):
