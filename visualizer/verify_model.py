@@ -1,6 +1,7 @@
 """Read-only check against the current trainer model; never calls run_episode or opens a game."""
 from pathlib import Path
 import re
+import json
 import runpy
 import statistics
 import tempfile
@@ -35,8 +36,7 @@ def main():
         observer = Observer(net, 0, 'verification-only', directory=directory,
                             labels={'input': source['INPUT_LABELS'],
                                     'hu': source['TOOLS'][:source['NU']],
-                                    'hc': [f'Cell {i + 1}'
-                                           for i in range(source['NC'])]})
+                                    'hc': source['CELL_LABELS']})
         try:
             torch.random.set_rng_state(rng)
             observed = sequence()
@@ -47,7 +47,9 @@ def main():
             assert len(frame['values']['input']) == source['NOBS']
             assert len(frame['values']['gru']) == source['HID']
             assert len(frame['values']['hu']) == source['NU']
-            assert len(frame['values']['hc']) == source['NC']
+            assert len(frame['values']['hc']) == source['NU']*source['NC']
+            assert 'label_warning' not in frame
+            assert len(json.dumps(frame, separators=(',', ':')).encode()) < 2*1024*1024 - 40000, 'Keep room for masked probabilities in server frame cap'
             inp = next(l for l in frame['graph']['layers']
                        if l['id'] == 'input')
             assert inp['labels'] == source['INPUT_LABELS'], \

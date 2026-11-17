@@ -1,4 +1,4 @@
-"""Input labels matching nn_play2.make_obs() output order (NOBS=32).
+"""Input labels matching nn_play2.make_obs() output order (NOBS=332).
 
 MAINTENANCE CONTRACT (root AGENTS.md): any feature add/remove/reorder or
 semantic/normalization change in make_obs() MUST update, in the SAME change:
@@ -44,6 +44,19 @@ INPUT_LABELS = [
     'Planning phase',
     'Budget spent (/ 1, cap 1)',
 ]
+
+INPUT_LABELS += [f'Grid {channel} cell {i+1} (log1p count)'
+                 for channel in ('civilians', 'zombies', 'defenders', 'buildings')
+                 for i in range(48)]
+INPUT_LABELS += [f'Grid safe zone cell {i+1} (center inside: 0/1)' for i in range(48)]
+for name in ('Police', 'Bomber', 'Heli', 'Stungas', 'Firebomb', 'CallArms',
+             'APC', 'Demolition', 'Rally', 'SeekDestroy', 'Bus', 'Missile',
+             'Medevac', 'Dozer', 'Cluster', 'Tank', 'AC130', 'Cure', 'Nuke'):
+    INPUT_LABELS += [f'{name} loadout level (/ 10)',
+                     f'{name} castable (charges+alive heli / max)',
+                     f'{name} pending arrival (remaining sim s / 60)']
+INPUT_LABELS += ['Unspent skill points (/ 10)', 'Geometry anchor tool (/ 72; -1 absent)',
+                 'Geometry anchor cell (/ 48; -1 absent)']
 
 
 def validate(nobs=None, labels=None):

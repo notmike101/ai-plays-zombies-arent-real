@@ -1,14 +1,8 @@
-"""ZAR PPO v2: the NET owns planning AND battle (buys, placement, deployment).
+"""ZAR recurrent PPO: the model chooses loadout, planning geometry and battle actions.
 
-Single GRU policy with factorized heads: U (tool/unit, 14) x C (map cell, 12).
-Phases: PLANNING (money spent via tool hotkey + cell click; READY is the
-model's decision) then BATTLE (SP deck casts; heli reposition unlimited after
-first heli cast). Rewards: 8*dfrac/civ + dense kill term - action costs +
-terminal 3*win + 5*frac^1.5. Boards persist: R-loop returns to planning,
-placements + leftover budget carry (game rule).
-
-Usage: nn_play2.py train|play --pids a,b,c --eps N --rounds M [--random]
-       nn_play2.py greedy --pid P
+Schema 3: 332 observations, 72 tools and 48 cells conditioned on the tool.
+Reward = -new infections / initial population + 5 * actual terminal saved fraction.
+Timeouts bootstrap; they never earn a terminal save reward. R carries the board.
 """
 import argparse
 import json
@@ -36,10 +30,10 @@ try:
     from visualizer.labels import INPUT_LABELS, validate as validate_labels
 except ImportError:
     Observer = None
-MODEL = os.path.join(ROOT, 'sessions', 'nn_policy2.pt')
-HIST = os.path.join(ROOT, 'analysis', 'nn_hist2.jsonl')
-NOBS, HID = 32, 128
-NU, NC = 34, 48
+MODEL = os.path.join(ROOT, 'sessions', 'nn_policy3.pt')
+HIST = os.path.join(ROOT, 'analysis', 'nn_hist3.jsonl')
+NOBS, HID = 332, 128
+NU, NC = 72, 48
 TOOLS = ['wait', 'ready', 'garrison', 'mortar', 'napalm', 'turret', 'mine',
          'c4', 'gas_mortar', 'upgrade_unit', 'zone_rect', 'heli', 'cta',
          'rally', 'medevac', 'wall', 'gate', 'corridor', 'hold', 'seek',
@@ -56,15 +50,7 @@ U_HOTKEY = {2: (0x31, 2), 3: (0x32, 3), 4: (0x33, 4), 5: (0x34, 5),
             15: (0x5A, 44), 16: (0x47, 46), 17: (0x51, 16), 18: (0x45, 18)}
 
 
-# BATTLE DECK (2026-11-17, replaces the pinned-BATTLE_U keybind contract):
-# per-board deck TRUTH comes from the F6 dump: [economy] echoes
-# 'loadout <Name> = lvl' (what SP actually bought), [counts] echoes the
-# balance rules (*_unlock_seconds, *_arrival_seconds,
-# ability_charges_per_level = [.Heli = 1, ...]). Bar slots bind to
-# bind_slot1..7 (settings.ini) in battle_order.txt order (DECK_ORDER).
-# Old stale binding = silent no-op key press; now bindings are READ, never
-# assumed. charges = level x per_level (it17 kit verified: cta2 rally3
-# medevac4 seek1).
+# BATTLE DECK: purchased levels and actual saved roster determine hotkeys.
 ABILITY_U = {'Police': 33, 'Bomber': 20, 'Heli': 11, 'Stungas': 21,
              'Firebomb': 22, 'CallArms': 12, 'APC': 23, 'Demolition': 24,
              'Rally': 13, 'SeekDestroy': 19, 'Bus': 25, 'Missile': 26,
@@ -74,17 +60,15 @@ DECK_ORDER = ['Police', 'Bomber', 'Heli', 'Stungas', 'Firebomb', 'CallArms',
               'APC', 'Demolition', 'Rally', 'SeekDestroy', 'Bus', 'Missile',
               'Medevac', 'Dozer', 'Cluster', 'Tank', 'AC130', 'Cure', 'Nuke']
 U2ABILITY = {v: k for k, v in ABILITY_U.items()}
+TOOLS += [f'buy_{n}' for n in DECK_ORDER] + [f'refund_{n}' for n in DECK_ORDER]
+CELL_LABELS = [f'{tool}: cell {c+1}' for tool in TOOLS for c in range(NC)]
 PLANNING_U = list(range(11)) + [15, 16, 17, 18]
-XF = [0.11 + 0.77 * i / 7 for i in range(8)]   # grid as FRACTIONS of the
-YF = [0.16 + 0.44 * j / 5 for j in range(6)]   # client window: the game
+BATTLE_GEOMETRY = {12, 20, 22, 24, 27, 28, 30, 33}
+from spatial import XF, YF
 # resizes itself after tiling (probe: client 1920x1200 despite SetWindowPos),
 # so cell coords are always computed from the LIVE client size.
 
 
-def zone_span(c):
-    """Zone rect = cell c to one row down + three cols right (~3x2 cells)."""
-    r, col = divmod(c, 8)
-    return ((r + 1) % 6) * 8 + (col + 3) % 8
 PLAN_STEPS = 60            # harness bound on planning phase (cap, not strategy)
 BATTLE_T = 560.0
 STEP_S = 0.7               # battle step; at 8x ~5.6 s game-time; act() floor
@@ -99,7 +83,7 @@ class PolicyNet2(nn.Module):
         super().__init__()
         self.gru = nn.GRU(NOBS, HID, 1, batch_first=True)
         self.hu = nn.Linear(HID, NU)
-        self.hc = nn.Linear(HID, NC)
+        self.hc = nn.Linear(HID, NU * NC)
         self.val = nn.Linear(HID, 1)
 
     def forward(self, x, h=None):
@@ -121,7 +105,7 @@ def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
     deck = st.get('deck') or []
     slots = [slot_castable_frac(st, s) for s in deck[:4]]
     slots += [0.0] * (4 - len(slots))
-    return [g(o['civ']), g(o['zomb']), g(o['converting']), g(o['corpses']),
+    base = [g(o['civ']), g(o['zomb']), g(o['converting']), g(o['corpses']),
             g(o['police']), money / 1000.0, min(st['t'] / 300.0, 2),
             frac, max(-3, min(3, trend / 1000.0)), max(-1, min(1, slope)),
             slots[0], slots[1], slots[2], slots[3],
@@ -132,6 +116,18 @@ def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
             float(prev_u), float(prev_c), float(succ),
             1.0 if st['planning'] else 0.0,
             min(st['spend_frac'], 1.0)]
+    grid = np.asarray(st.get('grid', np.zeros((5, NC))))
+    base.extend(np.log1p(grid[:4]).flatten().tolist())
+    base.extend(grid[4].tolist())
+    for name in DECK_ORDER:
+        slot = next((s for s in deck if s['name'] == name), None)
+        base.extend([st.get('loadout', {}).get(name, 0) / 10.,
+                     slot_castable_frac(st, slot) if slot else 0.,
+                     max(0., slot.get('ready_t', st['sim'])-st['sim']) / 60. if slot else 0.])
+    anchor = st.get('anchor')
+    base.extend([st.get('sp', 0) / 10., anchor[0]/NU if anchor else -1.,
+                 anchor[1]/NC if anchor else -1.])
+    return base
 
 
 def slot_castable(st, s):
@@ -149,16 +145,53 @@ def slot_castable(st, s):
 
 def masks_for(st):
     mu = np.zeros(NU, dtype=np.float32)
+    mc = np.ones(NC, dtype=np.float32)
+    if st.get('anchor'):
+        u, c = st['anchor']
+        mu[u] = 1
+        mc[c] = 0
+        if u == 10:
+            mc[np.arange(NC)//8 == c//8] = 0
+            mc[np.arange(NC)%8 == c%8] = 0
+        return mu, mc
     if st['planning']:
         for u in PLANNING_U:
             mu[u] = 1
+        if 'build_targets' in st and not any(p is not None for p in st['build_targets']):
+            mu[[2, 3, 5, 8, 9]] = 0
+        for i, name in enumerate(DECK_ORDER):
+            level = st.get('loadout', {}).get(name, 0)
+            cost = st.get('costs', {}).get(name)
+            room = level > 0 or sum(v > 0 for v in st.get('loadout', {}).values()) < 7
+            if cost is not None and cost > 0 and cost <= st.get('sp', 0) and room and name in st.get('unlocked', []):
+                mu[34+i] = 1
+            if level > 0:
+                mu[53+i] = 1
     else:
         mu[0] = 1
         for s in (st.get('deck') or []):
             u = ABILITY_U.get(s['name'])
             if u is not None and slot_castable(st, s):
                 mu[u] = 1
-    return mu, np.ones(NC, dtype=np.float32)
+    return mu, mc
+
+
+def cell_mask(st, u, mc):
+    mc = mc.copy()
+    if u in (0, 1) or u >= 34:
+        mc[:] = 0
+        mc[0] = 1
+    elif st['planning'] and u in (2, 3, 5, 8, 9) and 'build_targets' in st:
+        mc *= [p is not None for p in st['build_targets']]
+    return mc
+
+
+def cell_distribution(logits, tool, mask):
+    logits = logits.reshape(-1, NU, NC)
+    tools = torch.as_tensor(tool, dtype=torch.long).reshape(-1)
+    selected = logits[torch.arange(len(tools)), tools]
+    selected = selected.masked_fill(torch.as_tensor(mask) == 0, -1e9)
+    return torch.distributions.Categorical(logits=selected.squeeze(0) if len(tools) == 1 else selected)
 
 
 def ready_once(env):
@@ -215,18 +248,12 @@ def _slot(name, lvl, pl, counts, keys, i):
             'key': keys[i] if i < len(keys) else None}
 
 
-def build_deck(dump, keys):
-    """Deck = what SP actually BOUGHT: only the [economy] 'loadout <Name> =
-    lvl' echo proves a purchase. The kit file (resume_loadout) is NOT truth:
-    kit probe 2026-11-17 on an SP-starved L1 board consumed the file and
-    bought ZERO (economy echo empty), while ability_charges shows unowned
-    defaults (.Police = 1) — either would fabricate casts. Charges + timing
-    from the [counts] rules echo; bar keys bind in deck (battle_order)
-    order; refresh_battle_state re-syncs charges from the live dump."""
+def build_deck(dump, keys, roster=None):
+    """Purchased levels plus actual seven-slot roster; config supplies rules only."""
     if not dump:
         return []
     econ = dump.get('economy', {})
-    counts = {**dump.get('params', {}), **dump.get('counts', {})}
+    counts = {**dump.get('config', {}), **dump.get('params', {}), **dump.get('counts', {})}
     pl = dict(_CPL_RE.findall(counts.get('ability_charges_per_level', '')))
     bought = {}
     for k, v in econ.items():
@@ -238,89 +265,36 @@ def build_deck(dump, keys):
             if lv > 0:
                 bought[k[len('loadout '):].strip()] = lv
     deck = []
-    for name in DECK_ORDER:
+    for i, name in enumerate(roster if roster is not None else DECK_ORDER):
         if name in bought and name in ABILITY_U:
             deck.append(_slot(name, bought[name], pl, counts, keys,
-                              len(deck)))
+                              i if roster is not None else len(deck)))
     return deck
 
 
-_AB_RE = re.compile(r'\.([A-Za-z0-9]+)\s*=\s*([\d.]+)')
-
-
 def refresh_battle_state(st, dump):
-    """Re-sync sim clock, charges, cooldowns + heli liveness from a periodic
-    battle dump: [counts] 'ability_charges'/'ability_cooldown' bracket lines
-    are the GAME'S OWN deck truth (drift-corrects the sim);
-    counts.helicopters is the only heli truth (the optimistic post-arrival
-    'alive' gets cleared here once the aircraft left)."""
+    """Only live clock and helicopter counts; config charges are not live stock."""
     if not dump:
         return
-    cl = dump.get('clock', {})
-    try:
-        st['sim'] = float(cl.get('sim_time', st['sim']))
-        st['mult'] = float(cl.get('speed_mult', st['mult']) or 1)
-    except (TypeError, ValueError):
-        pass
-    counts = dump.get('counts', {})
-    ch = dict(_AB_RE.findall(counts.get('ability_charges', '')))
-    cd = dict(_AB_RE.findall(counts.get('ability_cooldown', '')))
-    try:
-        heli_n = int(float(counts.get('helicopters', 0)))
-    except (TypeError, ValueError):
-        heli_n = 0
-    for s in st.get('deck') or []:
-        if s['name'] in ch:
-            s['charges'] = min(float(ch[s['name']]), s['max_charges'])
-        if s['name'] != 'Heli' and float(cd.get(s['name'], 0)) > 0:
-            # game-side cooldown: exact until-time (heli ignores it: a
-            # flying heli is RE-AIMED free, it17-verified)
-            s['ready_t'] = (st['sim'] + float(cd[s['name']])
-                            if not s['pending'] else s['ready_t'])
-            s['pending'] = True
-        if s['name'] == 'Heli':
-            s['alive'] = heli_n > 0
-            if heli_n > 0:
-                s['pending'] = False
+    clock = dump.get('clock', {})
+    st['sim'] = float(clock.get('sim_time', st['sim']))
+    st['mult'] = float(clock.get('speed_mult', st['mult']))
+    for slot in st.get('deck', []):
+        if slot['name'] == 'Heli':
+            slot['alive'] = int(dump.get('counts', {}).get('helicopters', 0)) > 0
+            if slot['alive']:
+                slot['pending'] = False
 
-def q_saved(pid, dur):
-    """Game's own saved_pct from its battle telemetry (queue.jsonl); the
-    BADGE metric counts evacuation + in-zone, which the live 'civ' memory
-    field misses (zones evacuate -> alive falls). Only losers queue rows;
-    match by duration. None = row absent (win or lag)."""
-    try:
-        import psutil
-        d = psutil.Process(pid).exe().split('\\')[3]
-        p = rf'{ROOT}\game-copies\{d}\cache\usage\queue.jsonl'
-        with open(p, encoding='utf-8', errors='ignore') as fh:
-            *_, last = fh
-        row = json.loads(last)
-        if abs(row.get('battle_s', -99) - dur) < 15:
-            return float(row.get('saved_pct', 0.0)) / 100.0
-    except Exception:
-        pass
-    return None
+
+def checkpoint_schema():
+    return dict(version=3, inputs=INPUT_LABELS, tools=TOOLS, cells=CELL_LABELS)
 
 
 def load_pretrained(net, path):
-    """Warm start: map an older narrower-obs checkpoint column-wise onto the
-    current input width (old columns keep trained weights)."""
-    try:
-        old = torch.load(path, weights_only=True)
-    except FileNotFoundError:
-        return
-    old = old.get('policy', old)
-    new = net.state_dict()
-    for key in tuple(old):
-        o = old[key]
-        if not key.startswith(('gru.', 'hu.', 'hc.', 'val.')):
-            continue
-        if o.shape != new[key].shape and all(
-                n >= g for n, g in zip(new[key].shape, o.shape)):
-            w = new[key].clone()
-            w[tuple(slice(0, g) for g in o.shape)] = o
-            old[key] = w
-    net.load_state_dict(old)
+    data = torch.load(path, weights_only=True)
+    if data.get('schema') != checkpoint_schema():
+        raise ValueError('Incompatible checkpoint schema: v3 needs a new policy; v2 is preserved')
+    net.load_state_dict(data['policy'])
 
 
 def transition_reward(before, after, civ0):
@@ -350,12 +324,18 @@ def run_episode(args):
         civ0 = max(o['civ'], 1)
         m0 = o['money']
         st = dict(t=0., planning=True, spend_frac=0., deck=[], sim=0., mult=8.)
+        config = initial.get('config', {})
+        st.update(loadout=env.loadout_levels(), sp=session.get('sp_unspent', 0),
+                  unlocked=env.unlocked_abilities(),
+                  costs={name: _rule({k.removeprefix('loadout_'): v for k, v in config.items()}, name, '_cost')
+                         for name in DECK_ORDER})
+        plan = initial
         net = None if eps_rand else PolicyNet2().eval()
         if net is not None:
             net.load_state_dict(sd)
             if Observer is not None:
                 observer = Observer(net, pid, tag, labels={
-                    'input': INPUT_LABELS, 'hu': TOOLS, 'hc': [f'Cell {i+1}' for i in range(NC)]})
+                    'input': INPUT_LABELS, 'hu': TOOLS, 'hc': CELL_LABELS})
         rows = {k: [] for k in ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail')}
         h = None
         prev_u = prev_c = succ = trend = slope = 0.
@@ -371,6 +351,17 @@ def run_episode(args):
             st['planning'] = state['phase'] == 'planning'
             st['t'] = time.monotonic() - (battle_start or start)
             st['sim'], st['mult'] = state['sim'], state['mult']
+            if not st['planning']:
+                if any(s['name'] == 'Heli' for s in st['deck']) and state['sim'] >= st.get('next_heli_check', 0):
+                    refresh_battle_state(st, env.dump())
+                    st['next_heli_check'] = state['sim'] + 5
+                stock = env.battle_stock()
+                for slot in st['deck']:
+                    slot['charges'] = stock[slot['name']]
+                if st.get('anchor'):
+                    slot = next(s for s in st['deck'] if ABILITY_U[s['name']] == st['anchor'][0])
+                    if not slot_castable(st, slot):
+                        st.pop('anchor')
             if state['paused']:
                 env.vi.key_press(0x20, sc=57)
                 time.sleep(.1)
@@ -378,7 +369,8 @@ def run_episode(args):
                 if state['paused']:
                     raise ZAREnvError('Confirmed pause did not clear')
             frac = o['civ'] / civ0
-            # Spatial input is supplied by a validated native reader in milestone 3.
+            spatial = env.spatial(plan)
+            st['grid'], st['build_targets'] = spatial['counts'], spatial['build_targets']
             blobs = []
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
             mu, mc = masks_for(st)
@@ -386,18 +378,22 @@ def run_episode(args):
             with torch.no_grad():
                 if net is None:
                     u = int(np.random.choice(np.flatnonzero(mu)))
+                    mc = cell_mask(st, u, mc)
                     c = int(np.random.choice(np.flatnonzero(mc)))
                     ulp, clp = -math.log(mu.sum()), -math.log(mc.sum())
                 else:
                     lu, lc, _, h = net(x, h)
                     du = torch.distributions.Categorical(logits=lu.flatten().masked_fill(torch.tensor(mu == 0), -1e9))
-                    dc = torch.distributions.Categorical(logits=lc.flatten())
                     u = int(du.probs.argmax() if options.get('greedy') else du.sample())
+                    mc = cell_mask(st, u, mc)
+                    dc = cell_distribution(lc, u, mc)
                     c = int(dc.probs.argmax() if options.get('greedy') else dc.sample())
                     ulp, clp = float(du.log_prob(torch.tensor(u))), float(dc.log_prob(torch.tensor(c)))
                     if observer:
-                        observer.publish(probabilities={'hu': du.probs, 'hc': dc.probs},
-                                         selected={'hu': u, 'hc': c},
+                        cp = torch.zeros(NU, NC)
+                        cp[u] = dc.probs
+                        observer.publish(probabilities={'hu': du.probs, 'hc': cp.flatten()},
+                                         selected={'hu': u, 'hc': u*NC+c},
                                          phase='planning' if st['planning'] else 'battle')
             for k, v in dict(obs=f, us=u, cs=c, ulps=ulp, clps=clp, masks=(mu, mc)).items():
                 rows[k].append(v)
@@ -405,33 +401,75 @@ def run_episode(args):
             previous_state = state
             action_started = time.monotonic()
             if st['planning']:
-                if u == 1 or len(rows['obs']) >= options.get('plan_steps', PLAN_STEPS):
+                if u == 1:
                     state = ready_once(env)
                     battle_start = time.monotonic()
                     d = dict(initial)
                     d['economy'] = {f'loadout {name}': str(level) for name, level in
-                                    zip(DECK_ORDER, env.loadout_levels()) if level > 0}
-                    st['deck'] = build_deck(d, keys)
+                                    env.loadout_levels().items() if level > 0}
+                    st['deck'] = build_deck(d, keys, env.roster())
+                    stock = env.battle_stock()
+                    for slot in st['deck']:
+                        slot['charges'] = slot['max_charges'] = stock[slot['name']]
+                elif u >= 34:
+                    name = DECK_ORDER[(u-34) % 19]
+                    delta = 1 if u < 53 else -1
+                    st['loadout'] = env.change_loadout(name, delta)
+                    st['sp'] -= delta*st['costs'][name]
+                elif u in (10, 15, 17, 18):
+                    if not st.get('anchor'):
+                        st['anchor'] = (u, c)
+                    else:
+                        x1, y1 = cell_of_px(st.pop('anchor')[1], env.cw, env.ch)
+                        x2, y2 = cell_of_px(c, env.cw, env.ch)
+                        env._arm(*((0x42, 48) if u == 10 else U_HOTKEY[u]))
+                        if u == 10:
+                            for px, py in ((x1, y1), (x2, y1), (x2, y2), (x1, y2)):
+                                env.vi.click(px, py)
+                            env.vi.key_press(0x0D, sc=28)
+                        else:
+                            env.vi.drag(x1, y1, x2, y2)
+                            if u == 15:
+                                env.vi.click(x2, y2)
+                        time.sleep(.2)
+                        plan = env.dump() or plan
                 elif u in U_HOTKEY:
                     env._arm(*U_HOTKEY[u])
                     cx, cy = cell_of_px(c, env.cw, env.ch)
-                    env.vi.click(cx, cy)
-                    time.sleep(.2)
-                elif u == 10:
-                    x1, y1 = cell_of_px(c, env.cw, env.ch)
-                    x2, y2 = cell_of_px(zone_span(c), env.cw, env.ch)
-                    env._arm(0x42, 48)
-                    for px, py in ((x1, y1), (x2, y1), (x2, y2), (x1, y2)):
-                        env.vi.click(px, py)
-                    env.vi.key_press(0x0D, sc=28)
+                    if u in (2, 3, 5, 8, 9):
+                        cx, cy = map(int, st['build_targets'][c])
+                    env.vi.move_to(cx, cy)
+                    time.sleep(.15)
+                    env.vi.click(hold=.15)
                     time.sleep(.2)
             elif u in U2ABILITY:
                 slot = next(s for s in st['deck'] if s['name'] == U2ABILITY[u])
-                env.cast(slot['key'], *cell_of_px(c, env.cw, env.ch))
-                if not (slot['name'] == 'Heli' and slot['alive']):
-                    slot['charges'] = max(slot['charges'] - 1, 0)
-                    slot['ready_t'] = state['sim'] + slot['arrival']
-                    slot['pending'] = slot['arrival'] > 0
+                if u in BATTLE_GEOMETRY and not st.get('anchor'):
+                    st['anchor'] = (u, c)
+                else:
+                    before_stock = env.battle_stock()[slot['name']]
+                    if u in BATTLE_GEOMETRY:
+                        import ctypes
+                        vk = ord(slot['key'].upper())
+                        env._arm(vk, ctypes.windll.user32.MapVirtualKeyW(vk, 0))
+                        start_xy = cell_of_px(st.pop('anchor')[1], env.cw, env.ch)
+                        end_xy = cell_of_px(c, env.cw, env.ch)
+                        if u == 27:
+                            env.vi.click(*start_xy)
+                            time.sleep(.15)
+                            env.vi.click(*end_xy)
+                        else:
+                            env.vi.drag(*start_xy, *end_xy)
+                    else:
+                        env.cast(slot['key'], *cell_of_px(c, env.cw, env.ch))
+                    slot['charges'] = env.battle_stock()[slot['name']]
+                    # The stock receipt, not a sent keypress, proves a resource was spent.
+                    if slot['charges'] < before_stock:
+                        slot['ready_t'] = env.game_state()['sim'] + slot['arrival']
+                        slot['pending'] = slot['arrival'] > 0
+                    if slot['name'] == 'Heli':
+                        receipt = env.dump()
+                        slot['alive'] = bool(receipt and int(receipt.get('counts', {}).get('helicopters', 0)))
             # Observe after this action; outcomes belong to this transition.
             time.sleep(max(0., (.1 if st['planning'] else STEP_S) - (time.monotonic()-action_started)))
             o = env.obs()
@@ -452,9 +490,11 @@ def run_episode(args):
                     slot['pending'] = False
             if state['phase'] in ('won', 'lost'):
                 end = state['phase']
-            elif state['phase'] == 'playing' and o['civ'] <= .1*civ0:
+            elif state['phase'] == 'playing' and o['civ'] <= .1*civ0 and o['infections'] >= .9*civ0:
                 end = 'aborted'
             elif battle_start is not None and time.monotonic()-battle_start >= options.get('battle_seconds', BATTLE_T):
+                end = 'timeout'
+            elif state['phase'] == 'planning' and len(rows['obs']) >= options.get('plan_steps', PLAN_STEPS):
                 end = 'timeout'
         footer = env.stop_log()
         logging = False
@@ -465,8 +505,11 @@ def run_episode(args):
                 saved = pct / 100.
         bootstrap = 0.
         if end == 'timeout' and net is not None:
-            st['planning'] = False
-            st['t'] = time.monotonic()-battle_start
+            st['planning'] = state['phase'] == 'planning'
+            st['t'] = time.monotonic()-(battle_start or start)
+            spatial = env.spatial(plan)
+            st['grid'] = spatial['counts']
+            st['sim'] = state['sim']
             f = make_obs(st, o, o['civ']/civ0, trend, slope, [], prev_u, prev_c, succ)
             with torch.no_grad():
                 _, _, value, _ = net(torch.tensor([[f]], dtype=torch.float32), h)
@@ -529,6 +572,7 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015):
         CLP = torch.tensor(t['clps'], dtype=torch.float32)
         MU = torch.tensor(np.array([m[0] for m in t['masks']],
                                    dtype=np.float32))
+        MC = torch.tensor(np.array([m[1] for m in t['masks']], dtype=np.float32))
         RW = np.array(t['rews'], dtype=np.float32)
         with torch.no_grad():
             _, _, v, _ = net(X)
@@ -536,18 +580,18 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015):
         adv, ret = gae(list(RW), list(vals), bootstrap=t.get('bootstrap', 0.0))
         seqs.append((X, U, C, ULP, CLP, MU,
                      torch.tensor(adv, dtype=torch.float32),
-                     torch.tensor(ret, dtype=torch.float32)))
+                     torch.tensor(ret, dtype=torch.float32), MC))
     alladv = np.concatenate([s[6].numpy() for s in seqs])
     mu_a, sd_a = alladv.mean(), alladv.std() + 1e-8
     for _ in range(epochs):
         order = np.random.permutation(len(seqs))
         tot = 0.0
         for k in order:
-            X, U, C, ULP, CLP, MU, ADV, RET = seqs[k]
+            X, U, C, ULP, CLP, MU, ADV, RET, MC = seqs[k]
             lu, lc, v, _ = net(X)
             du = torch.distributions.Categorical(
                 logits=lu.squeeze(0).masked_fill_(MU == 0, -1e9))
-            dc = torch.distributions.Categorical(logits=lc.squeeze(0))
+            dc = cell_distribution(lc, U, MC)
             lp = du.log_prob(U) + dc.log_prob(C)
             ratio = torch.exp(lp - (ULP + CLP))
             adv = (ADV - mu_a) / sd_a
@@ -581,7 +625,7 @@ def save_checkpoint(net, opt, path, run_id):
     path = os.fspath(path)
     tmp = path + '.tmp'
     torch.save({'policy': net.state_dict(), 'optimizer': opt.state_dict(),
-                'run_id': run_id, 'schema': 1}, tmp)
+                'run_id': run_id, 'schema': checkpoint_schema()}, tmp)
     if os.path.exists(path):
         shutil.copy2(path, path + '.previous')
     os.replace(tmp, path)

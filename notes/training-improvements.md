@@ -25,7 +25,7 @@ civilians. Model decisions retain control of strategy. Evaluation never trains.
   immediate doomed-run retry, no counter-only SPACE heuristic, save-based reward.
   Tests: stale outcomes, zero balance, failed READY, pause/lull, credit timing,
   unknown outcomes, evacuation, truncation. Live: owned copy only, bounded episode.
-- [ ] 3. `nn_play2.py`, environment, visualizer: reliable spatial observations,
+- [x] 3. `nn_play2.py`, environment, visualizer: reliable spatial observations,
   carried-board state, conditional placement via existing GRU/linear heads,
   legal geometry and gestures, policy-selected loadout with SP legality.
   Update labels, probes, observer/renderer as required in the same change.
@@ -84,3 +84,23 @@ hardware probe scripts are not safe automatic test-discovery targets.
 - Ruling: remove net-zombie/purchase/cast shaping. Next-state cumulative
   infections cost 1 per initial population, terminal saved fraction earns 5;
   no per-step floor. This coefficient choice requires later performance trials.
+
+- Milestone 3: 18 learning/state, 12 deck, 3 spatial and 34 visualizer tests PASS;
+  actual-model parity (12 steps) and graph checks PASS. Schema 3 is 332 inputs /
+  632,649 parameters; old checkpoint loading now fails explicitly.
+- Live inst9 PID 34176: UI Police buy/refund and scrolled Demolition buy/refund
+  changed exact native levels and persisted roster order. Native enum ordering
+  differs from picker order. Police level 2 means 40 individual officers.
+- Native stock at 0x656488 was verified against session logs: Police 40 -> 28
+  after a successful spray; failed clicks stayed at 40; Police20/Stungas1 matched
+  all 39 footer stock entries. This replaces optimistic charge decrementing.
+- Live model samples (seeds42/123, 12/20 planning decisions) spent $178.20 and
+  $1611.24 through purchases/geometry, and changed loadout via receipts. Both
+  were planning truncations, reward zero; neither is evidence of winning play.
+- Fresh real worker44944/game34176 frame: 332 exact input labels, 3456 conditional
+  cell outputs, actual sampled tool17/cell20 (flattened836), no label_warning.
+  Evidence: visualizer/runtime/m3-frame.evidence. Owned game and worker stopped.
+- Spatial reader captures native units, building candidates and planned-zone
+  coverage. Candidates include unbuildable scenery; receipts remain required.
+  Full obstacle/footprint and wall-health encoding is deferred pending validated
+  native semantics, not guessed from screenshots.

@@ -59,7 +59,7 @@ class IntegrationTests(unittest.TestCase):
                          load_bind_keys=lambda env: [], q_saved=lambda pid, dur: None,
                          time=clock)
         with patch.dict(self.globals, overrides), patch.dict(sys.modules, {'env_zar': SimpleNamespace(ZAREnv=lambda pid: game, ZAREnvError=RuntimeError)}):
-            with patch.object(torch.distributions.Categorical, 'sample', return_value=torch.tensor([0])):
+            with patch.object(torch.distributions.Categorical, 'sample', side_effect=[torch.tensor(v) for v in (1, 0, 0, 0)]):
                 with redirect_stderr(io.StringIO()):
                     return self.run_episode((-1, self.model.state_dict(), False, 'test-episode'))
 
@@ -74,7 +74,7 @@ class IntegrationTests(unittest.TestCase):
         self.assertTrue(observer._closed)
         self.assertEqual([frame['phase'] for frame in observer.frames], ['planning', 'battle'])
         for index, frame in enumerate(observer.frames):
-            self.assertEqual(frame['selected'], {'hu': observed['us'][index], 'hc': observed['cs'][index]})
+            self.assertEqual(frame['selected'], {'hu': observed['us'][index], 'hc': observed['us'][index]*self.globals['NC']+observed['cs'][index]})
             self.assertEqual(len(frame['values']['input']),
                              self.globals['NOBS'])
             inp = next(l for l in frame['graph']['layers']

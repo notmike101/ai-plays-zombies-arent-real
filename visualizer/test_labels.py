@@ -59,6 +59,16 @@ LABEL_PINS = {0: 'civilians', 5: 'money', 6: 'elapsed', 8: 'trend',
               23: 'crowd 4 x', 26: 'extent', 27: 'previous tool',
               30: 'planning', 31: 'budget'}
 
+EXPECT += [0.0]*240
+for i in range(19):
+    EXPECT += [0., 1. if i < 4 else 0., 0.]
+EXPECT += [0., -1., -1.]
+LABEL_PINS.update({32: 'grid civilians cell 1', 80: 'grid zombies cell 1',
+                   128: 'grid defenders cell 1', 176: 'grid buildings cell 1',
+                   224: 'grid safe zone cell 1', 272: 'police loadout',
+                   273: 'police castable', 274: 'police pending',
+                   329: 'unspent skill', 330: 'anchor tool', 331: 'anchor cell'})
+
 
 class Tiny(nn.Module):
     def __init__(self, n=3):
@@ -100,6 +110,18 @@ class LabelTests(unittest.TestCase):
             self.assertIn(pin, INPUT_LABELS[i].lower(),
                           msg=f'label {i} no longer means the probed feature')
 
+    def test_spatial_loadout_and_anchor_semantics(self):
+        import numpy as np
+        t = trainer()
+        st = dict(PROBE_ST, grid=np.arange(240).reshape(5,48),
+                  loadout={n: i+1 for i,n in enumerate(t['DECK_ORDER'])},
+                  sp=2, anchor=(15,47))
+        obs = t['make_obs'](st, PROBE_O, .75, 0, 0, [], 0, 0, 0)
+        np.testing.assert_allclose(obs[32:224], np.log1p(np.arange(192)))
+        np.testing.assert_allclose(obs[224:272], np.arange(192,240))
+        np.testing.assert_allclose(obs[272:329:3], np.arange(1,20)/10.)
+        np.testing.assert_allclose(obs[-3:], [.2,15/72,47/48])
+
     def test_crowd_missing_partial_full(self):
         obs = self.probe(blobs=[])
         self.assertEqual(obs[14:26], [-1.0] * 12)
@@ -110,33 +132,14 @@ class LabelTests(unittest.TestCase):
         obs = self.probe(blobs=[(min(k / 5, 1.0), 0.5, 6000) for k in range(1, 6)])
         self.assertEqual(obs[26], 1.0)  # >4 detections truncate to 4 slots
 
-    def test_warm_start_block_copy(self):
-        import os
-        import tempfile
+    def test_old_checkpoint_is_rejected_without_reinterpreting_columns(self):
         t = trainer()
         net = t['PolicyNet2']()
-        sd = net.state_dict()
-        old = {k: (v[:12] if k.startswith(('hc.weight', 'hc.bias')) else
-                   v[:, :22] if k == 'gru.weight_ih_l0' else
-                   v[:15] if k.startswith(('hu.weight', 'hu.bias')) else
-                   v.clone()) for k, v in sd.items()}
         with tempfile.TemporaryDirectory() as d:
-            p = os.path.join(d, 'm.pt')
-            torch.save(old, p)
-            net2 = t['PolicyNet2']()
-            t['load_pretrained'](net2, p)
-            got = net2.state_dict()
-        for key, want in (('hc.weight', old['hc.weight']),
-                          ('hc.bias', old['hc.bias']),
-                          ('hu.weight', old['hu.weight']),
-                          ('gru.weight_ih_l0', old['gru.weight_ih_l0'])):
-            pre = got[key][:want.shape[0]]
-            if want.ndim == 2:
-                pre = pre[:, :want.shape[1]]
-            self.assertTrue(torch.equal(pre, want), key)
-        self.assertFalse(torch.equal(got['hc.weight'][12:],
-                                     got['hc.weight'][12:13].expand_as(
-                                         got['hc.weight'][12:]) * 0))
+            p = Path(d) / 'old.pt'
+            torch.save(net.state_dict(), p)
+            with self.assertRaisesRegex(ValueError, 'Incompatible checkpoint'):
+                t['load_pretrained'](net, p)
 
     def test_no_generic_labels_in_source_list(self):
         self.assertFalse([s for s in INPUT_LABELS

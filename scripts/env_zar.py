@@ -31,6 +31,15 @@ BASE_RVA = dict(civ=0x650f10, zomb=0x650f18, police=0x650f20, corpses=0x650f28,
                 count=0x650438, converting=0x650f80)
 MONEY_F32_RVAS = (0x6563c0, 0x65d9c0, 0x665ef0)
 BUILD_SHA256 = 'a1bd5913ed3905aaaadfb5a14781004d28990f433ff1621c658c10f1795469d2'
+NATIVE_ABILITIES = ['Bomber', 'Police', 'Heli', 'Stungas', 'Firebomb', 'CallArms',
+                    'APC', 'Rally', 'Bus', 'Missile', 'Medevac', 'Dozer', 'Tank',
+                    'Cure', 'Nuke', 'Demolition', 'SeekDestroy', 'Cluster', 'AC130']
+STOCK_NAMES = ['Police', 'Garrison', 'Nest', 'Mine', 'C4', 'Sniper', 'Mortar',
+               'Heli', 'Bomber', 'Firebomb', 'Stungas', 'Corridor', 'Hold', 'Decoy',
+               'CallArms', 'Wall', 'APC', 'Battleship', 'GasMortar', 'FireMortar',
+               'Rally', 'Bus', 'Missile', 'Howitzer', 'MLRS', 'Railgun', 'Cure',
+               'ChemMine', 'Spikes', 'Oil', 'Napalm', 'Medevac', 'Dozer', 'Tank',
+               'Nuke', 'Demolition', 'SeekDestroy', 'Cluster', 'AC130']
 PROGRESS = r'game-copies/inst2/steam_cloud/progress/Boston__MA.progress'
 
 
@@ -154,7 +163,109 @@ class ZAREnv:
         self.vi.key_press(0x52, sc=19)
 
     def loadout_levels(self):
-        return [self.scalar(0x655f90 + i * 8, '<q') for i in range(19)]
+        return {name: self.scalar(0x655f90 + i * 8, '<q') for i, name in enumerate(NATIVE_ABILITIES)}
+
+    def battle_stock(self):
+        stock = {name: self.scalar(0x656488+i*4, '<f') for i, name in enumerate(STOCK_NAMES)}
+        if any(not math.isfinite(v) or v < 0 for v in stock.values()):
+            raise ZAREnvError('Invalid battle stock')
+        return stock
+
+    def roster(self):
+        settings = (Path(self.copy_dir()) / 'steam_cloud/settings.ini').read_text()
+        match = re.search(r'^roster_battle\s*=\s*(.*)$', settings, re.M)
+        if not match or len(match[1].split()) != 7:
+            raise ZAREnvError('Missing seven-slot battle roster')
+        return match[1].split()
+
+    def change_loadout(self, name, delta):
+        """One model-selected level change through the calibrated loadout UI."""
+        if (self.cw, self.ch) != (1920, 1200) or delta not in (-1, 1):
+            raise ZAREnvError('Loadout gestures require calibrated 1920x1200 client')
+        before = self.loadout_levels()
+        roster = self.roster()
+        self.vi.key_press(9, sc=15)
+        time.sleep(.2)
+        if self.scalar(0x6553e8, '<I') != 1:
+            raise ZAREnvError('Loadout did not open')
+        try:
+            if name in roster:
+                slot = roster.index(name)
+                self.vi.click((244 if delta > 0 else 80) + 266*slot, 794)
+            elif delta > 0:
+                slot = roster.index('-')
+                order = [s.strip() for s in (Path(self.copy_dir())/'battle_order.txt').read_text().splitlines()
+                         if s.strip() and not s.startswith('#')]
+                unlocked = self.unlocked_abilities()
+                order = [n for n in order if n in unlocked] + [n for n in order if n not in unlocked]
+                index = order.index(name)
+                self.vi.click(160+266*slot, 680)
+                time.sleep(.2)
+                self.vi.wheel(30, 600, 600)
+                scroll = min(index, max(0, len(order)-7))
+                if scroll:
+                    self.vi.wheel(-scroll, 600, 600)
+                self.vi.click(600, 180+120*(index-scroll))
+            time.sleep(.2)
+        finally:
+            # Close a remaining picker, then the loadout, without backing out of play.
+            self.vi.key_press(0x1B, sc=1)
+            time.sleep(.1)
+            if self.scalar(0x6553e8, '<I') == 1:
+                self.vi.key_press(9, sc=15)
+            time.sleep(.2)
+        self.game_state()
+        after = self.loadout_levels()
+        expected = dict(before)
+        expected[name] += delta
+        if after != expected:
+            raise ZAREnvError(f'Loadout receipt mismatch for {name} {delta:+d}')
+        return after
+
+    def unlocked_abilities(self):
+        text = (Path(self.copy_dir())/'steam_cloud/unlocks.ini').read_text()
+        return set(re.findall(r'^unlock\s*=\s*ability\s+(\w+)', text, re.M))
+
+    def array(self, rva, dtype, limit=500000):
+        import numpy as np
+        pointer = self.scalar(rva, '<Q')
+        count = self.scalar(rva+8, '<q')
+        if not 0 <= count <= limit or count and not pointer:
+            raise ZAREnvError(f'Invalid array at {rva:#x}: {count}')
+        size = np.dtype(dtype).itemsize * count
+        data = memscan.read(self.h, pointer, size) if size else b''
+        if data is None or len(data) != size:
+            raise ZAREnvError(f'Incomplete array at {rva:#x}')
+        return np.frombuffer(data, dtype=dtype).copy()
+
+    def spatial(self, plan):
+        import numpy as np
+        from spatial import project, features
+        for _ in range(5):
+            tick = self.scalar(0x6514e8, '<q')
+            points = self.array(0x650280, np.dtype(('<f4', 2)))
+            kinds = self.array(0x6502d0, 'u1')
+            if len(points) == len(kinds) and tick == self.scalar(0x6514e8, '<q'):
+                break
+        else:
+            raise ZAREnvError('Unit snapshot changed during read')
+        camera = [self.scalar(rva, '<f') for rva in (0x6553ac, 0x6553b0, 0x6553b4)]
+        if self.scalar(0x6553d4, '<f') != 0 or self.scalar(0x6553d8, '<f') != 0:
+            raise ZAREnvError('Spatial projection requires top-down unrotated camera')
+        if not np.isfinite(points).all() or not all(map(math.isfinite, camera)) or camera[2] <= 0:
+            raise ZAREnvError('Invalid spatial coordinates')
+        rectangles = self.array(0x656680, np.dtype(('<f4', 4)))
+        origin = np.array([self.scalar(0x665358, '<f'), self.scalar(0x66535c, '<f')])
+        zones = []
+        for line in plan.get('_text', '').splitlines():
+            if line.startswith('board zone = '):
+                fields = line.split('=', 1)[1].split()
+                n = int(fields[0])
+                vertices = np.asarray(list(map(float, fields[1:1+2*n]))).reshape(n, 2)-origin
+                zones.append(project(vertices, camera, self.cw, self.ch))
+        return features(project(points, camera, self.cw, self.ch), kinds,
+                        project(rectangles.reshape(-1, 2), camera, self.cw, self.ch).reshape(-1, 4),
+                        zones, self.cw, self.ch)
 
     def close(self):
         """Release this attachment without stopping the caller's game."""
@@ -174,7 +285,7 @@ class ZAREnv:
         return os.path.dirname(psutil.Process(self.pid).exe())
 
     def dump_parse(text):
-        out = {}
+        out = {'_text': text}
         sec = out
         for ln in text.splitlines():
             s = ln.strip()

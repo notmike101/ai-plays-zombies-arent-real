@@ -15,6 +15,15 @@ class StateTests(unittest.TestCase):
         e.h, e.base = 0, 0
         return e
 
+    def test_native_stock_uses_float_array_enum_order(self):
+        e = self.env()
+        values = {0x656488: 28., 0x656488+10*4: 1.}
+        e.scalar = lambda address, fmt: values.get(address, 0.)
+        stock = e.battle_stock()
+        self.assertEqual(stock['Police'], 28)
+        self.assertEqual(stock['Stungas'], 1)
+        self.assertEqual(stock['Heli'], 0)
+
     def test_money_uses_dump_field_and_accepts_zero(self):
         def read(h, address, size):
             return struct.pack('<f', 0.0 if address == 0x65d9c0 else 3111.0)

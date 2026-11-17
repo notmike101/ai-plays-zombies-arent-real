@@ -170,34 +170,13 @@ class RefreshTests(unittest.TestCase):
         t()['refresh_battle_state'](st, None)   # missing dump: no crash
         self.assertEqual(st['sim'], 100.0)
 
-    def test_charges_synced_from_dump(self):
+    def test_config_does_not_replenish_spent_stock_or_invent_cooldown(self):
         st = {'sim': 10, 'mult': 1, 'deck': [slot(name='Police', mx=20,
                                                   charges=3, unlock=0)]}
-        t()['refresh_battle_state'](st, dump())
-        self.assertEqual(st['deck'][0]['charges'], 20)
-        # capped at max even if the dump line says more
-        st['deck'][0]['charges'] = 3
-        st['deck'][0]['max_charges'] = 5
-        t()['refresh_battle_state'](st, dump())
-        self.assertEqual(st['deck'][0]['charges'], 5)
-
-    def test_game_cooldown_blocks_exact_window(self):
-        st = {'sim': 100, 'mult': 1,
-              'deck': [slot(name='Bomber', charges=1, unlock=0)]}
-        t()['refresh_battle_state'](st, dump(counts=dict(
-            COUNTS, ability_cooldown='[.Bomber = 12]')))
-        s = st['deck'][0]
-        self.assertTrue(s['pending'])
-        self.assertEqual(s['ready_t'], 112)
-        self.assertFalse(t()['slot_castable']({'sim': 111}, s))
-        self.assertTrue(t()['slot_castable']({'sim': 112},
-                                             dict(s, pending=False)))
-        # HELI cooldown ignored (free re-aim while flying)
-        st = {'sim': 100, 'mult': 1, 'deck': [slot(charges=0, unlock=0)]}
-        t()['refresh_battle_state'](st, dump(counts=dict(
-            COUNTS, ability_charges='[.Heli = 0]',
-            ability_cooldown='[.Heli = 8]', helicopters='1')))
-        self.assertTrue(t()['slot_castable'](st, st['deck'][0]))
+        t()['refresh_battle_state'](st, dump(counts=dict(COUNTS,
+            ability_cooldown='[.Police = 12]')))
+        self.assertEqual(st['deck'][0]['charges'], 3)
+        self.assertFalse(st['deck'][0]['pending'])
 
 
 class SetLoadoutTests(unittest.TestCase):

@@ -1,5 +1,6 @@
 """Test-only game/clock double. No files, processes, or real input."""
 from types import SimpleNamespace
+import numpy as np
 
 
 class FakeGame:
@@ -54,7 +55,19 @@ class FakeGame:
         return {'phase': self.phase, 'stats': {'saved_pct': 100-self.infections}}
 
     def loadout_levels(self):
-        return [0]*19
+        return {}
+
+    def battle_stock(self):
+        return {}
+
+    def roster(self):
+        return ['-']*7
+
+    def unlocked_abilities(self):
+        return set()
+
+    def spatial(self, plan):
+        return dict(counts=np.zeros((5, 48)), build_targets=[None]*48)
 
     def retry(self):
         self.keys.extend([0x52, 0x52])

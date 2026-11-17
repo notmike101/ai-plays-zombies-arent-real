@@ -175,16 +175,24 @@ tests or checking the synthetic preview are NOT sufficient proof: after
 deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.json`
 — `graph.layers[input].labels` readable, no `label_warning` key present).
 
-## Battle keybind contract (2026-11-16s, user directive)
-- Battle kit keys 1-5 are bound BY THE RUN LOADOUT (SP picks rebind the
-  bar). Pinned WIN-board kit (0/2 SP spent, confirmed on L1 end screen):
-  key1 = heli (redeployable), 2 = CTA x2, 3 = Rally x3, 4 = MEDEVAC x4,
-  5 = Seek x1 (it17 evidence). `nn_play2` BATTLE_U + st['charges'] +
-  TOOLS idx 11-14/19 mirror exactly this.
-- ANY loadout pick change: read the live battle HUD bar screenshot BEFORE
-  trusting battle fitness, then update BATTLE_U + charges + TOOLS in the
-  same change. A stale binding is a silent no-op keypress (the old table
-  pressed '2' as heli when key2 was actually CTA — every battle cast was
-  off one slot).
-- L1 battle dies in <4 s on a naked board (t=4 end screen already shows
-  'nothing deployed', 0 kills) — bare boards are useless as HUD probes.
+## Battle input and schema contract (2026-11-17)
+- `nn_play2` schema 3 uses 332 inputs, 72 tools and 48 conditional cells.
+  Checkpoints default to sessions/nn_policy3.pt. Never silently reinterpret v2
+  weights: checkpoint metadata must match labels/action meanings exactly.
+- Battle hotkeys follow steam_cloud/settings.ini roster_battle, including gaps,
+  plus bind_slot1..7. battle_order.txt controls the picker, not the equipped bar.
+  UI purchases/refunds require native level receipts; do not use resume_loadout
+  file edits as proof of ownership. Fresh normal L1 has 2 SP on this build.
+- Dump [config] ability_charges/cooldown are balance defaults, NOT live stock.
+  Native stock is 39 float32 values at RVA 0x656488 in Stock_Item enum order.
+  Validate the executable hash first. Paratrooper stock counts individual officers.
+- Model geometry uses two sampled cells; never wrap an endpoint across the grid
+  or substitute READY when a planning cap expires. A cap is truncation.
+- Native positions/camera replace battle screenshots. Grid building centers are
+  candidate targets; scenery outside the play area can still reject purchases.
+  Money/stock receipts decide success. Never infer execution from a sent input.
+- The loadout UI is calibrated for 1920x1200 English UI scale 1 only; unsupported
+  layouts fail explicitly. Battle geometry follows the shipped config comments.
+- Native stock and post-cast receipts govern resource masks. Helicopter liveness
+  refreshes from counts every five sim seconds; do not fabricate replenishment.
+- Evaluation is read-only for model/optimizer; game actions still change its board.

@@ -27,7 +27,7 @@ def run_battle(rate=0, pause=False):
                     load_bind_keys=lambda e: [], time=clock)), \
             patch.dict(sys.modules, {'env_zar': SimpleNamespace(ZAREnv=lambda pid: game,
                          ZAREnvError=RuntimeError)}), \
-            patch.object(torch.distributions.Categorical, 'sample', return_value=torch.tensor(0)):
+            patch.object(torch.distributions.Categorical, 'sample', side_effect=[torch.tensor(v) for v in [1, 0]+[0]*100]):
         result = fn((-1, source['PolicyNet2']().state_dict(), False, 'test'))
     return result, game
 

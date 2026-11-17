@@ -13,6 +13,35 @@ import nn_play2 as train
 
 
 class LearningTests(unittest.TestCase):
+    def test_loadout_mask_requires_unlocked_affordable_skill_points(self):
+        st = dict(planning=True, loadout={'Police': 1}, sp=1,
+                  costs={'Police': 1, 'Heli': 2, 'Stungas': 1}, unlocked={'Police', 'Heli'})
+        mu, _ = train.masks_for(st)
+        self.assertEqual(mu[34], 1)
+        self.assertEqual(mu[36], 0)
+        self.assertEqual(mu[37], 0)
+        self.assertEqual(mu[53], 1)
+
+    def test_actual_roster_preserves_gaps_and_reordered_hotkeys(self):
+        dump = {'economy': {'loadout Police': '1', 'loadout Heli': '1'},
+                'config': {'heli_unlock_seconds': '30'}}
+        deck = train.build_deck(dump, list('123456T'), ['Heli', '-', 'Police', '-', '-', '-', '-'])
+        self.assertEqual([(s['name'], s['key'], s['unlock']) for s in deck],
+                         [('Heli', '1', 30), ('Police', '3', 0)])
+
+    def test_cell_distribution_depends_on_selected_tool(self):
+        logits = torch.zeros(train.NU * train.NC)
+        logits[2*train.NC+3] = 20
+        logits[3*train.NC+9] = 20
+        self.assertEqual(int(train.cell_distribution(logits, 2, np.ones(train.NC)).probs.argmax()), 3)
+        self.assertEqual(int(train.cell_distribution(logits, 3, np.ones(train.NC)).probs.argmax()), 9)
+
+    def test_geometry_endpoint_cannot_wrap_or_repeat_anchor(self):
+        st = dict(planning=True, anchor=(10, 47), deck=[])
+        mu, mc = train.masks_for(st)
+        self.assertEqual(list(np.flatnonzero(mu)), [10])
+        self.assertEqual(mc[47], 0)
+
     def test_zero_reward_terminal_returns(self):
         adv, ret = train.gae([0, 0, 0], [1, 1, 1], gamma=1, lam=1)
         np.testing.assert_allclose(adv, [-1, -1, -1])
