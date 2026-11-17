@@ -54,6 +54,8 @@ class Observer:
                 self._hooks.append(head.register_forward_hook(self._capture_head(name)))
         except Exception as exc:
             self.error = f'Unsupported or unavailable observer: {type(exc).__name__}: {exc}'
+            if self._thread is not None and not self._thread.is_alive():
+                self._thread = None
             for hook in self._hooks:
                 hook.remove()
             self._hooks.clear()

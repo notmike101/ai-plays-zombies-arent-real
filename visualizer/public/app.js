@@ -79,7 +79,9 @@ async function poll() {
     if(requestedGeneration!==generation){setTimeout(poll,0);return;}
     const options=[new Option('Automatic attachment',''),...data.streams.map(s=>new Option(`Game ${s.game_pid} · worker ${s.worker_pid}${s.age>15?' · stale':''}`,s.id))];
     if(selectedStream&&!data.streams.some(s=>s.id===selectedStream))options.push(new Option('Selected worker unavailable',selectedStream));
-    $('stream').replaceChildren(...options);$('stream').value=selectedStream;
+    const optionSignature=options.map(o=>`${o.value}:${o.text}`).join('|');
+    if($('stream').dataset.signature!==optionSignature){$('stream').replaceChildren(...options);$('stream').dataset.signature=optionSignature;}
+    $('stream').value=selectedStream;
     const detail=data.status==='live'?`Following game ${data.frame.game_pid}`:data.status==='stale'?'No fresh sample · inference may be idle':data.status==='preview'?'Separate model · synthetic observations':data.status==='error'?data.frame.error:'Auto-attach is armed';
     showStatus(data.status,detail);text('age',data.age===undefined?'—':`${data.age.toFixed(1)}s ago`);
     if(!paused){

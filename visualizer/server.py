@@ -24,10 +24,15 @@ class Feed:
 
     def _read(self, now):
         frames = []
-        paths = list(self.directory.glob('*.json'))
+        paths = []
+        for path in self.directory.glob('*.json'):
+            try:
+                paths.append((path.stat().st_mtime_ns, path))
+            except OSError:
+                continue
         # Abandoned crash files are bounded on read; normal observers remove their own files.
-        paths.sort(key=lambda p: p.name)
-        for path in paths[-128:]:
+        paths.sort(key=lambda entry: entry[0], reverse=True)
+        for _, path in paths[:128]:
             try:
                 stat = path.stat()
                 if stat.st_size > 2 * 1024 * 1024:
