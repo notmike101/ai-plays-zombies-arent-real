@@ -1,43 +1,38 @@
 # ZAR Tracker (live state — update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17f — NN phase live, CEM paused)
-- Git: local repo + remote origin github.com/notmike101/ai-plays-zombies-arent-real
-  (main pushed). Commits: 9f1c793 init -> 4ec4443 launch fix -> 7af1015 logs.
-- `scripts/nn_play.py` PPO+GRU (63,282 params; obs 19 feats; 49 acts = wait +
-  4 battle units x 12 grid cells; charge-masked; reward 8*dfrac - 0.02/cast +
-  3*win + 5*frac^1.5; GAE+clip+entropy; ckpt sessions/nn_policy.pt; history
-  analysis/nn_hist.jsonl; forward returns full (T,) sequences; ppo_update
-  verified synthetic 4.21->4.00/epoch).
-- Training run (service NnTrain4): rounds 0-1 DONE = all-loss plateau
-  (frac ~0, R -8.0x, batch loss 23.9->12.5 mostly value-head). Diagnosis:
-  flat 49-way softmax + sparse signal = no gradient; scripted mortar boards die
-  at ammo-cliff ~t450s.
-- v2 IN PROGRESS (scripts/nn_play2.py, new file so live run isn't poisoned):
-  two-headed policy (unit x cell factorized) + kill/reward shaping + PLANNING
-  PHASE OWNED BY NET (tool hotkeys 1 garrison $18-270 bldg / 2 mortar $75 bldg /
-  3 napalm $100 / 4 turret $90 bldg / 5 mine $15 open / 6 C4 $500 / 7 gas tower
-  $90 / F upgrade; zone presets; READY = model decides; phase+money+success bit
-  in obs). Deck fixed para/heli/gas/ac130 (SP meta = outer loop later).
-- Boards: L1 fresh (START OVER'd, planning $3111, civ 8142):
-  pids 49320 49276 49384 39160 (training) + inst6 21992 READY (spare).
-  inst2 45120 idle L3 E-zone board ($69, 39% safe). Nav for fresh boards =
-  scripts/launch_boards.py (updated to MAP-COMPLETE layout: NORMAL shot(705,765)
-  -> START OVER shot(705,926)).
-- Smoke facts: random policy + mortar board held frac 1.00 until 496 s once,
-  else full-collapse runs -> cliff after mortar ammo dry (no resupply).
-  R dialog: keeps placements + loadout + leftover budget (economy persists;
-  START OVER = full reset). L1 = 8,142 civ, $3,111, land cap 30%.
-- Verified planning-hotkey map (from cards + _place probes): see v2 list above;
-  zone tool key Z UNVERIFIED (probe interrupted by R dialog on inst2).
-
+## CURRENT STATE (2026-11-17g — nn_play2 PPO LIVE)
+- Git: remote pushed thru 82d6eca (verified hotkeys + zone + trail + to_planning).
+- nn_play2 TRAINING (service Nn2Train1, 5 pids, log analysis/nn2_train1.log):
+  round0 = WINS 2/10 frac 1.00 x2, meanfrac 0.356, R spread -0.8..+15.9 (strong
+  advantage variance = real gradient). Random-init policy already wins L1 via
+  persistent-board economy (purchases accumulate across R-restarts).
+- Wedge fixed live: 49384 paused-mid-battle (SPACE unpause + ENTER + R ->
+  planning). to_planning needs unpause probe (SPACE once per iteration when
+  zomb>0 unchanged) - TODO next trainer downtime. Hardcore banner on boards:
+  loss wipes run -> back to L1 (self-heals via START-OVER-less R; curriculum OK).
+- Trainer stack: nn_play2.py (PPO two-head UxC, verified DEPLOY/BUILD hotkey
+  map from live HUD: 1 Napalm $100, 2 Mortar $79, 3 Sniper $50, 4 Turret $90,
+  5 Mine $15, 6 C4 $500, T GasMortar $90, B Safe-Zone, F Upgrade, G Gate,
+  Z Wall, Q Corridor, E Hold; READY=[Spc]; L3 zone cap 9 zones/44% land).
+  v1 nn_play.py dead-ended (flat head, 16 all-loss eps) — history only.
+- Economy facts: R keeps placements+loadout+LEFTOVER BUDGET (board invests
+  grow across episodes); START OVER = full reset; L1 = 8,142 civ $3,111 cap
+  30%; L3 fresh = 99,843 civ; hardcore banner: loss wipes run back to L1.
+- Boards: 49320 49276 49384 39160 21992 (L1-lineage, training, hardcore runs);
+  inst2 45120 idle L3 E-zone reference board ($69). Fresh-board nav =
+  scripts/launch_boards.py (MAP-COMPLETE layout: NORMAL(705,765) START
+  OVER(705,926)).
+- Zone tool = B (VERIFIED, arms wall-start prompt; fee on close; model draws
+  rect from cell c to c+4).
 ## NEXT STEPS
-1. Finish nn_play2.py (planning-phase actions, two-head policy, kill shaping);
-   dry-run ppo path; syntax gate; then swap training over when NnTrain4 ends.
-2. Relaunch training with 5 pids (add inst6 21992) long-run; monitor
-   wins/frac/loss in analysis/nn_*.log + nn_hist.jsonl; commit logs per round.
-3. Probe zone tool key (Z) on a board; add zone actions to v2 if real.
-4. Escalate on wins: win L1 -> battle-end CONTINUE chain -> L2 (badges auto).
-   >=35% per level is the bar; BC from best episodes if PPO slow.
+1. Monitor Nn2Train1 (analysis/nn2_train1.log): round wins/meanfrac trend +
+   ppo2 loss; commit logs every couple rounds, push milestones.
+2. Next trainer downtime: to_planning() unpause probe (SPACE when counters
+   frozen with zomb>0); stray-SPACE pause is the recurring wedge.
+3. Escalate: wins at >=35% badge; boards rotate L1->L2->... via win ENTER
+   chain; keep >=35% per level bar; BC from best episodes if PPO slow.
+4. Watch ammo-cliff: mortars dry (no resupply) -> kills plateau late battle;
+   model must learn heli/AC130 micromanagement (feature blob exists).
 5. Phase end: kill instances, port new Steam build (RE-DERIVE MEMORY RVAs!),
    re-baseline, final tracker + notes update, push.
 
