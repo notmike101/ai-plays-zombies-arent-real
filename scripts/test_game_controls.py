@@ -7,6 +7,13 @@ from game_mechanics import UNITS
 
 
 class ControlsTests(unittest.TestCase):
+    def test_endpoint_drag_releases_button_when_frame_receipt_fails(self):
+        c=Controls(Mock());c.frames=Mock(side_effect=[None,RuntimeError('stalled UI')])
+        with self.assertRaisesRegex(RuntimeError,'stalled UI'):
+            c.drag_handles((100,200),(300,400))
+        c.env.vi.button_down.assert_called_once()
+        c.env.vi.button_up.assert_called_once()
+
     def test_gesture_preserves_selection_and_releases_modifier_on_failure(self):
         c=Controls(Mock());c.frames=Mock();c.cancel=Mock()
         c.env.vi.drag.side_effect=RuntimeError('input failure')

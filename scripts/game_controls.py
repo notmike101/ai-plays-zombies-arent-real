@@ -14,6 +14,7 @@ KEY_ACTIONS = {
     'pan_down': (83,31,False), 'pan_right': (68,32,False),
     'speed_half': (112,59,False), 'speed_1': (113,60,False),
     'speed_2': (114,61,False), 'speed_4': (115,62,False),
+    'pause_toggle': (32,57,False),
 }
 
 
@@ -48,7 +49,9 @@ class Controls:
         return any(self.env.scalar(rva,'<B') for rva in (
             0x667060,0x65c488,0x65d2e1,0x65d2e2,0x65d309,0x65d30b,
             0x65d368,0x65d369,0x65cc80,0x65ddb8,0x65ddb9,
-            0x6651e0,0x6651e2,0x665161,0x6651f0,0x6651f1))
+            0x6651e0,0x6651e2,0x665161,0x6651f0,0x6651f1,
+            0x65d458,0x665162,0x660fd1,0x665038,0x6650c8,
+            0x6650e0,0x65d30c,0x65d260,0x65d418))
 
     def cancel(self):
         if self.tool_active():
@@ -92,10 +95,22 @@ class Controls:
         if additive: vi.key_down(16, sc=42)
         try:
             if end is None: vi.click(*point)
-            else: vi.drag(*point, *end)
+            else: self.drag_handles(point,end)
         finally:
             if additive: vi.key_up(16, sc=42)
         self.frames()
+
+    def drag_handles(self, point, end):
+        """Endpoint geometry needs consumed edges, not a timed paint stroke."""
+        vi=self.env.vi
+        vi.move_to(*point);self.frames(1)
+        vi.button_down()
+        try:
+            self.frames()
+            vi.move_to(*end);self.frames()
+        finally:
+            vi.button_up()
+        self.frames(1)
 
     def move_selection(self, point, reaim=False):
         if self.tool_active():

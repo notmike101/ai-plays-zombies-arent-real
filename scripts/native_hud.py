@@ -31,8 +31,8 @@ def panel_actions(panel, width, height):
             ('target_toggle',0x3bc,0x3c0),('next_special',0x388,0x38c),
             ('upgrades_page',0x42c,0x430),('upgrades_back',0x440,0x430)]:
         if get(flag,'B'): rect(name,offset)
-    if get(0x3d0,'B'): rect('detonate',0x3e8)
-    if get(0x3e0,'q') >= 0: rect('vehicle_leave',0x3e8)
+    if get(0x3d0,'B') == 8: rect('detonate',0x3e8)
+    if get(0x3e0,'q') >= 0: rect('medevac_leave',0x3e8)
     count=get(0x340,'q')
     if not 0 <= count <= 4: raise ZAREnvError('Invalid building choice count')
     for i in range(count):
@@ -64,7 +64,10 @@ def read_panel(env):
     if not snapshot['valid']:
         return dict(actions={},valid=False)
     panel=snapshot['panel']
+    bounds=struct.unpack_from('<4f',panel)
+    scale=env.cw/(bounds[2]+12)
     return dict(actions=panel_actions(panel,env.cw,env.ch),valid=True,
+                bounds=tuple(v*scale for v in bounds),
                 unit=struct.unpack_from('<q',panel,0x2d0)[0],
                 building=struct.unpack_from('<q',panel,0x2f8)[0],
                 far_first=bool(panel[0x3bd]),level=struct.unpack_from('<q',panel,0x2c8)[0])

@@ -2,7 +2,7 @@
 from scripts.game_mechanics import UNITS, PERKS
 
 MISSING_UNITS = ('Sniper','Battleship','FireMortar','Railgun','Howitzer','MLRS','ChemMine','Spikes','Oil')
-PANEL_ACTIONS = ('level_up','refund_level','target_toggle','detonate','vehicle_leave',
+PANEL_ACTIONS = ('level_up','refund_level','target_toggle','detonate','medevac_leave',
     'upgrades_page','upgrades_back') + tuple(f'building_{i}' for i in (2,3,4,5,6,7,10,11,12,14,15)) + (
     'building_officer_0','building_officer_1') + tuple(
     f'upgrade_{direction}_{i}' for direction in ('buy','refund') for i in range(4))
@@ -15,6 +15,8 @@ EXTRA_TOOLS = [f'place_{name}' for name in MISSING_UNITS] + [
     'officer_mode','officer_paint','detonate_all','next_special',
     'pan_up','pan_left','pan_down','pan_right','zoom_in','zoom_out',
     'speed_half','speed_1','speed_2','speed_4'] + [f'panel_{name}' for name in PANEL_ACTIONS]
+EXTRA_TOOLS += ['select_helicopter','select_vehicle','select_medevac',
+    'drag_corner','drag_edge','insert_corner','remove_corner','pause_toggle']
 
 # Counts retain multiplicity; selected entities expose individual state below.
 GRID_CHANNELS = tuple(f'unit {name}' for name in UNITS if name not in ('Spikes','Oil')) + (
@@ -42,6 +44,7 @@ EXTRA_LABELS += [f'Grid play area cell {i+1} (center inside: 0/1)' for i in rang
     'Gesture anchor cell (/ 48; -1 absent)',
     'Armed generic placement (native tool ID / 42)',
     'Armed sniper placement (0/1)','Armed turret placement (0/1)']
+EXTRA_LABELS += ['Simulation paused (0/1)','Simulation speed (native half ticks / 8)']
 
 
 def extra_cell_label(tool, cell):

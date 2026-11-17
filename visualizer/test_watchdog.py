@@ -42,10 +42,13 @@ class WatchdogTests(unittest.TestCase):
         self.assertIn('bootstrap', result)
         self.assertEqual(result['R'], 0)
 
-    def test_confirmed_pause_gets_one_unpause(self):
+    def test_pause_is_left_to_policy_and_still_has_bounded_timeout(self):
         result, game = run_battle(pause=True)
         self.assertNotIn('err', result)
-        self.assertEqual(game.keys.count(0x20), 2)
+        self.assertEqual(game.keys.count(0x20), 1)
+        self.assertTrue(game.paused)
+        self.assertEqual(result['end'], 'timeout')
+        self.assertNotIn(0x74,game.keys)  # Never force developer speed.
 
     def test_doomed_battle_retries_and_log_finishes(self):
         result, game = run_battle(rate=20)

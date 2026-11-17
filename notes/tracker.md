@@ -11,8 +11,9 @@
 - Owned diagnostic inst13 game49076(created1794955122.3567407), no trainer,
   below-normal CPUs0-7. Revalidate process identity before action. Passive HUD observation
   and virtual input only. Installed game remains read-only. Clean probe at end.
-- Visualizer22604(created1794931712.9690397) remains on8765. Preserve/reuse.
-- Schema4:171 tools/2376 inputs; current offline checks pass. Source checkpoint3
+- Visualizer6716(created1794957272.1076765) now serves8765 after guarded restart.
+  Real2378-label worker/browser sample passed. Isolated preview8766 cleaned.
+- Schema4:179 tools/2378 inputs; current offline checks pass. Source checkpoint3
   remains unchanged; no production migration yet. Live20-decision evaluation7.03s
   vs27.04s baseline with different actions/board (not controlled A/B).
 - Measured original20-decision planning evaluation:27.04s; median published

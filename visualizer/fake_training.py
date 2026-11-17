@@ -96,7 +96,9 @@ class FakeClock:
 
 
 class FakeMechanics:
-    def __init__(self,game):self.game=game
+    def __init__(self,game):
+        self.game=game
+        self.controls=SimpleNamespace(key_action=lambda name: game.press(113))
 
     def refresh(self,st):
         spatial=self.game.spatial({})

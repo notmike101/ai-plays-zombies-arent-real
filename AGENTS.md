@@ -223,7 +223,7 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
 — `graph.layers[input].labels` readable, no `label_warning` key present).
 
 ## Battle input and schema contract (2026-11-17)
-- `nn_play2` schema 4 uses 2376 inputs, 171 tools and 48 conditional cells.
+- `nn_play2` schema 4 uses 2378 inputs, 179 tools and 48 conditional cells.
   Checkpoints default to sessions/nn_policy4.pt. Never silently reinterpret v2
   weights: checkpoint metadata must match labels/action meanings exactly.
 - Battle hotkeys follow steam_cloud/settings.ini roster_battle, including gaps,

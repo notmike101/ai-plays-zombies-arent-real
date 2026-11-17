@@ -13,8 +13,8 @@ from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, GRID_CHANNELS, 
 PLACEMENTS = {2:'Garrison',3:'Mortar',4:'Napalm',5:'Nest',6:'Mine',7:'C4',8:'GasMortar'}
 PLACEMENTS.update({72+EXTRA_TOOLS.index('place_'+name):name for name in UNITS
                    if 'place_'+name in EXTRA_TOOLS})
-DRAGS = {'select_box','drag_world','shift_drag_world'}
-SELECTORS = ('unit','building','wall','gate','evac','corner')
+DRAGS = {'select_box','drag_world','shift_drag_world','drag_corner','drag_edge'}
+SELECTORS = ('unit','building','wall','gate','evac','corner','helicopter','vehicle','medevac')
 NONSPATIAL = set(KEY_ACTIONS)-{'pan_up','pan_left','pan_down','pan_right'} | {
     'zone_finish','zone_back','cancel_tool','undo'} | {'panel_'+name for name in PANEL_ACTIONS}
 
@@ -25,7 +25,7 @@ def extra_masks(st):
     sel=st['native']['selection'];planning=st['planning'];polygon=len(sel['polygon'])
     selected=any(len(sel[k]) for k in ('units','zones','helicopters','evac')) or sel['gate']>=0
     for i,name in enumerate(EXTRA_TOOLS):
-        mask=masks[i];mask[:]=np.repeat(YF<.70,len(XF))
+        mask=masks[i];mask[:]=st.get('world_cells',np.repeat(YF<.70,len(XF)))
         enabled=True
         if name.startswith('place_'):
             enabled=planning and name[6:] in st['planning_roster']
@@ -48,7 +48,11 @@ def extra_masks(st):
         elif name in ('zone_begin','zone_corner','zone_finish','zone_back'):
             enabled=planning and (name=='zone_begin' or polygon>0)
             if name=='zone_finish':enabled=enabled and polygon>=3
-        elif name=='undo':enabled=planning
+        elif name in ('undo','drag_corner','drag_edge','insert_corner','remove_corner'):
+            enabled=planning
+            if name!='undo' and not st.get('gesture_anchor'):
+                kind='corner' if name in ('drag_corner','remove_corner') else 'edge'
+                mask *= [p is not None for p in st['targets'][kind]]
         elif name=='move_selection':
             u=st['native']['units']
             enabled=planning and (bool(np.any((u['kind']==2)&np.isin(u['id'],sel['units']))) or bool(len(sel['helicopters'])))
@@ -59,7 +63,7 @@ def extra_masks(st):
             enabled=planning and selected
         elif name=='refund_selection':enabled=planning or len(sel['evac'])>0
         elif name=='detonate_all':enabled=not planning and bool(np.any(st['native']['units']['kind']==9))
-        elif name.startswith('speed_'):enabled=not planning
+        elif name.startswith('speed_') or name=='pause_toggle':enabled=not planning
         if name in NONSPATIAL or name.startswith('pan_'):
             mask[:]=0;mask[0]=1
         if not enabled:mask[:]=0
@@ -70,10 +74,18 @@ def extra_masks(st):
     return masks
 
 
-def nearest_per_cell(points, width, height):
+def outside_panel(points, bounds):
+    points=np.asarray(points).reshape(-1,2)
+    if bounds is None:return np.ones(len(points),dtype=bool)
+    left,top,right,bottom=bounds
+    return ~((points[:,0]>=left)&(points[:,0]<=right)&
+             (points[:,1]>=top)&(points[:,1]<=bottom))
+
+
+def nearest_per_cell(points, width, height, bounds=None):
     points=np.asarray(points).reshape(-1,2)
     visible=((points[:,0]>=0)&(points[:,0]<width)&(points[:,1]>=.07*height)&(points[:,1]<.8*height))
-    points=points[visible]
+    points=points[visible & outside_panel(points,bounds)]
     result=[None]*48
     if len(points):
         col=np.abs(points[:,:1]/width-XF).argmin(1)
@@ -103,7 +115,7 @@ def unit_names(units, maps):
 
 
 def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, width, height,
-                gesture_anchor=None, armed=(0,0,0)):
+                gesture_anchor=None, armed=(0,0,0), paused=False, speed=2):
     s=snapshot;sel=s['selection'];u=s['units'];maps=s['unit_maps']
     camera=s['camera'];g=lambda x:math.log1p(max(float(x),0))
     result=[camera[0]/10000,camera[1]/10000,camera[2]/8,float(paint_mode),float(legal),land_fraction]
@@ -146,6 +158,7 @@ def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, 
     result.extend(inside_polygon(centers(width,height),project(s['playarea'],camera,width,height)))
     result += [EXTRA_TOOLS.index(gesture_anchor[0])/128 if gesture_anchor else -1.,
                gesture_anchor[1]/48 if gesture_anchor else -1.,armed[0]/42,*armed[1:]]
+    result += [float(paused),speed/8]
     assert len(result)==len(EXTRA_LABELS)
     if not np.isfinite(result).all():raise RuntimeError('Nonfinite mechanics observation')
     return list(map(float,result))
@@ -160,6 +173,8 @@ class Mechanics:
         if e.scalar(0x6553d4,'<f') or e.scalar(0x6553d8,'<f'):
             raise RuntimeError('Policy projection requires top-down camera')
         hud=read_panel(e);roster=c.planning_roster();perks=c.perks()
+        bounds=hud.get('bounds')
+        st['world_cells']=np.repeat(YF<.70,len(XF)) & outside_panel(centers(e.cw,e.ch),bounds)
         legal=e.geometry_legal() if st['planning'] else False
         total=e.scalar(0x659310,'<q');covered=e.scalar(0x659308,'<q')
         camera=s['camera'];p=lambda pts:project(pts,camera,e.cw,e.ch)
@@ -169,15 +184,21 @@ class Mechanics:
             planning_roster=roster,perks=perks,ready_legal=legal,
             mechanics_features=observation(s,roster,perks,hud,e.scalar(0x665160,'<B'),legal,
                 covered/max(total,1),e.cw,e.ch,st.get('gesture_anchor'),
-                [e.scalar(rva,'<B') for rva in (0x667060,0x65d2e1,0x65d309)]))
+                [e.scalar(rva,'<B') for rva in (0x667060,0x65d2e1,0x65d309)],
+                e.scalar(0x665fa2,'<B'),e.scalar(0x666868,'<q')))
         st['playarea_cells']=inside_polygon(centers(e.cw,e.ch),p(s['playarea']))
         kinds=s['units']['kind'];defenders=(kinds>=2)&(kinds!=3)
         targets=dict(unit=s['units']['pos'][defenders],building=s['buildings']['center'],
             wall=(s['walls']['a']+s['walls']['b'])/2,gate=s['gates'],evac=s['evac']['a'],
-            corner=np.concatenate(s['zones']) if s['zones'] else np.empty((0,2)))
-        st['targets']={key:nearest_per_cell(p(pts),e.cw,e.ch) for key,pts in targets.items()}
+            corner=np.concatenate(s['zones']) if s['zones'] else np.empty((0,2)),
+            edge=np.concatenate([(z+np.roll(z,-1,axis=0))/2 for z in s['zones'] if len(z)>2])
+                if any(len(z)>2 for z in s['zones']) else np.empty((0,2)),
+            helicopter=s['helicopters']['pos'][s['helicopters']['alive']!=0],
+            vehicle=s['vehicles']['pos'][s['vehicles']['alive']!=0],
+            medevac=s['medevacs']['pos'][s['medevacs']['alive']!=0])
+        st['targets']={key:nearest_per_cell(p(pts),e.cw,e.ch,bounds) for key,pts in targets.items()}
         b=s['buildings'];valid=(b['destroyed']==0)&inside_polygon(b['center'],s['playarea'])
-        st['build_targets']=nearest_per_cell(p(b['center'][valid]),e.cw,e.ch)
+        st['build_targets']=nearest_per_cell(p(b['center'][valid]),e.cw,e.ch,bounds)
         for slot in st.get('deck',[]):
             if slot['name']=='Heli':slot['alive']=bool(np.any(s['helicopters']['alive']))
 
@@ -190,17 +211,28 @@ class Mechanics:
             return c.select(st['targets'][name[7:]][cell])
         if name=='select_add':return c.select(xy,additive=True)
         if name in DRAGS:
-            if not st.get('gesture_anchor'):st['gesture_anchor']=(name,cell);return
+            if not st.get('gesture_anchor'):
+                st['gesture_anchor']=(name,cell)
+                if name in ('drag_corner','drag_edge'):
+                    st['gesture_point']=st['targets'][name[5:]][cell]
+                return
             _,start=st.pop('gesture_anchor');point=(round(XF[start%8]*e.cw),round(YF[start//8]*e.ch))
+            if name in ('drag_corner','drag_edge'):
+                point=st.pop('gesture_point');c.cancel()
+                return c.drag_handles(point,xy)
             if name=='select_box':return c.select(point,xy)
             return c.gesture(point,xy,shift=name=='shift_drag_world')
+        if name in ('insert_corner','remove_corner'):
+            c.cancel()
+            return c.gesture(st['targets']['edge' if name=='insert_corner' else 'corner'][cell],right=True)
         if name in ('move_selection','reaim_selection'):return c.move_selection(xy,reaim=name=='reaim_selection')
         if name=='arm_slot':return c.arm(*[(49,2),(50,3),(51,4),(52,5),(53,6),(54,7),(84,20)][cell])
         if name in ('click_world','right_click_world'):return c.gesture(xy,right=name=='right_click_world')
         if name in ('zone_begin','zone_corner'):return c.polygon_corner(xy,begin=name=='zone_begin')
         if name=='zone_finish':return c.polygon_finish()
         if name=='zone_back':return c.polygon_back()
-        if name=='cancel_tool':st.pop('gesture_anchor',None);return c.cancel()
+        if name=='cancel_tool':
+            st.pop('gesture_anchor',None);st.pop('gesture_point',None);return c.cancel()
         if name=='refund_selection':return c.refund(xy)
         if name=='undo':return c.undo()
         if name in KEY_ACTIONS:return c.key_action(name)

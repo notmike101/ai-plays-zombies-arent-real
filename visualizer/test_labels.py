@@ -72,7 +72,8 @@ LABEL_PINS.update({32: 'grid civilians cell 1', 80: 'grid zombies cell 1',
                    329: 'unspent skill', 330: 'anchor tool', 331: 'anchor cell'})
 LABEL_PINS.update({332:'camera x',335:'placement paint',336:'ready land',
     343:'planning slot 1',356:'selected unit kind',
-    332+len(EXTRA_LABELS)-1:'armed turret'})
+    332+EXTRA_LABELS.index('Armed turret placement (0/1)'):'armed turret',
+    332+len(EXTRA_LABELS)-2:'simulation paused',332+len(EXTRA_LABELS)-1:'simulation speed'})
 
 
 class Tiny(nn.Module):

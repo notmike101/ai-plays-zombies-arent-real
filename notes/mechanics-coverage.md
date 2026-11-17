@@ -150,3 +150,29 @@ median0.152ms plain and0.355ms with observation. Live server/browser latency
 remains to be measured. Migration is explicit/new-path-only; production
 checkpoint3 is preserved and has not yet been migrated. Remaining terrain,
 editing and ability proofs are pending.
+
+## Geometry, timing and live viewer proof
+
+Schema4 now179 tools/2378 inputs. Added snapped corner/edge edits and helicopter,
+vehicle and medevac selectors. Native polygon right-edge insert4->5 vertices,
+right-corner removal5->4, corner drag displacement and undo restoration passed.
+Frame-receipted endpoint drags (not timed paint strokes) changed corner/corridor/hold
+native geometry in0.050-0.055s; paint and battle casting retain their durations.
+Selected HUD bounds mask world targets so an intended placement cannot click a panel.
+Native speed keys F1-F4 set half-tick counts1/2/4/8, meaning0.5/1/2/4 times real
+time. Removed automatic F5 developer-speed activation. Begin at1x; policy controls
+normal speed/pause and observes pause/speed. Pause still has bounded wall timeout.
+Native handler2f5a50 identifies panel3e0 as MEDEVAC departure, not bus departure;
+3d0 must equal action enum8 for detonation. Corrected names/parser and tests.
+
+116 offline script tests,37 visualizer tests,12-step observer parity and graph
+checks passed. Current-model browser SSE/reconnect/pause/isolation and mobile
+WebGPU/Canvas2D tests passed on isolated8766; preview/server cleaned.
+Production visualizer restarted via guarded operator:6716(created1794957272.1076765).
+Real evaluation worker31612/game49076:40 decisions14.64s, no optimization/saves;
+2378 labels and actual sampled actions reached browser, no label warning. First
+10 samples: first capture->receive584ms plus165ms two-animation-frame display
+probe; subsequent122-388ms receive and42-77ms display. This is scoped planning
+evidence, not battle or worst-case latency. Observer samples at most5Hz; model
+can decide between samples. Exact evidence remains analysis/coverage-latency-live.json
+and coverage-real-latency.js / Playwright output.

@@ -30,6 +30,15 @@ class HudTests(unittest.TestCase):
         b=self.panel();struct.pack_into('<f',b,0,float('nan'))
         with self.assertRaisesRegex(RuntimeError,'rectangle'):panel_actions(b,1920,1200)
 
+    def test_action_discriminator_and_medevac_departure(self):
+        b=self.panel();struct.pack_into('<4f',b,0x3e8,800,400,1260,430)
+        b[0x3d0]=7
+        self.assertNotIn('detonate',panel_actions(b,1920,1200))
+        b[0x3d0]=8
+        self.assertIn('detonate',panel_actions(b,1920,1200))
+        b[0x3d0]=0;struct.pack_into('<q',b,0x3e0,2)
+        self.assertIn('medevac_leave',panel_actions(b,1920,1200))
+
     def test_menu_and_stale_frames_cannot_supply_actions(self):
         env=Mock(cw=1920,ch=1200)
         env.scalar.return_value=1

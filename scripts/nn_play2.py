@@ -199,7 +199,7 @@ def cell_mask(st, u, mc):
     if u >= 72:
         return extra_masks(st)[u-72].copy()
     mc = mc.copy()
-    mc *= WORLD_CELLS
+    mc *= st.get('world_cells',WORLD_CELLS)
     if u in (0, 1) or u >= 34:
         mc[:] = 0
         mc[0] = 1
@@ -358,7 +358,7 @@ def run_episode(args):
             'plan': [line for line in initial.get('_text', '').splitlines() if line.startswith('board ')]},
             sort_keys=True).encode()).hexdigest()[:16]
         keys = load_bind_keys(env)
-        env.vi.key_press(0x74, sc=63)
+        mechanics.controls.key_action('speed_1')
         o = env.obs()
         civ0 = max(o['civ'], 1)
         m0 = o['money']
@@ -398,12 +398,6 @@ def run_episode(args):
                     slot = next(s for s in st['deck'] if ABILITY_U[s['name']] == st['anchor'][0])
                     if not slot_castable(st, slot):
                         st.pop('anchor')
-            if state['paused']:
-                env.vi.key_press(0x20, sc=57)
-                time.sleep(.1)
-                state = env.game_state()
-                if state['paused']:
-                    raise ZAREnvError('Confirmed pause did not clear')
             frac = o['civ'] / civ0
             mechanics.refresh(st)
             blobs = []
@@ -470,7 +464,7 @@ def run_episode(args):
                                 env.vi.click(px, py)
                             env.vi.key_press(0x0D, sc=28)
                         else:
-                            env.vi.drag(x1, y1, x2, y2)
+                            mechanics.controls.drag_handles((x1,y1),(x2,y2))
                             if u == 15:
                                 env.vi.click(x2, y2)
                         mechanics.controls.frames()

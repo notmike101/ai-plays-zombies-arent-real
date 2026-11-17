@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import numpy as np
 
 from native_state import WALL, EVAC, HELI, VEHICLE, MEDEVAC, PATCH
-from policy_mechanics import observation, unit_names, nearest_per_cell, extra_masks
+from policy_mechanics import observation, unit_names, nearest_per_cell, extra_masks, SELECTORS, Mechanics
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, GLOBAL_LABELS, GRID_CHANNELS
 
 
@@ -42,18 +42,36 @@ class MechanicsTests(unittest.TestCase):
         s=fixture();st=dict(native=s,planning=True,planning_roster=['Sniper']+['-']*6,
             perks=[dict(name='Extra_Zones',locked=True),dict(name='Hot_Fire',locked=False),dict(name='-',locked=False)],
             hud={'actions':{'target_toggle':(1,2)}},build_targets=[(100,100)]*48,
-            targets={k:[None]*48 for k in ('unit','building','wall','gate','evac','corner')})
+            targets={k:[None]*48 for k in (*SELECTORS,'edge')})
         masks=extra_masks(st);get=lambda name:masks[EXTRA_TOOLS.index(name)]
         self.assertTrue(get('place_Sniper').any());self.assertFalse(get('place_Battleship').any())
         self.assertEqual(np.flatnonzero(get('arm_slot')).tolist(),[0])
         self.assertFalse(get('perk_Hot_Fire').any());self.assertEqual(np.flatnonzero(get('perk_clear')).tolist(),[1])
-        self.assertFalse(get('panel_vehicle_leave').any());self.assertTrue(get('panel_target_toggle')[0])
+        self.assertFalse(get('panel_medevac_leave').any());self.assertTrue(get('panel_target_toggle')[0])
         self.assertFalse(get('zone_finish').any());self.assertFalse(get('select_building').any())
 
     def test_targets_are_visible_and_nearest_with_stable_ties(self):
         points=[(200,200),(210,200),(200,200),(-100,0)]
         targets=nearest_per_cell(points,1920,1200)
         self.assertEqual([p for p in targets if p is not None],[(210,200)])
+        targets=nearest_per_cell(points,1920,1200,bounds=(190,190,220,220))
+        self.assertFalse(any(p is not None for p in targets))
+
+    def test_corner_drag_starts_at_native_corner_and_keeps_model_endpoint(self):
+        m=Mechanics.__new__(Mechanics);m.env=Mock(cw=1920,ch=1200);m.controls=Mock()
+        st={'targets':{'corner':[(633,336)]*48}}
+        m.execute(st,'drag_corner',0)
+        m.controls.gesture.assert_not_called()
+        m.execute(st,'drag_corner',9)
+        m.controls.cancel.assert_called_once()
+        m.controls.drag_handles.assert_called_once_with((633,336),(422,336))
+        self.assertNotIn('gesture_anchor',st)
+
+    def test_pause_speed_and_gesture_sentinels_have_explicit_meanings(self):
+        values=observation(fixture(),['-']*7,[dict(name='-',locked=False)]*3,
+                           {'actions':{}},0,True,0,1920,1200,paused=True,speed=8)
+        self.assertEqual(values[-2:],[1.,1.])
+        self.assertEqual(values[EXTRA_LABELS.index('Gesture anchor cell (/ 48; -1 absent)')],-1.)
 
 
 if __name__=='__main__':unittest.main()
