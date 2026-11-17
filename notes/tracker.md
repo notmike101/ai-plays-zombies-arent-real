@@ -1,6 +1,10 @@
 # ZAR Tracker (live state — update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-17 — read-only telemetry streaming deployed)
+- Live follow-up in progress at user request: isolated inst9 cloned from inst4;
+  boot + current-checkpoint evaluation only, no optimizer/checkpoint writes.
+  Owned runner logs/evidence: visualizer/runtime/live-attachment*. Cleanup is
+  in the runner finally block; browser proof is required before reporting success.
 - User clarified observation-only visualizer, delegated implementation choices,
   and authorized guidance updates and push. Implementation through e5da13d pushed
   to origin/main; final tracker/plan completion accompanies it in the next commit.
