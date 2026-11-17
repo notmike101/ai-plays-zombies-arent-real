@@ -51,3 +51,11 @@ Applied the 22-line observer integration; added AGENTS.md requirements for label
 Verification: 18 Python tests pass, including two new tests running the real episode function against a fake game. They verify unchanged episode results, actual sampled actions and cleanup after success/failure. Model verification preserves exact tensors and sampled actions for 12 recurrent steps. Node graph assertions pass. No live game was opened or controlled by these tests.
 
 Ruling: push the integration branch without updating the active training checkout or merging into main while trainer workers remain live. Bring the branch into the deployed checkout at the training owner's next safe restart, preserving their newer changes, then verify a real fresh telemetry sample. This is a deployment condition, not pending user permission. No additional edits to notes/tracker.md were authorized; the handoff stays here.
+
+## Low-latency display — 2026-11-16
+
+The active checkout now includes the trainer integration and real workers are publishing live telemetry. Reduced the browser poll delay from 500 ms to 50 ms, keeping requests sequential and backing off to one second after failures. Unchanged samples skip graph/inspector rebuilds; stream, sequence, timestamp and model revision distinguish new frames. No model, observer, trainer or game process changes.
+
+Two 16-second live-worker measurements captured six new samples each: median publication-timestamp-to-browser-receipt delay fell from 323 ms (maximum 476 ms) to 90 ms (maximum 106 ms). These are local spot measurements, not a latency guarantee; network and server load still contribute. The trainer's battle decision interval remains about 2.5 seconds.
+
+Verification: all 18 Python tests and Node graph assertions pass; JavaScript syntax passes. Browser checks on WebGPU and Canvas 2D confirmed rapid polling, no duplicate redraws, new sequence/timestamp/revision/worker updates, and pause/resume. The ignored runtime/check-updates.js contains the browser regression check used for this change. One five-second server measurement during rapid polling used 31.2% of one CPU core and 34.3 MB resident memory; no sustained or multi-client load test was run.

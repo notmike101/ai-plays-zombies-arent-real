@@ -44,6 +44,9 @@ function inspect(node) {
   if(incoming.some(e=>e.kind==='gate-rms'))box.append(element('p','small','GRU connections show unsigned RMS across three gate weights. They are summaries, not individual synapses.'));
 }
 function updateFrame(next) {
+  // Poll promptly, but redraw only when the observer publishes a different sample.
+  if(frame && frame.stream===next.stream && frame.sequence===next.sequence &&
+     frame.timestamp===next.timestamp && frame.model_revision===next.model_revision)return;
   if(next.graph){graph=next.graph;revision=next.model_revision;}
   if(!graph)return;
   const changed=frame?.stream!==next.stream||frame?.model_revision!==next.model_revision;
@@ -72,6 +75,7 @@ function updateFrame(next) {
 }
 async function poll() {
   const requestedGeneration=generation;
+  let delay=50;
   try {
     const args=new URLSearchParams();if(preview)args.set('preview','1');if(selectedStream)args.set('stream',selectedStream);if(revision)args.set('revision',revision);
     const response=await fetch(`/api/state?${args}`,{signal:AbortSignal.timeout(4000)});if(!response.ok)throw new Error(`HTTP ${response.status}`);
@@ -89,8 +93,9 @@ async function poll() {
       else if(data.frame)updateFrame(data.frame);
       else if(frame)resetView();
     }
-  } catch(error) {showStatus('offline','Server unavailable · retrying');text('age','Disconnected');}
-  setTimeout(poll,500);
+  } catch(error) {showStatus('offline','Server unavailable · retrying');text('age','Disconnected');delay=1000;}
+  // Requests stay sequential; a slow server cannot accumulate outstanding polls.
+  setTimeout(poll,delay);
 }
 $('live').onclick=()=>setMode(false);$('preview').onclick=()=>setMode(true);
 $('stream').onchange=()=>{selectedStream=$('stream').value;resetView();};

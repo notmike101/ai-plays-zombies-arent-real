@@ -53,6 +53,8 @@ The graph fills the window beneath a compact control bar. Click a node to open t
 
 Automatic attachment stays on the selected fresh stream. After 15 seconds without a sample, it switches to another fresh stream if one exists; otherwise it labels the retained frame stale. A paused game or slow inference can therefore look stale without the process having crashed. Streams older than 120 seconds are omitted. Manual selection holds the requested stream rather than silently switching.
 
+The browser checks for new telemetry 50 ms after each completed request and redraws only when the sample, worker or model revision changes. Requests never overlap; an unavailable server is retried after one second. This reduces display delay without changing the model's decision rate. The current trainer makes battle decisions about every 2.5 seconds, so the graph holds the actual last values between decisions instead of generating artificial activity. The observer still caps publication at five frames/second.
+
 ## Model changes and limits
 
 Dimensions, head names, weights and values come from the running model. Each episode reports its own model revision, derived from full parameter values. Normal in-place parameter updates and checkpoint loads refresh the graph; later worker instances publish their current weights automatically. This observes the weights the worker actually uses, which may lag the trainer's newest checkpoint until its next episode.
