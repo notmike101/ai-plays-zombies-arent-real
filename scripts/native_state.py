@@ -17,6 +17,10 @@ def record(size, fields):
 
 
 VEC = ('<f4', 2)
+AI = record(56, [('mode',0,'u1'), ('way',16,VEC), ('way_t',24,'<f4'),
+    ('walled',40,'u1'), ('fire_turn',44,VEC), ('fire_until',52,'<f4')])
+PATCH = record(48, [('kind',0,'u1'), ('pos',4,VEC), ('radius',12,'<f4'),
+    ('start',16,'<f4'), ('until',20,'<f4'), ('shooter',24,'<u8'), ('source',32,'u1')])
 WALL = record(192, [('a',120,VEC), ('b',128,VEC), ('full_hp',152,'<f4'),
     ('level',160,'<i8'), ('build_left',168,'<f4'), ('build_total',172,'<f4')])
 EVAC = record(52, [('kind',0,'u1'), ('a',4,VEC), ('b',12,VEC), ('dir',20,VEC),
@@ -90,6 +94,25 @@ class NativeState:
             result.append(vertices)
         return result
 
+    def paint(self):
+        paint = self.mapping(0x6509c8, 'u1')
+        if any(value not in (1, 2) for value in paint.values()):
+            raise ZAREnvError('Unknown native terrain paint')
+        # Native plan capture packs signed cell x/y into the low/high32 bits.
+        cells = np.asarray(list(paint), dtype='<u8').view('<i4').reshape(-1,2)
+        return dict(pos=(cells.astype(np.float32)+.5)*4,
+                    kind=np.asarray(list(paint.values()), dtype='u1'))
+
+    def selection(self):
+        e = self.env
+        return dict(units=e.array(0x65c490,'<u8'),
+                    helicopter=e.scalar(0x65c4e0,'<q'),
+                    vehicle=e.scalar(0x65c4e8,'<q'),
+                    gate=e.scalar(0x65c4f0,'<q')-1,
+                    building=e.scalar(0x6593b0,'<q')-1,
+                    polygon=e.array(0x65ccd8,VEC,limit=10000),
+                    menu=bool(e.scalar(0x666870,'<B')))
+
     def snapshot(self):
         e = self.env
         for _ in range(5):
@@ -109,9 +132,15 @@ class NativeState:
                 maps = {name: self.mapping(rva, dtype) for name,rva,dtype in (
                     ('level',0x6508d8,'<i8'), ('far_first',0x6508f8,'u1'),
                     ('payload',0x650988,'u1'), ('trap_kind',0x6509a8,'u1'),
-                    ('upgrades',0x650968,('u1',4)))}
+                    ('upgrades',0x650968,('u1',4)), ('ai',0x650898,AI),
+                    ('boosts',0x650918,('<f4',5)), ('officer_kind',0x650ba0,'u1'),
+                    ('roof',0x650858,'<i8'), ('kills',0x6543f0,'<i4'))}
+                walls = e.array(0x656bb0,WALL,limit=10000)
+                wall_pointer = e.scalar(0x656bb0,'<Q')
+                wall_hp = [self.array_at(wall_pointer+i*192+80,'<f4') for i in range(len(walls))]
                 result = dict(units=units, unit_maps=maps, zones=self.zones(),
-                    walls=e.array(0x656bb0,WALL,limit=10000),
+                    walls=walls, wall_hp=wall_hp, paint=self.paint(), selection=self.selection(),
+                    hazards=e.array(0x654ef0,PATCH,limit=100000),
                     evac=e.array(0x657e40,EVAC,limit=10000),
                     gates=e.array(0x65d3d8,VEC,limit=10000),
                     helicopters=e.array(0x65c580,HELI,limit=10000),
@@ -119,7 +148,9 @@ class NativeState:
                     medevacs=e.array(0x65cbe0,MEDEVAC,limit=10000),
                     buildings={name: e.array(rva,dtype) for name,rva,dtype in (
                         ('rect',0x656680,('<f4',4)), ('destroyed',0x6566d8,'u1'),
-                        ('damage',0x656700,'<f4'), ('max_hp',0x656728,'<f4'))},
+                        ('damage',0x656700,'<f4'), ('max_hp',0x656728,'<f4'),
+                        ('class',0x658f00,'u1'), ('ability',0x658f50,'u1'),
+                        ('area',0x658d70,'<f4'), ('center',0x658d98,VEC))},
                     camera=[e.scalar(rva,'<f') for rva in (0x6553ac,0x6553b0,0x6553b4)],
                     tick=tick)
                 if tick == e.scalar(0x6514e8,'<q'):

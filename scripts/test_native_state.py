@@ -46,5 +46,15 @@ class NativeTests(unittest.TestCase):
         with patch('native_state.memscan.read',return_value=b''):
             with self.assertRaisesRegex(RuntimeError,'Incomplete'):state.read(65536,8)
 
+    def test_paint_signed_coordinates_and_unknown_kind(self):
+        state=NativeState(Mock())
+        key=struct.unpack('<Q',struct.pack('<ii',-2,3))[0]
+        state.mapping=Mock(return_value={key:np.uint8(2)})
+        paint=state.paint()
+        np.testing.assert_array_equal(paint['pos'],[[-6,14]])
+        np.testing.assert_array_equal(paint['kind'],[2])
+        state.mapping.return_value={key:np.uint8(9)}
+        with self.assertRaisesRegex(RuntimeError,'paint'):state.paint()
+
 
 if __name__=='__main__':unittest.main()
