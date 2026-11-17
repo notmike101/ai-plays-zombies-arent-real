@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark"><title>Signal / ZAR Policy Observatory</title>
+  <link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Signal home"><span class="brand-mark">⠿</span> SIGNAL <span class="slash">/</span> <span class="brand-sub">Policy observatory</span></a>
+    <div class="project"><span class="tiny-dot"></span> ZOMBIES AREN’T REAL <span class="project-place">BOSTON, MA</span></div>
+  </header>
+  <main>
+    <section class="heading">
+      <div><div class="eyebrow">NEURAL ACTIVITY / LIVE INFERENCE</div><h1>Inside the decision.</h1><p>Follow the signal from observation to action.</p></div>
+      <div class="connection"><span id="status" class="badge" role="status">CONNECTING</span><span id="connection-detail">Looking for an observer</span></div>
+    </section>
+    <section class="stats" aria-label="Observed model details">
+      <div><span>GAME INSTANCE</span><strong id="game">—</strong></div>
+      <div><span>WORKER / EPISODE</span><strong id="worker">—</strong></div>
+      <div><span>NETWORK</span><strong id="architecture">Awaiting model</strong></div>
+      <div><span>PARAMETERS</span><strong id="parameters">—</strong></div>
+      <div><span>PHASE</span><strong id="phase">—</strong></div>
+    </section>
+    <div class="workspace">
+      <section class="network-panel" aria-label="Neural network visualization">
+        <div class="toolbar">
+          <div class="view-tabs"><button id="live" class="active">Live network</button><button id="preview">Preview</button></div>
+          <div class="tools"><label for="density">Links <select id="density"><option value="1">Sparse</option><option value="2" selected>Balanced</option><option value="6">Detailed</option></select></label><button id="pause" aria-pressed="false">Ⅱ Pause</button><button id="fit" title="Reset zoom and pan">Fit view</button></div>
+        </div>
+        <div id="stage" class="stage">
+          <canvas id="network" aria-hidden="true"></canvas><canvas id="labels" aria-hidden="true"></canvas>
+          <div class="stage-caption"><span id="graph-title">OBSERVATION → MEMORY → DECISION</span><span id="renderer">Initializing renderer</span></div>
+          <div id="empty" class="empty"><div class="waiting-symbol">◎</div><h2>Waiting for a policy worker</h2><p>The first worker with the observer enabled will connect automatically. Your training keeps running independently.</p><span>Observer integration is required on the next training launch.</span></div>
+          <div id="preview-banner" class="preview-banner" hidden>PREVIEW · REAL PYTORCH NETWORK, SYNTHETIC INPUTS · NO GAME ATTACHED</div>
+          <div id="pause-banner" class="pause-banner" hidden>VIEW PAUSED · Training is unaffected</div>
+          <div class="canvas-hint">Scroll to zoom <span>·</span> Drag to pan <span>·</span> Select a node to inspect</div>
+        </div>
+        <div class="legend"><span><i class="mint"></i> Positive activation / weight</span><span><i class="violet"></i> Negative</span><span><i class="blue"></i> Memory / GRU gate magnitude</span><span><i class="gold"></i> Selected action</span></div>
+        <div class="graph-note" id="graph-note">Node brightness is normalized within each layer. Connections show learned weights, not causal explanations.</div>
+      </section>
+      <aside>
+        <section class="side-section"><div class="section-heading"><h2>Observed worker</h2><span class="section-number">01</span></div><label class="sr-only" for="stream">Worker selection</label><select id="stream"><option value="">Automatic attachment</option></select><p class="small">Stays with one worker. Reattaches when its stream goes quiet and another is available.</p><div class="data-row"><span>Last sample</span><strong id="age">—</strong></div><div class="data-row"><span>Model revision</span><code id="revision">—</code></div></section>
+        <section class="side-section"><div class="section-heading"><h2>Selected decision</h2><span class="section-number">02</span></div><div id="decision" class="decision">Awaiting a decision</div><div id="decision-sub" class="small">The actual sampled action appears here.</div><div id="probabilities" class="probabilities"></div><div class="data-row"><span>Expected return</span><strong id="value">—</strong></div></section>
+        <section class="side-section inspect"><div class="section-heading"><h2>Node inspector</h2><button id="unpin" class="text-button" hidden>Clear</button></div><label class="sr-only" for="node-select">Inspect a node</label><select id="node-select"><option value="">Select a node…</option></select><div id="inspector"><p class="small">Hover over a node for its current value. Click to pin it and isolate its strongest connections.</p></div></section>
+      </aside>
+    </div>
+    <footer><span><span class="tiny-dot"></span> READ-ONLY OBSERVATION <span class="footer-sep">/</span> No policy control</span><span id="footer-state">Waiting for telemetry</span></footer>
+  </main>
+</body>
+</html>
