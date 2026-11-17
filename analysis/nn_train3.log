@@ -1,0 +1,29 @@
+ep pid 49320 win False frac 0.0 R -8.06
+ep pid 49320 win False frac 0.0 R -8.06
+ep pid 49276 win False frac 0.005 R -8.06
+ep pid 49276 win False frac 0.005 R -8.06
+ep pid 49384 win False frac 0.0 R -8.06
+ep pid 49384 win False frac 0.0 R -8.06
+ep pid 39160 win False frac 0.0 R -8.04
+ep pid 39160 win False frac 0.0 R -8.04
+D:\zar-scratch\scripts\nn_play.py:255: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\torch\csrc\autograd\generated\python_variable_methods.cpp:821.)
+  tot += float(loss)
+ppo batch loss 23.977
+ppo batch loss 21.985
+ppo batch loss 20.124
+ppo batch loss 18.417
+round 0: wins 0/8 meanfrac 0.001
+ep pid 49320 win False frac 0.0 R -8.08
+ep pid 49320 win False frac 0.0 R -8.08
+ep pid 49276 win False frac 0.0 R -8.04
+ep pid 49276 win False frac 0.0 R -8.04
+ep pid 49384 win False frac 0.0 R -8.06
+ep pid 49384 win False frac 0.0 R -8.04
+ep pid 39160 win False frac 0.0 R -8.06
+ep pid 39160 win False frac 0.0 R -8.06
+ppo batch loss 16.978
+ppo batch loss 15.351
+ppo batch loss 13.892
+ppo batch loss 12.521
+round 1: wins 0/8 meanfrac 0.000
