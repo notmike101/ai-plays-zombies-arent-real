@@ -47,7 +47,8 @@ class ObserverTests(unittest.TestCase):
         self.assertEqual(frame['values']['hu'], u.flatten().tolist())
         self.assertEqual(frame['values']['memory'], [0] * 8)
         self.assertEqual(frame['selected'], {'hu': 2})
-        self.assertAlmostEqual(sum(frame['probabilities']['hu']), 1)
+        # float32 softmax sums land within ~6e-8 of 1; 7 places is unsatisfiable
+        self.assertAlmostEqual(sum(frame['probabilities']['hu']), 1, places=5)
         self.observer.close()
         with torch.no_grad():
             plain = self.net(x)
