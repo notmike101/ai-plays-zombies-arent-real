@@ -5,6 +5,7 @@ Reward = -new infections / initial population + 5 * actual terminal saved fracti
 Timeouts bootstrap; they never earn a terminal save reward. R carries the board.
 """
 import argparse
+import hashlib
 import json
 import math
 import multiprocessing as mp
@@ -305,6 +306,9 @@ def transition_reward(before, after, civ0):
 def run_episode(args):
     pid, sd, eps_rand, tag, *extra = args
     options = extra[0] if extra else {}
+    if 'seed' in options:
+        torch.manual_seed(options['seed'])
+        np.random.seed(options['seed'] % (2**32))
     from env_zar import ZAREnv, ZAREnvError
     env = observer = None
     logging = False
@@ -318,6 +322,10 @@ def run_episode(args):
         header = env.start_log()
         logging = True
         session = header['session']
+        board_id = hashlib.sha256(json.dumps({
+            'session': {k: session.get(k) for k in ('campaign', 'scenario', 'map', 'money', 'loadout')},
+            'plan': [line for line in initial.get('_text', '').splitlines() if line.startswith('board ')]},
+            sort_keys=True).encode()).hexdigest()[:16]
         keys = load_bind_keys(env)
         env.vi.key_press(0x74, sc=63)
         o = env.obs()
@@ -516,17 +524,22 @@ def run_episode(args):
                 bootstrap = float(value.item())
         if rows['rews']:
             rows['rews'][-1] += outcome_reward(saved, end)
-        if end in ('aborted', 'won', 'lost'):
+        advance = end == 'won' and saved is not None and saved >= .35
+        if end in ('aborted', 'lost') or end == 'won' and not advance:
             env.retry()
-        return dict(rows, level=tag, pid=pid, win=end == 'won', end=end,
+        return dict(rows, level=tag, pid=pid, win=end == 'won', advance=advance, end=end,
                     saved_frac=saved, frac=o['civ']/civ0, bootstrap=bootstrap,
                     civ0=civ0, t=time.monotonic()-start, sim=state['sim'],
                     R=sum(rows['rews']), nbuy=nbuy, ndeck=len(st['deck']),
-                    spend=m0-o['money'], board=session, log_started=header['wall'])
+                    spend=m0-o['money'], board=session, board_id=board_id,
+                    scenario=session.get('scenario'), campaign=session.get('campaign'),
+                    start_kind=options.get('start_kind', 'unknown'), seed=options.get('seed'),
+                    log_started=header['wall'])
     except Exception as exc:
         import traceback
         traceback.print_exc()
-        return dict(level=tag, pid=pid, err=str(exc))
+        return dict(level=tag, pid=pid, err=str(exc), seed=options.get('seed'),
+                    start_kind=options.get('start_kind', 'unknown'))
     finally:
         try:
             if logging:
@@ -583,7 +596,8 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015):
                      torch.tensor(ret, dtype=torch.float32), MC))
     alladv = np.concatenate([s[6].numpy() for s in seqs])
     mu_a, sd_a = alladv.mean(), alladv.std() + 1e-8
-    for _ in range(epochs):
+    diagnostics = []
+    for epoch in range(epochs):
         order = np.random.permutation(len(seqs))
         tot = 0.0
         for k in order:
@@ -599,22 +613,50 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015):
                             torch.clamp(ratio, 1 - clip, 1 + clip) * adv).mean()
             vf = ((v.squeeze(0) - RET) ** 2).mean()
             loss = pg + c1 * vf - ent * (du.entropy() + dc.entropy()).mean()
+            if not torch.isfinite(loss):
+                raise ValueError('Non-finite PPO loss; checkpoint not saved')
             opt.zero_grad()
             loss.backward()
-            nn.utils.clip_grad_norm_(net.parameters(), 0.5)
+            nn.utils.clip_grad_norm_(net.parameters(), 0.5, error_if_nonfinite=True)
             opt.step()
             tot += loss.detach().item()
+            with torch.no_grad():
+                variance = RET.var(unbiased=False)
+                diagnostics.append(dict(epoch=epoch, loss=float(loss),
+                    approx_kl=float(((ratio-1)-(lp-(ULP+CLP))).mean()),
+                    clip_fraction=float(((ratio-1).abs() > clip).float().mean()),
+                    entropy=float((du.entropy()+dc.entropy()).mean()),
+                    explained_variance=float(1-(RET-v.squeeze(0)).var(unbiased=False)/variance)
+                        if variance > 1e-8 else None))
         print('ppo2 batch loss', round(tot / max(len(seqs), 1), 3), flush=True)
+    summary = {key: float(np.mean([d[key] for d in diagnostics if d[key] is not None]))
+               if any(d[key] is not None for d in diagnostics) else None
+               for key in ('loss', 'approx_kl', 'clip_fraction', 'entropy', 'explained_variance')}
+    print('ppo diagnostics', json.dumps(summary), flush=True)
+    return summary
 
 
-def episode_batches(pids, sd, random, tag, eps):
+def episode_batches(pids, sd, random, tag, eps, options=None):
     if not pids or len(set(pids)) != len(pids) or eps < 1:
         raise ValueError('Provide unique game PIDs and at least one episode')
-    return [[(p, sd, random, f'{tag}/ep{i}') for i in range(eps)] for p in pids]
+    options = options or {}
+    return [[(p, sd, random, f'{tag}/ep{i}', dict(options,
+               seed=options.get('seed', 0)+j*eps+i,
+               start_kind=options.get('starts', {}).get(p, 'unknown')))
+             for i in range(eps)] for j, p in enumerate(pids)]
 
 
 def run_batch(jobs):
-    return [run_episode(job) for job in jobs]
+    results = []
+    for job in jobs:
+        if results:
+            job = (*job[:4], dict(job[4], start_kind='next_level' if results[-1].get('advance') else 'carry'))
+        result = run_episode(job)
+        results.append(result)
+        board = result.get('board', {})
+        if 'err' in result or result.get('advance') and board.get('scenario') == board.get('scenario_count'):
+            break
+    return results
 
 
 def training_enabled(mode, random):
@@ -640,6 +682,13 @@ def load_checkpoint(net, opt, path):
         opt.load_state_dict(data['optimizer'])
 
 
+def policy_id(net):
+    digest = hashlib.sha256()
+    for p in net.parameters():
+        digest.update(p.detach().cpu().numpy().tobytes())
+    return digest.hexdigest()[:16]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('mode', choices=['play', 'greedy', 'train'])
@@ -650,56 +699,69 @@ def main():
     ap.add_argument('--random', action='store_true')
     ap.add_argument('--model', default=MODEL)
     ap.add_argument('--history', default=HIST)
+    ap.add_argument('--seed', type=int, default=0)
+    ap.add_argument('--fresh-pids', default='', help='Only freshly booted boards, supplied by train_run')
+    ap.add_argument('--plan-steps', type=int, default=PLAN_STEPS)
+    ap.add_argument('--battle-seconds', type=float, default=BATTLE_T)
     a = ap.parse_args()
-    if Observer is not None:
-        validate_labels(NOBS, INPUT_LABELS)  # AGENTS.md contract: mismatch
-        # means make_obs changed without labels -> refuse to launch training
+    validate_labels(NOBS, INPUT_LABELS)
+    if a.mode != 'train' and not a.random and not os.path.exists(a.model):
+        ap.error('Evaluation requires an existing schema-3 checkpoint or --random')
     if a.mode == 'greedy':
-        net = PolicyNet2()
-        load_checkpoint(net, None, a.model)
-        ep = run_episode((int(a.pid), net.state_dict(), False, 'eval'))
-        print('GREEDY', {k: ep[k] for k in
-                         ('win', 'frac', 't', 'R') if k in ep}, flush=True)
-        return
+        a.pids, a.eps, a.rounds = a.pid, 1, 1
+        if a.random:
+            ap.error('greedy requires a policy checkpoint')
+    if a.rounds < 1 or a.plan_steps < 1 or a.battle_seconds <= 0:
+        ap.error('Rounds and rollout bounds must be positive')
     pids = [int(p) for p in a.pids.split(',') if p]
     episode_batches(pids, {}, a.random, '', a.eps)
+    fresh = {int(p) for p in a.fresh_pids.split(',') if p}
+    if not fresh.issubset(pids):
+        ap.error('--fresh-pids must be among --pids')
+    starts = {p: 'fresh' if p in fresh else 'unknown' for p in pids}
+    torch.manual_seed(a.seed)
     net = PolicyNet2()
-    opt = torch.optim.Adam(net.parameters(), lr=3e-4)
-    load_checkpoint(net, opt if a.mode == 'train' else None, a.model)
+    opt = torch.optim.Adam(net.parameters(), lr=3e-4) if training_enabled(a.mode, a.random) else None
+    if not a.random:
+        load_checkpoint(net, opt, a.model)
     run_id = uuid.uuid4().hex[:12]
     sd = net.state_dict()
     with mp.Pool(len(pids)) as pool:
         for rnd in range(a.rounds):
-            jobs = episode_batches(pids, sd, a.random, f'{run_id}/r{rnd}', a.eps)
+            options = dict(seed=a.seed+rnd*len(pids)*a.eps, starts=starts,
+                           greedy=a.mode == 'greedy', plan_steps=a.plan_steps,
+                           battle_seconds=a.battle_seconds)
+            jobs = episode_batches(pids, sd, a.random, f'{run_id}/r{rnd}', a.eps, options)
             trajs = [tr for batch in pool.map(run_batch, jobs) for tr in batch]
-            good, wins, fracs = [], 0, []
-            for tr in trajs:
-                if 'err' in tr:
-                    print('ERR', tr['pid'], tr['err'][:120], flush=True)
-                    continue
-                if len(tr.get('obs', [])) < 2:
-                    print('SKIP short traj', tr['pid'], 'win', tr['win'],
-                          'frac', tr['frac'], 't', round(tr.get('t', 0), 1),
-                          flush=True)
-                    continue
-                with open(a.history, 'a') as fh:
-                    fh.write(json.dumps({k: tr[k] for k in
-                                        ('level', 'pid', 'win', 'frac', 'saved_frac', 'end', 't',
-                                         'R', 'civ0', 'nbuy', 'ndeck', 'spend', 'log_started') if k in tr}) + '\n')
-                if valid_trajectory(tr):
-                    good.append(tr)
-                wins += tr['win']
-                fracs.append(tr['frac'])
-                print('ep pid', tr['pid'], 'win', tr['win'],
-                      'frac', round(tr['frac'], 3), 'R', round(tr['R'], 2),
-                      flush=True)
-            if training_enabled(a.mode, a.random) and good:
-                ppo_update(net, good, opt)
-                sd = net.state_dict()
-                save_checkpoint(net, opt, a.model, run_id)
-            if good:
-                print(f'round {rnd}: wins {wins}/{len(good)} '
-                      f'meanfrac {np.mean(fracs):.3f}', flush=True)
+            good = []
+            checkpoint_id = 'random' if a.random else policy_id(net)
+            with open(a.history, 'a', encoding='utf-8') as fh:
+                for tr in trajs:
+                    row = {k: v for k,v in tr.items() if k not in
+                           ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'board')}
+                    row.update(kind='episode', run_id=run_id, round=rnd, mode=a.mode,
+                               checkpoint_id=checkpoint_id, schema=3)
+                    fh.write(json.dumps(row) + '\n')
+                    starts[tr['pid']] = 'next_level' if tr.get('advance') else 'carry'
+                    if 'err' in tr:
+                        print('ERR', tr['pid'], tr['err'][:120], flush=True)
+                        continue
+                    if tr.get('obs') and valid_trajectory(tr):
+                        good.append(tr)
+                    print('ep pid', tr['pid'], 'end', tr['end'],
+                          'saved', tr['saved_frac'], 'R', round(tr['R'], 2), flush=True)
+                if opt is not None and good:
+                    diagnostics = ppo_update(net, good, opt)
+                    sd = net.state_dict()
+                    save_checkpoint(net, opt, a.model, run_id)
+                    fh.write(json.dumps(dict(kind='update', run_id=run_id, round=rnd,
+                                             checkpoint_id=policy_id(net), **diagnostics))+'\n')
+            if any('err' in tr for tr in trajs):
+                raise RuntimeError('Worker failed; stopped this run after preserving error history')
+            if any(tr.get('advance') and tr.get('board', {}).get('scenario') ==
+                   tr.get('board', {}).get('scenario_count') for tr in trajs):
+                print('Campaign completed; ending run for review', flush=True)
+                break
     print('done', flush=True)
 
 

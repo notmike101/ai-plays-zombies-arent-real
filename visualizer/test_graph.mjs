@@ -6,6 +6,14 @@ const graph = {layers: [{id:'input',size:3,kind:'input',labels:['a','b','c']}, {
 const layout = layoutGraph(graph);
 assert.equal(layout.nodes.length,23);
 assert.equal(new Set(layout.nodes.map(n=>n.id)).size,23);
+const large=layoutGraph({layers:[{id:'input',size:332,kind:'input'},
+  {id:'hu',size:72,kind:'policy'},{id:'hc',size:3456,kind:'policy'},
+  {id:'val',size:1,kind:'value'}]});
+assert(large.nodes.every(n=>Number.isFinite(n.x)&&n.x<=1160&&n.y<=700));
+const cells=large.nodes.filter(n=>n.layer==='hc');
+assert.equal(new Set(cells.map(n=>n.x)).size,48,'One conditional-tool row has 48 cells');
+assert(cells[48].y-cells[0].y>3,'Dense cell rows stay selectable when zoomed');
+assert(large.nodes.filter(n=>n.layer==='input').every(n=>n.compact),'Dense inputs use inspector labels instead of overlapping text');
 assert(layout.nodes.every(n=>Number.isFinite(n.x)&&n.x>=0&&n.x<=1160&&n.y>=0&&n.y<=700));
 assert.equal(visibleEdges(graph.edges, 1)[0].weight, -.8);
 assert.equal(visibleEdges(graph.edges, 1, 'input:0').length,1);

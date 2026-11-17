@@ -10,6 +10,36 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_picker_bottom_and_stale_unowned_roster(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        e = self.env()
+        e.cw, e.ch = 1920, 1200
+        before = dict.fromkeys(env_zar.NATIVE_ABILITIES, 0)
+        e.loadout_levels = Mock(side_effect=[before, dict(before, Cluster=1)])
+        e.roster = lambda: ['Missile'] + ['-']*6
+        e.scalar = lambda *args: 1
+        e.game_state = lambda: {'phase':'planning'}
+        e.unlocked_abilities = lambda: set(before)
+        e.vi = SimpleNamespace(key_press=Mock(), click=Mock(), wheel=Mock())
+        with tempfile.TemporaryDirectory() as tmp, patch.object(env_zar.time, 'sleep'):
+            e.copy_dir = lambda: tmp
+            (Path(tmp)/'battle_order.txt').write_text('\n'.join(train.DECK_ORDER))
+            e.change_loadout('Cluster', 1)
+        self.assertIn(unittest.mock.call(160,680), e.vi.click.call_args_list)
+        self.assertIn(unittest.mock.call(-11,600,600), e.vi.wheel.call_args_list)
+        self.assertIn(unittest.mock.call(600,540), e.vi.click.call_args_list)
+
+    def test_won_board_continues_instead_of_retrying_same_level(self):
+        from types import SimpleNamespace
+        e = self.env()
+        e.game_state = unittest.mock.Mock(side_effect=[{'phase':'won'}, {'phase':'planning'}])
+        e.obs = lambda: {'civ': 100}
+        e.vi = SimpleNamespace(key_press=unittest.mock.Mock())
+        with patch.object(env_zar.time, 'sleep'):
+            self.assertEqual(e.to_planning(), {'civ':100})
+        e.vi.key_press.assert_called_once_with(0x0D, sc=28)
+
     def env(self):
         e = env_zar.ZAREnv.__new__(env_zar.ZAREnv)
         e.h, e.base = 0, 0

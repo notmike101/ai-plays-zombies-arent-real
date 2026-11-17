@@ -31,7 +31,7 @@ civilians. Model decisions retain control of strategy. Evaluation never trains.
   Update labels, probes, observer/renderer as required in the same change.
   Tests: geometry, legal choices, observations, telemetry and exact model parity.
   Live: real planning/action receipts and a fresh actual worker observer frame.
-- [ ] 4. `nn_report.py`, launcher and documentation: run/checkpoint/board identity,
+- [x] 4. `nn_report.py`, launcher and documentation: run/checkpoint/board identity,
   separate fresh versus carry evaluation, >=35% saved success rate and unknowns,
   useful PPO diagnostics. Final offline suites and scoped live train/eval smoke,
   checkpoint isolation, process cleanup, guidance/tracker update and milestone push.
@@ -104,3 +104,56 @@ hardware probe scripts are not safe automatic test-discovery targets.
   coverage. Candidates include unbuildable scenery; receipts remain required.
   Full obstacle/footprint and wall-health encoding is deferred pending validated
   native semantics, not guessed from screenshots.
+
+- Milestone 4: report groups retain run/policy/level/start/mode identity; only
+  actual known completed saved fractions count toward >=35%. Unknown outcomes,
+  timeouts and errors are explicit. Source history2 is preserved and never read
+  as proof of schema3 progress. Policy sampling seeds do not fix the game's RNG.
+- Play/greedy main-path tests verify no PPO/save calls and byte-identical model;
+  greedy now uses legal argmax. Adam state persists, PPO logs KL, clipping,
+  entropy and explained variance, and nonfinite updates fail before saving.
+- Curriculum: a game win below35% retries the level; >=35% leaves the win board
+  for confirmed CONTINUE on the next episode. Final-level success stops the run.
+  This path is covered with fake states; no live L1->L2 or full campaign win was
+  achieved in these bounded tests.
+- Full live validation initially caught a bottom-picker failure: eight rows fit,
+  not seven. Fixed scroll clamp and ignored stale equipped names with zero native
+  level. Regression test and live Cluster purchase/refund both PASS.
+- Final normal inst9 PID12724/worker10300: seed42 policy sampled Mine, buy Cluster,
+  READY, then waits (Cluster unlock45s; battle ended before that). Eight decisions,
+  actual saved1.95%, immediate doomed-run abort, reward-0.88334. One real PPO step
+  changed weights; validation checkpoint saved separately, optimizer state retained.
+  This is functional evidence, not improved strength or a successful campaign.
+- Reloaded validation checkpoint for a bounded greedy carry evaluation:12
+  decisions, planning timeout, zero terminal reward, no optimization or checkpoint
+  change. Original policy2 SHA remains
+  bd97460bfefa468c0c3564936cf9fcd74d390cf2c4d33bcccc34716e7df230ed.
+- Browser LIVE check:332 readable inputs, architecture332->GRU128->72/3456/1,
+  actual Mine/cell25 matched native observer selected hu6/hc312. Larger graph
+  layout now uses grids and inspector labels to avoid overprinted input names.
+- Final checks:77 Python tests (21 learning/state,2 report/eval,3 spatial,12 deck,
+  5 boot,34 visualizer);12-step exact-model parity; Node graph assertions; browser
+  SSE/reconnect/pause/isolation; mobile WebGPU/Canvas2D and desktop gestures PASS.
+  Mobile checks are emulated. Layout expansion was separately inspected with
+  synthetic332/3456 data; it is not a second live-game test.
+- Owned games, trainer attachments and test preview/browser are cleaned at end.
+  Durable summary is this note; ignored runtime evidence includes
+  final-validation.evidence, final-evaluation.evidence, validation-frame.evidence,
+  schema3-browser.png and schema3-layout.png. No long training run started.
+
+## Running the new schema
+
+Use the configured PyTorch Python executable, not an unrelated system Python.
+`python -B scripts/train_run.py --copies inst1 --rounds 1 --eps 1 --seed 42`
+boots one fresh normal board, trains schema3 and cleans its owned game.
+`--mode play --model sessions/nn_policy3.pt` evaluates an existing checkpoint;
+`--start continue` resumes a partially cleared campaign. Subsequent episodes in
+one run are carry retries or next-level starts, recorded separately. Fresh-board
+benchmarking needs a fresh boot per evaluated episode; eps>1 is not a fresh-only
+benchmark. `python -B scripts/nn_report.py --history analysis/nn_hist3.jsonl`
+prints saved-score groups and unknown/incomplete counts.
+
+`python -B scripts/validate_training.py --train --steps 60 --seconds 12` is the
+bounded smoke harness; its checkpoint stays under visualizer/runtime. It refuses
+busy copies and preserves both user policy2 and policy3. Long training and a
+multi-seed L1-L5 benchmark remain separate work; no quality claim is supported yet.

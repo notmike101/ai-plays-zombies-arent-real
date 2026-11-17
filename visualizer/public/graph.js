@@ -4,20 +4,22 @@ export const palette = {positive:[.29,.91,.72], negative:[.65,.54,1], memory:[.3
 export function layoutGraph(graph) {
   const nodes = [], titles = [];
   const heads = graph.layers.filter(l => l.kind === 'policy' || l.kind === 'value');
+  const columns=layer=>layer.size>256?48:layer.size>24?8:layer.id==='hc'?4:1;
+  const headRows=heads.reduce((sum,layer)=>sum+Math.ceil(layer.size/columns(layer)),0);
   let headY = 135;
   for (const layer of graph.layers) {
     let x, y, cols, dx, dy, title;
-    if (layer.kind === 'input') { x=188; y=150; cols=1; dx=0; dy=Math.min(21,440/Math.max(1,layer.size-1)); title='INPUTS'; }
+    if (layer.kind === 'input') { cols=Math.ceil(layer.size/48); x=cols>1?100:188; y=150; dx=cols>1?160/(cols-1):0; dy=Math.min(21,440/Math.max(1,Math.ceil(layer.size/cols)-1)); title='INPUTS'; }
     else if (layer.kind === 'memory') { x=340; y=485; cols=16; dx=10; dy=Math.min(12,120/Math.ceil(layer.size/16)); title='PREVIOUS MEMORY'; }
     else if (layer.kind === 'gru') { x=565; y=178; cols=8; dx=16; dy=Math.min(23,360/Math.ceil(layer.size/8)); title='GRU HIDDEN STATE'; }
     else {
-      x=900; y=headY; cols=layer.size>24 ? 8 : layer.id==='hc' ? 4 : 1; dx=23;
-      dy=Math.min(21,420/Math.max(1,heads.reduce((s,l)=>s+Math.ceil(l.size/(l.id==='hc'?4:l.size>24?8:1)),0)));
+      x=900; y=headY; cols=columns(layer); dx=cols>8?168/(cols-1):23;
+      dy=Math.min(21,(420-65*(heads.length-1))/Math.max(1,headRows));
       title=layer.kind==='value' ? 'EXPECTED RETURN' : layer.id==='hc' ? 'MAP POSITION' : 'ACTION';
       headY += Math.ceil(layer.size/cols)*dy+65;
     }
     titles.push({x:layer.kind==='input'?65:x, y:y-35, text:title, subtitle:`${layer.size} ${layer.kind==='input'?'features':layer.kind==='gru'?'hidden units':layer.kind==='memory'?'units · t − 1':'outputs'}`, layer:layer.id});
-    for(let i=0;i<layer.size;i++) nodes.push({id:`${layer.id}:${i}`,layer:layer.id,index:i,label:layer.labels?.[i]||`${layer.id} ${i}`,kind:layer.kind,x:x+(i%cols)*dx,y:y+Math.floor(i/cols)*dy});
+    for(let i=0;i<layer.size;i++) nodes.push({id:`${layer.id}:${i}`,layer:layer.id,index:i,label:layer.labels?.[i]||`${layer.id} ${i}`,kind:layer.kind,compact:cols>1,radius:Math.min(7,dy*.35,cols>1?dx*.35:7),x:x+(i%cols)*dx,y:y+Math.floor(i/cols)*dy});
   }
   return {nodes, titles, byId:new Map(nodes.map(n=>[n.id,n]))};
 }
@@ -134,12 +136,12 @@ export class Renderer {
     for(const node of nodes) {
       const isChosen=this.frame?.selected?.[node.layer]===node.index;
       const rgb=isChosen||node.id===this.focus?palette.selected:node.kind==='memory'?palette.memory:(values[node.layer]?.[node.index]||0)<0?palette.negative:palette.positive;
-      const strength=activation(node),radius=node.kind==='gru'||node.kind==='memory'?5:7;
+      const strength=activation(node),radius=node.kind==='gru'||node.kind==='memory'?5:node.radius;
       const color=[...rgb,.22+.78*strength];
       for(const [u,v] of [[-1,-1],[1,-1],[-1,1],[-1,1],[1,-1],[1,1]]) vertex(dots,node.x+u*radius,node.y+v*radius,color,u,v,1);
       if(plain){const p=this.transform(node.x,node.y);plain.fillStyle=rgba(rgb,color[3]);plain.beginPath();plain.arc(p.x,p.y,Math.max(1,radius*p.scale*.5),0,Math.PI*2);plain.fill();}
       if(isChosen){const p=this.transform(node.x,node.y);ctx.strokeStyle='#ffd283';ctx.lineWidth=1;ctx.beginPath();ctx.arc(p.x,p.y,9*p.scale,0,Math.PI*2);ctx.stroke();}
-      if(this.transform(0,0).scale>=.5 && (node.kind==='input'||(node.kind==='policy'&&this.graph.layers.find(l=>l.id===node.layer).size<=24&&node.layer!=='hc'))) {
+      if(this.transform(0,0).scale>=.5 && (node.id===this.focus || (!node.compact && (node.kind==='input'||(node.kind==='policy'&&this.graph.layers.find(l=>l.id===node.layer).size<=24&&node.layer!=='hc'))))) {
         const p=this.transform(node.x+(node.kind==='input'?-14:15),node.y+3); ctx.font=`${Math.max(8,10*p.scale)}px ui-monospace,monospace`;ctx.fillStyle=isChosen?'#ffe0a0':'#8d9da9';ctx.textAlign=node.kind==='input'?'right':'left';ctx.fillText(node.label.replaceAll('_',' '),p.x,p.y);
       }
     }

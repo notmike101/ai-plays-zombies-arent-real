@@ -1,16 +1,8 @@
-"""ZAR RL environment: Zombies Aren't Real campaign battle as a gym-like loop.
+"""ZAR environment: native observations and VirtualInput/PostMessage actions.
 
-Observation  : exact live counters via module statics (no screenshots, no OCR):
-               civilians, zombies, converting, corpses, police, money(f32), wall-carry total.
-Actions      : virtual-input primitives only (DLL section + PostMessage; game ignores real mouse):
-               select battle-bar deployable (hotkey), click at client-px to cast, keys.
-Episode      : planning -> set_loadout(file edit) -> READY -> dialog SPACE(YES) -> battle ticks
-               -> terminal when horde wiped (win) or civilians below stop line / lost screen.
-Rules        : only legit resources: money + SP loadout levels (file-edited resume_loadout —
-               equivalent to clicking +/− on the LOADOUT screen; assignments default by unlock
-               order: battle slot idx17=slot3, idx18=slot4(Cure) on this save).
-
-Client px mapping for windowed captures: png(1942x1256) minus (11,40).
+The trainer uses validated native phase, economy, spatial and resource readers;
+loadout changes go through the calibrated UI and require native level receipts.
+Historical screenshot/file-loadout helpers remain for older diagnostic scripts.
 """
 import os
 import hashlib
@@ -189,11 +181,11 @@ class ZAREnv:
         if self.scalar(0x6553e8, '<I') != 1:
             raise ZAREnvError('Loadout did not open')
         try:
-            if name in roster:
+            if name in roster and before[name] > 0:
                 slot = roster.index(name)
                 self.vi.click((244 if delta > 0 else 80) + 266*slot, 794)
             elif delta > 0:
-                slot = roster.index('-')
+                slot = next(i for i, n in enumerate(roster) if before.get(n, 0) == 0)
                 order = [s.strip() for s in (Path(self.copy_dir())/'battle_order.txt').read_text().splitlines()
                          if s.strip() and not s.startswith('#')]
                 unlocked = self.unlocked_abilities()
@@ -202,7 +194,8 @@ class ZAREnv:
                 self.vi.click(160+266*slot, 680)
                 time.sleep(.2)
                 self.vi.wheel(30, 600, 600)
-                scroll = min(index, max(0, len(order)-7))
+                # Eight rows fit at this calibrated size, including the bottom row.
+                scroll = min(index, max(0, len(order)-8))
                 if scroll:
                     self.vi.wheel(-scroll, 600, 600)
                 self.vi.click(600, 180+120*(index-scroll))
@@ -401,65 +394,26 @@ class ZAREnv:
         return self.obs()
 
     def to_planning(self, max_r=12):
-        """R-loop back to PLANNING (DUMP phase is the only truth).
-        Frozen battle counters = pause-modal wedge: SPACE + ESC + ENTER
-        escalate, then double-R. Menu/dead states raise."""
-        last = None
-        lost = 0
-        healed = 0
+        """Enter planning from a confirmed phase; never diagnose pauses from counters."""
         for _ in range(max_r):
-            p = self.phase_now()
-            if p == 'planning':
+            state = self.game_state()
+            if state['phase'] == 'planning':
                 return self.obs()
-            o = self.obs()
-            sig = (o['civ'], o['zomb'])
-            if p is None and healed < 2:
-                # writer frozen = modal surface over the world: the PAUSE
-                # menu (RESUME|SETTINGS|GIVE FEEDBACK|REPORT BUG|MAIN MENU)
-                # or a dialog. One click on RESUME (client-fraction spot;
-                # inst6 wedge healed live 2026-11-17 this way) restores the
-                # sim; keyboard-modal dialogs ignore clicks, so the R-loop
-                # below still works for them.
-                healed += 1
-                self.vi.click(int(0.2035 * max(self.cw, 1)),
-                              int(0.2192 * max(self.ch, 1)))
-                time.sleep(2.0)
-                continue
-            if p == 'playing':
-                if sig == last:      # pause-modal: unpause, close menu,
-                    self.vi.key_press(0x20, sc=57, hold=0.25)   # dismiss,
-                    time.sleep(1.2)  # then double-R below
-                    self.vi.key_press(0x1B, sc=1, hold=0.25)    # ESC menu
-                    time.sleep(1.2)
-                    self.vi.key_press(0x0D, sc=28, hold=0.25)
-                    time.sleep(1.2)
-                # 1st R opens 'Restart this level? YES(R)/NO', 2nd R = YES
-                self.vi.key_press(0x52, sc=19, hold=0.25)
-                time.sleep(2.5)
-                self.vi.key_press(0x52, sc=19, hold=0.25)
-            elif (o['civ'] or 0) == 0 and o.get('money') is None and p is None:
-                if lost < 3:         # retry level = KEEPS placements+budget
-                    self.vi.key_press(0x52, sc=19, hold=0.25)
-                    time.sleep(2.5)  # (START OVER wipes: last resort only)
-                    self.vi.key_press(0x52, sc=19, hold=0.25)
-                else:
-                    self.vi.key_press(0x0D, sc=28, hold=0.25)   # START OVER
-                lost += 1
-            else:                    # phase 'lost' (or None with live money):
-                self.vi.key_press(0x52, sc=19, hold=0.25)       # R = dialog
-                time.sleep(2.5)
-                self.vi.key_press(0x52, sc=19, hold=0.25)       # R = YES
-            last = sig
-            time.sleep(3.5)
-        raise ZAREnvError('not planning: phase=%s obs=%s' % (self.phase_now(),
-                                                             self.obs()))
-
+            if state['phase'] == 'won':
+                self.vi.key_press(0x0D, sc=28)  # campaign CONTINUE
+            else:
+                self.retry()
+            time.sleep(.5)
+        raise ZAREnvError('Could not confirm planning after retry/continue')
 
     # ---------------- actions ----------------
     def cast(self, bar_key, cx, cy):
         """Select battle-bar deployable (hotkey char) and click at client px."""
-        vk = {'1': 0x31, '2': 0x32, '3': 0x33, '4': 0x34, '5': 0x35, '6': 0x36, 'T': 0x54}[bar_key]
-        sc = {'1': 2, '2': 3, '3': 4, '4': 5, '5': 6, '6': 7, 'T': 20}[bar_key]
+        import ctypes
+        if len(bar_key) != 1 or not bar_key.isascii() or not bar_key.isalnum():
+            raise ZAREnvError(f'Unsupported battle binding {bar_key!r}')
+        vk = ord(bar_key.upper())
+        sc = ctypes.windll.user32.MapVirtualKeyW(vk, 0)
         self.vi.key_press(vk, sc=sc)
         time.sleep(0.2)
         self.vi.move_to(cx, cy)

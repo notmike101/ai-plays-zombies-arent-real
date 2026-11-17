@@ -21,13 +21,15 @@ def main():
     root = Path(trainer.ROOT) / 'visualizer/runtime'
     root.mkdir(exist_ok=True)
     original = Path(trainer.MODEL).read_bytes() if Path(trainer.MODEL).exists() else None
+    protected = [Path(trainer.ROOT)/'sessions/nn_policy2.pt', Path(trainer.MODEL)]
+    originals = {p: p.read_bytes() if p.exists() else None for p in protected}
     torch.manual_seed(42)
     net = trainer.PolicyNet2()
     env = None
     try:
         env = zar_boot.boot(zar_boot.COPIES / args.copy)
         tr = trainer.run_episode((env.pid, net.state_dict(), False, 'validation',
-                                  dict(plan_steps=args.steps, battle_seconds=args.seconds)))
+                                  dict(plan_steps=args.steps, battle_seconds=args.seconds, start_kind='fresh', seed=42)))
         report = {k: v for k, v in tr.items() if k not in
                   ('obs', 'masks', 'ulps', 'clps', 'trail')}
         if 'err' in tr:
@@ -35,7 +37,9 @@ def main():
         assert trainer.valid_trajectory(tr), report
         if args.train:
             opt = torch.optim.Adam(net.parameters(), lr=3e-4)
-            trainer.ppo_update(net, [tr], opt, epochs=1)
+            before = trainer.policy_id(net)
+            report['ppo'] = trainer.ppo_update(net, [tr], opt, epochs=1)
+            assert trainer.policy_id(net) != before, 'Optimizer did not update weights'
             trainer.save_checkpoint(net, opt, root / 'validation-policy.pt', 'validation')
         report['training_update'] = args.train
         (root / 'validation-result.json').write_text(json.dumps(report, indent=2))
@@ -43,6 +47,8 @@ def main():
     finally:
         if env:
             zar_boot.stop(env)
+        for p, data in originals.items():
+            assert (p.read_bytes() if p.exists() else None) == data, f'Protected checkpoint changed: {p}'
         after = Path(trainer.MODEL).read_bytes() if Path(trainer.MODEL).exists() else None
         assert original == after, 'User checkpoint changed during validation'
         if after:

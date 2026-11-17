@@ -1,3 +1,17 @@
+# Current schema3 implementation (2026-11-17)
+
+The historical design below is superseded where it differs from scripts/nn_play2.py.
+Current:332 observations,128-unit single-layer GRU,72 tool logits and72x48
+conditional position logits plus value. Native grid carries civilian/zombie/
+defender/building/zone observations; per-ability levels, stock and arrival state,
+SP and geometry anchors are explicit. Model-selected loadout uses UI receipts.
+Reward is -new infections / initial civilians +5*actual terminal saved fraction.
+No purchase/cast bonus or per-step floor. Planning/battle caps bootstrap instead
+of forcing an action or treating alive civilians as a win. Unknown terminal
+outcomes are excluded. Native stock, not config defaults, controls availability.
+Schema metadata rejects old checkpoints; sessions/nn_policy2.pt is preserved.
+See training-improvements.md for tested behavior, launch commands and limits.
+
 # ML spec — learning to play Boston L5 (draft v2, 2026-11-15)
 
 ## UPDATE after baselines + WIN-1 (read first)

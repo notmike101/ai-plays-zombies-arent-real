@@ -13,6 +13,22 @@ import nn_play2 as train
 
 
 class LearningTests(unittest.TestCase):
+    def test_ppo_updates_with_conditional_cell_masks_and_finite_diagnostics(self):
+        net = train.PolicyNet2()
+        obs = np.zeros((2, train.NOBS), dtype=np.float32)
+        mu, mc = np.zeros(train.NU), np.zeros(train.NC)
+        mu[2], mc[3] = 1, 1
+        tr = dict(obs=obs, us=[2,2], cs=[3,3], ulps=[0.,0.], clps=[0.,0.],
+                  masks=[(mu,mc)]*2, rews=[0.,1.], bootstrap=0.)
+        before = train.policy_id(net)
+        opt = torch.optim.Adam(net.parameters(), lr=3e-4)
+        diag = train.ppo_update(net, [tr], opt, epochs=1)
+        self.assertNotEqual(train.policy_id(net), before)
+        self.assertAlmostEqual(diag['approx_kl'], 0.)
+        self.assertEqual(diag['clip_fraction'], 0.)
+        self.assertEqual(diag['entropy'], 0.)
+        self.assertTrue(all(v is None or np.isfinite(v) for v in diag.values()))
+
     def test_loadout_mask_requires_unlocked_affordable_skill_points(self):
         st = dict(planning=True, loadout={'Police': 1}, sp=1,
                   costs={'Police': 1, 'Heli': 2, 'Stungas': 1}, unlocked={'Police', 'Heli'})

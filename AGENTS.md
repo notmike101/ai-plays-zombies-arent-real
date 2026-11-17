@@ -39,9 +39,8 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 
 ## Where things live
 - `notes/tracker.md` — CURRENT STATE, NEXT STEPS, PIDs, evidence index.
-- `notes/ml-spec.md` — model design; `scripts/nn_play.py` — PPO trainer (train /
-  play / greedy modes; checkpoint `sessions/nn_policy.pt`; logs
-  `analysis/nn_*.log|jsonl`).
+- `notes/ml-spec.md` — model design; `scripts/nn_play2.py` — schema3 PPO trainer (train /
+  play / greedy; checkpoint `sessions/nn_policy3.pt`, history `analysis/nn_hist3.jsonl`).
 - `scripts/env_zar.py` — ZAREnv(pid): memory-RVA observation + ready()/cast/place
   primitives; `scripts/zar_input.py` + `scripts/hookdll/` — virtual input.
 - `scripts/launch_boards.py <instN...>` — kill/relaunch/nav boards to planning.
@@ -196,3 +195,17 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
 - Native stock and post-cast receipts govern resource masks. Helicopter liveness
   refreshes from counts every five sim seconds; do not fabricate replenishment.
 - Evaluation is read-only for model/optimizer; game actions still change its board.
+
+## Evaluation and curriculum records
+- Use an existing compatible checkpoint for play/greedy; only train optimizes.
+  Greedy means legal argmax. Policy seeds do not guarantee identical game RNG.
+- History records actual campaign/scenario, board fingerprint, policy ID, mode,
+  seed and start kind. Fresh, carry and next-level scores must remain separate.
+- Report >=35% actual saved, plus minimum/mean and unknown/incomplete counts.
+  A planning timeout with100% civilians alive is never a completed success.
+- Advance curriculum only after a confirmed game win with >=35% saved; retry
+  lower-score wins. CONTINUE is phase-gated; never blindly restart a won board.
+- Eight picker rows fit the calibrated1920x1200 loadout UI. Clamp scroll to N-8.
+  A persisted roster name with native level0 is an empty card, not a plus button.
+- Dense graph layers use grids; labels remain accessible in the Inspector.
+  Keep masked conditional probabilities and raw head outputs distinct.

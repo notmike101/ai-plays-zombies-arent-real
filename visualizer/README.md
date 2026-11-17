@@ -124,3 +124,13 @@ change. The old integration branch and original directory-only scope are histori
 not pending deployment instructions. Keep telemetry read-only, bounded and detached;
 maintain label semantics with the trainer, and verify real attachment at the next
 coordinated worker launch. Synthetic/fake-game checks do not prove live attachment.
+
+## Schema3 trainer (2026-11-17)
+
+Current model supplies332 inputs and72x48 conditional cell outputs. The cell head
+is still a direct linear head: raw outputs show all tool/cell logits, while
+probabilities are zero outside the sampled tool row; selected hc is tool*48+cell.
+Input and large output layers use compact grids. Select a node or use Inspector
+for its full label/value. Telemetry remains observation-only. Real attachment
+and browser332-input check passed; subsequent grid-layout tests used explicit
+synthetic data, plus the transport/mobile suites. See training-improvements.md.
