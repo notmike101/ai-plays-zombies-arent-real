@@ -191,7 +191,8 @@ def run_episode(args):
         env.vi.key_press(0x74, sc=0x3F)  # 8x battle speed (harness, not strat)
         st = {'t': 0.0, 'charges': {'cta': 2, 'rally': 3, 'medevac': 4,
                                     'seek': 1},
-              'heli_up': 0.0, 'planning': True, 'spend_frac': 0.0}
+              'heli_up': 0.0, 'planning': True, 'spend_frac': 0.0,
+              'frz': 0}
         m0 = o['money'] or 0.0
         civ0 = max(o['civ'] or 1, 1)
         net = None
@@ -207,6 +208,7 @@ def run_episode(args):
                 })
         h = None
         obs, us, cs, ulps, clps, rews, mus, trail = [], [], [], [], [], [], [], []
+        wprev = None        # watchdog-only obs snapshot, distinct from prev_o
         prev_o = dict(o)
         prev_t = time.time()
         prev_u, prev_c, succ = 0.0, 0.0, 0.0
@@ -240,6 +242,7 @@ def run_episode(args):
                       for bx, by, n in (blobs or [])]
             f = make_obs(st, o, frac, trend, slope, nblobs, prev_u, prev_c,
                          succ)
+            obs.append(f)
             mus.append((mu, mc))
             x = torch.tensor([f], dtype=torch.float32).unsqueeze(0)
             with torch.no_grad():
@@ -279,6 +282,7 @@ def run_episode(args):
                 step_at = time.time()
                 prev_o = env.obs()
                 prev_t = time.time()
+                wprev = None       # phase boundary: never inherit a streak
                 rews.append(-0.05)
                 trail.append((round(st['t'], 1), (prev_o.get('civ') or 0),
                               prev_o.get('zomb'), prev_o.get('money'), u, c))
@@ -356,17 +360,29 @@ def run_episode(args):
                     step_at = time.time()
                     prev_o = env.obs()
                     prev_t = time.time()
+                    wprev = None   # phase boundary: never inherit a streak
                 time.sleep(0.2)
                 continue
             bt = time.time() - t0
-            if (o['civ'], o['zomb']) == (prev_o['civ'], prev_o['zomb']) \
-                    and (o['zomb'] or 0) > 0:
-                st['frz'] = st.get('frz', 0) + 1
+            # Pause watchdog: compare against the PREVIOUS battle sample
+            # via a dedicated snapshot — prev_o is re-snapshotted above
+            # every iteration (the cc8ef9f check compared o with itself and
+            # false-fired every second battle iteration). LIMITATION:
+            # stationary (civ, zomb) can also mean a dialog/menu is open
+            # (counters freeze; SPACE = dialog YES there), and a genuine
+            # no-contact lull; counter data alone still cannot PROVE the
+            # game is paused — this only guarantees the streak now means
+            # "no progress between DISTINCT battle samples".
+            wp = (o['civ'], o['zomb'])
+            if (o['zomb'] or 0) > 0 and wprev is not None and wp == wprev:
+                st['frz'] += 1
                 if st['frz'] >= 2:     # pause wedge: unpause
+                    print(f'UNPAUSE pid {pid} t {st["t"]:.0f}', flush=True)
                     env.vi.key_press(0x20, sc=57)
                     st['frz'] = 0
             else:
                 st['frz'] = 0
+            wprev = wp
             if o['zomb'] == 0 and bt > 25 and fought:
                 win = True
                 break
