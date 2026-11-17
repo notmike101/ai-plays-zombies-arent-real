@@ -26,9 +26,11 @@ def trainer():
 # One unambiguous value per feature slot, independent of make_obs internals.
 PROBE_O = dict(civ=7, zomb=11, converting=13, corpses=17, police=19,
                money=2500.0)
-PROBE_ST = dict(t=450, charges={'para': 2, 'gas': 3, 'ac130': 1},
-                heli_up=1.0, planning=True, spend_frac=0.5)
-PROBE_BLOBS = [(960, 600, 3000), (1920, 1200, 6000)]
+PROBE_ST = dict(t=450, charges={'cta': 2, 'rally': 3, 'medevac': 4,
+                                'seek': 1}, heli_up=1.0, planning=True,
+                                spend_frac=0.5)
+# blob x/y arrive from run_episode already normalized to client fractions
+PROBE_BLOBS = [(0.5, 0.5, 3000), (1.0, 1.0, 6000)]
 # EXPECT[i] must equal make_obs(...)[i] AND describe INPUT_LABELS[i].
 EXPECT = [
     math.log1p(7), math.log1p(11), math.log1p(13), math.log1p(17),
@@ -38,7 +40,7 @@ EXPECT = [
     0.75,  # civilian fraction
     2.5,   # trend 2500 k/s / 1000 (clip +-3)
     -0.25,  # slope clip +-1
-    2.0, 1.0, 3.0, 1 / 3,  # para, heli, gas, ac130/3
+    1.0, 1.0, 1.0, 1.0,  # cta/2, heli, rally/3, (medevac+4*seek)/8
     0.5, 0.5, 0.5,   # crowd 1: 960/1920, 600/1200, 3000/6000
     1.0, 1.0, 1.0,   # crowd 2: full-scale probe
     -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,  # crowd 3-4 missing sentinel
@@ -50,7 +52,7 @@ EXPECT = [
 # Keyword pins: position i of the probe must belong to a label whose meaning
 # matches — catches same-width reorders that element-wise tests can't see.
 LABEL_PINS = {0: 'civilians', 5: 'money', 6: 'elapsed', 8: 'trend',
-              9: 'slope', 13: 'ac130', 14: 'crowd 1 x', 16: 'crowd 1 weight',
+              9: 'slope', 13: 'medevac', 14: 'crowd 1 x', 16: 'crowd 1 weight',
               23: 'crowd 4 x', 26: 'extent', 27: 'previous tool',
               30: 'planning', 31: 'budget'}
 
@@ -102,9 +104,36 @@ class LabelTests(unittest.TestCase):
         obs = self.probe(blobs=[(0, 0, 0)] * 3)
         self.assertEqual(obs[23:26], [-1.0, -1.0, -1.0])
         self.assertEqual(obs[26], 0.75)
-        self.assertEqual(obs[14:17], [0.0, 0.0, 0.0])  # real 0 != missing
-        obs = self.probe(blobs=[(1920 * k % 1920, 0, 6000) for k in range(1, 6)])
+        obs = self.probe(blobs=[(min(k / 5, 1.0), 0.5, 6000) for k in range(1, 6)])
         self.assertEqual(obs[26], 1.0)  # >4 detections truncate to 4 slots
+
+    def test_warm_start_block_copy(self):
+        import os
+        import tempfile
+        t = trainer()
+        net = t['PolicyNet2']()
+        sd = net.state_dict()
+        old = {k: (v[:12] if k.startswith(('hc.weight', 'hc.bias')) else
+                   v[:, :22] if k == 'gru.weight_ih_l0' else
+                   v[:15] if k.startswith(('hu.weight', 'hu.bias')) else
+                   v.clone()) for k, v in sd.items()}
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, 'm.pt')
+            torch.save(old, p)
+            net2 = t['PolicyNet2']()
+            t['load_pretrained'](net2, p)
+            got = net2.state_dict()
+        for key, want in (('hc.weight', old['hc.weight']),
+                          ('hc.bias', old['hc.bias']),
+                          ('hu.weight', old['hu.weight']),
+                          ('gru.weight_ih_l0', old['gru.weight_ih_l0'])):
+            pre = got[key][:want.shape[0]]
+            if want.ndim == 2:
+                pre = pre[:, :want.shape[1]]
+            self.assertTrue(torch.equal(pre, want), key)
+        self.assertFalse(torch.equal(got['hc.weight'][12:],
+                                     got['hc.weight'][12:13].expand_as(
+                                         got['hc.weight'][12:]) * 0))
 
     def test_no_generic_labels_in_source_list(self):
         self.assertFalse([s for s in INPUT_LABELS

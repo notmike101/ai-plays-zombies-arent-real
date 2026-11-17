@@ -271,17 +271,19 @@ class ZAREnv:
 
     def hot_spot(self):
         """Densest combat blob (green militia/fire tracers, fallback bright
-        flash dots) -> client PHYSICAL px, or None."""
+        flash dots) -> LOGICAL client px (DPI-scale aware), or None."""
         from harness import grab
         import numpy as _np
         img = _np.asarray(grab(self.hwnd).convert('RGB')).astype(int)
+        sx = img.shape[1] / max(self.cw, 1)
+        sy = img.shape[0] / max(self.ch, 1)
         r, g, b = img[..., 0], img[..., 1], img[..., 2]
         m = (g > 140) & (g - r > 50) & (g - b > 40)
         if int(m.sum()) < 60:
             lum = img.mean(axis=2)
             m = lum > 225
-        m[:130, :] = False
-        m[int(self.ch * 0.80):, :] = False
+        m[:int(130 * sy), :] = False
+        m[int(img.shape[0] * 0.80):, :] = False
         ys, xs = _np.nonzero(m)
         if len(xs) < 40:
             return None
@@ -289,8 +291,8 @@ class ZAREnv:
         for x, y in zip(xs // 60, ys // 60):
             bins[(x, y)] = bins.get((x, y), 0) + 1
         (bx, by), _n = max(bins.items(), key=lambda kv: kv[1])
-        return (int(min(bx * 60 + 30 - 11, self.cw - 30)),
-                int(min(by * 60 + 30 - 48, int(self.ch * 0.8))))
+        return (int(min((bx * 60 + 30) / sx, self.cw - 30)),
+                int(min((by * 60 + 30) / sy, self.ch * 0.78)))
 
     def crowd_topk(self, k=4):
         """Player-view segmentation (ONE grab, like hot_spot): fire-tracer
@@ -299,11 +301,13 @@ class ZAREnv:
         from harness import grab
         import numpy as _np
         img = _np.asarray(grab(self.hwnd).convert('RGB')).astype(int)
+        sx = img.shape[1] / max(self.cw, 1)
+        sy = img.shape[0] / max(self.ch, 1)
         r, g, b = img[..., 0], img[..., 1], img[..., 2]
         m = (((g > 140) & (g - r > 50) & (g - b > 40)) |
              ((g > r + 8) & (g > b + 8) & (g > 40) & (g < 110)))
-        m[:130, :] = False
-        m[int(self.ch * 0.80):, :] = False
+        m[:int(130 * sy), :] = False
+        m[int(img.shape[0] * 0.80):, :] = False
         ys, xs = _np.nonzero(m)
         if len(xs) < 30:
             return [], 0
@@ -311,8 +315,8 @@ class ZAREnv:
         for x, y in zip(xs // 60, ys // 60):
             bins[(x, y)] = bins.get((x, y), 0) + 1
         top = sorted(bins.items(), key=lambda kv: -kv[1])[:k]
-        out = [(int(min(bx * 60 + 30 - 11, self.cw - 30)),
-                int(min(by * 60 + 30 - 48, int(self.ch * 0.8))), n)
+        out = [(int(min((bx * 60 + 30) / sx, self.cw - 30)),
+                int(min((by * 60 + 30) / sy, self.ch * 0.78)), n)
                for (bx, by), n in top]
         return out, len(xs)
 

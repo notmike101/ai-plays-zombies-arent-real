@@ -118,3 +118,17 @@ bug and must never degrade into generic `input <n>` labels. Dimension-only
 tests or checking the synthetic preview are NOT sufficient proof: after
 deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.json`
 — `graph.layers[input].labels` readable, no `label_warning` key present).
+
+## Battle keybind contract (2026-11-16s, user directive)
+- Battle kit keys 1-5 are bound BY THE RUN LOADOUT (SP picks rebind the
+  bar). Pinned WIN-board kit (0/2 SP spent, confirmed on L1 end screen):
+  key1 = heli (redeployable), 2 = CTA x2, 3 = Rally x3, 4 = MEDEVAC x4,
+  5 = Seek x1 (it17 evidence). `nn_play2` BATTLE_U + st['charges'] +
+  TOOLS idx 11-14/19 mirror exactly this.
+- ANY loadout pick change: read the live battle HUD bar screenshot BEFORE
+  trusting battle fitness, then update BATTLE_U + charges + TOOLS in the
+  same change. A stale binding is a silent no-op keypress (the old table
+  pressed '2' as heli when key2 was actually CTA — every battle cast was
+  off one slot).
+- L1 battle dies in <4 s on a naked board (t=4 end screen already shows
+  'nothing deployed', 0 kills) — bare boards are useless as HUD probes.

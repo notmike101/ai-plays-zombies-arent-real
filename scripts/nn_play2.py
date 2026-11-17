@@ -36,31 +36,48 @@ except ImportError:
 MODEL = os.path.join(ROOT, 'sessions', 'nn_policy2.pt')
 HIST = os.path.join(ROOT, 'analysis', 'nn_hist2.jsonl')
 NOBS, HID = 32, 128
-NU, NC = 15, 12
-TOOLS = ['wait', 'ready', 'napalm', 'mortar', 'sniper', 'turret', 'mine',
-         'c4', 'gas_mortar', 'upgrade_unit', 'zone_rect', 'para', 'heli',
-         'gas_bomb', 'ac130', 'wall']
-# planning DEPLOY/BUILD hotkeys VERIFIED from HUD bottom bar 2026-11-17:
-# 1 Napalm $100 | 2 Mortar $79 | 3 Sniper $50 | 4 Turret $90 | 5 Mine $15
-# 6 C4 $500 | T Gas Mortar $90 | B Safe Zone (click wall start/end) |
-# F Upgrade Unit | G Gate | Z Wall | Q Corridor | E Hold
+NU, NC = 20, 48
+TOOLS = ['wait', 'ready', 'garrison', 'mortar', 'napalm', 'turret', 'mine',
+         'c4', 'gas_mortar', 'upgrade_unit', 'zone_rect', 'heli', 'cta',
+         'rally', 'medevac', 'wall', 'gate', 'corridor', 'hold', 'seek']
+# planning DEPLOY/BUILD hotkeys READ OFF HUD screenshot probe 2026-11-16r:
+# [1] Garrison $18-270 | [2] Mortar $75 | [3] Napalm $100 | [4] Turret $90 |
+# [5] Mine Field $15 | [6] C4 $500 | [T] Gas Mortar $90 | [Q] Corridor
+# $0.40/len | [E] Hold $0.80/rad | [B] Safe Zone | [Z] Wall | [F] Upgrade
+# Unit | [G] Gate | [Tab] LOADOUT (SP picks) | [Space] READY
 U_HOTKEY = {2: (0x31, 2), 3: (0x32, 3), 4: (0x33, 4), 5: (0x34, 5),
             6: (0x35, 6), 7: (0x36, 7), 8: (0x54, 20), 9: (0x46, 33),
-            14: (0x5A, 44)}
-BATTLE_U = {11: ('1', 'para', 1), 12: ('2', 'heli', 1), 13: ('3', 'gas', 1),
-            14: ('4', 'ac130', 3)}
-PLANNING_U = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-BATTLE_U_ALLOWED = [0, 11, 12, 13, 14]
-XS = [500, 767, 1033, 1300]
-YS = [260, 500, 740]
-CELLS = [(x, y) for y in YS for x in XS]
+            15: (0x5A, 44), 16: (0x47, 46), 17: (0x51, 16), 18: (0x45, 18)}
+
+
+# KEYBIND CONTRACT (user directive 2026-11-16s): battle bar slots are bound
+# BY THE RUN LOADOUT (SP picks rebind keys 1-5). These entries are valid ONLY
+# for the pinned WIN-board kit (0/2 SP spent): key1 = heli (redeployable),
+# 2 = CTA x2, 3 = Rally x3, 4 = MEDEVAC x4, 5 = Seek x1 (it17 evidence).
+# ANY loadout change: read the live battle HUD bar screenshot, update
+# BATTLE_U + st['charges'] + TOOLS battle names in the SAME change — a stale
+# binding is a silent no-op key press. See AGENTS.md 'keybind contract'.
+BATTLE_U = {11: ('1', 'heli', 1), 12: ('2', 'cta', 2), 13: ('3', 'rally', 3),
+            14: ('4', 'medevac', 4), 19: ('5', 'seek', 1)}
+PLANNING_U = list(range(11)) + [15, 16, 17, 18]
+BATTLE_U_ALLOWED = [0, 11, 12, 13, 14, 19]
+XF = [0.11 + 0.77 * i / 7 for i in range(8)]   # grid as FRACTIONS of the
+YF = [0.16 + 0.44 * j / 5 for j in range(6)]   # client window: the game
+# resizes itself after tiling (probe: client 1920x1200 despite SetWindowPos),
+# so cell coords are always computed from the LIVE client size.
+
+
+def zone_span(c):
+    """Zone rect = cell c to one row down + three cols right (~3x2 cells)."""
+    r, col = divmod(c, 8)
+    return ((r + 1) % 6) * 8 + (col + 3) % 8
 PLAN_STEPS = 60            # harness bound on planning phase (cap, not strategy)
 BATTLE_T = 560.0
 STEP_S = 0.7               # battle step; at 8x ~5.6 s game-time; act() floor
 # now ~0.55 s (shorter input sleeps), matching real-time play cadence
 
-def cell_of(i):
-    return CELLS[i % 12]
+def cell_of_px(c, cw, ch):
+    return (int(XF[c % 8] * cw), int(YF[c // 8] * ch))
 
 
 class PolicyNet2(nn.Module):
@@ -83,10 +100,10 @@ def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
     return [g(o['civ']), g(o['zomb']), g(o['converting']), g(o['corpses']),
             g(o['police']), money / 1000.0, min(st['t'] / 300.0, 2),
             frac, max(-3, min(3, trend / 1000.0)), max(-1, min(1, slope)),
-            float(ch['para']), float(st['heli_up']), float(ch['gas']),
-            ch['ac130'] / 3.0,
+            ch['cta'] / 2.0, float(st['heli_up']), ch['rally'] / 3.0,
+            (ch['medevac'] + 4 * ch['seek']) / 8.0,
             *[v / s for bv in (blobs or [])[:4]
-              for v, s in ((bv[0], 1920.0), (bv[1], 1200.0), (bv[2], 6000.0))],
+              for v, s in ((bv[0], 1.0), (bv[1], 1.0), (bv[2], 6000.0))],
             *([-1.0] * (12 - 3 * min(len(blobs or []), 4))),
             min(len(blobs or []) / 4.0, 1.0),
             float(prev_u), float(prev_c), float(succ),
@@ -101,7 +118,7 @@ def masks_for(st):
             mu[u] = 1
     else:
         mu[0] = 1
-        for u in (11, 12, 13, 14):
+        for u in BATTLE_U:
             key, name, _ = BATTLE_U[u]
             avail = st['heli_up'] if name == 'heli' else st['charges'][name]
             if avail > 0:
@@ -151,15 +168,15 @@ def load_pretrained(net, path):
     except FileNotFoundError:
         return
     new = net.state_dict()
-    if old['gru.weight_ih_l0'].shape[1] != NOBS:
-        for key in tuple(old):
-            if key.startswith(('gru.weight_ih', 'gru.weight_hh',
-                               'hu.weight', 'hc.weight', 'val.weight')) \
-                    and old[key].ndim == 2:
-                w = new[key].clone()
-                oc = min(old[key].shape[-1], w.shape[-1])
-                w[..., :oc] = old[key][..., :oc]
-                old[key] = w
+    for key in tuple(old):
+        o = old[key]
+        if not key.startswith(('gru.', 'hu.', 'hc.', 'val.')):
+            continue
+        if o.shape != new[key].shape and all(
+                n >= g for n, g in zip(new[key].shape, o.shape)):
+            w = new[key].clone()
+            w[tuple(slice(0, g) for g in o.shape)] = o
+            old[key] = w
     net.load_state_dict(old)
 
 
@@ -169,9 +186,11 @@ def run_episode(args):
     observer = None
     try:
         env = ZAREnv(pid)
+        cell_of = lambda c: cell_of_px(c, env.cw, env.ch)
         o = env.to_planning()          # R-loop to planning ONLY (net readies)
         env.vi.key_press(0x74, sc=0x3F)  # 8x battle speed (harness, not strat)
-        st = {'t': 0.0, 'charges': {'para': 1, 'gas': 1, 'ac130': 3},
+        st = {'t': 0.0, 'charges': {'cta': 2, 'rally': 3, 'medevac': 4,
+                                    'seek': 1},
               'heli_up': 0.0, 'planning': True, 'spend_frac': 0.0}
         m0 = o['money'] or 0.0
         civ0 = max(o['civ'] or 1, 1)
@@ -217,8 +236,10 @@ def run_episode(args):
                     hs = env.hot_spot()
                     blobs = [(hs[0], hs[1], 2000)] if hs else []
             mu, mc = masks_for(st)
-            f = make_obs(st, o, frac, trend, slope, blobs or [], prev_u,
-                         prev_c, succ)
+            nblobs = [(bx / max(env.cw, 1), by / max(env.ch, 1), n)
+                      for bx, by, n in (blobs or [])]
+            f = make_obs(st, o, frac, trend, slope, nblobs, prev_u, prev_c,
+                         succ)
             mus.append((mu, mc))
             x = torch.tensor([f], dtype=torch.float32).unsqueeze(0)
             with torch.no_grad():
@@ -267,23 +288,24 @@ def run_episode(args):
                 vk, sc = U_HOTKEY[u]
                 cx, cy = cell_of(c)
                 env._arm(vk, sc)
-                env.vi.move_to(cx, cy)
-                time.sleep(0.12)
-                env.vi.click()
-                time.sleep(0.25)
+                # Polled-path placement: the engine reads DLL-hooked
+                # cursor/buttons; PostMessage clicks place NOTHING in-world;
+                # >=3-step >=6px strokes only (verified by HUD receipts).
+                env.vi.drag(int(cx), int(cy), int(cx) + 8, int(cy) + 6,
+                            steps=4)
+                time.sleep(0.3)
                 did = True
             elif st['planning'] and u == 10:
                 x1, y1 = cell_of(c)
-                x2, y2 = cell_of((c + 4) % 12)
+                x2, y2 = cell_of(zone_span(c))
                 env._arm(0x42, 48)
                 for px, py in ((x1, y1), (x2, y1), (x2, y2), (x1, y2)):
-                    env.vi.move_to(px, py)
+                    env.vi.drag(int(px), int(py), int(px) + 7, int(py) + 5,
+                                steps=3)
                     time.sleep(0.12)
-                    env.vi.click()
-                    time.sleep(0.18)
-                env.vi.key_press(0x0D, sc=28)   # CLOSE loop: ENTER or no zone
+                env.vi.key_press(0x0D, sc=28)  # CLOSE loop: ENTER or no zone
                 time.sleep(0.8)
-                did = True        # bonus paid only if money actually fell
+                did = True        # fee charges on close; receipt gates bonus
             elif not st['planning'] and u in BATTLE_U:
                 key, name, _ = BATTLE_U[u]
                 cx, cy = cell_of(c)
@@ -303,12 +325,21 @@ def run_episode(args):
             if not st['planning']:
                 r = 8.0 * ((o['civ'] or 0) - (prev_o['civ'] or 0)) / civ0
                 r += min(kills, 20000) * 2e-6
+            if did and u in BATTLE_U:
+                # it17 winning lever shaping: a cast placed INS the
+                # detected horde outearns a blind cast (heli redeploys).
+                fx, fy = cell_of(c)                      # compare in client
+                fx /= max(env.cw, 1)                     # fractions: blobs
+                fy /= max(env.ch, 1)                     # are normalized
+                near = any(abs(fx - bx) < 0.09 and abs(fy - by) < 0.10
+                           for bx, by, _n in nblobs)
+                r += 0.15 if near else 0.02
             trail.append((round(st['t'], 1), o.get('civ'), o.get('zomb'),
                           o.get('money'), u, c))
             if did:
                 r -= 0.01
-                if st['planning'] and u not in (0, 1):
-                    r += 0.12    # shapes board-building: money fell = bought
+                if st['planning'] and u not in (0, 1) and succ == 1.0:
+                    r += 0.12    # receipt: money really fell = placed for real
             r = max(r, -0.25)     # floor: evacuation waves are saves, not spiral
             rews.append(r)
             if o['zomb'] > 0:
