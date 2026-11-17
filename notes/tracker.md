@@ -1,44 +1,31 @@
 # ZAR Tracker (live state — update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17t — SP-honest deck model, kit5 trainer live)
-- Git HEAD 888b1a8 UNPUSHED (deck model + env_zar dump channel + hookdll v2 +
-  probe/test scripts; shim git only). Tests 17/17 green
-  (scripts/test_deck.py 11 + visualizer/test_labels.py 6).
-- DECK MODEL (nn_play2): deck built ONLY from battle-dump [economy]
-  'loadout <Name> = lvl' echo = what SP actually bought. KIT TRUTH (probe
-  2026-11-17, kit_probe.py): SP-starved L1 board CONSUMES resume_loadout and
-  buys ZERO (economy echo empty); ability_charges shows UNOWNED defaults
-  (.Police = 1) and loadout_police_cost = 1/level; R-retry boards NEVER earn
-  SP (6/6 EMPTY on the once-won board) -> SP comes from SAVINGS (sp_base=1 +
-  sp_per_root_10k=1 per 10k saved) -> decks exist only after good outcomes
-  (it17 L5 kit proves purchases at scale). Deck keys READ from settings.ini
-  bind_slot1..7 ('_1'->'1', T). Charges + *_unlock/_arrival_seconds from the
-  [counts] rules echo; refresh_battle_state re-syncs charges + game
-  ability_cooldown -> exact blocked window (HELI exempt: free re-aim while
-  flying, counts.helicopters = liveness truth). ready_once verifies
-  phase='playing' via F6 dump (memory counters LIE on lost screens).
-- L1 reality: civ0 8142 naked board dies ~6 s wall @8x -> early-loss break
-  (civ==0 bt>6). Win is possible (kit2 hist: one r3 win frac 1.0) — trainer
-  must find defense; battle mask when deck EMPTY = wait-only HONESTLY (old
-  code cast phantom abilities for reward: fixed).
-- Dump channel (env_zar.dump/phase_now): raw debug_dumps txt = plain
-  '[section]' headers, parses to build/where/clock/view/economy/counts;
-  analysis/dump-plan-44716.txt copy was re-formatted to '== [x] ==' by the
-  earlier session (live files differ).
-- Trainer RUNNING: TrainerKit5 = train --pids 39092,10428,29948,17224
-  --eps 2 --rounds 14 > analysis/nn2_train_kit5.log (started ~04:10).
-  kit2 (01:06, pre-fix) = all frac 0 + UNPAUSE flood: superseded.
-- Instances idle/live: 39092 10428 29948 17224 (inst4/5/6/8, L1) in trainer;
-  44716 inst3 lost screen; 3588 inst7 wedged welcome page (kill at end).
-  NO Subagents rule stands (this run).
+## CURRENT STATE (2026-11-17 — deterministic interface validation in progress)
+- Interface only; no trainer/model changes. Existing unrelated training logs and
+  checkpoint edits are left untouched. No subagents or console commands used.
+- v3 client coordinates and Win32 raw record ABI corrected. All mouse gestures
+  now share posted edges, including drag held moves. Injection reconnects safely,
+  uses an exclusive sentinel and bounded waits; native init is idempotent.
+- REA/Ghidra confirms raw movement is gated by RVA 0x68e6b9; posted mouse edges
+  and wheel have separate handlers. Raw-only menu claims were contradicted by
+  isolated live probes. Full Evidence: analysis/interface-raw-consumer.json.
+- First two fresh acceptance runs PASSED (analysis/interface-20261117-090900.log),
+  then native Shared padding/read semantics were tightened and the DLL rebuilt.
+  Revalidation is in progress. A second native build needs fresh live proof.
+- Parallel boot uncovered a memscan ctypes race, fixed by serializing only
+  ZAREnv attachment in zar_boot. Subsequent boots reach fresh world counters but
+  sometimes F6 is blocked; longer holds/focus messages did not fix it. Investigating
+  a dialog using a one-off planning/menu capture. Automated boot/tests use no images.
+- inst4 badges were intact, no restoration needed. Backups of inst1..inst4 progress
+  are in analysis/interface-progress-backups. inst3 fullscreen probe failed and
+  its settings were restored. All failed test runs cleaned their owned processes.
+- Active owned test PIDs at this checkpoint: 35080 (inst1 diagnostic), 9252 (inst4
+  acceptance). Inspect live processes before acting; these are historical once run ends.
+
 ## NEXT STEPS
-1. Monitor kit5 log: planning defense quality (money receipts), early-loss
-   breaks ~6-9 s, one L1 win -> SP>0 -> DECK lines become non-EMPTY = the
-   final live proof of purchase+cast (todo item 5's tail).
-2. Deck-live proof audit: 'DECK <pid>: <name>xN@key' lines vs economy echo;
-   kills Paratrooper/Heli counters move after casts.
-3. BC from winners + it17 recipe -> PPO warm start (ml-spec gates 4/13.69/35%).
-4. Phase end: kill instances (incl 3588/44716), update tracker + push.
+1. Identify/dismiss the blocking surface; finish four simultaneous planning boots.
+2. Repeat fresh acceptance twice on final code/DLL; check fullscreen separately.
+3. Kill all test games, update this state with final logs, commit and push milestone.
 
 ## VERIFIED CAPABILITIES (condensed; details notes/automation.md)
 1. Parallel unfocused copies; virtual input per instance (DLL): clicks, keys,
@@ -86,3 +73,46 @@ dense crowds + Battleship water AOE = path to silver. (notes/game-rules.md)
   deck decode: battle row = fixed SP deck para/heli/gas/ac130 (no cure card in
   build); planning cards = money buys; extra-safe-zones perk active.
   Git repo created + GitHub remote pushed. AGENTS.md split (guidance vs tracker).
+
+## Prior tracker snapshot (before interface task)
+
+## CURRENT STATE (2026-11-17t — SP-honest deck model, kit5 trainer live)
+- Git HEAD 888b1a8 UNPUSHED (deck model + env_zar dump channel + hookdll v2 +
+  probe/test scripts; shim git only). Tests 17/17 green
+  (scripts/test_deck.py 11 + visualizer/test_labels.py 6).
+- DECK MODEL (nn_play2): deck built ONLY from battle-dump [economy]
+  'loadout <Name> = lvl' echo = what SP actually bought. KIT TRUTH (probe
+  2026-11-17, kit_probe.py): SP-starved L1 board CONSUMES resume_loadout and
+  buys ZERO (economy echo empty); ability_charges shows UNOWNED defaults
+  (.Police = 1) and loadout_police_cost = 1/level; R-retry boards NEVER earn
+  SP (6/6 EMPTY on the once-won board) -> SP comes from SAVINGS (sp_base=1 +
+  sp_per_root_10k=1 per 10k saved) -> decks exist only after good outcomes
+  (it17 L5 kit proves purchases at scale). Deck keys READ from settings.ini
+  bind_slot1..7 ('_1'->'1', T). Charges + *_unlock/_arrival_seconds from the
+  [counts] rules echo; refresh_battle_state re-syncs charges + game
+  ability_cooldown -> exact blocked window (HELI exempt: free re-aim while
+  flying, counts.helicopters = liveness truth). ready_once verifies
+  phase='playing' via F6 dump (memory counters LIE on lost screens).
+- L1 reality: civ0 8142 naked board dies ~6 s wall @8x -> early-loss break
+  (civ==0 bt>6). Win is possible (kit2 hist: one r3 win frac 1.0) — trainer
+  must find defense; battle mask when deck EMPTY = wait-only HONESTLY (old
+  code cast phantom abilities for reward: fixed).
+- Dump channel (env_zar.dump/phase_now): raw debug_dumps txt = plain
+  '[section]' headers, parses to build/where/clock/view/economy/counts;
+  analysis/dump-plan-44716.txt copy was re-formatted to '== [x] ==' by the
+  earlier session (live files differ).
+- Trainer RUNNING: TrainerKit5 = train --pids 39092,10428,29948,17224
+  --eps 2 --rounds 14 > analysis/nn2_train_kit5.log (started ~04:10).
+  kit2 (01:06, pre-fix) = all frac 0 + UNPAUSE flood: superseded.
+- Instances idle/live: 39092 10428 29948 17224 (inst4/5/6/8, L1) in trainer;
+  44716 inst3 lost screen; 3588 inst7 wedged welcome page (kill at end).
+  NO Subagents rule stands (this run).
+## NEXT STEPS
+1. Monitor kit5 log: planning defense quality (money receipts), early-loss
+   breaks ~6-9 s, one L1 win -> SP>0 -> DECK lines become non-EMPTY = the
+   final live proof of purchase+cast (todo item 5's tail).
+2. Deck-live proof audit: 'DECK <pid>: <name>xN@key' lines vs economy echo;
+   kills Paratrooper/Heli counters move after casts.
+3. BC from winners + it17 recipe -> PPO warm start (ml-spec gates 4/13.69/35%).
+4. Phase end: kill instances (incl 3588/44716), update tracker + push.
+
