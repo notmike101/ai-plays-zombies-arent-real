@@ -15,6 +15,8 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 - Run `.\local.ps1 status`, then `.\local.ps1 check` from this checkout. Preserve
   healthy active training. Use `.\local.ps1 train --rounds N` only when idle;
   it resumes schema3 with one owned copy and inherited CPU/priority limits.
+  Select the deployed copy from tracker with `--copy instN` on check/train;
+  inst1 is only the default name, not a guarantee its older unlock profile is valid.
 - Use `.\local.ps1 visualizer-start` to reuse/start the server. Stop commands
   require current PID AND create_time; see `local.ps1 --help` and the runbook.
   Do not bypass duplicate-run/missing-checkpoint/foreign-process refusal checks.

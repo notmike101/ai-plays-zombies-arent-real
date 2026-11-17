@@ -1,6 +1,6 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 15:13 local — portable setup validated, training restarting)
+## CURRENT STATE (2026-11-17 15:17 local — full-availability training LIVE, sharing enabled)
 - Active module roots now derive from their checkout. Ignored zar.local.toml
   configures the supported read-only asset source and GitHub App helper. Local
   source is game-copies/inst4: the installed EXE differs from the supported hash;
@@ -29,10 +29,26 @@
   schema/reward/action changes. Full availability does NOT imply complete policy
   action coverage; gameplay goal remains unmet.
 - Old run b39316bdad21 stopped at saved update46,policy e9c9e765b8f64cf9.
-  New .venv launch requested for inst12,200 rounds,2 episodes,seed20261172.
-  Verify actual PIDs/log/first completed update before treating it as healthy.
+  New .venv run83bfa5642d1d is LIVE on inst12,200 rounds,2 episodes,seed20261172.
+  Completed update0: policy86937deddc7dabc2,10 Adam states; SHA256
+  e1dbc34654777ba335351ce4b22af4fcfaaa223ce42b71c4d0c54432eca7a647.
+  First two L1 battles saved7.6%/6.9%,both aborted. No strong-play claim.
+- Live identities: operator7924(created1794949994.8707004),venv redirector29272
+  (1794949994.8510892); launcher34720(1794949997.99964),redirector47252
+  (1794949997.9919803); trainer43344(1794950087.7209148),redirector45860
+  (1794950087.7134013);worker28516(1794950089.7673914);game528
+  (1794949998.1934192). Revalidate before any stop; redirectors are not extra runs.
   Original visualizer22604(created1794931712.9690397) preserved on8765.
-- Source/docs committed/pushed through799ad2b. Preserved unrelated legacy
+- Logs: analysis/nn3_operator_20261117-151314-9df84d.log and
+  analysis/nn3_20261117-151317-555255.log. Actual worker/server frame matched
+  game528/worker28516,episode r1/ep0,332 labels,no label warning,preview=false,
+  live age1.85s; trainer ancestry verified. Server HTTP200. Browser UI unchanged.
+- One game, below-normal and CPUs0-7. SampleCPU7.6%,GPU33%,RAM11.77GiB available,
+  GPU3392/10240MiB,D:12.31GiB free. These are samples/startup limits,not quotas.
+  Preserve this run. Six-hour sharing is scheduled; no continuous gameplay
+  supervision after this chat. Next agent should inspect status/check --copy inst12,
+  reuse visualizer-start and review learning/action gaps in ml-spec.md.
+- Source/docs committed conventionally and pushed at milestones. Preserved unrelated legacy
   policy2/history2 modifications and old untracked analysis artifacts.
 
 ## Prior snapshot (2026-11-17 — isolated Python environment verified, training LIVE)

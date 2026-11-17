@@ -20,7 +20,7 @@ dirty policy2/history2 files. Do not modify the installed game or commit DLLs.
   publish idempotent versioned GitHub Release assets through the identity helper.
   Provide verified import without overwriting active/existing model files. Run one
   real publication/download validation, then schedule every6h using Codex automation.
-- [ ] Handoff: README/AGENTS/config/build/sharing instructions and tracker updated;
+- [x] Handoff: README/AGENTS/config/build/sharing instructions and tracker updated;
   run offline suites, a tight owned-copy live check, resume existing weights/Adam
   under .venv with headroom and verify a fresh update/frame. Commit/push milestones.
 
@@ -61,3 +61,14 @@ dirty policy2/history2 files. Do not modify the installed game or commit DLLs.
   tests PASS,12 recurrent-step parity PASS,Node graph PASS. Added one further
   missing-copy CLI boundary test; seven boot tests PASS after that change.
   Unrelated legacy nn_hist2 whitespace dirt was not changed by diff checks.
+- Corrected read-only probe completed four actual policy decisions; all52 unlock
+  entries survived native boot and checkpoint bytes stayed identical. Probe cleaned.
+- Production .venv run83bfa5642d1d on inst12 completed/saved update0,policy
+  86937deddc7dabc2, retaining10 Adam states. Its two battles saved7.6%/6.9%, both
+  aborted; this proves operation, not improved strength or the35% objective.
+  Visualizer HTTP state matched worker28516/game528,332 labels,no warning,live
+  non-preview frame; worker ancestry matched trainer43344. One game, CPUs0-7,
+  below-normal; sampleCPU7.6%,GPU33%,availableRAM11.77GiB. Tracker has live identities.
+- Final source/docs diff check PASS; no DLL/PDB tracked.117 Python tests across
+  milestone suites, Rust ABI test, two matching DLL builds, model parity and Node
+  graph checks passed. No browser transport/UI changes; no browser suite rerun.
