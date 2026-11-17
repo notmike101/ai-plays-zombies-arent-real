@@ -8,3 +8,4 @@ PERKS = ('Extra_Zones', 'Flammable_Gas', 'Fall_Gas', 'Officer_Blast',
 UNITS = ('Garrison', 'Sniper', 'Mortar', 'Nest', 'Mine', 'C4', 'Battleship',
          'GasMortar', 'FireMortar', 'Railgun', 'Howitzer', 'MLRS', 'ChemMine',
          'Spikes', 'Oil', 'Napalm')
+UNIT_IDS = dict(zip(UNITS, (4, 2, 3, 5, 6, 7, 20, 21, 22, 28, 26, 27, 30, 31, 32, 33)))

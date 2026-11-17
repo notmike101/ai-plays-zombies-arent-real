@@ -1,0 +1,34 @@
+"""Native-control boundaries; these tests never attach to a game."""
+import unittest
+from unittest.mock import Mock, patch
+
+from game_controls import Controls, wait_until, unit_choices
+from game_mechanics import UNITS
+
+
+class ControlsTests(unittest.TestCase):
+    def test_picker_replaces_current_entry_with_clear_and_preserves_order(self):
+        self.assertEqual(unit_choices('-'), list(UNITS))
+        self.assertEqual(unit_choices('Mortar'), ['-']+[n for n in UNITS if n != 'Mortar'])
+        with self.assertRaises(ValueError): unit_choices('unknown')
+
+    def test_wait_is_bounded_and_returns_the_receipt(self):
+        self.assertEqual(wait_until(lambda: {'money': 42}, 'receipt'), {'money': 42})
+        with self.assertRaisesRegex(RuntimeError, 'receipt'):
+            wait_until(lambda: False, 'receipt', timeout=0)
+
+    def test_invalid_roster_selection_never_sends_input(self):
+        env = Mock(cw=1920, ch=1200)
+        c = Controls(env)
+        for name, slot in [('unknown',0),('Sniper',7),('Sniper',-1)]:
+            with self.assertRaises(ValueError): c.equip_unit(name,slot)
+        env.vi.key_press.assert_not_called()
+
+    def test_native_roster_unknown_ids_are_not_empty_slots(self):
+        env = Mock(cw=1920, ch=1200)
+        env.scalar.side_effect=[4,2,3,5,6,7,255]
+        with self.assertRaisesRegex(RuntimeError, 'roster'):
+            Controls(env).planning_roster()
+
+
+if __name__ == '__main__': unittest.main()
