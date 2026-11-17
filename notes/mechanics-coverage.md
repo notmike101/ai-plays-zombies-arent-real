@@ -224,3 +224,11 @@ Live diagnostic receipts: Police,CallArms,Rally,Medevac,Heli,Stungas,Firebomb,
 Missile,Bomber,Cluster consumed native stock. Demolition needs a tall eligible
 building; vehicle drops require valid open ground. Those proofs and medevac
 queued departure remain pending; mere clicks are not success evidence.
+
+
+Quick Deploy now applies the shipped/config-echo unlock reduction to the actual
+equipped perk when constructing the battle deck. Abilities without a bound key
+stay masked. Both old and new two-step geometry gestures can be canceled by the
+policy; cancellation clears the saved anchor as well as the native tool.
+Regression tests cover reduced unlock time, missing binding and cancelability;
+125 script tests pass. No reward or optimizer changes in this milestone.

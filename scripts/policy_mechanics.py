@@ -269,7 +269,7 @@ class Mechanics:
         if name=='zone_finish':return c.polygon_finish()
         if name=='zone_back':return c.polygon_back()
         if name=='cancel_tool':
-            st.pop('gesture_anchor',None);st.pop('gesture_point',None);return c.cancel()
+            st.pop('anchor',None);st.pop('gesture_anchor',None);st.pop('gesture_point',None);return c.cancel()
         if name=='refund_selection':return c.refund(xy)
         if name=='undo':return c.undo()
         if name in KEY_ACTIONS:return c.key_action(name)

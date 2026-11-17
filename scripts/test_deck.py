@@ -69,6 +69,11 @@ class BuildDeckTests(unittest.TestCase):
             ['1'])
         self.assertEqual([s['key'] for s in deck2], ['1', None])
 
+    def test_quick_deploy_reduces_first_unlock_from_actual_equipped_perks(self):
+        d=dump(econ={'loadout Heli':'1'},counts=dict(COUNTS,perk_unlock_cut_percent='33'))
+        self.assertAlmostEqual(t()['build_deck'](d,KEYS,perks=[{'name':'Quick_Deploy'}])[0]['unlock'],20.1)
+        self.assertEqual(t()['build_deck'](d,KEYS,perks=[{'name':'Hot_Fire'}])[0]['unlock'],30.)
+
     def test_no_econ_echo_means_no_deck(self):
         # kit probe 2026-11-17: SP-starved board consumed resume_loadout and
         # bought ZERO -> economy echo stays empty, ability_charges shows
@@ -105,6 +110,13 @@ class MaskTests(unittest.TestCase):
         tt = t()
         self.sc, self.frac = tt['slot_castable'], tt['slot_castable_frac']
         self.masks, self.st_b = tt['masks_for'], tt['ABILITY_U']['Heli']
+
+    def test_missing_binding_and_geometry_cancellation(self):
+        self.assertFalse(self.sc({'sim':100},slot(key=None)))
+        st={'planning':True,'anchor':(10,9)}
+        mu,_=self.masks(st)
+        cancel=t()['TOOLS'].index('cancel_tool')
+        self.assertEqual(mu[cancel],1)
 
     def test_unlock_boundary(self):
         s = slot()

@@ -142,6 +142,7 @@ def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
 def slot_castable(st, s):
     """Battle mask rule: sim clock past unlock, not awaiting arrival, and
     either charges left or (Heli) one already flying = free re-aim."""
+    if not s.get('key'):return False
     t = st['sim']
     if t + 0.5 < s['unlock']:
         return False
@@ -158,6 +159,7 @@ def masks_for(st):
     if st.get('anchor'):
         u, c = st['anchor']
         mu[u] = 1
+        mu[TOOLS.index('cancel_tool')] = 1
         mc[c] = 0
         if u == 10:
             mc[np.arange(NC)//8 == c//8] = 0
@@ -197,6 +199,8 @@ def masks_for(st):
 
 def cell_mask(st, u, mc):
     if u >= 72:
+        if TOOLS[u]=='cancel_tool' and st.get('anchor'):
+            return np.eye(1,NC,dtype=np.float32)[0]
         return extra_masks(st)[u-72].copy()
     mc = mc.copy()
     mc *= st.get('world_cells',WORLD_CELLS)
@@ -270,7 +274,7 @@ def _slot(name, lvl, pl, counts, keys, i):
             'key': keys[i] if i < len(keys) else None}
 
 
-def build_deck(dump, keys, roster=None):
+def build_deck(dump, keys, roster=None, perks=()):
     """Purchased levels plus actual seven-slot roster; config supplies rules only."""
     if not dump:
         return []
@@ -291,6 +295,10 @@ def build_deck(dump, keys, roster=None):
         if name in bought and name in ABILITY_U:
             deck.append(_slot(name, bought[name], pl, counts, keys,
                               i if roster is not None else len(deck)))
+    if any(p['name']=='Quick_Deploy' for p in perks):
+        cut=float(counts['perk_unlock_cut_percent'])
+        if not math.isfinite(cut) or not 0<=cut<=100:raise ValueError('Invalid Quick Deploy reduction')
+        for slot in deck:slot['unlock'] *= 1-cut/100
     return deck
 
 
@@ -443,7 +451,7 @@ def run_episode(args):
                     d = dict(initial)
                     d['economy'] = {f'loadout {name}': str(level) for name, level in
                                     env.loadout_levels().items() if level > 0}
-                    st['deck'] = build_deck(d, keys, env.roster())
+                    st['deck'] = build_deck(d, keys, env.roster(), st['perks'])
                     stock = env.battle_stock()
                     for slot in st['deck']:
                         slot['charges'] = slot['max_charges'] = stock[slot['name']]
