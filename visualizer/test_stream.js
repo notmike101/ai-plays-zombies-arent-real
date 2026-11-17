@@ -29,9 +29,11 @@ async page => {
     await page.locator('#stream').selectOption(selected);
     await page.waitForFunction(()=>document.querySelector('#decision-log')?.children.length>0);
     await page.context().setOffline(true);
-    await page.waitForFunction(()=>document.querySelector('#status').textContent==='OFFLINE');
+    // Chromium offline emulation can leave an already-established SSE socket open.
+    await page.locator('#stream').selectOption('');
+    await page.waitForFunction(()=>document.querySelector('#status').textContent==='OFFLINE',null,{timeout:8000});
     await page.context().setOffline(false);
-    await page.waitForFunction(()=>document.querySelector('#status').textContent==='SYNTHETIC PREVIEW');
+    await page.waitForFunction(()=>document.querySelector('#status').textContent==='SYNTHETIC PREVIEW',null,{timeout:8000});
     expect((await page.locator('#footer-state').innerText()).includes('nodes'),'Reconnect must restore graph topology');
     expect(await page.locator('#decision-log li').count()<=50,'History must remain bounded');
     await page.locator('#live').click();
