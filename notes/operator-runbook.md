@@ -27,6 +27,9 @@ to a game or send input. `check` loads a CPU copy of the checkpoint for exact
 schema, weight and optimizer validation, checks dependencies, hashes inst1's game
 executable, and inspects the DLL. It never changes the checkpoint or games.
 Use `check --copy instN` for another existing copy.
+On this deployment, use `check --copy inst12` and `train --copy inst12` for the
+new full-availability copy. The legacy inst1 profile lacks upgrades and now fails
+preflight deliberately. A fresh clone's prepared inst1 has the complete profile.
 
 If `training_active=true`, inspect the log from its actual command or tracker and
 preserve healthy training. New history rows with `kind=update` establish saved

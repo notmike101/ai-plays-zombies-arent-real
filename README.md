@@ -63,6 +63,8 @@ Once prerequisites exist:
 training run. `check` verifies dependencies, the current checkpoint/Adam state,
 game build and input DLL without attaching to the game. `visualizer-start` reuses
 this checkout's existing server or starts one; open http://localhost:8765.
+The default copy is inst1; use `--copy instN` on check/train when the tracker names
+another deployment copy. Existing copies are not silently rewritten to add unlocks.
 
 **Only when no trainer is active and `check` passes**, resume in the background:
 

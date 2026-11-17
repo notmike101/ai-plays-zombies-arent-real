@@ -15,7 +15,7 @@ dirty policy2/history2 files. Do not modify the installed game or commit DLLs.
   x64/export contract, record source/compiler/flags/output hash. Verify two clean
   builds match with the current linker. Refuse deployment while owned games run.
   Commit source/toolchain/build instructions only, never generated DLL/PDB/targets.
-- [ ] Checkpoints: capture a single atomic checkpoint revision into a local bundle,
+- [x] Checkpoints: capture a single atomic checkpoint revision into a local bundle,
   validate schema/weights/optimizer and checksum, record source revision honestly,
   publish idempotent versioned GitHub Release assets through the identity helper.
   Provide verified import without overwriting active/existing model files. Run one
@@ -44,3 +44,20 @@ dirty policy2/history2 files. Do not modify the installed game or commit DLLs.
   two independent clean builds matched SHA256
   2d2f160e53c26c521984727c922e7629bd6718e5010642d23f9db49bdcd8d848.
   Deployed only while no owned game was running; outputs remain ignored.
+- User clarified fresh training copies must have everything available. Default
+  preparation now enables all16 units/19 abilities/16 upgrades plus Extra_Zones;
+  preflight rejects incomplete profiles. This does not buy levels, spend SP,
+  change normal difficulty or pre-place units. Policy action coverage remains
+  incomplete and is explicitly documented.
+- Published/download-verified checkpoint-35a8148ff8948406; repeat publication
+  returned already_published without modifying the release. Active local Codex
+  heartbeat share-zar-checkpoints runs every6h when this environment is available.
+- First native probes exposed a distinct unplayed campaign panel. PrintWindow
+  captures analysis/portable-menu-*.png show its PLAY NOW at(.446,.610) on1920x1200.
+  Corrected navigation reached Boston L1/8142 civilians/$3111 with inst12 and the
+  rebuilt DLL. Initial fixture probe had a bytes/text assertion error after boot;
+  cleanup succeeded and the corrected read-only policy probe was rerun.
+- Offline milestone:81 Python trainer/operator/interface tests +35 visualizer
+  tests PASS,12 recurrent-step parity PASS,Node graph PASS. Added one further
+  missing-copy CLI boundary test; seven boot tests PASS after that change.
+  Unrelated legacy nn_hist2 whitespace dirt was not changed by diff checks.
