@@ -362,6 +362,7 @@ def run_episode(args):
         prev_o = dict(o)
         prev_t = time.time()
         prev_u, prev_c, succ = 0.0, 0.0, 0.0
+        nbuy = 0
         trend, slope = 0.0, 0.0
         win = False
         fought = False
@@ -511,6 +512,7 @@ def run_episode(args):
                 r -= 0.01
                 if st['planning'] and u not in (0, 1) and succ == 1.0:
                     r += 0.12    # receipt: money really fell = placed for real
+                    nbuy += 1
             r = max(r, -0.25)     # floor: evacuation waves are saves, not spiral
             rews.append(r)
             if o['zomb'] > 0:
@@ -580,7 +582,9 @@ def run_episode(args):
         return dict(level=tag, pid=pid, win=bool(win), frac=float(frac),
                     civ0=int(civ0), t=st['t'], obs=obs, us=us, cs=cs,
                     ulps=ulps, clps=clps, trail=trail, rews=rews,
-                    masks=mus, R=float(sum(rews)))
+                    masks=mus, R=float(sum(rews)),
+                    nbuy=int(nbuy), ndeck=len(st['deck']),
+                    spend=round(m0 - (prev_o.get('money') or m0), 1))
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -686,8 +690,8 @@ def main():
                     continue
                 with open(HIST, 'a') as fh:
                     fh.write(json.dumps({k: tr[k] for k in
-                                         ('level', 'pid', 'win', 'frac', 't',
-                                          'R', 'civ0') if k in tr}) + '\n')
+                                        ('level', 'pid', 'win', 'frac', 't',
+                                         'R', 'civ0', 'nbuy', 'ndeck', 'spend') if k in tr}) + '\n')
                 good.append(tr)
                 wins += tr['win']
                 fracs.append(tr['frac'])
