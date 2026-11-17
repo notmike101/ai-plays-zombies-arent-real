@@ -132,8 +132,8 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 - Zones need a press at each corner then Enter; segment drags supply corner presses.
   Walls need start/end presses. One freehand stroke does not commit either shape.
 - Wheel uses WM_MOUSEWHEEL at the virtual cursor; validate anchoring with F6 view.
-- Fresh dump economy is money truth: obs().money can return a stale positive mirror.
-  F6 writes in-world only and names files to one-second precision.
+- Current obs().money reads the verified native dump field, including debt; old
+  positive mirrors can be stale. F6 writes in-world and names files to one-second precision.
 - env_zar.py and trainer APIs remain unchanged. Never edit live trainer modules or
   stop another owner's workers as part of interface maintenance.
 

@@ -1,102 +1,131 @@
-# Current schema3 implementation (2026-11-17)
+# Model and learning contract
 
-The historical design below is superseded where it differs from scripts/nn_play2.py.
-Current:332 observations,128-unit single-layer GRU,72 tool logits and72x48
-conditional position logits plus value. Native grid carries civilian/zombie/
-defender/building/zone observations; per-ability levels, stock and arrival state,
-SP and geometry anchors are explicit. Model-selected loadout uses UI receipts.
-Reward is -new infections / initial civilians +5*actual terminal saved fraction.
-No purchase/cast bonus or per-step floor. Planning/battle caps bootstrap instead
-of forcing an action or treating alive civilians as a win. Unknown terminal
-outcomes are excluded. Native stock, not config defaults, controls availability.
-Schema metadata rejects old checkpoints; sessions/nn_policy2.pt is preserved.
-See training-improvements.md for tested behavior, launch commands and limits.
+Current implementation: `scripts/nn_play2.py`, schema3. This document supersedes
+the old screenshot-based/L5 draft; Git history retains that draft. The objective
+is at least35% actual civilians saved on every Boston level, consistently, at
+normal difficulty. All strategy belongs to the policy.
 
-# ML spec — learning to play Boston L5 (draft v2, 2026-11-15)
+## Observations
 
-## UPDATE after baselines + WIN-1 (read first)
-All naive plans LOSE to the conversion snowball (A 0.00, B 0.19, C 0.00, WIN-1 0%/best 1%).
-The policy must learn DYNAMIC play: first-strike helis at t=0 (HP=1 one-shot window),
-heli redeployment every 26 s recharge on the biggest cluster, fortify on threatened wall
-segments, Repair picks, mine fields at breach points, and EARLY RESTART of doomed runs
-(user directive: <10% civilians = failure → R RETRY). The RETRY-iterate loop (breach
-markers persist in planning; RETRY keeps the board) is the primary search mechanism.
-The reward shaping should reflect this: survival time of zones, conversions prevented
-early, and the terminal saved_pct.
+The policy receives332 floats per decision:
+- 32 scalar/legacy features: populations, money, elapsed time, population trends,
+  four deck availability slots, previous action, purchase receipt, phase and spend.
+  Thirteen legacy crowd features are currently constant because native-grid
+  rollouts supply no screenshot blobs. They are retained for checkpoint compatibility.
+- 240 spatial features: an8x6 grid of civilians, zombies, aggregated defender
+  people, building counts and safe-zone occupancy. The bottom8 action cells are
+  masked because their screen positions overlap the HUD.
+- 57 ability features: level, remaining availability and pending arrival for each
+  of19 abilities; plus3 features for unspent SP and a two-point geometry anchor.
 
+Native memory is read only after matching the supported executable SHA256.
+Positions use the live camera and client size. Zone geometry comes from fresh
+planning dumps. Inputs, meanings and normalizations are pinned by visualizer
+labels/tests. Changes require matching schema metadata; never reuse weights with
+silently different feature meanings.
 
-## Problem framing
-Two coupled decision phases per episode:
-1. **Planning** (no zombies): spend $6,605 (+ carry already on board) on safe zones,
-   walls, fortify, Turrets/Mortars/Snipers/Garrisons, building-class ability picks.
-   One-shot spatial layout problem, but order matters for undo/branching.
-2. **Battle** (deterministic sim, 30 ticks/sim-s): deploy SP-bought abilities (Police
-   paratroopers x19 squads, Heli x6 with 26 s recharge) on the live horde; optionally
-   place walls/gates mid-battle. A dynamic resource-allocation problem under the
-   conversion snowball.
+Important missing information: detailed static weapon placement/type/health,
+wall position/health/breaches, walkable terrain/water, playable-map boundary,
+weapon range, building classes and per-target price. Defender people counts are
+not a complete map of all turrets/garrisons/mortars. A GRU cannot reliably recover
+unobserved carried placements, especially when its state resets between episodes.
+The current viewport/grid also limits aiming precision and offscreen awareness.
 
-The game is tick-deterministic with per-stage saved outbreak seeds (steam_cloud/outbreaks/)
-=> identical (plan, actions) reproduce identical outcomes; "repeat outbreak" admin command
-re-rolls the same outbreak for counterfactuals.
+## Policy and actions
 
-## Observation (per decision)
-- **Spatial**: downsampled screenshot grid (~64x45 RGB at zoom-out, or 3 channels:
-  civilians-white density, zombie-green density, zone/wall masks). At planning time the
-  crowd is the signal (white dots); in battle the zombie glow is the signal.
-- **Scalars**: money, civilians-safe %, zones used/11, land cap %, civilians-left %,
-  zombies count, zombie health, SP stock per ability, cooldowns, sim_time, tick.
-  Source: screenshot OCR of the HUD/STATS panel + F6 .txt dumps (rich but 275 MB .state
-  side-file — parse .txt only; dump sparingly) + admin console readouts.
-- **Map priors** (precomputed once per map/stage): building footprints + heights,
-  special-building classes (from map data), play-area polygon, walkable land.
+One128-unit single-layer GRU feeds72 tool logits,72x48 conditional cell logits
+and a value head (632,649 parameters). Sampling uses the legal tool mask, then
+the selected tool's cell mask. Evaluation can use legal argmax (`greedy`).
 
-## Action space
-- Planning: {arm tool garrison|mortar|sniper|turret|zone|fortify|gate} x {client x, y}
-  (+ Enter for zone close). Verified automatable via the virtual-input DLL.
-- Battle: {deploy slot 1..7} x {client x, y} (+ timing = decision step index). Verified.
-- Episode control: READY, speed F4/F5, retry.
+The72 tools comprise34 wait/READY/planning/battle tools and38 buy/refund loadout
+choices (19 abilities each). Geometry uses two model-selected cells. Loadout
+controls use actual native ownership receipts; battle bindings use the saved
+roster including gaps. Native stock governs resource availability.
+
+Tool selection cancels the previous tool through virtual right-click before
+pressing a hotkey: hotkeys toggle and undo can leave a tool selected. Geometry
+that violates native land/budget READY gates is undone once, with the prior board
+and money verified. Failure to confirm execution or rollback stops the worker.
+
+The action space is incomplete: no general unit/zone refund or reposition action,
+no camera pan/zoom policy, no C4 detonation action, and no general selection,
+repair or rebuilding interface. Masks do not yet predict every target's
+buildability or purchase price. Do not claim all game mechanics are exposed.
 
 ## Reward
-- Terminal: saved_pct (the game's own metric; badge lines bronze 4% / silver 13% /
-  diamond 28% / sapphire 41% on L5) -> shaped reward: saved_pct/100, +badge bonuses,
-  strong penalty for wipe (saved 0). progress/*.progress + end-screen are the source.
-- Shaping (optional): per-battle-step delta of civilians-left % (the STATS panel gives
-  it live), kills per SP spent (end screen per-unit kills vs SP value).
 
-## Architecture (candidate)
-- **GRU policy** (user's suggestion): inputs = CNN encoder over the spatial grid +
-  scalars MLP -> GRU over decision steps -> heads: {tool/type (softmax), x, y (Gaussian
-  or discretized 32x32 grid), stop}. Handles the sequential placement/deployment nature
-  and partial observability (hidden outbreak sites) naturally.
-- Alternative: small transformer over (state, action) history; or ConvNet + pointer
-  network for precise coordinates. Start GRU — cheapest to iterate.
-- Value head for PPO.
+For each action, read the resulting state and compute:
 
-## Training loop
-1. Harness episode (scripts/harness.py + zar_input VirtualInput): restore checkpoint
-   steam_cloud snapshot -> load Boston L5 -> (planning actions) -> READY -> speed 4x ->
-   battle actions each ~2 s poll (deployables on detected clusters) -> end -> reward.
-2. Parallel: N copies (inst1..instN), each with own VirtualInput + steam_cloud; sims run
-   unfocused; the user's game stays foreground for observation.
-3. Determinism: same seed + plan + actions = same battle; vary plans across episodes.
-4. Initial data: baseline episodes A/B/C recorded; sandbox mode ($ UNLIMITED, 99999 SP,
-   all units) for exploration data without budget pressure.
-5. RL: PPO with the real game as env (slow but exact); frame the battle phase as a
-   semi-MDP (decision every ~2 s real / 8 sim s).
+    infection_reward = -max(infections_after - infections_before, 0) / initial_civilians
 
-## Eval gates
-- Beat baseline B (0.19%) -> beat bronze (4% = win) -> silver 13.69% (the save's stage-4
-  best) -> diamond 28%+.
-- Regression check: every harness change re-runs baseline B (deterministic).
+For a known completed/aborted outcome, add:
 
-## Known harness gaps to fix before training
-- Speed: F4=4x verified; F5 behavior (expected 8x) needs one more test; button clicks
-  unreliable. Battle-phase admin console (virtual Ctrl+Space) unverified — verify with
-  screenshot before any typed command (raw SPACE in typed strings toggles pause!).
-- Placement precision: pixel-detect building centroids for Turret/Garrison; open-ground
-  for Mortar; zoom-in helps.
-- Ctrl+Z undo wipes the whole board — never rely on undo; snapshot before planning.
-- One transient freeze seen during a globe transition — add hang detection
-  (SendMessageTimeout) + relaunch to the harness.
-- .prep NMPL decode (notes/prep-format.md) would enable file-level plans (no clicks);
-  optional optimization after the UI-driven loop works.
+    terminal_reward = 5 * actual_saved_fraction
+    episode_reward = sum(infection_reward) + terminal_reward
+
+The outcome comes from this episode's native session-log footer, never a best
+badge or the live civilian fraction. An aborted score is measured at retry, not
+a completed game win. Evacuated civilians are not infections. There are no
+purchase, spending, cast-emission, kill-count or READY bonuses.
+
+Illustration: if35% are actually saved and65% are newly infected, the undiscounted
+reward is1.75-0.65=1.10. A complete wipe with all civilians newly infected scores-1.
+This assumes those infection totals; other deaths/evacuation can change the sum.
+The35% goal is a curriculum/evaluation gate, not a discontinuous bonus cliff.
+
+Timeouts are truncations: terminal reward0 and critic bootstrap, with saved_frac
+null. observed_saved_frac retains the snapshot (often1.0 in planning) strictly
+as diagnostics. History records reward_components, timeout_phase and learning
+configuration; invalid/non-finite outcomes never enter PPO.
+
+## Credit assignment and PPO
+
+Planning GAE uses gamma=lambda=1: planning decisions do not advance simulation
+time, so adding a longer planning prefix must not attenuate the battle signal.
+Battle GAE uses gamma=.99 and lambda=.95 per decision. These are decision-based,
+not elapsed-time discounts. Previously,60 planning steps attenuated a distant
+TD residual by(.99*.95)^60, approximately0.0252. Preserving planning credit trades
+lower attenuation for higher variance; actual gameplay gains require evaluation.
+
+PPO uses a joint tool/cell likelihood ratio, clipping at0.2, value weight0.5,
+entropy coefficient0.015, gradient-norm cap0.5 and4 epochs. Adam (lr3e-4) persists
+across batches and is saved with the policy. KL, clipping, entropy and explained
+variance are logged; there is not yet a KL-based early-stop gate.
+
+One sequential episode batch owns each unique game PID. Episode/cap boundaries
+currently reset GRU state. In particular, truncated planning may carry the board
+but resets transient policy/anchor state: this is an approximation, not exact
+recurrent continuation. Stalling can remain attractive while battle returns are
+negative; no forced READY or arbitrary strategy reward hides this problem.
+A proper persistent rollout state and stronger outcome evaluation remain needed.
+
+## Checkpoints, evaluation and operations
+
+Default model: sessions/nn_policy3.pt; history: analysis/nn_hist3.jsonl. Writes are
+atomic and retain a.previous backup. Schema3 observation/action metadata is
+validated. Learning revision1 records reward coefficients and phase-aware GAE;
+older schema3 weights/Adam remain loadable. Policy2 is preserved separately.
+`play`/`greedy` never optimize or write model checkpoints; use separate history.
+
+Report actual >=35% saved with minimum/mean and unknown/incomplete/error counts,
+separately by level, policy and fresh/carry/next-level start. Only confirmed wins
+meeting35% advance curriculum. Repeated-board improvement is not fresh-board
+or five-level generalization. Policy seed alone does not fix native game RNG.
+
+Read notes/tracker.md for current PIDs and status. Launch with resource headroom;
+never create competing workers for an owned PID. Runtime snapshots are discarded
+only when newly created by trainer attachments inside owned game-copies; text
+receipts, checkpoints and previous evidence are kept. Test copies are cleaned.
+
+## Evidence and next priorities
+
+See notes/learning-audit.md for this audit and notes/training-improvements.md for
+prior implementation tests. Passing tests proves specific behavior, not strong
+play. Priorities are complete observations of the carried board, missing recovery
+and tactical actions, exact truncated-rollout continuation, better affordability
+masks, then controlled fresh-board/multi-seed L1-L5 evaluation.
+
+References: the [GAE paper](https://arxiv.org/abs/1506.02438) explains the trace
+estimator; [OpenAI PPO documentation](https://spinningup.openai.com/en/latest/algorithms/ppo.html)
+describes clipping limitations and a KL early-stop option. The phase-specific
+choice here is a project decision, not a claim that those sources validate it.
