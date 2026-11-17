@@ -48,6 +48,12 @@ class ScriptGame:
     def to_planning(self):
         return self.obs()
 
+    def set_loadout(self, kit):
+        pass
+
+    def dump(self):
+        return {'where': {'phase': 'playing'}, 'clock': {}, 'economy': {}, 'counts': {}}
+
     def crowd_topk(self):
         return [], 0
 
@@ -78,6 +84,7 @@ def run_battle(samples):
         game_box[0].keys.append((-1, 0x52, 0))   # phase marker, not SPACE
 
     overrides = dict(Observer=None, PLAN_STEPS=1, BATTLE_T=60,
+                     load_bind_keys=lambda env: [], q_saved=lambda pid, dur: None,
                      ready_once=ready,
                      time=SimpleNamespace(time=lambda: next(clock),
                                           sleep=lambda _s: None))

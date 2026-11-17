@@ -21,6 +21,7 @@ class FakeGame:
     def __init__(self, pid):
         assert pid == -1
         self.calls = 0
+        self.cw, self.ch = 1920, 1200
         self.vi = SimpleNamespace(key_press=lambda *args, **kwargs: None)
 
     def obs(self):
@@ -34,6 +35,12 @@ class FakeGame:
 
     def ready(self):
         pass
+
+    def set_loadout(self, kit):
+        pass
+
+    def dump(self):
+        return {'where': {'phase': 'playing'}, 'clock': {}, 'economy': {}, 'counts': {}}
 
     def crowd_topk(self):
         return [], 0
@@ -79,6 +86,7 @@ class IntegrationTests(unittest.TestCase):
         clock = itertools.count(0, .01)
         FakeGame.fail = fail
         overrides = dict(Observer=observer, PLAN_STEPS=1, BATTLE_T=0,
+                         load_bind_keys=lambda env: [], q_saved=lambda pid, dur: None,
                          time=SimpleNamespace(time=lambda: next(clock), sleep=lambda _: None))
         with patch.dict(self.globals, overrides), patch.dict(sys.modules, {'env_zar': SimpleNamespace(ZAREnv=FakeGame)}):
             with patch.object(torch.distributions.Categorical, 'sample', return_value=torch.tensor([0])):
