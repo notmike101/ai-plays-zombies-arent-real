@@ -150,6 +150,13 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   are replaced atomically with a .previous backup. Live tests use a separate
   --model and --history; never overwrite the user's training checkpoint.
 - Training improvement milestones and evidence: notes/training-improvements.md.
+- The trainer validates the executable hash before using native phase/clock,
+  money or spatial fields. Unchanged populations do not justify pressing SPACE.
+- Shift+F6/F7 session logging is observation-only and is allowed. Bind the header
+  to this episode; use footer stats.saved_pct, not alive fraction or best badges.
+  Aborted results are scores at retry; timeouts are incomplete, never successes.
+- Reward transitions read AFTER actions. Do not reward purchases or emitted
+  casts; track receipts separately. Keep evacuation distinct from infection.
 
 ## Visualizer label maintenance contract (2026-11-16, enforceable)
 Any change to `make_obs()` in `scripts/nn_play2.py` — feature add, removal,

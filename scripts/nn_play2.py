@@ -162,26 +162,17 @@ def masks_for(st):
 
 
 def ready_once(env):
-    """START single SPACE; VERIFY phase='playing' via DUMP (memory counters
-    lie on lost screens). SPACE again only while a dialog/pause blocks."""
+    """One READY and at most one warning confirmation; never assume success."""
+    from env_zar import ZAREnvError
     env.vi.key_press(0x20, sc=57)
-    time.sleep(3.0)
-    for _ in range(6):
-        d = env.dump()
-        if d:
-            ph = d['where'].get('phase')
-            if ph == 'playing':
-                if d['clock'].get('paused') == 'true':
-                    env.vi.key_press(0x20, sc=57)   # stray pause
-                return d
-            if ph == 'planning':
-                env.vi.key_press(0x20, sc=57)      # ready_short warning YES
-                time.sleep(2.5)
-                continue
-        else:
-            env.vi.key_press(0x20, sc=57)          # dialog blocks: YES
-        time.sleep(2.0)
-    return None
+    for i in range(12):
+        time.sleep(.1)
+        state = env.game_state()
+        if state['phase'] in ('playing', 'won', 'lost'):
+            return state
+        if i == 5 and state['phase'] == 'planning':
+            env.vi.key_press(0x20, sc=57)
+    raise ZAREnvError('READY did not enter battle')
 
 
 _CPL_RE = re.compile(r'\.([A-Za-z]+)\s*=\s*([\d.]+)')
@@ -235,7 +226,7 @@ def build_deck(dump, keys):
     if not dump:
         return []
     econ = dump.get('economy', {})
-    counts = dump.get('counts', {})
+    counts = {**dump.get('params', {}), **dump.get('counts', {})}
     pl = dict(_CPL_RE.findall(counts.get('ability_charges_per_level', '')))
     bought = {}
     for k, v in econ.items():
@@ -332,269 +323,176 @@ def load_pretrained(net, path):
     net.load_state_dict(old)
 
 
+def transition_reward(before, after, civ0):
+    # Infections are losses; evacuation is not. No per-sample clipping.
+    return -max(after['infections'] - before['infections'], 0) / civ0
+
+
 def run_episode(args):
-    pid, sd, eps_rand, tag = args
-    from env_zar import ZAREnv
-    observer = None
+    pid, sd, eps_rand, tag, *extra = args
+    options = extra[0] if extra else {}
+    from env_zar import ZAREnv, ZAREnvError
+    env = observer = None
+    logging = False
     try:
         env = ZAREnv(pid)
-        cell_of = lambda c: cell_of_px(c, env.cw, env.ch)
-        o = env.to_planning()          # R-loop to planning ONLY (net readies)
-        kit = {0: 1}                   # Police lvl1 (1 SP — cheapest pick;
-        env.set_loadout(kit)           # the econ echo verifies the buy)
-        bind_keys = load_bind_keys(env)
-        env.vi.key_press(0x74, sc=0x3F)  # 8x battle speed (harness, not strat)
-        st = {'t': 0.0, 'planning': True, 'spend_frac': 0.0, 'frz': 0,
-              'deck': [], 'sim': 0.0, 'mult': 8.0, 'last_dump': 0.0}
-        m0 = o['money'] or 0.0
-        civ0 = max(o['civ'] or 1, 1)
-        net = None
-        if not eps_rand:
-            net = PolicyNet2()
+        env.validate_build()
+        env.to_planning()
+        initial = env.dump()
+        if not initial or initial.get('where', {}).get('phase') != 'planning':
+            raise ZAREnvError('No confirmed initial planning dump')
+        header = env.start_log()
+        logging = True
+        session = header['session']
+        keys = load_bind_keys(env)
+        env.vi.key_press(0x74, sc=63)
+        o = env.obs()
+        civ0 = max(o['civ'], 1)
+        m0 = o['money']
+        st = dict(t=0., planning=True, spend_frac=0., deck=[], sim=0., mult=8.)
+        net = None if eps_rand else PolicyNet2().eval()
+        if net is not None:
             net.load_state_dict(sd)
-            net.eval()
             if Observer is not None:
                 observer = Observer(net, pid, tag, labels={
-                    'input': INPUT_LABELS if NOBS == len(INPUT_LABELS) else [],
-                    'hu': TOOLS[:NU],
-                    'hc': [f'Cell {i + 1}' for i in range(NC)],
-                })
+                    'input': INPUT_LABELS, 'hu': TOOLS, 'hc': [f'Cell {i+1}' for i in range(NC)]})
+        rows = {k: [] for k in ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail')}
         h = None
-        obs, us, cs, ulps, clps, rews, mus, trail = [], [], [], [], [], [], [], []
-        wprev = None        # watchdog-only obs snapshot, distinct from prev_o
-        prev_o = dict(o)
-        prev_t = time.time()
-        prev_u, prev_c, succ = 0.0, 0.0, 0.0
+        prev_u = prev_c = succ = trend = slope = 0.
+        start = time.monotonic()
+        battle_start = None
+        end = None
         nbuy = 0
-        trend, slope = 0.0, 0.0
-        win = False
-        fought = False
-        frac = 1.0
-        step = 0
-        step_at = time.time()
-        t0 = time.time()
-        while True:
-            st['t'] = time.time() - t0
-            dt = max(time.time() - prev_t, 1e-6)
-            o = env.obs()
-            if st['planning'] and o.get('money') is None:
-                return dict(level=tag, pid=pid, err='menu state mid-planning')
-            trend = 0.7 * trend + 0.3 * ((o['zomb'] or 0) -
-                                         (prev_o['zomb'] or 0)) / dt
-            slope = ((o['civ'] or 0) - (prev_o['civ'] or 0)) / \
-                max(dt * civ0, 1e-6)
-            frac = (o['civ'] or 0) / civ0
-            kills = max((prev_o['zomb'] or 0) - (o['zomb'] or 0), 0)
-            blobs, tot = (None, 0)
-            if o['zomb']:
-                blobs, tot = env.crowd_topk()
-                if not blobs and st['planning']:
-                    hs = env.hot_spot()
-                    blobs = [(hs[0], hs[1], 2000)] if hs else []
+        state = env.game_state()
+        while end is None:
+            if state['phase'] in ('won', 'lost'):
+                end = state['phase']
+                break
+            st['planning'] = state['phase'] == 'planning'
+            st['t'] = time.monotonic() - (battle_start or start)
+            st['sim'], st['mult'] = state['sim'], state['mult']
+            if state['paused']:
+                env.vi.key_press(0x20, sc=57)
+                time.sleep(.1)
+                state = env.game_state()
+                if state['paused']:
+                    raise ZAREnvError('Confirmed pause did not clear')
+            frac = o['civ'] / civ0
+            # Spatial input is supplied by a validated native reader in milestone 3.
+            blobs = []
+            f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
             mu, mc = masks_for(st)
-            nblobs = [(bx / max(env.cw, 1), by / max(env.ch, 1), n)
-                      for bx, by, n in (blobs or [])]
-            f = make_obs(st, o, frac, trend, slope, nblobs, prev_u, prev_c,
-                         succ)
-            obs.append(f)
-            mus.append((mu, mc))
-            x = torch.tensor([f], dtype=torch.float32).unsqueeze(0)
+            x = torch.tensor([[f]], dtype=torch.float32)
             with torch.no_grad():
                 if net is None:
-                    u = int(np.random.choice(np.flatnonzero(mu > 0)))
-                    c = int(np.random.choice(NC))
-                    ulp = float(np.log(1.0 / max(mu.sum(), 1e-9)))
-                    clp = float(math.log(1.0 / NC))
+                    u = int(np.random.choice(np.flatnonzero(mu)))
+                    c = int(np.random.choice(np.flatnonzero(mc)))
+                    ulp, clp = -math.log(mu.sum()), -math.log(mc.sum())
                 else:
-                    lu, lc, v, h = net(x, h)
-                    lu = lu.squeeze(0).masked_fill_(
-                        torch.tensor(mu == 0), -1e9)
-                    du = torch.distributions.Categorical(logits=lu)
-                    dc = torch.distributions.Categorical(logits=lc.squeeze(0))
-                    u = int(du.sample())
-                    c = int(dc.sample())
-                    ulp = float(du.log_prob(torch.tensor(u)))
-                    clp = float(dc.log_prob(torch.tensor(c)))
-                    h = h.detach()
-                    if observer is not None:
-                        observer.publish(
-                            probabilities={'hu': du.probs, 'hc': dc.probs},
-                            selected={'hu': u, 'hc': c},
-                            phase='planning' if st['planning'] else 'battle')
-            us.append(u)
-            cs.append(c)
-            ulps.append(ulp)
-            clps.append(clp)
-            # ---------------- execute ----------------
-            r = 0.0
-            m_before = o['money']
-            did = False
-            if u == 1 and st['planning']:
-                d = ready_once(env)
-                st['planning'] = False
-                st['deck'] = build_deck(d, bind_keys)
-                print(f"DECK {pid}: " + (', '.join(
-                    f"{s['name']}x{int(s['charges'])}@{s['key']}u{int(s['unlock'])}"
-                    for s in st['deck']) or 'EMPTY'), flush=True)
-                t0 = time.time()
-                step_at = time.time()
-                prev_o = env.obs()
-                prev_t = time.time()
-                wprev = None       # phase boundary: never inherit a streak
-                rews.append(-0.05)
-                trail.append((round(st['t'], 1), (prev_o.get('civ') or 0),
-                              prev_o.get('zomb'), prev_o.get('money'), u, c))
-                step += 1
-                continue
-            if st['planning'] and u in U_HOTKEY:
-                vk, sc = U_HOTKEY[u]
-                cx, cy = cell_of(c)
-                env._arm(vk, sc)
-                # Polled-path placement: the engine reads DLL-hooked
-                # cursor/buttons; PostMessage clicks place NOTHING in-world;
-                # >=3-step >=6px strokes only (verified by HUD receipts).
-                env.vi.drag(int(cx), int(cy), int(cx) + 8, int(cy) + 6,
-                            steps=4)
-                time.sleep(0.3)
-                did = True
-            elif st['planning'] and u == 10:
-                x1, y1 = cell_of(c)
-                x2, y2 = cell_of(zone_span(c))
-                env._arm(0x42, 48)
-                for px, py in ((x1, y1), (x2, y1), (x2, y2), (x1, y2)):
-                    env.vi.drag(int(px), int(py), int(px) + 7, int(py) + 5,
-                                steps=3)
-                    time.sleep(0.12)
-                env.vi.key_press(0x0D, sc=28)  # CLOSE loop: ENTER or no zone
-                time.sleep(0.8)
-                did = True        # fee charges on close; receipt gates bonus
-            elif not st['planning'] and u in U2ABILITY:
-                s = next((x for x in st['deck']
-                          if x['name'] == U2ABILITY[u]), None)
-                if s and s['key'] and slot_castable(st, s):
-                    was_alive = s['alive']
-                    cx, cy = cell_of(c)
-                    env.cast(s['key'], cx, cy)
-                    if not (s['name'] == 'Heli' and was_alive):
-                        s['charges'] -= 1.0
-                        if s['arrival'] > 0:
-                            s['pending'] = True
-                            s['ready_t'] = st['sim'] + s['arrival']
-                    did = True
-            m_after = env.obs()['money'] if did and st['planning'] else None
-            if m_after is not None and m_before is not None:
-                succ = 1.0 if m_after < m_before - 0.5 else 0.0
-            if m_after is not None and m0:
-                st['spend_frac'] = max(0.0, (m0 - m_after) / m0)
-            prev_u, prev_c = float(u), float(c)
-            if not st['planning']:
-                r = 8.0 * ((o['civ'] or 0) - (prev_o['civ'] or 0)) / civ0
-                r += min(kills, 20000) * 2e-6
-            if not st['planning']:
-                st['sim'] += dt * st['mult']
-                for s in st['deck']:
-                    if s['pending'] and st['sim'] >= s['ready_t']:
-                        s['pending'] = False
-                        if s['name'] == 'Heli':
-                            s['alive'] = True   # optimistic; dump verifies
-                if time.time() - st['last_dump'] > 20:
-                    st['last_dump'] = time.time()
-                    refresh_battle_state(st, env.dump())
-            if did and u in U2ABILITY:
-                # it17 winning lever shaping: a cast placed INS the
-                # detected horde outearns a blind cast (heli redeploys).
-                fx, fy = cell_of(c)                      # compare in client
-                fx /= max(env.cw, 1)                     # fractions: blobs
-                fy /= max(env.ch, 1)                     # are normalized
-                near = any(abs(fx - bx) < 0.09 and abs(fy - by) < 0.10
-                           for bx, by, _n in nblobs)
-                r += 0.15 if near else 0.02
-            trail.append((round(st['t'], 1), o.get('civ'), o.get('zomb'),
-                          o.get('money'), u, c))
-            if did:
-                r -= 0.01
-                if st['planning'] and u not in (0, 1) and succ == 1.0:
-                    r += 0.12    # receipt: money really fell = placed for real
-                    nbuy += 1
-            r = max(r, -0.25)     # floor: evacuation waves are saves, not spiral
-            rews.append(r)
-            if o['zomb'] > 0:
-                fought = True
-            prev_o = dict(o)
-            prev_t = time.time()
-            step += 1
-            # ---------------- termination ----------------
+                    lu, lc, _, h = net(x, h)
+                    du = torch.distributions.Categorical(logits=lu.flatten().masked_fill(torch.tensor(mu == 0), -1e9))
+                    dc = torch.distributions.Categorical(logits=lc.flatten())
+                    u = int(du.probs.argmax() if options.get('greedy') else du.sample())
+                    c = int(dc.probs.argmax() if options.get('greedy') else dc.sample())
+                    ulp, clp = float(du.log_prob(torch.tensor(u))), float(dc.log_prob(torch.tensor(c)))
+                    if observer:
+                        observer.publish(probabilities={'hu': du.probs, 'hc': dc.probs},
+                                         selected={'hu': u, 'hc': c},
+                                         phase='planning' if st['planning'] else 'battle')
+            for k, v in dict(obs=f, us=u, cs=c, ulps=ulp, clps=clp, masks=(mu, mc)).items():
+                rows[k].append(v)
+            before = o
+            previous_state = state
+            action_started = time.monotonic()
             if st['planning']:
-                if step >= PLAN_STEPS:
-                    d = ready_once(env)
-                    st['planning'] = False
-                    st['deck'] = build_deck(d, bind_keys)
-                    t0 = time.time()
-                    print(f"DECK {pid}: " + (', '.join(
-                        f"{s['name']}x{int(s['charges'])}@{s['key']}u{int(s['unlock'])}"
-                        for s in st['deck']) or 'EMPTY'), flush=True)
-                    step_at = time.time()
-                    prev_o = env.obs()
-                    prev_t = time.time()
-                    wprev = None   # phase boundary: never inherit a streak
-                time.sleep(0.2)
-                continue
-            bt = time.time() - t0
-            # Pause watchdog: compare against the PREVIOUS battle sample
-            # via a dedicated snapshot — prev_o is re-snapshotted above
-            # every iteration (the cc8ef9f check compared o with itself and
-            # false-fired every second battle iteration). LIMITATION:
-            # stationary (civ, zomb) can also mean a dialog/menu is open
-            # (counters freeze; SPACE = dialog YES there), and a genuine
-            # no-contact lull; counter data alone still cannot PROVE the
-            # game is paused — this only guarantees the streak now means
-            # "no progress between DISTINCT battle samples".
-            wp = (o['civ'], o['zomb'])
-            if (o['zomb'] or 0) > 0 and wprev is not None and wp == wprev:
-                st['frz'] += 1
-                if st['frz'] >= 2:     # pause wedge: unpause
-                    print(f'UNPAUSE pid {pid} t {st["t"]:.0f}', flush=True)
-                    env.vi.key_press(0x20, sc=57)
-                    st['frz'] = 0
-            else:
-                st['frz'] = 0
-            wprev = wp
-            if o['zomb'] == 0 and bt > 25 and fought:
-                win = True
-                break
-            if fought and (frac <= 0.02 and bt > 60 or
-                           (o['civ'] or 0) == 0 and bt > 6):
-                break
-            if bt > BATTLE_T:
-                break
-            time.sleep(max(STEP_S - (time.time() - step_at), 0.3))
-        battle_dur = st['t']
-        sp = q_saved(pid, battle_dur)
-        eff = max(frac, sp or 0.0)
-        R_final = (3.0 if win else 0.0) + 5.0 * eff ** 1.5
-        if win:
-            # USER DIRECTIVE 2026-11-16: STAY ON LEVEL 1 until told otherwise.
-            # Replay THIS level (R = dialog, 2nd R = YES): keeps placements +
-            # budget, banks the badge, and the pinned-adaptive loop hardens
-            # each good win via outbreak head starts. (ENTER would advance.)
-            env.vi.key_press(0x52, sc=19)
-            time.sleep(2.5)
-            env.vi.key_press(0x52, sc=19)
-            time.sleep(6)
-        rews[-1] += R_final
-        return dict(level=tag, pid=pid, win=bool(win), frac=float(frac),
-                    civ0=int(civ0), t=st['t'], obs=obs, us=us, cs=cs,
-                    ulps=ulps, clps=clps, trail=trail, rews=rews,
-                    masks=mus, R=float(sum(rews)),
-                    nbuy=int(nbuy), ndeck=len(st['deck']),
-                    spend=round(m0 - (prev_o.get('money') or m0), 1))
-    except Exception as e:
+                if u == 1 or len(rows['obs']) >= options.get('plan_steps', PLAN_STEPS):
+                    state = ready_once(env)
+                    battle_start = time.monotonic()
+                    d = dict(initial)
+                    d['economy'] = {f'loadout {name}': str(level) for name, level in
+                                    zip(DECK_ORDER, env.loadout_levels()) if level > 0}
+                    st['deck'] = build_deck(d, keys)
+                elif u in U_HOTKEY:
+                    env._arm(*U_HOTKEY[u])
+                    cx, cy = cell_of_px(c, env.cw, env.ch)
+                    env.vi.click(cx, cy)
+                    time.sleep(.2)
+                elif u == 10:
+                    x1, y1 = cell_of_px(c, env.cw, env.ch)
+                    x2, y2 = cell_of_px(zone_span(c), env.cw, env.ch)
+                    env._arm(0x42, 48)
+                    for px, py in ((x1, y1), (x2, y1), (x2, y2), (x1, y2)):
+                        env.vi.click(px, py)
+                    env.vi.key_press(0x0D, sc=28)
+                    time.sleep(.2)
+            elif u in U2ABILITY:
+                slot = next(s for s in st['deck'] if s['name'] == U2ABILITY[u])
+                env.cast(slot['key'], *cell_of_px(c, env.cw, env.ch))
+                if not (slot['name'] == 'Heli' and slot['alive']):
+                    slot['charges'] = max(slot['charges'] - 1, 0)
+                    slot['ready_t'] = state['sim'] + slot['arrival']
+                    slot['pending'] = slot['arrival'] > 0
+            # Observe after this action; outcomes belong to this transition.
+            time.sleep(max(0., (.1 if st['planning'] else STEP_S) - (time.monotonic()-action_started)))
+            o = env.obs()
+            state = env.game_state()
+            if any(o[k] is None for k in ('money', 'civ', 'zomb', 'infections')):
+                raise ZAREnvError('Incomplete observation')
+            dt = max(state['sim'] - previous_state['sim'], .001)
+            trend = (o['zomb'] - before['zomb']) / dt
+            slope = (o['civ'] - before['civ']) / (dt*civ0)
+            succ = float(st['planning'] and o['money'] < before['money'] - .01)
+            nbuy += int(succ)
+            st['spend_frac'] = max(0., (m0-o['money']) / max(m0, 1))
+            prev_u, prev_c = float(u), float(c)
+            rows['rews'].append(transition_reward(before, o, civ0))
+            rows['trail'].append((state['sim'], o['civ'], o['zomb'], o['money'], u, c))
+            for slot in st['deck']:
+                if slot['pending'] and state['sim'] >= slot['ready_t']:
+                    slot['pending'] = False
+            if state['phase'] in ('won', 'lost'):
+                end = state['phase']
+            elif state['phase'] == 'playing' and o['civ'] <= .1*civ0:
+                end = 'aborted'
+            elif battle_start is not None and time.monotonic()-battle_start >= options.get('battle_seconds', BATTLE_T):
+                end = 'timeout'
+        footer = env.stop_log()
+        logging = False
+        saved = None
+        if footer and footer.get('phase') == state['phase']:
+            pct = footer.get('stats', {}).get('saved_pct')
+            if pct is not None and math.isfinite(pct) and 0 <= pct <= 100:
+                saved = pct / 100.
+        bootstrap = 0.
+        if end == 'timeout' and net is not None:
+            st['planning'] = False
+            st['t'] = time.monotonic()-battle_start
+            f = make_obs(st, o, o['civ']/civ0, trend, slope, [], prev_u, prev_c, succ)
+            with torch.no_grad():
+                _, _, value, _ = net(torch.tensor([[f]], dtype=torch.float32), h)
+                bootstrap = float(value.item())
+        if rows['rews']:
+            rows['rews'][-1] += outcome_reward(saved, end)
+        if end in ('aborted', 'won', 'lost'):
+            env.retry()
+        return dict(rows, level=tag, pid=pid, win=end == 'won', end=end,
+                    saved_frac=saved, frac=o['civ']/civ0, bootstrap=bootstrap,
+                    civ0=civ0, t=time.monotonic()-start, sim=state['sim'],
+                    R=sum(rows['rews']), nbuy=nbuy, ndeck=len(st['deck']),
+                    spend=m0-o['money'], board=session, log_started=header['wall'])
+    except Exception as exc:
         import traceback
         traceback.print_exc()
-        return dict(level=tag, pid=pid, err=str(e))
+        return dict(level=tag, pid=pid, err=str(exc))
     finally:
-        if observer is not None:
-            observer.close()
+        try:
+            if logging:
+                env.stop_log()
+        finally:
+            if observer is not None:
+                observer.close()
+            if env is not None:
+                env.close()
 
 
 def gae(rews, vals, lam=0.95, gamma=0.99, bootstrap=0.0):
@@ -608,6 +506,17 @@ def gae(rews, vals, lam=0.95, gamma=0.99, bootstrap=0.0):
     adv = list(reversed(adv))
     rets = [a + v for a, v in zip(adv, vals)]
     return adv, rets
+
+
+def outcome_reward(saved_frac, end):
+    if saved_frac is None or end == 'timeout':
+        return 0.0
+    return 5.0 * saved_frac
+
+
+def valid_trajectory(tr):
+    return ('err' not in tr and (tr.get('saved_frac') is not None or
+            tr.get('end') == 'timeout' and 'bootstrap' in tr))
 
 
 def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015):
@@ -731,9 +640,10 @@ def main():
                     continue
                 with open(a.history, 'a') as fh:
                     fh.write(json.dumps({k: tr[k] for k in
-                                        ('level', 'pid', 'win', 'frac', 't',
-                                         'R', 'civ0', 'nbuy', 'ndeck', 'spend') if k in tr}) + '\n')
-                good.append(tr)
+                                        ('level', 'pid', 'win', 'frac', 'saved_frac', 'end', 't',
+                                         'R', 'civ0', 'nbuy', 'ndeck', 'spend', 'log_started') if k in tr}) + '\n')
+                if valid_trajectory(tr):
+                    good.append(tr)
                 wins += tr['win']
                 fracs.append(tr['frac'])
                 print('ep pid', tr['pid'], 'win', tr['win'],

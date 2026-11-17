@@ -15,38 +15,7 @@ import torch
 from observer import Observer
 
 
-class FakeGame:
-    fail = False
-
-    def __init__(self, pid):
-        assert pid == -1
-        self.calls = 0
-        self.cw, self.ch = 1920, 1200
-        self.vi = SimpleNamespace(key_press=lambda *args, **kwargs: None)
-
-    def obs(self):
-        self.calls += 1
-        if self.fail and self.calls == 3:
-            raise RuntimeError('synthetic observation failure')
-        return dict(civ=100, zomb=1, converting=0, corpses=0, police=0, money=3111.0)
-
-    def to_planning(self):
-        return self.obs()
-
-    def ready(self):
-        pass
-
-    def set_loadout(self, kit):
-        pass
-
-    def dump(self):
-        return {'where': {'phase': 'playing'}, 'clock': {}, 'economy': {}, 'counts': {}}
-
-    def crowd_topk(self):
-        return [], 0
-
-    def hot_spot(self):
-        return None
+from fake_training import FakeGame, FakeClock
 
 
 class IntegrationTests(unittest.TestCase):
@@ -83,12 +52,13 @@ class IntegrationTests(unittest.TestCase):
             self.temp.cleanup()
 
     def episode(self, observer, fail=False):
-        clock = itertools.count(0, .01)
+        game = FakeGame(-1)
+        clock = FakeClock(game)
         FakeGame.fail = fail
-        overrides = dict(Observer=observer, PLAN_STEPS=1, BATTLE_T=0,
+        overrides = dict(Observer=observer, PLAN_STEPS=1, BATTLE_T=.1,
                          load_bind_keys=lambda env: [], q_saved=lambda pid, dur: None,
-                         time=SimpleNamespace(time=lambda: next(clock), sleep=lambda _: None))
-        with patch.dict(self.globals, overrides), patch.dict(sys.modules, {'env_zar': SimpleNamespace(ZAREnv=FakeGame)}):
+                         time=clock)
+        with patch.dict(self.globals, overrides), patch.dict(sys.modules, {'env_zar': SimpleNamespace(ZAREnv=lambda pid: game, ZAREnvError=RuntimeError)}):
             with patch.object(torch.distributions.Categorical, 'sample', return_value=torch.tensor([0])):
                 with redirect_stderr(io.StringIO()):
                     return self.run_episode((-1, self.model.state_dict(), False, 'test-episode'))

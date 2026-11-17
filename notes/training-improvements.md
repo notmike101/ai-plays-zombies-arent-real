@@ -20,7 +20,7 @@ civilians. Model decisions retain control of strategy. Evaluation never trains.
   checkpoint with prior backup; explicit train/play/greedy semantics and run IDs.
   Tests: numerical returns/lambda/bootstrap; concurrent fake games cannot overlap
   per PID; optimizer round trip; evaluation does not update/save.
-- [ ] 2. `env_zar.py`, `nn_play2.py`: authoritative economy and outcome data,
+- [x] 2. `env_zar.py`, `nn_play2.py`: authoritative economy and outcome data,
   fresh dump handling, confirmed phase changes, action/next-state reward alignment,
   immediate doomed-run retry, no counter-only SPACE heuristic, save-based reward.
   Tests: stale outcomes, zero balance, failed READY, pause/lull, credit timing,
@@ -61,3 +61,26 @@ hardware probe scripts are not safe automatic test-discovery targets.
   Bootstrap support is in the math; actual cutoff observations land in milestone 2.
   Greedy sampling semantics and checkpoint schema compatibility are finalized
   with the expanded action/observation schema, not silently changed mid-run.
+- Milestone 2: 13 learning/state, 13 deck, 5 boot and 33 visualizer tests PASS;
+  model parity and graph checks PASS. Replaced the watchdog's old heuristic
+  tests with explicit native pause/lull, retry, and next-state reward tests.
+- Native build SHA a1bd5913ed3905aaaadfb5a14781004d28990f433ff1621c658c10f1795469d2
+  matches retained REA dump-writer evidence. New REA saved_pct trace:
+  ev_091fe3011d1d7161e240a486ae84a43038cdfa24b8ed6d4fc6de3b21804d003f
+  in visualizer/runtime/train-saved-trace.json (static references, not runtime proof).
+- Runtime session-log probe: Shift+F6 starts observer logging, F7 writes footer.
+  Header includes SP, quota, loadout; snapshots every ~5 sim seconds and footer
+  include the game's own saved_pct. Fresh header wall time binds one episode.
+  Log timestamps state speed/2 is real-time multiplier; native sim clock avoids
+  estimating from wall time. World Y is inverted in client projection.
+- Scoped live model evaluation on fresh normal inst9 PID 50128: 7 sampled
+  decisions, immediate doomed-run retry, end=aborted, actual footer saved 5.35%,
+  reward -0.6801; no optimizer step. This is functional proof, not good play.
+  Owned game stopped. User checkpoint SHA bd97460bfefa468c0c3564936cf9fcd74d390cf2c4d33bcccc34716e7df230ed unchanged.
+  Evidence: visualizer/runtime/validation-result.json (later validations replace it).
+- Ruling: use the documented session log for exact episode outcomes instead of
+  deriving score from guessed memory fields. Unknown terminal outcomes are
+  excluded; timeout samples use value bootstrap and never claim completed scores.
+- Ruling: remove net-zombie/purchase/cast shaping. Next-state cumulative
+  infections cost 1 per initial population, terminal saved fraction earns 5;
+  no per-step floor. This coefficient choice requires later performance trials.

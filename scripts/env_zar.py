@@ -16,6 +16,8 @@ import os
 import hashlib
 import math
 import re
+import json
+from pathlib import Path
 import struct
 import subprocess
 import sys
@@ -34,6 +36,25 @@ PROGRESS = r'game-copies/inst2/steam_cloud/progress/Boston__MA.progress'
 
 class ZAREnvError(RuntimeError):
     pass
+
+
+def read_session(path, started_ms):
+    """Only complete records from this logging session; stale files are unknown."""
+    try:
+        rows = []
+        with open(path, encoding='utf-8') as fh:
+            for line in fh:
+                try:
+                    rows.append(json.loads(line))
+                except json.JSONDecodeError:
+                    break
+        if not rows or rows[0].get('ev') != 'header' or rows[0].get('wall', 0) < started_ms:
+            return None
+        return {'header': rows[0],
+                'footer': next((r for r in reversed(rows) if r.get('ev') == 'footer'), None),
+                'latest': next((r for r in reversed(rows) if 'stats' in r), None)}
+    except (OSError, ValueError):
+        return None
 
 
 class ZAREnv:
@@ -100,10 +121,52 @@ class ZAREnv:
                     paused=bool(self.scalar(0x665fa2, '<B')),
                     mult=self.scalar(0x666868, '<q'))
 
+    def start_log(self):
+        """The game's documented Shift+F6 observer log, not the admin console."""
+        self.vi.key_press(0x76, sc=65)
+        self.log_started = int(time.time() * 1000)
+        self.vi.key_down(0x10, sc=42)
+        try:
+            self.vi.key_press(0x75, sc=64)
+        finally:
+            self.vi.key_up(0x10, sc=42)
+        for _ in range(20):
+            for path in (Path(self.copy_dir()) / 'logs').glob('*.jsonl'):
+                data = read_session(path, self.log_started)
+                if data:
+                    self.log_path = path
+                    return data['header']
+            time.sleep(.05)
+        raise ZAREnvError('No fresh session-log header')
+
+    def stop_log(self):
+        self.vi.key_press(0x76, sc=65)
+        for _ in range(20):
+            data = read_session(self.log_path, self.log_started)
+            if data and data['footer']:
+                return data['footer']
+            time.sleep(.05)
+        return None
+
+    def retry(self):
+        self.vi.key_press(0x52, sc=19)
+        time.sleep(.15)
+        self.vi.key_press(0x52, sc=19)
+
+    def loadout_levels(self):
+        return [self.scalar(0x655f90 + i * 8, '<q') for i in range(19)]
+
+    def close(self):
+        """Release this attachment without stopping the caller's game."""
+        self.vi.close()
+        import ctypes
+        ctypes.windll.kernel32.CloseHandle(ctypes.c_void_p(self.h))
+
     def obs(self):
         return dict(civ=self._gv('civ'), zomb=self._gv('zomb'),
                     converting=self._gv('converting'), corpses=self._gv('corpses'),
-                    police=self._gv('police'), money=self.money())
+                    police=self._gv('police'), money=self.money(),
+                    infections=self.scalar(0x651098, '<q'))
 
     # ---------------- F6 state-dump channel ----------------
     def copy_dir(self):

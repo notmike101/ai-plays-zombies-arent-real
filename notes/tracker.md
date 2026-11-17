@@ -1,6 +1,41 @@
-# ZAR Tracker (live state — update EVERY run; guidance lives in ../AGENTS.md)
+# ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — read-only telemetry streaming deployed)
+## CURRENT STATE (2026-11-17 — training improvements in progress)
+- User approved all twelve audit proposals, milestone tests/commits and bounded
+  live validation. No subagents. Plan/evidence: training-improvements.md.
+- Milestone 1 committed/pushed a20786a: exclusive PID batches, corrected GAE,
+  persistent optimizer/checkpoints and no optimization from play mode.
+- Authoritative money/phase reader committed 5dd479f; exact build SHA checked.
+- Milestone 2 in progress: next-state infection costs, current session-log saved
+  percentage, explicit READY/pause checks, early retry, no purchase/cast rewards.
+- Live probes inst9 PIDs 34160/28280 cleaned. Normal fresh L1; native phase,
+  sim clock, money and positions verified; immediate <10% retry verified.
+- Game Shift+F6/F7 log verified: fresh header, 5-sim-second snapshots, footer
+  saved_pct; header includes actual SP/loadout and quota. No admin console.
+- Owned inst9 model validation PID 50128 currently in bounded startup/episode;
+  parent validation script owns cleanup. Original policy untouched.
+- Only pre-existing visualizer server 22604 retained; no other training owner.
+- Existing uncommitted policy/history/run artifacts are preserved, not staged.
+
+## Prior snapshot (2026-11-17u â€” kit8 PPO run live on 5 fresh boards)
+- RUN: train_run.py --copies inst1 inst2 inst4 inst5 inst8 --eps 2 --rounds 14
+  -> analysis/nn2_train_kit8.log (bg_246). Boards = zar_boot fresh L1 (planning
+  barrier PASS before trainer). Warm start = kit6 checkpoint (committed parent).
+- PROVEN THIS RUN (pids 12612/47012 probes, killed): zar_boot fresh-boot works
+  (~95 s to planning incl 75 s welcome); scripted garrison drags spend REAL money
+  ($58-63/unit, receipts ok); L1 naked+3-garrison board = TOTAL loss ~5 s wall at
+  8x (zomb 1447->8033 vs civ 8142); R-loop PERSISTS purchases+budget across losses
+  (money 2935.80 + garrisons present in post-R dump) -> accumulation legit; kit
+  {0:1} Police buys NOTHING on fresh L1 (SP-starved, DECK EMPTY expected early).
+- NEW TELEMETRY (b470a84): hist rows now carry nbuy/ndeck/spend. First smoke row
+  (pid 45772 r0): nbuy 5, spend $735.60, ndeck 0 -> random policy DOES build.
+- kit5/6 post-mortem: t=6 wall + money-stuck-3111 ERR lines = modal-wedged boards
+  wasting episodes (pre-zar_boot boards); accumulation was UNMEASURABLE then.
+- Monitoring: after ~3 rounds check kit8 log for battle lengthening (t>6) and
+  hist nbuy/spend growth = accumulation; if round 13 meanfrac still 0 with
+  spend>0, escalate: reward/curriculum change (skill: score mid-state, boards
+  carry via R). BC-warm start still queued after defense signal exists.
+- Visualizer server 22604 up; stale preview demo killed; no other agents' workers.
 - Live follow-up PASS: isolated inst9 normal Boston L1, game PID 38408 and
   evaluation worker 10824, current checkpoint. Captured 15 planning frames;
   browser LIVE, 32 displayed inputs, sampled action and history verified against
@@ -43,7 +78,7 @@
   stream-mobile-artifacts/ and stream-browser-artifacts/. Unrelated training
   logs/checkpoint changes remain unstaged. Server log/error files are runtime-only.
 
-## Prior verified state (2026-11-17 — deterministic interface complete)
+## Prior verified state (2026-11-17 â€” deterministic interface complete)
 - Interface only: no ML/trainer source changes, subagents, console commands,
   physical cursor input or game-install writes. Unrelated training artifacts
   remain uncommitted and untouched by this work.
@@ -140,7 +175,7 @@ dense crowds + Battleship water AOE = path to silver. (notes/game-rules.md)
 
 ## Prior tracker snapshot (before interface task)
 
-## CURRENT STATE (2026-11-17t — SP-honest deck model, kit5 trainer live)
+## CURRENT STATE (2026-11-17t â€” SP-honest deck model, kit5 trainer live)
 - Git HEAD 888b1a8 UNPUSHED (deck model + env_zar dump channel + hookdll v2 +
   probe/test scripts; shim git only). Tests 17/17 green
   (scripts/test_deck.py 11 + visualizer/test_labels.py 6).
@@ -158,7 +193,7 @@ dense crowds + Battleship water AOE = path to silver. (notes/game-rules.md)
   flying, counts.helicopters = liveness truth). ready_once verifies
   phase='playing' via F6 dump (memory counters LIE on lost screens).
 - L1 reality: civ0 8142 naked board dies ~6 s wall @8x -> early-loss break
-  (civ==0 bt>6). Win is possible (kit2 hist: one r3 win frac 1.0) — trainer
+  (civ==0 bt>6). Win is possible (kit2 hist: one r3 win frac 1.0) â€” trainer
   must find defense; battle mask when deck EMPTY = wait-only HONESTLY (old
   code cast phantom abilities for reward: fixed).
 - Dump channel (env_zar.dump/phase_now): raw debug_dumps txt = plain
