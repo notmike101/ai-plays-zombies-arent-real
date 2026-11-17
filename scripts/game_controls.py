@@ -1,8 +1,12 @@
 """Player controls with bounded native receipts; never write native game memory."""
 import time
+from pathlib import Path
 
-from env_zar import ZAREnvError
-from game_mechanics import UNITS, UNIT_IDS
+from env_zar import ZAREnvError, NATIVE_ABILITIES
+from game_mechanics import UNITS, UNIT_IDS, PERKS
+
+ABILITY_IDS = dict(zip(NATIVE_ABILITIES,
+    (9, 1, 12, 11, 10, 18, 19, 23, 24, 25, 34, 35, 36, 29, 37, 38, 39, 40, 41)))
 
 
 def wait_until(predicate, description, timeout=.8):
@@ -34,6 +38,22 @@ class Controls:
         except KeyError as exc:
             raise ZAREnvError('Unknown native planning roster entry') from exc
 
+    def battle_roster(self):
+        names = {value: key for key, value in ABILITY_IDS.items()} | {0: '-'}
+        try:
+            return [names[self.env.scalar(0x65622f+i, '<B')] for i in range(7)]
+        except KeyError as exc:
+            raise ZAREnvError('Unknown native battle roster entry') from exc
+
+    def perks(self):
+        result = []
+        for i in range(3):
+            ident, present, locked = [self.env.scalar(0x665f71+3*i+j, '<B') for j in range(3)]
+            if ident >= len(PERKS) or present > 1 or locked > 1:
+                raise ZAREnvError('Invalid native perk slot')
+            result.append(dict(name=PERKS[ident] if present else '-', locked=bool(locked)))
+        return result
+
     def open_loadout(self):
         e = self.env
         if (e.cw, e.ch) != (1920, 1200):
@@ -42,6 +62,9 @@ class Controls:
             raise ZAREnvError('Loadout requires planning')
         e.vi.key_press(9, sc=15)
         wait_until(lambda: e.scalar(0x6553e8, '<I') == 1, 'loadout open')
+        # App mode changes before the loadout's first layout/hit-test frame.
+        frame = e.scalar(0x68e590, '<Q')
+        wait_until(lambda: e.scalar(0x68e590, '<Q') >= frame+2, 'loadout layout')
 
     def close_loadout(self):
         e = self.env
@@ -87,5 +110,62 @@ class Controls:
                 wait_until(lambda: not e.scalar(0x667868, '<B'), 'unequip confirmation')
             wait_until(lambda: self.planning_roster()[slot] == name, 'planning roster receipt')
             return self.planning_roster()
+        finally:
+            self.close_loadout()
+
+    def change_loadout(self, name, delta):
+        e = self.env
+        if name not in NATIVE_ABILITIES or delta not in (-1, 1):
+            raise ValueError('Expected native ability and one level change')
+        before = e.loadout_levels()
+        roster = self.battle_roster()
+        if delta < 0 and before[name] == 0:
+            raise ValueError('Cannot refund an unpurchased ability')
+        if name in roster and before[name] > 0:
+            slot = roster.index(name)
+        else:
+            slot = next((i for i, n in enumerate(roster) if before.get(n, 0) == 0), None)
+            if slot is None:
+                raise ValueError('No free battle roster slot')
+        self.open_loadout()
+        try:
+            if name in roster and before[name] > 0:
+                e.vi.click((244 if delta > 0 else 80)+266*slot, 794)
+            else:
+                order = [s.strip() for s in (Path(e.copy_dir())/'battle_order.txt').read_text().splitlines()
+                         if s.strip() and not s.startswith('#')]
+                if set(order) != set(NATIVE_ABILITIES) or len(order) != 19:
+                    raise ZAREnvError('Invalid native battle picker order')
+                unlocked = e.unlocked_abilities()
+                order = [n for n in order if n in unlocked]+[n for n in order if n not in unlocked]
+                current = roster[slot]
+                choices = (['-'] if current != '-' else [])+[n for n in order if n != current]
+                e.vi.click(160+266*slot, 680)
+                self.pick(choices.index(name))
+            expected = dict(before)
+            expected[name] += delta
+            wait_until(lambda: e.loadout_levels() == expected, 'loadout level receipt')
+            return expected
+        finally:
+            self.close_loadout()
+
+    def equip_perk(self, name, slot):
+        if name not in (*PERKS, '-') or not isinstance(slot, int) or not 0 <= slot < 3:
+            raise ValueError('Expected native perk and slot0..2')
+        before = self.perks()
+        if before[slot]['name'] == name:
+            return before
+        if before[slot]['locked'] or slot == 0:
+            raise ValueError('Campaign perk slot is locked')
+        choices = (['-'] if before[slot]['name'] != '-' else [])+[
+            n for n in PERKS if n not in [p['name'] for p in before]]
+        if name not in choices:
+            raise ValueError('Perk already equipped in another slot')
+        self.open_loadout()
+        try:
+            self.env.vi.click(330+620*slot, 950)
+            self.pick(choices.index(name))
+            wait_until(lambda: self.perks()[slot]['name'] == name, 'perk slot receipt')
+            return self.perks()
         finally:
             self.close_loadout()

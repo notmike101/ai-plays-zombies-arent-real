@@ -86,25 +86,14 @@ class StateTests(unittest.TestCase):
         with patch.object(env_zar.time, 'sleep'), self.assertRaises(env_zar.ZAREnvError):
             e.finish_geometry(before)
 
-    def test_picker_bottom_and_stale_unowned_roster(self):
-        from types import SimpleNamespace
-        from unittest.mock import Mock
-        e = self.env()
-        e.cw, e.ch = 1920, 1200
-        before = dict.fromkeys(env_zar.NATIVE_ABILITIES, 0)
-        e.loadout_levels = Mock(side_effect=[before, dict(before, Cluster=1)])
-        e.roster = lambda: ['Missile'] + ['-']*6
-        e.scalar = lambda *args: 1
-        e.game_state = lambda: {'phase':'planning'}
-        e.unlocked_abilities = lambda: set(before)
-        e.vi = SimpleNamespace(key_press=Mock(), click=Mock(), wheel=Mock())
-        with tempfile.TemporaryDirectory() as tmp, patch.object(env_zar.time, 'sleep'):
-            e.copy_dir = lambda: tmp
-            (Path(tmp)/'battle_order.txt').write_text('\n'.join(train.DECK_ORDER))
-            e.change_loadout('Cluster', 1)
-        self.assertIn(unittest.mock.call(160,680), e.vi.click.call_args_list)
-        self.assertIn(unittest.mock.call(-11,600,600), e.vi.wheel.call_args_list)
-        self.assertIn(unittest.mock.call(600,540), e.vi.click.call_args_list)
+    def test_loadout_uses_receipt_checked_shared_controls(self):
+        with patch('game_controls.Controls') as controls:
+            expected = {'Cluster': 1}
+            controls.return_value.change_loadout.return_value = expected
+            e = self.env()
+            self.assertEqual(e.change_loadout('Cluster', 1), expected)
+            controls.assert_called_once_with(e)
+            controls.return_value.change_loadout.assert_called_once_with('Cluster', 1)
 
     def test_won_board_continues_instead_of_retrying_same_level(self):
         from types import SimpleNamespace

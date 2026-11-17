@@ -30,5 +30,39 @@ class ControlsTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'roster'):
             Controls(env).planning_roster()
 
+    def test_open_waits_for_layout_after_mode_transition(self):
+        env = Mock(cw=1920, ch=1200)
+        env.game_state.return_value = {'phase': 'planning'}
+        env.scalar.side_effect = [1, 100, 100, 101, 102]
+        with patch('game_controls.time.sleep'):
+            Controls(env).open_loadout()
+        self.assertEqual(env.scalar.call_count, 5)
+
+    def test_campaign_perk_rejects_locked_or_duplicate_choice(self):
+        c = Controls(Mock())
+        c.perks = Mock(return_value=[dict(name='Extra_Zones', locked=False),
+            dict(name='Hot_Fire', locked=True), dict(name='-', locked=False)])
+        for name, slot in [('Hot_Fire', 0), ('Fall_Gas', 1), ('Hot_Fire', 2)]:
+            with self.assertRaises(ValueError): c.equip_perk(name, slot)
+        c.env.vi.key_press.assert_not_called()
+
+    def test_stale_unpurchased_battle_slot_uses_clear_entry_offset(self):
+        import tempfile
+        from pathlib import Path
+        from env_zar import NATIVE_ABILITIES
+        env = Mock()
+        before = dict.fromkeys(NATIVE_ABILITIES, 0)
+        env.loadout_levels.side_effect = [before, dict(before, Bomber=1)]
+        env.unlocked_abilities.return_value = set(before)
+        c = Controls(env)
+        c.battle_roster = Mock(return_value=['Missile']+['-']*6)
+        c.open_loadout, c.close_loadout, c.pick = Mock(), Mock(), Mock()
+        with tempfile.TemporaryDirectory() as tmp:
+            env.copy_dir.return_value = tmp
+            (Path(tmp)/'battle_order.txt').write_text('\n'.join(NATIVE_ABILITIES))
+            self.assertEqual(c.change_loadout('Bomber', 1), dict(before, Bomber=1))
+        c.pick.assert_called_once_with(1)
+        env.vi.wheel.assert_not_called()
+
 
 if __name__ == '__main__': unittest.main()

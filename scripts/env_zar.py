@@ -209,49 +209,9 @@ class ZAREnv:
         return match[1].split()
 
     def change_loadout(self, name, delta):
-        """One model-selected level change through the calibrated loadout UI."""
-        if (self.cw, self.ch) != (1920, 1200) or delta not in (-1, 1):
-            raise ZAREnvError('Loadout gestures require calibrated 1920x1200 client')
-        before = self.loadout_levels()
-        roster = self.roster()
-        self.vi.key_press(9, sc=15)
-        time.sleep(.2)
-        if self.scalar(0x6553e8, '<I') != 1:
-            raise ZAREnvError('Loadout did not open')
-        try:
-            if name in roster and before[name] > 0:
-                slot = roster.index(name)
-                self.vi.click((244 if delta > 0 else 80) + 266*slot, 794)
-            elif delta > 0:
-                slot = next(i for i, n in enumerate(roster) if before.get(n, 0) == 0)
-                order = [s.strip() for s in (Path(self.copy_dir())/'battle_order.txt').read_text().splitlines()
-                         if s.strip() and not s.startswith('#')]
-                unlocked = self.unlocked_abilities()
-                order = [n for n in order if n in unlocked] + [n for n in order if n not in unlocked]
-                index = order.index(name)
-                self.vi.click(160+266*slot, 680)
-                time.sleep(.2)
-                self.vi.wheel(30, 600, 600)
-                # Eight rows fit at this calibrated size, including the bottom row.
-                scroll = min(index, max(0, len(order)-8))
-                if scroll:
-                    self.vi.wheel(-scroll, 600, 600)
-                self.vi.click(600, 180+120*(index-scroll))
-            time.sleep(.2)
-        finally:
-            # Close a remaining picker, then the loadout, without backing out of play.
-            self.vi.key_press(0x1B, sc=1)
-            time.sleep(.1)
-            if self.scalar(0x6553e8, '<I') == 1:
-                self.vi.key_press(9, sc=15)
-            time.sleep(.2)
-        self.game_state()
-        after = self.loadout_levels()
-        expected = dict(before)
-        expected[name] += delta
-        if after != expected:
-            raise ZAREnvError(f'Loadout receipt mismatch for {name} {delta:+d}')
-        return after
+        """One model-selected level change with a native receipt."""
+        from game_controls import Controls
+        return Controls(self).change_loadout(name, delta)
 
     def unlocked_abilities(self):
         text = (Path(self.copy_dir())/'steam_cloud/unlocks.ini').read_text()
