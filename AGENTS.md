@@ -237,3 +237,8 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
   planning GAE discount/trace at1 so battle credit reaches early placements;
   battle retains its separately recorded gamma/lambda. This is credit assignment,
   not a reward for buying units, choosing READY, or spending resources.
+
+## Idempotent tool selection
+- Tool hotkeys toggle. Undo may leave the old tool armed. Before selecting a
+  planning/battle tool, cancel via virtual right-click and then press its hotkey.
+  Repeated identical actions must reselect, never silently disarm the tool.

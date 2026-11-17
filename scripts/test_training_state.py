@@ -10,6 +10,21 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_repeated_tool_selection_cancels_before_rearming(self):
+        from types import SimpleNamespace
+        events = []
+        e = self.env()
+        e.cw, e.ch = 1920, 1200
+        e.vi = SimpleNamespace(
+            click=lambda *args, **kwargs: events.append(('click', args, kwargs)),
+            key_press=lambda *args, **kwargs: events.append(('key', args, kwargs)))
+        with patch.object(env_zar.time, 'sleep'):
+            e._arm(0x42, 48)
+            e._arm(0x42, 48)
+        self.assertEqual([x[0] for x in events], ['click','key','click','key'])
+        self.assertTrue(all(x[2].get('right') for x in events if x[0] == 'click'))
+        self.assertEqual(events[0][1], (960, 600))
+
     def test_training_discards_only_its_new_replay_snapshots(self):
         from types import SimpleNamespace
         e = self.env()

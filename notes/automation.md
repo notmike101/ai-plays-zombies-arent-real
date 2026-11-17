@@ -427,3 +427,10 @@ rollback stops the worker. No reward bonus, strategy selection or memory writes.
 Training-only dump retention removes new replay .state companions after a successful
 text read. This avoids multi-gigabyte accumulation during long training. Diagnostic
 attachments retain replays by default; old files and .txt receipts are untouched.
+
+## Tool toggling after undo (2026-11-17)
+Owned inst1 PID26456 reproduced the stopped worker's sequence: arm safe_zone,
+place, undo, then pressing B emitted cancel safe_zone. Thus subsequent Enter
+could open READY instead of committing geometry. _arm now sends a virtual
+right-click at the map center before the requested hotkey; cast uses _arm too.
+No ESC, physical mouse, automatic READY or blind dump retry is added.

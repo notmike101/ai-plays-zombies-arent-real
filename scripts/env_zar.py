@@ -456,8 +456,7 @@ class ZAREnv:
             raise ZAREnvError(f'Unsupported battle binding {bar_key!r}')
         vk = ord(bar_key.upper())
         sc = ctypes.windll.user32.MapVirtualKeyW(vk, 0)
-        self.vi.key_press(vk, sc=sc)
-        time.sleep(0.2)
+        self._arm(vk, sc)
         self.vi.move_to(cx, cy)
         time.sleep(0.15)
         self.vi.click(cx, cy)
@@ -470,6 +469,9 @@ class ZAREnv:
     # BUILDING TO PLACE IT" rejection text = input landed). (x,y) are client
     # PHYSICAL px (GetClientRect, e.g. 1920x1200 for the windowed copies).
     def _arm(self, vk, sc):
+        # Tool hotkeys toggle; undo and repeated casts can leave the tool selected.
+        self.vi.click(self.cw // 2, self.ch // 2, right=True)
+        time.sleep(.05)
         self.vi.key_press(vk, sc=sc)
         time.sleep(0.2)
 
