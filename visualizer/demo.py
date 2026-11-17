@@ -7,12 +7,7 @@ import torch
 from torch import nn
 
 from observer import Observer
-
-INPUT_LABELS = ['Civilians (log)', 'Zombies (log)', 'Converting (log)', 'Corpses (log)',
-                'Police (log)', 'Money / 1000', 'Elapsed time', 'Civilian fraction',
-                'Zombie trend', 'Civilian slope', 'Para charges', 'Helicopter active',
-                'Gas charges', 'AC130 charges', 'Hotspot X', 'Hotspot Y', 'Hotspot density',
-                'Previous tool', 'Previous cell', 'Purchase succeeded', 'Planning phase', 'Budget spent']
+from labels import INPUT_LABELS
 TOOLS = ['wait', 'ready', 'napalm', 'mortar', 'sniper', 'turret', 'mine', 'c4',
          'gas_mortar', 'upgrade_unit', 'zone_rect', 'para', 'heli', 'gas_bomb', 'ac130']
 
