@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-17 — zero-context handoff verified, training LIVE)
+- Fresh-clone review (2026-11-17): recommendations only; no runtime/source
+  changes. Confirmed hard-coded trainer/env root, no Python dependency manifest,
+  source-only Rust hook DLL, tracked legacy checkpoints versus ignored schema3.
+  Proposed next milestone: portable paths+locked setup+read-only preflight,
+  followed by game-copy setup and a versioned compatible checkpoint package.
+  Existing synthetic preview/fake-game fixtures can support game-free onboarding.
+  Runtime observations below remain the previous handoff's samples; not rechecked
+  during this documentation review. Clean-environment install remains untested.
 - Entry points: root README.md -> AGENTS.md -> notes/operator-runbook.md ->
   this CURRENT STATE -> notes/ml-spec.md. Runbook has checkpoint preflight,
   resource-limited resume, server reuse/start/stop, guarded process cleanup and
