@@ -209,3 +209,10 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
   A persisted roster name with native level0 is an empty card, not a plus button.
 - Dense graph layers use grids; labels remain accessible in the Inspector.
   Keep masked conditional probabilities and raw head outputs distinct.
+
+## Spatial input boundary (2026-11-17)
+- At calibrated1920x1200, the bottom grid row (cells40-47, Y=.76*height)
+  overlaps the HUD. WORLD_CELLS must mask it out for every spatial action and
+  building-target availability. Only explicit READY may press the READY control.
+- Do not recover an accidental READY dialog by starting the battle. Fix the
+  invalid click boundary; preserve model control over phase transitions.

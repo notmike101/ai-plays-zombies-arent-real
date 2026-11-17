@@ -13,6 +13,19 @@ import nn_play2 as train
 
 
 class LearningTests(unittest.TestCase):
+    def test_spatial_actions_cannot_click_the_planning_hud(self):
+        st = dict(planning=True, deck=[])
+        for tool in range(2, 34):
+            mask = train.cell_mask(st, tool, np.ones(train.NC))
+            for cell in np.flatnonzero(mask):
+                self.assertLess(train.cell_of_px(cell, 1920, 1200)[1], 840)
+
+    def test_building_tools_require_a_target_above_the_hud(self):
+        targets = [None]*train.NC
+        targets[-1] = np.array([1680, 912])
+        mu, _ = train.masks_for(dict(planning=True, deck=[], build_targets=targets))
+        self.assertTrue(all(mu[u] == 0 for u in (2, 3, 5, 8, 9)))
+
     def test_ppo_updates_with_conditional_cell_masks_and_finite_diagnostics(self):
         net = train.PolicyNet2()
         obs = np.zeros((2, train.NOBS), dtype=np.float32)

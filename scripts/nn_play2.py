@@ -66,6 +66,7 @@ CELL_LABELS = [f'{tool}: cell {c+1}' for tool in TOOLS for c in range(NC)]
 PLANNING_U = list(range(11)) + [15, 16, 17, 18]
 BATTLE_GEOMETRY = {12, 20, 22, 24, 27, 28, 30, 33}
 from spatial import XF, YF
+WORLD_CELLS = np.repeat(YF < .70, len(XF))  # The last grid row overlaps the 1920x1200 HUD.
 # resizes itself after tiling (probe: client 1920x1200 despite SetWindowPos),
 # so cell coords are always computed from the LIVE client size.
 
@@ -158,7 +159,8 @@ def masks_for(st):
     if st['planning']:
         for u in PLANNING_U:
             mu[u] = 1
-        if 'build_targets' in st and not any(p is not None for p in st['build_targets']):
+        if 'build_targets' in st and not any(p is not None and WORLD_CELLS[i]
+                                             for i, p in enumerate(st['build_targets'])):
             mu[[2, 3, 5, 8, 9]] = 0
         for i, name in enumerate(DECK_ORDER):
             level = st.get('loadout', {}).get(name, 0)
@@ -179,6 +181,7 @@ def masks_for(st):
 
 def cell_mask(st, u, mc):
     mc = mc.copy()
+    mc *= WORLD_CELLS
     if u in (0, 1) or u >= 34:
         mc[:] = 0
         mc[0] = 1

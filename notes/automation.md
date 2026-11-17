@@ -383,3 +383,15 @@ The boot and acceptance scripts do not capture images.
 - Four simultaneous worlds: interface-scale.log; final mixed-layout proof:
   interface-scale-final.log. Failed exploratory runs are retained and superseded
   by these named passing logs, not erased from the evidence trail.
+
+## Training HUD overlap reproduced (2026-11-17)
+Two-worker schema3 launch6d87b2cdf039 stopped with `Loadout did not open` on
+inst1 after saving a valid update from inst2. Replaying policy seed20261117 on
+owned inst1 PID22648 reproduced the failure. PrintWindow showed the low-safe-zone
+READY confirmation, while native phase remained planning/app2. Grid row5 clicks
+Y912 reach the HUD (map ends near Y846), so a geometry endpoint could hit READY.
+WORLD_CELLS now masks cells40-47 for spatial actions and building availability;
+existing cell meanings/weights remain unchanged. Two regression tests failed
+before the fix and pass afterward. Failure screenshot: ignored
+visualizer/runtime/loadout-failure.png. Known dialog was cancelled with its NO
+button during diagnosis; no automatic battle start was used to hide the problem.
