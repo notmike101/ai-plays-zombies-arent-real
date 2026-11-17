@@ -19,6 +19,7 @@ def frame(stream, stamp, preview=False):
 
 class FeedTests(unittest.TestCase):
     def setUp(self):
+        (Path(__file__).parent / 'runtime').mkdir(exist_ok=True)
         self.tmp = tempfile.TemporaryDirectory(dir=Path(__file__).parent / 'runtime')
         self.root = Path(self.tmp.name)
         self.feed = Feed(self.root)

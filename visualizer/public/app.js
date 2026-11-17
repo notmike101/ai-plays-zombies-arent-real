@@ -26,6 +26,7 @@ function resetView() {
 }
 function setMode(isPreview) {
   preview=isPreview;selectedStream='';$('stream').value='';resetView();
+  showStatus('waiting',preview?'Looking for the synthetic stream':'Auto-attach is armed');
   $('live').classList.toggle('active',!preview);$('preview').classList.toggle('active',preview);
   $('preview-banner').hidden=!preview;
   $('empty').querySelector('h2').textContent=preview?'Waiting for a preview stream':'Waiting for a policy worker';

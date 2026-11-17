@@ -25,6 +25,7 @@ class Policy(nn.Module):
 
 class ObserverTests(unittest.TestCase):
     def setUp(self):
+        (Path(__file__).parent / 'runtime').mkdir(exist_ok=True)
         self.tmp = tempfile.TemporaryDirectory(dir=Path(__file__).parent / 'runtime')
         self.net = Policy().eval()
         self.observer = Observer(self.net, 123, 'round-test', directory=self.tmp.name)
@@ -116,10 +117,7 @@ class ObserverTests(unittest.TestCase):
         self.assertEqual(self.observer.snapshot()['values']['hu'], expected)
 
     def test_changed_dimensions_rebuild_graph(self):
-        other = Observer(Policy(width=12).eval(), 124, 'new-model', directory=self.tmp.name)
-        # Keep the observed model alive as the trainer would.
         net = Policy(width=12).eval()
-        other.close()
         other = Observer(net, 124, 'new-model', directory=self.tmp.name)
         try:
             with torch.no_grad():

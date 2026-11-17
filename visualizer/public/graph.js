@@ -133,7 +133,7 @@ export class Renderer {
       for(const [u,v] of [[-1,-1],[1,-1],[-1,1],[-1,1],[1,-1],[1,1]]) vertex(dots,node.x+u*radius,node.y+v*radius,color,u,v,1);
       if(plain){const p=this.transform(node.x,node.y);plain.fillStyle=rgba(rgb,color[3]);plain.beginPath();plain.arc(p.x,p.y,Math.max(1,radius*p.scale*.5),0,Math.PI*2);plain.fill();}
       if(isChosen){const p=this.transform(node.x,node.y);ctx.strokeStyle='#ffd283';ctx.lineWidth=1;ctx.beginPath();ctx.arc(p.x,p.y,9*p.scale,0,Math.PI*2);ctx.stroke();}
-      if(node.kind==='input'||(node.kind==='policy'&&this.graph.layers.find(l=>l.id===node.layer).size<=24&&node.layer!=='hc')) {
+      if(this.transform(0,0).scale>=.5 && (node.kind==='input'||(node.kind==='policy'&&this.graph.layers.find(l=>l.id===node.layer).size<=24&&node.layer!=='hc'))) {
         const p=this.transform(node.x+(node.kind==='input'?-14:15),node.y+3); ctx.font=`${Math.max(8,10*p.scale)}px ui-monospace,monospace`;ctx.fillStyle=isChosen?'#ffe0a0':'#8d9da9';ctx.textAlign=node.kind==='input'?'right':'left';ctx.fillText(node.label.replaceAll('_',' '),p.x,p.y);
       }
     }
@@ -145,7 +145,7 @@ export class Renderer {
       pass.setVertexBuffer(0,this.buffer);pass.setPipeline(this.lines);pass.draw(lines.length/9);pass.setPipeline(this.dots);pass.draw(dots.length/9,1,lines.length/9);pass.end();this.device.queue.submit([encoder.finish()]);
     }
     ctx.textAlign='left';
-    for(const title of titles){const p=this.transform(title.x,title.y);ctx.font=`600 ${Math.max(9,10*p.scale)}px system-ui`;ctx.fillStyle='#cbd7dd';ctx.fillText(title.text,p.x,p.y);ctx.font=`${Math.max(9,10*p.scale)}px ui-monospace,monospace`;ctx.fillStyle='#657783';ctx.fillText(title.subtitle,p.x,p.y+17*p.scale);}
-    const p=this.transform(340,615);ctx.font=`${Math.max(8,10*p.scale)}px system-ui`;ctx.fillStyle='#668798';ctx.fillText('Recurrent memory feeds the next decision',p.x,p.y);
+    for(const title of titles){const p=this.transform(title.x,title.y);ctx.font=`600 ${Math.max(9,10*p.scale)}px system-ui`;ctx.fillStyle='#cbd7dd';ctx.fillText(p.scale<.5?title.layer.toUpperCase():title.text,p.x,p.y);if(p.scale>=.5){ctx.font=`${Math.max(9,10*p.scale)}px ui-monospace,monospace`;ctx.fillStyle='#657783';ctx.fillText(title.subtitle,p.x,p.y+17*p.scale);}}
+    const p=this.transform(340,615);if(p.scale>=.5){ctx.font=`${Math.max(8,10*p.scale)}px system-ui`;ctx.fillStyle='#668798';ctx.fillText('Recurrent memory feeds the next decision',p.x,p.y);}
   }
 }
