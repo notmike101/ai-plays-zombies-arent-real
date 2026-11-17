@@ -55,6 +55,8 @@ sessions completed and released their engines; no persistent MCP session was ope
 - GetClientRect supplies physical client pixels. Menu coordinates are fractions:
   1920x1200: PlayNow (.4245,.844), CAMPAIGN (.207,.368), START OVER (.451,.738).
   3840x2160: PlayNow (.453,.709), CAMPAIGN (.16,.454), fresh-play (.286,.454).
+  Partially cleared campaign: START OVER/CONTINUE are (.446,.592)/(.446,.663)
+  windowed, and (.286,.356)/(.286,.394) fullscreen; difficulty rows are absent.
   English UI scale 1 is calibrated; other client sizes fail loudly. The layout
   does not scale using one universal fraction set. A completed campaign shows
   PLAY NOW in place of the start/resume pair when resume_stage is zero.
@@ -116,8 +118,10 @@ runs only after failing to enter the world: unconditional ESC backs out of a cle
 campaign page. Environment attachment is serialized around the existing memscan
 ctypes signature; launch and menu navigation remain concurrent.
 Destinations: ('campaign','stage1') and ('campaign','continue'); other destinations
-fail before launch. No progress edits unlock stages. Continue invokes to_planning
-when needed. Verify coverage in tracker; an API option alone is not live proof.
+fail before launch. CONTINUE requires a partially cleared campaign (1-4 badges);
+completed and zero-badge saves are rejected before launch for this destination.
+Boot reads progress to choose the layout; it never changes or unlocks progress.
+Continue invokes to_planning when needed. Verify live coverage in tracker.
 
 ```powershell
 $zarPython = "$env:LOCALAPPDATA\Python\pythoncore-3.14-64\python.exe"

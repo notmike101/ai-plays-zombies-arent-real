@@ -1,31 +1,27 @@
 # ZAR Tracker (live state — update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — deterministic interface validation in progress)
-- Interface only; no trainer/model changes. Existing unrelated training logs and
-  checkpoint edits are left untouched. No subagents or console commands used.
-- v3 client coordinates and Win32 raw record ABI corrected. All mouse gestures
-  now share posted edges, including drag held moves. Injection reconnects safely,
-  uses an exclusive sentinel and bounded waits; native init is idempotent.
-- REA/Ghidra confirms raw movement is gated by RVA 0x68e6b9; posted mouse edges
-  and wheel have separate handlers. Raw-only menu claims were contradicted by
-  isolated live probes. Full Evidence: analysis/interface-raw-consumer.json.
-- First two fresh acceptance runs PASSED (analysis/interface-20261117-090900.log),
-  then native Shared padding/read semantics were tightened and the DLL rebuilt.
-  Revalidation is in progress. A second native build needs fresh live proof.
-- Parallel boot uncovered a memscan ctypes race, fixed by serializing only
-  ZAREnv attachment in zar_boot. Subsequent boots reach fresh world counters but
-  sometimes F6 is blocked; longer holds/focus messages did not fix it. Investigating
-  a dialog using a one-off planning/menu capture. Automated boot/tests use no images.
-- inst4 badges were intact, no restoration needed. Backups of inst1..inst4 progress
-  are in analysis/interface-progress-backups. inst3 fullscreen probe failed and
-  its settings were restored. All failed test runs cleaned their owned processes.
-- Active owned test PIDs at this checkpoint: 35080 (inst1 diagnostic), 9252 (inst4
-  acceptance). Inspect live processes before acting; these are historical once run ends.
+## CURRENT STATE (2026-11-17 — final interface checks)
+- Interface only. No ML/trainer code changes, subagents, console commands, physical
+  input or installation writes. Unrelated training artifacts remain untouched.
+- Final mouse path: VirtualInput cursor/polling + one PostMessage edge sequence.
+  REA/Ghidra and isolated probes contradict the raw-only menu claim. ABI and
+  client coordinate bugs corrected; once-only injection is bounded and reconnects.
+- Two consecutive fresh acceptance cycles passed on the final mouse implementation:
+  analysis/interface-20261117-094110.log. Includes NO dialog, one garrison, zone,
+  wall, anchored wheel +/-1, battle start and existing R recovery; both cleaned up.
+- Four simultaneous planning boots passed: analysis/interface-scale.log. Fullscreen
+  fresh boot passed: analysis/interface-fullscreen-boot.log. All cleaned up.
+- Additional CONTINUE calibration found unfinished campaign buttons above the
+  completed-campaign layout. Windowed corrected click resumed L5 (209867 civ).
+  Final API checks for both layouts are running, then the four-copy proof repeats.
+- inst4 badges intact (39.23/34.31/21.14/13.69/7.91). Original save/settings backups
+  under analysis/interface-progress-backups; temporary resume fixtures are restored.
+- Owned live copies during this checkpoint: inst1 and inst3, PIDs in
+  analysis/interface-continue-final.log. Re-enumerate before acting.
 
 ## NEXT STEPS
-1. Identify/dismiss the blocking surface; finish four simultaneous planning boots.
-2. Repeat fresh acceptance twice on final code/DLL; check fullscreen separately.
-3. Kill all test games, update this state with final logs, commit and push milestone.
+1. Finish windowed/fullscreen CONTINUE API proof and repeat four-copy boot.
+2. Kill all test copies, restore probe settings/fixtures, commit final evidence and push.
 
 ## VERIFIED CAPABILITIES (condensed; details notes/automation.md)
 1. Parallel unfocused copies; virtual input per instance (DLL): clicks, keys,
@@ -115,4 +111,3 @@ dense crowds + Battleship water AOE = path to silver. (notes/game-rules.md)
    kills Paratrooper/Heli counters move after casts.
 3. BC from winners + it17 recipe -> PPO warm start (ml-spec gates 4/13.69/35%).
 4. Phase end: kill instances (incl 3588/44716), update tracker + push.
-
