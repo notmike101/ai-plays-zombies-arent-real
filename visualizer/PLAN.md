@@ -16,11 +16,11 @@ Networking: bind 0.0.0.0, serve only an explicit public-file allowlist and read-
 
 ## Execution (native, no delegation)
 
-- [ ] Observer tests first: actual values, no RNG/output/gradient change, bounded writer, parameter refresh, unsupported model, cleanup. Implement observer.py and test_observer.py.
-- [ ] Server tests first: sticky selection, stale data, failover, malformed files, endpoint allowlist. Implement server.py and test_server.py.
-- [ ] Implement public/index.html, style.css, graph.js and app.js. Test graph construction with Node assertions; browser-test live synthetic telemetry, WebGPU/fallback, pause, selection, responsive layout, waiting state.
-- [ ] Write README, start.ps1 and reviewable integration.patch. Test against the current trainer source without applying it. Measure observer overhead using isolated synthetic inference only.
-- [ ] Review diff, rerun meaningful checks, commit/push visualizer milestones, leave server available and request narrow trainer integration permission.
+- [x] Observer tests first: actual values, no RNG/output/gradient change, bounded writer, parameter refresh, unsupported model, cleanup. Implement observer.py and test_observer.py.
+- [x] Server tests first: sticky selection, stale data, failover, malformed files, endpoint allowlist. Implement server.py and test_server.py.
+- [x] Implement public/index.html, style.css, graph.js and app.js. Test graph construction with Node assertions; browser-test live synthetic telemetry, WebGPU/fallback, pause, selection, responsive layout, waiting state.
+- [x] Write README, start.ps1 and reviewable integration.patch. Test against the current trainer source without applying it. Measure observer overhead using isolated synthetic inference only.
+- [x] Review diff and rerun meaningful checks. Commit/push visualizer milestones; leave server available with real-game integration explicitly pending permission.
 
 ## Review focus
 
@@ -33,3 +33,11 @@ Networking: bind 0.0.0.0, serve only an explicit public-file allowlist and read-
 ## Evidence ledger
 
 2026-11-16: inspected active nn_play2.py and running five-worker trainer. Current implementation is GRU(22,128), heads hu(15), hc(12), val(1). Existing dirty files belong to training. System python resolves to an unusable Inkscape interpreter; use C:/Users/me/AppData/Local/Python/pythoncore-3.14-64/python.exe (torch 2.15.0+cpu).
+
+2026-11-16 completion evidence: 16 Python tests pass; Node assertions pass. Actual PolicyNet2 has 61,980 parameters and matched exact outputs and sampled actions for 12 recurrent steps. Warm median plain 0.074 ms versus observed + snapshot 0.122 ms in one isolated run. Edge verified WebGPU and forced Canvas 2D, preview updates, node inspection, pause/resume, clear waiting state, and compact viewport without horizontal document overflow.
+
+Review fixes: removed filesystem timestamp cache after a reproducible collision; clear the GPU framebuffer when disconnected; ignore responses from a previous view selection; report unsupported models; tolerate thread startup failure; prefer newest streams over accumulated crash files. Regression tests cover the backend/renderer failures. No subagents were used, per project guidance; review was performed in this session.
+
+Ruling: retain the current checkout and branch, stage/commit only visualizer paths, and keep handoff notes here instead of root notes/tracker.md — avoids changing the other agent's branch or violating the user's directory boundary. No new worktree or external edits were needed.
+
+Pending: user permission for the prepared 22-line addition to scripts/nn_play2.py, followed by application at a safe training-owner-controlled restart and real-game attachment validation. No trainer was stopped or edited. No game test instances were created. The app defaults to waiting; preview is explicitly synthetic.

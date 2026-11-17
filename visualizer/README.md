@@ -82,7 +82,7 @@ node visualizer/test_graph.mjs
 
 The model check imports the current trainer source without running its main function or opening a game. It checks exact recurrent outputs and sampled decisions, then reports a warm CPU inference benchmark. It does not establish end-to-end gameplay overhead.
 
-Verified on 2026-11-16: 14 Python tests; Node graph/layout/filter/clear assertions; the current 61,980-parameter PolicyNet2 gives identical outputs and sampled decisions for 12 recurrent steps. One warm CPU run measured median 0.074 ms plain versus 0.122 ms observed including snapshot creation, excluding first topology extraction and background disk writes. Edge displayed the WebGPU graph and Canvas 2D fallback, live synthetic updates, node inspection, pause/resume and waiting state. The responsive view was checked at a 390-pixel viewport. Real-game attachment awaits authorized trainer integration.
+Verified on 2026-11-16: 16 Python tests; Node graph/layout/filter/clear assertions; the current 61,980-parameter PolicyNet2 gives identical outputs and sampled decisions for 12 recurrent steps. One warm CPU run measured median 0.074 ms plain versus 0.122 ms observed including snapshot creation, excluding first topology extraction and background disk writes. Edge displayed the WebGPU graph and Canvas 2D fallback, live synthetic updates, node inspection, pause/resume and waiting state. The responsive view was checked at a 390-pixel viewport. Real-game attachment awaits authorized trainer integration.
 
 ## Collaboration handoff
 
