@@ -13,6 +13,9 @@ Rules        : only legit resources: money + SP loadout levels (file-edited resu
 Client px mapping for windowed captures: png(1942x1256) minus (11,40).
 """
 import os
+import hashlib
+import math
+import re
 import struct
 import subprocess
 import sys
@@ -25,6 +28,7 @@ from zar_input import VirtualInput
 BASE_RVA = dict(civ=0x650f10, zomb=0x650f18, police=0x650f20, corpses=0x650f28,
                 count=0x650438, converting=0x650f80)
 MONEY_F32_RVAS = (0x6563c0, 0x65d9c0, 0x665ef0)
+BUILD_SHA256 = 'a1bd5913ed3905aaaadfb5a14781004d28990f433ff1621c658c10f1795469d2'
 PROGRESS = r'game-copies/inst2/steam_cloud/progress/Boston__MA.progress'
 
 
@@ -63,13 +67,38 @@ class ZAREnv:
         return struct.unpack('<q', d)[0] if d and len(d) == 8 else None
 
     def money(self):
-        for rva in MONEY_F32_RVAS:
-            d = memscan.read(self.h, self.base + rva, 4)
-            if d and len(d) == 4:
-                v = struct.unpack('<f', d)[0]
-                if 0 < v < 1e7:
-                    return v
+        # The dump writer reads this field; the other positive mirrors can be stale.
+        d = memscan.read(self.h, self.base + 0x65d9c0, 4)
+        if d and len(d) == 4:
+            v = struct.unpack('<f', d)[0]
+            if math.isfinite(v) and 0 <= v < 1e7:
+                return v
         return None
+
+    def validate_build(self):
+        import psutil
+        with open(psutil.Process(self.pid).exe(), 'rb') as fh:
+            if hashlib.file_digest(fh, 'sha256').hexdigest() != BUILD_SHA256:
+                raise ZAREnvError('Unsupported game build: revalidate memory offsets')
+
+    def scalar(self, rva, fmt):
+        size = struct.calcsize(fmt)
+        data = memscan.read(self.h, self.base + rva, size)
+        if data is None or len(data) != size:
+            raise ZAREnvError(f'Missing memory at {rva:#x}')
+        return struct.unpack(fmt, data)[0]
+
+    def game_state(self):
+        """Read fields used by the matching-build F6 writer, without dumping."""
+        app = self.scalar(0x6553e8, '<I')
+        phase = self.scalar(0x65d9c8, '<I')
+        if app != 2 or phase > 3:
+            raise ZAREnvError(f'Not in a game world: app={app}, phase={phase}')
+        return dict(phase=('planning', 'playing', 'won', 'lost')[phase],
+                    sim=self.scalar(0x675d28, '<f'),
+                    tick=self.scalar(0x6514e8, '<q'),
+                    paused=bool(self.scalar(0x665fa2, '<B')),
+                    mult=self.scalar(0x666868, '<q'))
 
     def obs(self):
         return dict(civ=self._gv('civ'), zomb=self._gv('zomb'),
@@ -88,8 +117,9 @@ class ZAREnv:
             s = ln.strip()
             if not s:
                 continue
-            if s.startswith('[') and s.endswith(']') and ' ' not in s:
-                sec = out.setdefault(s[1:-1], {})
+            header = re.match(r'^\[([a-z_]+)\]', s)
+            if header:
+                sec = out.setdefault(header[1], {})
                 continue
             if '=' in s:
                 k, v = s.split('=', 1)
@@ -100,15 +130,19 @@ class ZAREnv:
         """Press F6, wait for the NEW debug_dumps txt, parse sections.
         Returns None when the writer never ran (menu/title/workshop)."""
         d = os.path.join(self.copy_dir(), 'debug_dumps')
-        before = set(os.listdir(d)) if os.path.isdir(d) else set()
+        # Timestamped names have one-second precision; overwrites also count.
+        def stamps():
+            return {f: (os.stat(os.path.join(d, f)).st_mtime_ns,
+                        os.stat(os.path.join(d, f)).st_size)
+                    for f in os.listdir(d) if f.endswith('.txt')} if os.path.isdir(d) else {}
+        before = stamps()
         self.vi.key_press(0x75, sc=64, hold=0.1)
         t0 = time.time()
         while time.time() - t0 < wait_s:
             time.sleep(0.35)
             if not os.path.isdir(d):
                 continue
-            new = sorted(f for f in set(os.listdir(d)) - before
-                         if f.endswith('.txt'))
+            new = sorted(f for f, stamp in stamps().items() if before.get(f) != stamp)
             if new:
                 p = os.path.join(d, new[-1])
                 time.sleep(0.25)          # let the writer flush
