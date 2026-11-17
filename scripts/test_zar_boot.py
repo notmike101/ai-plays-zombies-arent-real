@@ -2,10 +2,17 @@
 import unittest
 from unittest.mock import patch
 
-from zar_boot import COPIES, boot, copy_path
+from zar_boot import COPIES, boot, copy_path, menu_points
 
 
 class BootBoundary(unittest.TestCase):
+    def test_menu_layouts_are_explicit_and_fractional(self):
+        for size in ((1920, 1200), (3840, 2160)):
+            self.assertTrue(all(0 < n < 1 for point in menu_points(*size) for n in point))
+        self.assertNotEqual(menu_points(1920, 1200), menu_points(3840, 2160))
+        with self.assertRaisesRegex(RuntimeError, 'Uncalibrated'):
+            menu_points(800, 600)
+
     def test_only_named_copies_are_allowed(self):
         self.assertEqual(copy_path(COPIES / 'inst4'), COPIES / 'inst4')
         for path in (COPIES.parent, COPIES / '..' / 'inst4', COPIES / 'template',
