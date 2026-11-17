@@ -72,9 +72,8 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 - For an authorized real attachment check, use an owned idle game copy and
   read-only policy evaluation, then match game/worker PIDs and actual browser
   values/actions to one fresh observer frame. See notes/visualizer-live-check.md.
-  `nn_play2.py play` currently shares PPO/save logic with train: use the `greedy`
-  evaluation path or direct run_episode without optimization/checkpoint writes.
-  Evaluation still samples the policy; do not force actions for visualizer tests.
+  `nn_play2.py play` never optimizes or saves weights. Use a separate --history
+  for evaluations. Do not force actions for visualizer attachment tests.
 - Launch `./visualizer/start.ps1` from the deployed checkout; open
   `http://localhost:8765` (binds `0.0.0.0:8765`). `-Preview` starts a separate,
   clearly labeled synthetic network, not a game. Reuse an existing server;
@@ -143,6 +142,14 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 1. Tracker + notes updated with verified findings; lessons learned -> notes.
 2. All uncommitted work committed (conventional).
 3. Kill test instances (enumerate via psutil dirname).
+
+## Training ownership and persistence
+- Schedule one sequential episode batch per unique game PID. Never submit
+  multiple episodes for the same PID as independent pool jobs.
+- Keep one optimizer across PPO rounds. Checkpoints include optimizer state and
+  are replaced atomically with a .previous backup. Live tests use a separate
+  --model and --history; never overwrite the user's training checkpoint.
+- Training improvement milestones and evidence: notes/training-improvements.md.
 
 ## Visualizer label maintenance contract (2026-11-16, enforceable)
 Any change to `make_obs()` in `scripts/nn_play2.py` — feature add, removal,

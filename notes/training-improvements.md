@@ -15,7 +15,7 @@ civilians. Model decisions retain control of strategy. Evaluation never trains.
 
 ## Milestones
 
-- [ ] 1. `nn_play2.py`: one sequential episode batch per unique PID; standard
+- [x] 1. `nn_play2.py`: one sequential episode batch per unique PID; standard
   GAE with terminal/truncation bootstrap; persistent Adam; versioned atomic
   checkpoint with prior backup; explicit train/play/greedy semantics and run IDs.
   Tests: numerical returns/lambda/bootstrap; concurrent fake games cannot overlap
@@ -56,3 +56,8 @@ hardware probe scripts are not safe automatic test-discovery targets.
   untracked run artifacts. Those artifacts are not inputs to performance claims.
 - REA is available by skill, but no REA MCP tools are exposed in this session;
   use existing CLI/Ghidra only when a concrete runtime-format question needs it.
+- Milestone 1: five new regression tests RED -> GREEN; 35 visualizer tests,
+  actual-model parity (12 recurrent steps), and graph assertions PASS.
+  Bootstrap support is in the math; actual cutoff observations land in milestone 2.
+  Greedy sampling semantics and checkpoint schema compatibility are finalized
+  with the expanded action/observation schema, not silently changed mid-run.

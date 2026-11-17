@@ -17,7 +17,9 @@ import multiprocessing as mp
 import os
 import sys
 import re
+import shutil
 import time
+import uuid
 
 import numpy as np
 import torch
@@ -313,9 +315,10 @@ def load_pretrained(net, path):
     """Warm start: map an older narrower-obs checkpoint column-wise onto the
     current input width (old columns keep trained weights)."""
     try:
-        old = torch.load(path)
+        old = torch.load(path, weights_only=True)
     except FileNotFoundError:
         return
+    old = old.get('policy', old)
     new = net.state_dict()
     for key in tuple(old):
         o = old[key]
@@ -594,18 +597,20 @@ def run_episode(args):
             observer.close()
 
 
-def gae(rews, vals, lam=0.95, gamma=0.99):
+def gae(rews, vals, lam=0.95, gamma=0.99, bootstrap=0.0):
     adv, last = [], 0.0
+    next_value = bootstrap
     for r, v in zip(rews[::-1], vals[::-1]):
-        last = r + gamma * last - v
+        delta = r + gamma * next_value - v
+        last = delta + gamma * lam * last
         adv.append(last)
+        next_value = v
     adv = list(reversed(adv))
     rets = [a + v for a, v in zip(adv, vals)]
     return adv, rets
 
 
-def ppo_update(net, trajs, epochs=4, clip=0.2, c1=0.5, ent=0.015):
-    opt = torch.optim.Adam(net.parameters(), lr=3e-4)
+def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015):
     seqs = []
     for t in trajs:
         X = torch.tensor(np.array(t['obs'], dtype=np.float32)).unsqueeze(0)
@@ -619,7 +624,7 @@ def ppo_update(net, trajs, epochs=4, clip=0.2, c1=0.5, ent=0.015):
         with torch.no_grad():
             _, _, v, _ = net(X)
         vals = v.squeeze(0).numpy()
-        adv, ret = gae(list(RW), list(vals))
+        adv, ret = gae(list(RW), list(vals), bootstrap=t.get('bootstrap', 0.0))
         seqs.append((X, U, C, ULP, CLP, MU,
                      torch.tensor(adv, dtype=torch.float32),
                      torch.tensor(ret, dtype=torch.float32)))
@@ -649,6 +654,39 @@ def ppo_update(net, trajs, epochs=4, clip=0.2, c1=0.5, ent=0.015):
         print('ppo2 batch loss', round(tot / max(len(seqs), 1), 3), flush=True)
 
 
+def episode_batches(pids, sd, random, tag, eps):
+    if not pids or len(set(pids)) != len(pids) or eps < 1:
+        raise ValueError('Provide unique game PIDs and at least one episode')
+    return [[(p, sd, random, f'{tag}/ep{i}') for i in range(eps)] for p in pids]
+
+
+def run_batch(jobs):
+    return [run_episode(job) for job in jobs]
+
+
+def training_enabled(mode, random):
+    return mode == 'train' and not random
+
+
+def save_checkpoint(net, opt, path, run_id):
+    path = os.fspath(path)
+    tmp = path + '.tmp'
+    torch.save({'policy': net.state_dict(), 'optimizer': opt.state_dict(),
+                'run_id': run_id, 'schema': 1}, tmp)
+    if os.path.exists(path):
+        shutil.copy2(path, path + '.previous')
+    os.replace(tmp, path)
+
+
+def load_checkpoint(net, opt, path):
+    if not os.path.exists(path):
+        return
+    load_pretrained(net, path)
+    data = torch.load(path, weights_only=True)
+    if opt is not None and 'optimizer' in data:
+        opt.load_state_dict(data['optimizer'])
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('mode', choices=['play', 'greedy', 'train'])
@@ -657,27 +695,30 @@ def main():
     ap.add_argument('--eps', type=int, default=2)
     ap.add_argument('--rounds', type=int, default=6)
     ap.add_argument('--random', action='store_true')
+    ap.add_argument('--model', default=MODEL)
+    ap.add_argument('--history', default=HIST)
     a = ap.parse_args()
     if Observer is not None:
         validate_labels(NOBS, INPUT_LABELS)  # AGENTS.md contract: mismatch
         # means make_obs changed without labels -> refuse to launch training
     if a.mode == 'greedy':
         net = PolicyNet2()
-        load_pretrained(net, MODEL)
+        load_checkpoint(net, None, a.model)
         ep = run_episode((int(a.pid), net.state_dict(), False, 'eval'))
         print('GREEDY', {k: ep[k] for k in
                          ('win', 'frac', 't', 'R') if k in ep}, flush=True)
         return
-    pids = [int(p) for p in a.pids.split(',')]
+    pids = [int(p) for p in a.pids.split(',') if p]
+    episode_batches(pids, {}, a.random, '', a.eps)
     net = PolicyNet2()
-    if os.path.exists(MODEL):
-        load_pretrained(net, MODEL)
+    opt = torch.optim.Adam(net.parameters(), lr=3e-4)
+    load_checkpoint(net, opt if a.mode == 'train' else None, a.model)
+    run_id = uuid.uuid4().hex[:12]
     sd = net.state_dict()
     with mp.Pool(len(pids)) as pool:
         for rnd in range(a.rounds):
-            jobs = [(p, {k: v.clone() for k, v in sd.items()},
-                     a.random, f'r{rnd}') for p in pids for _ in range(a.eps)]
-            trajs = pool.map(run_episode, jobs)
+            jobs = episode_batches(pids, sd, a.random, f'{run_id}/r{rnd}', a.eps)
+            trajs = [tr for batch in pool.map(run_batch, jobs) for tr in batch]
             good, wins, fracs = [], 0, []
             for tr in trajs:
                 if 'err' in tr:
@@ -688,7 +729,7 @@ def main():
                           'frac', tr['frac'], 't', round(tr.get('t', 0), 1),
                           flush=True)
                     continue
-                with open(HIST, 'a') as fh:
+                with open(a.history, 'a') as fh:
                     fh.write(json.dumps({k: tr[k] for k in
                                         ('level', 'pid', 'win', 'frac', 't',
                                          'R', 'civ0', 'nbuy', 'ndeck', 'spend') if k in tr}) + '\n')
@@ -698,10 +739,10 @@ def main():
                 print('ep pid', tr['pid'], 'win', tr['win'],
                       'frac', round(tr['frac'], 3), 'R', round(tr['R'], 2),
                       flush=True)
-            if not a.random and good:
-                ppo_update(net, good)
+            if training_enabled(a.mode, a.random) and good:
+                ppo_update(net, good, opt)
                 sd = net.state_dict()
-                torch.save(sd, MODEL)
+                save_checkpoint(net, opt, a.model, run_id)
             if good:
                 print(f'round {rnd}: wins {wins}/{len(good)} '
                       f'meanfrac {np.mean(fracs):.3f}', flush=True)
