@@ -147,6 +147,12 @@ def preflight(copy='inst1'):
         settings = (path/'steam_cloud/settings.ini').read_text()
         if not re.search(r'^difficulty\s*=\s*normal\s*$', settings, re.M):
             raise ValueError('Owned copy must use normal difficulty')
+        kit = 'Garrison Mortar Napalm Nest Mine C4 GasMortar'
+        if not re.search(r'^roster_plan\s*=\s*'+kit+r'\s*$', settings, re.M):
+            raise ValueError('Planning roster differs from the trained hotkey layout')
+        unlocks = (path/'steam_cloud/unlocks.ini').read_text()
+        if any(not re.search(r'^unlock\s*=\s*unit\s+'+unit+r'\s*$', unlocks, re.M) for unit in kit.split()):
+            raise ValueError('Planning kit is locked: use existing earned unlocks via prepare-game --unlocks-from; never fabricate unlocks')
         return dict(copy=copy, sha256=digest)
     check('game', game)
 
@@ -326,6 +332,7 @@ def main():
                                            'visualizer-start', 'visualizer-stop', 'checkpoint-export',
                                            'checkpoint-publish', 'checkpoint-verify', 'checkpoint-import'])
     parser.add_argument('--copy', default='inst1')
+    parser.add_argument('--unlocks-from', type=Path, help='Explicit earned unlocks.ini for a new game copy')
     parser.add_argument('--rounds', type=int, default=6)
     parser.add_argument('--seed', type=int, default=20261140)
     parser.add_argument('--foreground', action='store_true', help='Keep training attached to this terminal')
@@ -353,7 +360,7 @@ def main():
         elif args.command == 'prepare-game':
             from prepare_game import prepare_copy
             from project import load_config, config_path
-            result = dict(ok=True, copy=str(prepare_copy(config_path(load_config(), 'game', 'install_dir'), args.copy)))
+            result = dict(ok=True, copy=str(prepare_copy(config_path(load_config(), 'game', 'install_dir'), args.copy, args.unlocks_from)))
         elif args.command == 'build-input':
             from build_hook import build
             result = dict(ok=True, build=build())

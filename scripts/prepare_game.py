@@ -23,6 +23,17 @@ camera_intro = false
 tutorial = false
 tutorial_intro = false
 height_auto = false
+usage_sharing = false
+usage_asked = true
+low_fps_asked = true
+binds_version = 5
+readied_once = true
+debt_hint_seen = true
+mine_tip_seen = true
+para_tip_seen = true
+escalate_tip_seen = true
+outside_tip_seen = true
+restart_tips = false
 roster_plan = Garrison Mortar Napalm Nest Mine C4 GasMortar
 roster_battle = - - - - - - -
 bind_slot1 = _1
@@ -66,7 +77,7 @@ def sha256(path):
         return hashlib.file_digest(f, 'sha256').hexdigest()
 
 
-def prepare_copy(source, name):
+def prepare_copy(source, name, unlocks=None):
     source = Path(source)
     if not re.fullmatch(r'inst\d+', name):
         raise ValueError('Copy must be named instN')
@@ -80,6 +91,7 @@ def prepare_copy(source, name):
     target = copies/name
     if target.exists():
         raise FileExistsError(f'Refusing to overwrite {target}; choose a new copy')
+    earned = Path(unlocks).read_bytes() if unlocks is not None else None
     files = checked_files(source)
     expected = expected_hash()
     if sha256(source/'zombies-arent-real.exe') != expected:
@@ -99,6 +111,8 @@ def prepare_copy(source, name):
             raise ValueError('Game build changed during copying')
         (stage/'steam_cloud').mkdir()
         (stage/'steam_cloud/settings.ini').write_text(SETTINGS, encoding='utf-8')
+        if earned is not None:
+            (stage/'steam_cloud/unlocks.ini').write_bytes(earned)
         (stage/'steam_appid.txt').write_text('5185890\n', encoding='ascii')
         stage.rename(target)
     return target
@@ -107,5 +121,6 @@ def prepare_copy(source, name):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--copy', default='inst1')
+    parser.add_argument('--unlocks-from', type=Path, help='Explicit existing earned unlocks.ini; never synthesizes unlocks')
     args = parser.parse_args()
-    print(prepare_copy(config_path(load_config(), 'game', 'install_dir'), args.copy))
+    print(prepare_copy(config_path(load_config(), 'game', 'install_dir'), args.copy, args.unlocks_from))
