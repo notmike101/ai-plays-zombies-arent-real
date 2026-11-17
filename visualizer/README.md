@@ -30,7 +30,12 @@ To include a clearly labeled, separate PyTorch preview with synthetic inputs:
 
 Then choose **Preview** in the app. Preview never sends input to a game. The default **Live network** view only accepts real, non-preview observer streams. Closing the server with Ctrl+C also stops its preview process. Do not start a second server on the same port.
 
-The launcher uses the existing Python installation at `%LOCALAPPDATA%\Python\pythoncore-3.14-64\python.exe`. Override it with `-Python "C:\path\to\python.exe"`, or change the port with `-Port 8766`. The server and frontend need no installed dependencies. The observer and optional preview use the trainer's existing PyTorch installation.
+The launcher defaults to the repository's `.venv\Scripts\python.exe`; follow
+the root README to create it from `requirements.txt`. Override it with
+`-Python "C:\path\to\python.exe"`, or change the port with `-Port 8766`.
+The server/frontend use the Python standard library; the observer and optional
+preview use PyTorch from the selected environment. Existing processes keep their
+original interpreter until restarted normally.
 
 WebGPU is preferred. It works on a supported browser at localhost or over trusted HTTPS. Ordinary HTTP over a LAN address uses Canvas 2D when the browser withholds WebGPU. No insecure browser flags or certificate changes are needed. `/?canvas2d=1` explicitly exercises the fallback.
 
@@ -87,10 +92,10 @@ Observer snapshots and local test screenshots stay in ignored `visualizer/runtim
 
 ## Checks
 
-Use the known working Python executable, not an unrelated `python` earlier on PATH:
+Use the repository environment explicitly:
 
 ```powershell
-$python = "$env:LOCALAPPDATA\Python\pythoncore-3.14-64\python.exe"
+$python = (Resolve-Path .venv\Scripts\python.exe).Path
 & $python -B -m unittest discover -s visualizer -p 'test_*.py'
 & $python -B visualizer/verify_model.py
 node visualizer/test_graph.mjs

@@ -3,6 +3,9 @@
 Read `../AGENTS.md` first. This guide operates the existing Windows deployment at
 `D:\zar-scratch`. CURRENT STATE in `tracker.md` is a dated handoff; always inspect
 actual processes. `local-environment.md` records dependencies and recovery steps.
+Both launchers now default to `.venv\Scripts\python.exe`; follow README.md for
+first-time setup. Existing workers retain their original interpreter until their
+next normal restart. Never recreate/update an environment while it has workers.
 
 ## 1. Inspect and check
 
@@ -80,6 +83,8 @@ without authentication). For a separate test use an unused port and loopback:
 
 The command reports its PID/create_time. A custom-port server also appears in
 `status`'s process list. Server logs are ignored `analysis/nn3_visualizer_PORT.log`.
+On Windows, a venv redirector and its actual Python child can both appear; this
+does not necessarily mean two servers. The start result identifies the listener.
 These commands never start a synthetic preview or change training. The separate
 `visualizer/start.ps1 -Preview` remains available for explicitly synthetic UI
 tests; see `../visualizer/README.md`. Foreground Ctrl+C closes that server/preview.

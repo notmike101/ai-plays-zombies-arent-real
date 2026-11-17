@@ -8,6 +8,10 @@ hand-script strategy the model should learn. Curriculum L1->L5 (START OVER resta
 the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 
 ## New session entry point
+- Python setup: `.venv\Scripts\python.exe` is the repository interpreter. If it is
+  missing, follow README.md to create it with Python3.14 x64 and requirements.txt.
+  Never reinstall packages in an environment used by active workers. Both launchers
+  default to .venv; no activation is needed. Game/DLL/checkpoint prerequisites remain.
 - Run `.\local.ps1 status`, then `.\local.ps1 check` from this checkout. Preserve
   healthy active training. Use `.\local.ps1 train --rounds N` only when idle;
   it resumes schema3 with one owned copy and inherited CPU/priority limits.
@@ -124,7 +128,7 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   changes. Coordinate source updates/restarts with the training owner; never
   edit live trainer code or stop another agent's workers for visualizer work.
 - After changing policy architecture, features, action heads or telemetry, run:
-  `$zarPython = "$env:LOCALAPPDATA\Python\pythoncore-3.14-64\python.exe"`, then
+  `$zarPython = (Resolve-Path .venv\Scripts\python.exe).Path`, then
   `& $zarPython -B -m unittest discover -s visualizer -p 'test_*.py'`,
   `& $zarPython -B visualizer/verify_model.py`, and
   `node visualizer/test_graph.mjs`. The integration tests use a fake game and

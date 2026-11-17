@@ -6,6 +6,23 @@ observations and executes its actions. This objective has **not** been achieved.
 
 ## Starting with no context
 
+First-time Python setup uses **CPython 3.14 x64 on Windows**. Skip creation if this
+checkout already has a working `.venv`; do not reinstall packages under running
+workers. From the repository root:
+
+```powershell
+py -3.14 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip check
+```
+
+The [requirements](requirements.txt) pin the five direct dependencies, including
+CPU-only PyTorch. Both launchers use `.venv` explicitly, so activation is optional
+and unrelated Python installations on PATH are ignored. The environment directory
+is gitignored; recreate it from these commands after moving/cloning the repository.
+If `py` is unavailable, use the full path to an installed Python 3.14 x64 executable
+for the first command. The environment does not install the game or recover weights.
+
 Read [AGENTS.md](AGENTS.md), then run these from PowerShell in this checkout:
 
 ```powershell
