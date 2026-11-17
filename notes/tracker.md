@@ -1,13 +1,26 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — milestone 3 complete)
-- Milestones1/2 committed/pushed; milestone3 committed e3e042e.
-- Tests:18 learning/state,12 deck,3 spatial,34 visualizer; model parity and graph PASS.
-- Owned inst9 PID34176 and worker44944 stopped after bounded model/UI/native probes.
-- Real purchases, refunds, geometry, native stock and observer labels verified.
-- Original policy2/history2 artifacts remain untouched. No active training run.
-- Next: evaluation/report identity, PPO diagnostics, final scoped train/eval smoke.
-- Evidence and limitations: notes/training-improvements.md.
+## CURRENT STATE (2026-11-17 — training improvements complete)
+- All four implementation milestones completed. Latest code092552d; earlier
+  milestones a20786a/5dd479f/804fdd9/e3e042e; regular conventional commits.
+- Final77 Python tests PASS; model parity12 recurrent steps and Node graph PASS.
+  Browser SSE/reconnect/pause/preview-isolation and WebGPU/Canvas2D mobile PASS.
+- Owned live inst9 PID12724/worker10300:8 sampled decisions, actual saved1.95%,
+  aborted promptly, one PPO update changed weights and saved validation-policy.pt.
+  This proves functionality, not strong play. No long training run is active.
+- Separate12-decision greedy carry evaluation: planning timeout, zero terminal
+  reward; validation and original checkpoints byte-identical before/after eval.
+- User policy2 SHA bd97460bfefa468c0c3564936cf9fcd74d390cf2c4d33bcccc34716e7df230ed
+  remains unchanged. sessions/nn_policy3.pt does not yet exist; new schema needs
+  fresh training. Smoke weights only: visualizer/runtime/validation-policy.pt.
+- All owned game copies, validation workers, preview8440 and test browser closed.
+  Final psutil inventory: no game-copy PIDs. Existing visualizer server retained.
+- Pre-existing policy2/history2 changes and analysis run artifacts are untouched.
+- Full evidence, commands and limits: notes/training-improvements.md. Runtime
+  captures remain ignored under visualizer/runtime, including browser/mobile logs.
+- Follow-up work: sustained training and fresh-board multi-seed L1-L5 evaluation;
+  no claim yet of consistently saving35%. Full wall/obstacle/health encoding and
+  exhaustive live testing of every ability remain outside the verified subset.
 
 ## Prior snapshot (2026-11-17u â€” kit8 PPO run live on 5 fresh boards)
 - RUN: train_run.py --copies inst1 inst2 inst4 inst5 inst8 --eps 2 --rounds 14
