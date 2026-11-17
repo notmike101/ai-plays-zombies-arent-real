@@ -84,3 +84,13 @@ Find the sim-state ROOT POINTER statically with Ghidra:
   civilians, converting, zombies, police, corpses, snipers, mortars, garrisons,
   turrets, mines, c4, battleships, helicopters, apcs, walls, levelled_buildings,
   infections, wall_chews, zombie_deaths.
+
+## Verified schema 3 native readers (2026-11-17)
+Same build hash as env_zar.BUILD_SHA256. Units: positions dynamic array0x650280
+(vec2 float), kinds0x6502d0 (u8), stable tick0x6514e8. Camera x/y/zoom0x6553ac/b0/b4;
+pitch/yaw0x6553d4/d8 must be zero. Client=(world-camera)*(zoom,-zoom)+client_size/2,
+without another DPI divide. Buildings rectangle array0x656680 (four float32).
+Plan zone coords subtract map origin0x665358/5c. Stock0x656488:39 float32 in
+Stock_Item order; loadout0x655f90:19 int64 in NATIVE_ABILITIES order (env_zar.py).
+Runtime receipts: Police stock40->28 after spray; Police20/Stungas1 exactly matched
+session-log footer. No native writes. Building candidates can include scenery.

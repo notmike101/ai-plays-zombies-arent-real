@@ -1,21 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — training improvements in progress)
-- User approved all twelve audit proposals, milestone tests/commits and bounded
-  live validation. No subagents. Plan/evidence: training-improvements.md.
-- Milestone 1 committed/pushed a20786a: exclusive PID batches, corrected GAE,
-  persistent optimizer/checkpoints and no optimization from play mode.
-- Authoritative money/phase reader committed 5dd479f; exact build SHA checked.
-- Milestone 2 in progress: next-state infection costs, current session-log saved
-  percentage, explicit READY/pause checks, early retry, no purchase/cast rewards.
-- Live probes inst9 PIDs 34160/28280 cleaned. Normal fresh L1; native phase,
-  sim clock, money and positions verified; immediate <10% retry verified.
-- Game Shift+F6/F7 log verified: fresh header, 5-sim-second snapshots, footer
-  saved_pct; header includes actual SP/loadout and quota. No admin console.
-- Owned inst9 model validation PID 50128 currently in bounded startup/episode;
-  parent validation script owns cleanup. Original policy untouched.
-- Only pre-existing visualizer server 22604 retained; no other training owner.
-- Existing uncommitted policy/history/run artifacts are preserved, not staged.
+## CURRENT STATE (2026-11-17 — milestone 3 complete)
+- Milestones1/2 committed/pushed; milestone3 committed e3e042e.
+- Tests:18 learning/state,12 deck,3 spatial,34 visualizer; model parity and graph PASS.
+- Owned inst9 PID34176 and worker44944 stopped after bounded model/UI/native probes.
+- Real purchases, refunds, geometry, native stock and observer labels verified.
+- Original policy2/history2 artifacts remain untouched. No active training run.
+- Next: evaluation/report identity, PPO diagnostics, final scoped train/eval smoke.
+- Evidence and limitations: notes/training-improvements.md.
 
 ## Prior snapshot (2026-11-17u â€” kit8 PPO run live on 5 fresh boards)
 - RUN: train_run.py --copies inst1 inst2 inst4 inst5 inst8 --eps 2 --rounds 14
