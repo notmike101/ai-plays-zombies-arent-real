@@ -1,40 +1,31 @@
 # ZAR Tracker (live state — update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17g — nn_play2 PPO LIVE)
-- Git: remote pushed thru 82d6eca (verified hotkeys + zone + trail + to_planning).
-- nn_play2 TRAINING (service Nn2Train1, 5 pids, log analysis/nn2_train1.log):
-  round0 = WINS 2/10 frac 1.00 x2, meanfrac 0.356, R spread -0.8..+15.9 (strong
-  advantage variance = real gradient). Random-init policy already wins L1 via
-  persistent-board economy (purchases accumulate across R-restarts).
-- Wedge fixed live: 49384 paused-mid-battle (SPACE unpause + ENTER + R ->
-  planning). to_planning needs unpause probe (SPACE once per iteration when
-  zomb>0 unchanged) - TODO next trainer downtime. Hardcore banner on boards:
-  loss wipes run -> back to L1 (self-heals via START-OVER-less R; curriculum OK).
-- Trainer stack: nn_play2.py (PPO two-head UxC, verified DEPLOY/BUILD hotkey
-  map from live HUD: 1 Napalm $100, 2 Mortar $79, 3 Sniper $50, 4 Turret $90,
-  5 Mine $15, 6 C4 $500, T GasMortar $90, B Safe-Zone, F Upgrade, G Gate,
-  Z Wall, Q Corridor, E Hold; READY=[Spc]; L3 zone cap 9 zones/44% land).
-  v1 nn_play.py dead-ended (flat head, 16 all-loss eps) — history only.
-- Economy facts: R keeps placements+loadout+LEFTOVER BUDGET (board invests
-  grow across episodes); START OVER = full reset; L1 = 8,142 civ $3,111 cap
-  30%; L3 fresh = 99,843 civ; hardcore banner: loss wipes run back to L1.
-- Boards: 49320 49276 49384 39160 21992 (L1-lineage, training, hardcore runs);
-  inst2 45120 idle L3 E-zone reference board ($69). Fresh-board nav =
-  scripts/launch_boards.py (MAP-COMPLETE layout: NORMAL(705,765) START
-  OVER(705,926)).
-- Zone tool = B (VERIFIED, arms wall-start prompt; fee on close; model draws
-  rect from cell c to c+4).
+## CURRENT STATE (2026-11-17k — kit-corrected PPO, 7 boards)
+- Git: pushed thru 0417638. KEYBIND CONTRACT (AGENTS.md): battle keys 1-5 are
+  loadout-bound; pinned WIN kit = 1 heli, 2 CTA x2, 3 Rally x3, 4 MEDEVAC x4,
+  5 Seek x1 (0/2 SP). cc8ef9f wired this + obs kit slots + labels (24/24).
+- 0417638: pause watchdog FIXED (compared o against prev_o=dict(o) copy of
+  itself -> false SPACE every 2nd battle iteration; now dedicated wprev
+  snapshot, phase resets, 2-comparison threshold, UNPAUSE log line) +
+  restored lost obs.append (all episodes were SKIP short traj = PPO dead) +
+  scripts/launch_extra.py (clone boot). visualizer/test_watchdog.py 6 tests
+  drive real run_episode w/ fake env (5 fail on cc8ef9f, 30/30 after).
+  LIMITATION: stationary counters can't distinguish pause vs dialog/menu.
+- Boards: inst1..inst6 live L1 (pids per psutil dirname; DLL injected);
+  inst7/inst8 clones (from inst6) booting via launch_boards.py; tile new
+  pids into SLOTS (0,301)/(1265,301) 1295x837 via launch_extra.tile().
+- L1 facts: civ0 8142, money 3111, naked board dies <4 s (t=4 end screen,
+  no HUD bar visible = kit bar probe needs a surviving board).
+- Trainer: python -u scripts/nn_play2.py train --pids <7 pids> --eps 2
+  --rounds 14 | tee analysis/nn2_train_kit2.log. NEVER edit scripts/*.py
+  while workers live. First-round audit: 'ep pid' lines (no SKIP), no
+  UNPAUSE during falling zomb curve, runtime frames labels-ok.
 ## NEXT STEPS
-1. Monitor Nn2Train1 (analysis/nn2_train1.log): round wins/meanfrac trend +
-   ppo2 loss; commit logs every couple rounds, push milestones.
-2. Next trainer downtime: to_planning() unpause probe (SPACE when counters
-   frozen with zomb>0); stray-SPACE pause is the recurring wedge.
-3. Escalate: wins at >=35% badge; boards rotate L1->L2->... via win ENTER
-   chain; keep >=35% per level bar; BC from best episodes if PPO slow.
-4. Watch ammo-cliff: mortars dry (no resupply) -> kills plateau late battle;
-   model must learn heli/AC130 micromanagement (feature blob exists).
-5. Phase end: kill instances, port new Steam build (RE-DERIVE MEMORY RVAs!),
-   re-baseline, final tracker + notes update, push.
+1. Monitor kit2 log: wins/meanfrac trend; UNPAUSE lines only on true wedges.
+2. Kit receipts audit: garrison money drops (succ rows), heli zomb drops,
+   charges decrement vs reality; badge>=35% goal per ml-spec gates.
+3. BC from best episodes (winners + it17 recipe) -> PPO warm start.
+4. Phase end: kill instances, update tracker + AGENTS, push.
 
 ## VERIFIED CAPABILITIES (condensed; details notes/automation.md)
 1. Parallel unfocused copies; virtual input per instance (DLL): clicks, keys,
