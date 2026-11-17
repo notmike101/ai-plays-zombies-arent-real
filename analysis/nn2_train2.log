@@ -1,0 +1,42 @@
+ep pid 49320 win False frac 0.0 R -0.1
+ep pid 49320 win False frac 0.0 R -0.2
+ep pid 49276 win False frac 0.81 R 2.0
+ep pid 49276 win False frac 0.81 R 3.46
+ep pid 49384 win True frac 1.0 R 15.33
+ep pid 49384 win False frac 0.0 R -0.52
+ep pid 39160 win False frac 0.0 R -0.13
+ep pid 39160 win False frac 0.0 R -0.16
+ep pid 21992 win False frac 0.809 R 3.38
+ep pid 21992 win False frac 0.809 R 9.98
+ppo2 batch loss 39.829
+ppo2 batch loss 38.458
+ppo2 batch loss 36.687
+ppo2 batch loss 35.379
+round 0: wins 1/10 meanfrac 0.424
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play2.py", line 109, in run_episode
+    o = env.to_planning()          # R-loop to planning ONLY (net readies)
+  File "D:\zar-scratch\scripts\env_zar.py", line 164, in to_planning
+    raise ZAREnvError('not planning: %s' % o)
+env_zar.ZAREnvError: not planning: {'civ': 6591, 'zomb': 1951, 'converting': 10, 'corpses': 0, 'police': 0, 'money': 3111.0}
+  File "D:\zar-scratch\scripts\nn_play2.py", line 109, in run_episode
+    o = env.to_planning()          # R-loop to planning ONLY (net readies)
+  File "D:\zar-scratch\scripts\env_zar.py", line 164, in to_planning
+    raise ZAREnvError('not planning: %s' % o)
+env_zar.ZAREnvError: not planning: {'civ': 6591, 'zomb': 1951, 'converting': 10, 'corpses': 0, 'police': 0, 'money': 3111.0}
+ep pid 49320 win False frac 0.0 R -0.1
+ep pid 49320 win False frac 0.0 R -0.18
+ERR 49276 not planning: {'civ': 6591, 'zomb': 1951, 'converting': 10, 'corpses': 0, 'police': 0, 'money': 3111.0}
+ERR 49276 not planning: {'civ': 6591, 'zomb': 1951, 'converting': 10, 'corpses': 0, 'police': 0, 'money': 3111.0}
+ep pid 49384 win True frac 1.0 R 15.83
+ep pid 49384 win False frac 0.0 R -0.36
+ep pid 39160 win True frac 1.0 R 9.73
+ep pid 39160 win False frac 0.0 R -6.2
+ep pid 21992 win False frac 0.0 R -0.1
+ep pid 21992 win False frac 0.0 R -0.28
+ppo2 batch loss 61.55
+ppo2 batch loss 60.296
+ppo2 batch loss 59.365
+ppo2 batch loss 58.517
+round 1: wins 2/8 meanfrac 0.250

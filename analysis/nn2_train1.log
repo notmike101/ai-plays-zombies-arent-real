@@ -1,0 +1,133 @@
+ep pid 49320 win False frac 0.0 R -0.39
+ep pid 49320 win False frac 0.0 R -0.79
+ep pid 49276 win False frac 0.0 R -0.1
+ep pid 49276 win False frac 0.0 R -0.11
+ep pid 49384 win True frac 1.0 R 15.81
+ep pid 49384 win False frac 0.761 R 3.1
+ep pid 39160 win False frac 0.0 R -0.25
+ep pid 39160 win False frac 0.0 R -0.11
+ep pid 21992 win True frac 1.0 R 15.89
+ep pid 21992 win False frac 0.803 R 3.37
+ppo2 batch loss 18.879
+ppo2 batch loss 18.806
+ppo2 batch loss 18.764
+ppo2 batch loss 19.016
+round 0: wins 2/10 meanfrac 0.356
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play2.py", line 109, in run_episode
+    o = env.to_planning()          # R-loop to planning ONLY (net readies)
+  File "D:\zar-scratch\scripts\env_zar.py", line 154, in to_planning
+    raise ZAREnvError('not planning: %s' % o)
+env_zar.ZAREnvError: not planning: {'civ': 6194, 'zomb': 2348, 'converting': 24, 'corpses': 0, 'police': 0, 'money': 3111.0}
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play2.py", line 109, in run_episode
+    o = env.to_planning()          # R-loop to planning ONLY (net readies)
+  File "D:\zar-scratch\scripts\env_zar.py", line 154, in to_planning
+    raise ZAREnvError('not planning: %s' % o)
+env_zar.ZAREnvError: not planning: {'civ': 6194, 'zomb': 2348, 'converting': 24, 'corpses': 0, 'police': 0, 'money': 3111.0}
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play2.py", line 109, in run_episode
+    o = env.to_planning()          # R-loop to planning ONLY (net readies)
+  File "D:\zar-scratch\scripts\env_zar.py", line 154, in to_planning
+    raise ZAREnvError('not planning: %s' % o)
+env_zar.ZAREnvError: not planning: {'civ': 6542, 'zomb': 2000, 'converting': 16, 'corpses': 0, 'police': 0, 'money': 2787.0}
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play2.py", line 109, in run_episode
+    o = env.to_planning()          # R-loop to planning ONLY (net readies)
+  File "D:\zar-scratch\scripts\env_zar.py", line 154, in to_planning
+    raise ZAREnvError('not planning: %s' % o)
+env_zar.ZAREnvError: not planning: {'civ': 6542, 'zomb': 2000, 'converting': 16, 'corpses': 0, 'police': 0, 'money': 2787.0}
+ep pid 49320 win False frac 0.0 R -0.28
+ep pid 49320 win False frac 0.0 R -0.45
+ep pid 49276 win False frac 0.0 R -8.13
+ep pid 49276 win False frac 0.0 R -0.18
+ERR 49384 not planning: {'civ': 6194, 'zomb': 2348, 'converting': 24, 'corpses': 0, 'police': 0, 'money': 3111.0}
+ERR 49384 not planning: {'civ': 6194, 'zomb': 2348, 'converting': 24, 'corpses': 0, 'police': 0, 'money': 3111.0}
+ep pid 39160 win False frac 0.0 R -0.42
+ep pid 39160 win False frac 0.0 R -0.15
+ERR 21992 not planning: {'civ': 6542, 'zomb': 2000, 'converting': 16, 'corpses': 0, 'police': 0, 'money': 2787.0}
+ERR 21992 not planning: {'civ': 6542, 'zomb': 2000, 'converting': 16, 'corpses': 0, 'police': 0, 'money': 2787.0}
+ppo2 batch loss 5.701
+ppo2 batch loss 5.418
+ppo2 batch loss 5.24
+ppo2 batch loss 5.07
+round 1: wins 0/6 meanfrac 0.000
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play2.py", line 109, in run_episode
+    o = env.to_planning()          # R-loop to planning ONLY (net readies)
+  File "D:\zar-scratch\scripts\env_zar.py", line 154, in to_planning
+    raise ZAREnvError('not planning: %s' % o)
+env_zar.ZAREnvError: not planning: {'civ': 6542, 'zomb': 2000, 'converting': 16, 'corpses': 0, 'police': 0, 'money': 2787.0}
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play2.py", line 109, in run_episode
+    o = env.to_planning()          # R-loop to planning ONLY (net readies)
+  File "D:\zar-scratch\scripts\env_zar.py", line 154, in to_planning
+    raise ZAREnvError('not planning: %s' % o)
+env_zar.ZAREnvError: not planning: {'civ': 6542, 'zomb': 2000, 'converting': 16, 'corpses': 0, 'police': 0, 'money': 2787.0}
+ep pid 49320 win False frac 0.0 R -0.21
+ep pid 49320 win False frac 0.0 R -0.25
+ep pid 49276 win False frac 0.0 R -8.12
+ep pid 49276 win False frac 0.0 R -0.16
+ep pid 49384 win True frac 1.0 R 15.83
+ep pid 49384 win False frac 0.0 R -6.59
+ep pid 39160 win False frac 0.0 R -0.17
+ep pid 39160 win False frac 0.0 R -0.12
+ERR 21992 not planning: {'civ': 6542, 'zomb': 2000, 'converting': 16, 'corpses': 0, 'police': 0, 'money': 2787.0}
+ERR 21992 not planning: {'civ': 6542, 'zomb': 2000, 'converting': 16, 'corpses': 0, 'police': 0, 'money': 2787.0}
+ppo2 batch loss 55.694
+ppo2 batch loss 52.764
+ppo2 batch loss 49.143
+ppo2 batch loss 46.54
+round 2: wins 1/8 meanfrac 0.125
+ep pid 49320 win False frac 0.0 R -0.12
+ep pid 49320 win False frac 0.0 R -0.17
+ep pid 49276 win False frac 0.81 R 3.53
+ep pid 49276 win False frac 0.81 R 3.51
+ep pid 49384 win True frac 1.0 R 15.92
+ep pid 49384 win False frac 0.0 R -0.53
+ep pid 39160 win False frac 0.0 R -0.11
+ep pid 39160 win False frac 0.0 R -0.11
+ep pid 21992 win False frac 0.809 R 9.96
+ep pid 21992 win False frac 0.809 R 3.49
+ppo2 batch loss 3443.996
+ppo2 batch loss 3388.772
+ppo2 batch loss 3349.043
+ppo2 batch loss 3308.876
+round 3: wins 1/10 meanfrac 0.424
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play2.py", line 109, in run_episode
+    o = env.to_planning()          # R-loop to planning ONLY (net readies)
+  File "D:\zar-scratch\scripts\env_zar.py", line 154, in to_planning
+    time.sleep(1.2)
+    ~~~~~~~~~~^^^^^
+env_zar.ZAREnvError: not planning: {'civ': 6591, 'zomb': 1951, 'converting': 10, 'corpses': 0, 'police': 0, 'money': 3111.0}
+  File "D:\zar-scratch\scripts\nn_play2.py", line 109, in run_episode
+    o = env.to_planning()          # R-loop to planning ONLY (net readies)
+  File "D:\zar-scratch\scripts\env_zar.py", line 154, in to_planning
+    time.sleep(1.2)
+    ~~~~~~~~~~^^^^^
+env_zar.ZAREnvError: not planning: {'civ': 6591, 'zomb': 1951, 'converting': 10, 'corpses': 0, 'police': 0, 'money': 3111.0}
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\nn_play2.py", line 109, in run_episode
+    o = env.to_planning()          # R-loop to planning ONLY (net readies)
+  File "D:\zar-scratch\scripts\env_zar.py", line 154, in to_planning
+    time.sleep(1.2)
+    ~~~~~~~~~~^^^^^
+env_zar.ZAREnvError: not planning: {'civ': 7552, 'zomb': 990, 'converting': 4, 'corpses': 0, 'police': 0, 'money': 3111.0}
+ep pid 49320 win False frac 0.0 R -0.1
+ep pid 49320 win False frac 0.0 R -0.07
+ERR 49276 not planning: {'civ': 6591, 'zomb': 1951, 'converting': 10, 'corpses': 0, 'police': 0, 'money': 3111.0}
+ERR 49276 not planning: {'civ': 6591, 'zomb': 1951, 'converting': 10, 'corpses': 0, 'police': 0, 'money': 3111.0}
+ep pid 49384 win True frac 1.0 R 15.83
+ep pid 49384 win False frac 0.0 R -6.24
+ep pid 39160 win True frac 1.0 R 15.9
+ep pid 39160 win True frac 1.0 R 15.85
+ERR 21992 not planning: {'civ': 7552, 'zomb': 990, 'converting': 4, 'corpses': 0, 'police': 0, 'money': 3111.0}
+ep pid 21992 win False frac 0.0 R -0.12
+ppo2 batch loss 608.588
+ppo2 batch loss 600.352
+ppo2 batch loss 589.188
+ppo2 batch loss 579.311
+round 4: wins 3/7 meanfrac 0.429
+[ready] frozen -> SPACE

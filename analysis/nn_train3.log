@@ -27,3 +27,30 @@ ppo batch loss 15.351
 ppo batch loss 13.892
 ppo batch loss 12.521
 round 1: wins 0/8 meanfrac 0.000
+ep pid 49320 win False frac 1.0 R 4.9
+ep pid 49320 win False frac 1.0 R 4.9
+ep pid 49276 win False frac 1.0 R 4.9
+ep pid 49276 win False frac 1.0 R 4.9
+ep pid 49384 win False frac 1.0 R 4.9
+ep pid 49384 win False frac 1.0 R 4.9
+ep pid 39160 win False frac 1.0 R 4.9
+ep pid 39160 win False frac 1.0 R 4.9
+ppo batch loss 14.167
+ppo batch loss 10.121
+ppo batch loss 7.168
+ppo batch loss 4.988
+round 2: wins 0/8 meanfrac 1.000
+ep pid 49320 win False frac 0.0 R -8.1
+ep pid 49320 win False frac 0.0 R -8.1
+ep pid 49276 win False frac 0.0 R -8.04
+ep pid 49276 win False frac 0.0 R -8.04
+ep pid 49384 win False frac 0.0 R -8.04
+ep pid 49384 win False frac 0.0 R -8.04
+ep pid 39160 win False frac 0.0 R -8.02
+ep pid 39160 win False frac 0.0 R -8.02
+ppo batch loss 22.104
+ppo batch loss 20.261
+ppo batch loss 18.434
+ppo batch loss 16.634
+round 3: wins 0/8 meanfrac 0.000
+done
