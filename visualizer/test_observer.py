@@ -104,6 +104,28 @@ class ObserverTests(unittest.TestCase):
             frame = other.snapshot()
             self.assertIn('unsupported', frame['error'].lower())
             self.assertNotIn('graph', frame)
+            self.assertTrue(other.publish())
+        finally:
+            other.close()
+
+    def test_snapshot_does_not_retain_masked_output_alias(self):
+        with torch.no_grad():
+            u, *_ = self.net(torch.ones(1, 1, 3))
+            expected = u.flatten().tolist()
+            u.fill_(-1e9)
+        self.assertEqual(self.observer.snapshot()['values']['hu'], expected)
+
+    def test_changed_dimensions_rebuild_graph(self):
+        other = Observer(Policy(width=12).eval(), 124, 'new-model', directory=self.tmp.name)
+        # Keep the observed model alive as the trainer would.
+        net = Policy(width=12).eval()
+        other.close()
+        other = Observer(net, 124, 'new-model', directory=self.tmp.name)
+        try:
+            with torch.no_grad():
+                net(torch.ones(1, 1, 3))
+            graph = other.snapshot()['graph']
+            self.assertEqual(next(l['size'] for l in graph['layers'] if l['id'] == 'gru'), 12)
         finally:
             other.close()
 
