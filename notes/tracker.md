@@ -1,6 +1,20 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — learning audit complete, training LIVE)
+## CURRENT STATE (2026-11-17 — zero-context handoff verified, training LIVE)
+- Entry points: root README.md -> AGENTS.md -> notes/operator-runbook.md ->
+  this CURRENT STATE -> notes/ml-spec.md. Runbook has checkpoint preflight,
+  resource-limited resume, server reuse/start/stop, guarded process cleanup and
+  a new-session prompt. Current weights/copies are local, not supplied by Git.
+- Documentation-only validation: all7 PowerShell blocks parse; all3 embedded
+  Python blocks parse. Actual dependency/checkpoint preflight PASS. Isolated
+  hidden server on127.0.0.1:8766 served /api/state; documented guarded stop PASS,
+  test PID16748 exited and port closed. Initial guard rejected Windows conhost;
+  corrected to allow only the same Python exe or system32/conhost descendants.
+  No test game or preview was launched. Actual training stop was NOT exercised.
+- Production server22604 (created1794931712.9690397) remained on8765. Fresh real
+  worker31408/game22828 battle frame sequence47:332 input labels,no label warning,
+  preview=false. Training/game/server identities unchanged across lifecycle test.
+  No Qwen/new-agent trial was run; this is a tested runbook, not a model guarantee.
 - Prior run99adb97241d2 ended after4 updates/8 records (6 aborted battles,1 timeout,
   1 interface error); launcher/game cleaned. Latest checkpointc42691fb23e296d7.
 - Root cause reproduced: undo leaves safe-zone tool selected; its hotkey toggles
@@ -14,11 +28,14 @@
   byte-identical; probe26456 cleaned. See notes/learning-audit.md.
 - Active runb39316bdad21: launcher25848,trainer28856,worker31408,game22828(inst1).
   Resumed schema3 policy/Adam; seed20261140,eps2,rounds200. BELOW_NORMAL,CPU0-7,
-  low graphics,normal difficulty. Round0 completed two battles:7.44%,4.95% saved;
-  checkpoint7e51f12f76e78de3 includes learning revision1 and10 Adam states.
-  Round1 planning observed live;332 input labels and no label warning.
-- Headroom samples:CPU9.7-12.6%,GPU25-35%,RAM13.51-13.61GiB available,
-  VRAM3345-3361/10240MiB,D:13.22GiB free. Samples are not hard GPU/RAM caps.
+  low graphics,normal difficulty. Latest observed:8 updates through round7;
+  checkpoint842fdf1aff8a0d80. Latest pair: planning timeout(saved=null), aborted
+  battle9.90% saved. Objective remains unmet. Checkpoint preflight confirmed
+  saved policy+nonempty Adam state, schema3, learning revision1.
+  Creation times: launcher1794944254.8318655,trainer1794944344.6409335,
+  worker1794944347.6272433,game1794944255.099634. Revalidate before using any PID.
+- Latest headroom sample:CPU16.8%,GPU37%,RAM14.10GiB available,
+  VRAM3253/10240MiB,D:13.20GiB free. Samples are not hard GPU/RAM caps.
 - Logs: analysis/nn3_learning_audit_20261117.log and
   nn3_learning_audit_launcher_20261117.log/.err. Native replay cleanup remains active.
 - Training left running with per-batch checkpoints and launcher cleanup on exit.

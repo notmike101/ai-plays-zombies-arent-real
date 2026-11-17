@@ -76,6 +76,9 @@ not just a running process. Boot normally takes about 95 seconds. Planning, menu
 and modal dialogs can pause simulation/dumps. Stale telemetry alone is not proof
 of a hang. For errors, read `automation.md`, `learning-audit.md` and the actual
 traceback before retrying; do not repeatedly launch new copies.
+Judge results by `saved_frac`, `end`, `scenario` and `advance`: a planning timeout
+has `saved_frac=null`. Its `observed_saved_frac`/legacy `frac` may be 1.0 because
+the battle never started; that is not a 100% save or a win.
 
 ## 3. Resume training only when no trainer is active
 
@@ -240,6 +243,12 @@ uncertainties and next steps. Stop temporary test instances; preserve intended
 training. Commit only your changes through the identity helper, with Conventional
 Commits; push at milestones. Do not include ignored checkpoints/logs or unrelated
 pre-existing dirty files.
+
+Use `node D:/github-agent/identity.mjs git ...` for **all** Git commands and the
+same helper with `gh` for GitHub. For example, after staging only your named files:
+`node D:/github-agent/identity.mjs git commit -m "docs: update operator handoff"`,
+then `node D:/github-agent/identity.mjs git push`. The helper supplies contribution
+identity; do not bypass it with personal credentials or amend unrelated history.
 
 For model/feature/telemetry changes, run the checks required by AGENTS.md. Tests,
 live validation and remaining learning gaps are recorded in `learning-audit.md`

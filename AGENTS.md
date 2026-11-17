@@ -24,6 +24,8 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   `https://github.com/notmike101/ai-plays-zombies-arent-real`. Commit EVERY file
   update IMMEDIATELY, ALWAYS Conventional Commits (`feat:`/`fix:`/`chore:`/
   `docs:`/`test:`); push at milestones. Never force-add gitignored artifacts.
+  Use `node D:/github-agent/identity.mjs git ...` (and `... gh ...`) for all
+  Git/GitHub commands; preserve its default contribution identity.
 - Update `notes/*` (not this file) with new verified mechanics/traps as found.
 - No subagents. Kill test instances at phase end. Update tracker before yielding
   a long run.
