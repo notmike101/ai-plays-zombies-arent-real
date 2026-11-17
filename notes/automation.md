@@ -1,139 +1,125 @@
-# Automation design (VERIFIED + planned) — updated after live probe session
+# Automation interface — verified 2026-11-17
 
+## Current v3 input contract
+Use only VirtualInput + PostMessage. No physical cursor input, admin-console
+commands, or writes to the installed game. Work in game-copies/instN.
 
-## UI/INPUT TRAPS (2026-11-16, all proven painfully)
-- The game IGNORES real mouse entirely (raw-input): NEVER mouse_event/SetCursorPos at it;
-  use the DLL virtual cursor + vi.click (PostMessage client px, png(1942x1256)−(11,40)).
-- Real mouse_event left the game stuck-button-wedged twice; 100%-1core spin + PrintWindow
-  hangs 15-180 s = UI thread dead. Kill+recover to fix; observation stays exact via memory.
-- PrintWindow (harness.grab) deadlocks whenever the UI thread is wedged: ALWAYS wrap in a
-  watchdog thread with ~12-18 s timeout; never block the pipeline on a screenshot.
-- The admin console opens ONLY via virtual-modifier combo:
-  vi.combo_press([VK_CONTROL], VK_SPACE, sc=57) while RUNNING; PostMessage ctrl+space is
-  NOT seen (old zarmem.admin_command = hotkey-storm + pause; don't use it).
-  Then type chars via WM_CHAR + Enter via WM_KEYDOWN/UP 0x0D. 'cure here [r]' etc. run.
-- Keys need window ACTIVE? no — PostMessage keys work unfocused EXCEPT during loadout screen
-  (READY inert) — press Tab to open LOADOUT, click BACK TO PLANNING (client 197,789) first.
-- CLICKING a LOADOUT '+CHOOSE' card wedges the UI thread (popup modal vs PostMessage input):
-  never click CHOOSE; set levels via progress-file resume_loadout (idx15..21 = battle keys
-  1..6,T; level int). Default ability assignment by unlock order — on this save:
-  slot3(idx17)=Cluster bomb, slot4(idx18)=Cure. Cure Lv2 = 5 SP/level x2 = 10 of 18 SP.
+The handoff's absolute-RawInput-only menu claim was contradicted by isolated live
+tests: raw-only events incremented raw_sent but did not move the world cursor,
+purchase anything, or boot the menu chain. Posted-only clicks with the DLL virtual
+cursor reached planning and bought a garrison. The old web-layer, phantom-row,
+pump-lottery and dead-menu theories are withdrawn.
 
-## LEGIT CURE ECONOMY (rules for the ML goal — no admin casts in real runs)
-- [cure] config.ini: unlock_seconds=45 sim-s after outbreak, arrival_seconds=12, sp_cost=5
-  per level (adds charges), cooldown 0 (charges finite), cost in $? per cast scales with
-  cured-pile density x contact_radius^2; cloud radius 20 m; spread: spread_seconds/
-  contact_radius/spread_chance/max_generations; wane_seconds burnout. All hot-reloadable
-  via config.ini (copies only!) — for EXPERIMENTS; winning runs must stay in-game legit.
-- Admin 'cure here 300' discovery runs killed 42k zombies in 2 min — cure cascade scales;
-  the LEGIT cast = bar key '4' click on horde pixel, 2 charges at Lv2.
-- Battle outcomes observable: zomb→0 = horde wiped (win check), civ = saved count; L3 crowd
-  99,843; badges from progress/*.progress (L1 emerald 39.23, L2 diamond 34.31, L3 silver
-  21.14, L4 silver 13.69, L5 bronze 7.91 already banked — resume_stage=3 board $4,223 13%).
-## INPUT CAPABILITY MATRIX (verified on inst2, Boston L5 planning, DPI-aware driver)
-| Action | Works via PostMessage? | Notes |
+Two v3 defects beyond the already-fixed version gate were corrected: the client
+stored screen coordinates in client fields, and raw records used the wrong ABI.
+Win32 x64 mouse RAWINPUT is 48 bytes with a 24-byte header; RID_INPUT=0x10000003,
+RID_HEADER=0x10000005. Tests pin these constants, layout and client coordinates.
+
+All mouse button gestures now share ONE posted edge path. Shared buttons supply
+polling hooks; the single-owner raw pump emits compatibility movement only.
+GetCursorPos converts virtual client pixels to screen pixels with ClientToScreen.
+Drag sends held-button moves and releases in finally. No desktop input is sent.
+
+| Surface/action | Verified path | Evidence |
 |---|---|---|
-| Plain keys (Space/Enter/Esc/arrows/letters/F1-F12) | ✅ YES | scan code required in lParam bits 16-23; works unfocused |
-| UI button clicks (pause menu, HUD buttons, dialogs) | ✅ YES | client coords in PHYSICAL pixels (DPI 150%!) |
-| Mouse wheel zoom | ✅ YES | WM_MOUSEWHEEL needs SCREEN coords in lParam |
-| Mouse move → game cursor (F6 [view] cursor follows exactly) | ✅ YES | camera mapping verified: cursor = center + (client−center)/zoom |
-| Map tool hover effects (price labels, tooltips) | ❌ NO | follow the REAL cursor (GetCursorPos) |
-| Map tool placement (garrison etc.) | ❌ NO | game polls GetAsyncKeyState(VK_LBUTTON) — posted clicks never seen |
-| Modifier combos (Ctrl+Space console, Shift+F6 log) | ❌ NO | game polls real modifier state (GetAsyncKeyState) |
+| Play Now / CAMPAIGN / START OVER | Virtual cursor + posted mouse movement/edges | Fresh L1 $3111, 8142 civilians, planning dump |
+| World garrison | Key 1 + vi.click | Exactly 1 garrison, $3111 -> $3037.80 |
+| Safe-zone polygon | B; press at each corner; Enter | Four segment drags: $3037.80 -> $2247.10, 22 wall records |
+| Wall | Z; start press, movement, end press | Drag + endpoint click: $2247.10 -> $2189.93, walls 22 -> 23 |
+| Single freehand stroke | Does not commit zone/wall in this build | Corner/end presses are required |
+| Wheel | vi.wheel(+1/-1), WM_MOUSEWHEEL | Zoom .5795 -> .6374 -> .5795; world cursor unchanged |
+| READY confirmation | SPACE then SPACE, correct scan codes | Zombies >0 |
+| Restart confirmation | Existing env.to_planning() R loop | Planning, placements and budget retained |
+| Other dialogs | Bound Enter/Space/Esc keys | Arbitrary dialog mouse targets were not audited |
+| Raw-only menu/world mouse actions | Not the supported action path | Isolated tests produced no successful action |
 
-**ROOT CAUSE of the earlier "mouse dead" conclusion: DPI.** The desktop runs at 150% DPI.
-DPI-unaware processes (our Python) get virtualized rects (1295x837) while the game's real
-window is 1942x1256 physical. `game_drive.py` now calls SetProcessDpiAwarenessContext(-4)
-at import — all coords are physical. ALWAYS import game_drive (it sets DPI awareness).
+A segment drag starts with a press, which supplies a polygon corner. Four such
+segments plus Enter are a polygon, not a continuous freehand lasso. Do not add raw
+wheel: posted wheel passes the anchor check. Win32 raw wheel is usButtonFlags
+0x0400 plus signed usButtonData; 0x0010 is middle-button-down, not wheel.
 
-Coordinate helpers (client offset for a window): border_x = (winW − clientW)/2 (11 px),
-top offset = winH − clientH − border_x (45 px at 150%). WM_MOUSEWHEEL lParam = screen coords.
+## Coordinates, keyboard, and state
+- GetClientRect supplies physical client pixels. Menu coordinates are fractions:
+  PlayNow (.4245,.844), CAMPAIGN (.207,.368), START OVER (.451,.738).
+- Scan codes: SPACE=57, ENTER=28, ESC=1, R=19, F6=64. Stray SPACE toggles pause.
+- F6 writes only in-world. Menu/dialog silence is not proof of a hang. Filenames
+  have one-second precision; wait >=1.1 s between snapshots to avoid overwrites.
+- Fresh dump phase/economy/view is acceptance truth. obs() counters can describe
+  a world behind a menu. obs().money can select a stale positive mirror: measured
+  2247.10 while fresh dump money and RVA 0x65d9c0 were 1573.65. Use dump economy
+  for receipts. Existing env_zar.py and trainer public APIs remain unchanged.
+- Normal settings are reported as difficulty=Adaptive, hardcore=false,
+  ultra_hardcore=false, assist_level=0. Tests use F1 for 1x sim speed.
 
+## Shared section and injection
+ZARVI_<pid> is 0x100 bytes, magic 0x5A415249, version=3 at 0x04. Creation and
+validation use one native VERSION constant; Python validates it before enabling.
 
-## MENU INPUT — v0.42.1 Steam-update build (verified 2026-11-17, inst4 43876, hookdll v2)
-Steam auto-updated the copies; menus moved to RAWINPUT hit-testing:
-| Menu action | PostMessage | Physical SendInput (foreground) |
-|---|---|---|
-| Clicks (all menu buttons/rows) | ❌ DEAD | ✅ works (ABSOLUTE|VIRTUALDESK 0-65535; game must be FOREGROUND — WM_INPUT only reaches the focused app) |
-| WM_MOUSEWHEEL (campaign list scroll) | ✅ works | ✅ |
-| List selection arrows | ✅ ONLY with lParam bit24 EXTENDED set; UP=-1 DOWN=+1 WRAPS (e.g. 13->-2->11) | ✅ |
-| TAB focus ring | ✅ moves (no activation bound: SPACE/ENTER dead) | — |
-| ESC back | ✅ | ✅ |
-- Coordinate transform for physical clicks from capture (PrintWindow 1942x1256 incl. chrome):
-  `phys_client = cap/1.5 − (11, 37)` — python must be DPI-aware (SetProcessDPIAware) so
-  ClientToScreen takes physical client px (1280? no: physical client = 1920x1200 space? see
-  menu_nav.cap_to_client — verified against Boston row hit).
-- Campaign list = 13 rows + phantom 0; selection ONLY by click; wheel = scroll; state
-  machine is deterministic IF keys go >=0.45s apart + >=2s drain (queue latency lies).
-- scripts/menu_nav.py = driver (MenuDriver.click_cap / arrow / wheel / shot+diff).
-- Welcome page (EA Online, Play Now disabled ~30s) accepts pumped vi clicks when raw pump
-  + foreground line up; if wedged: wheel/ESC still work.
-- WORLD page: virtual crosshair renders at vi coords (GetCursorPos hook OK, armed banner
-  shows); purchase clicks under the new build are UNCONFIRMED (bg test in flight).
-## What this means
-- Harness can fully drive: menus, level select, loadout, READY, pause/speed, F6 dumps,
-  screenshots, zoom, pan? (WASD keys) — all unfocused, N instances parallel.
-- Map interactions blocked on: REAL cursor (GetCursorPos) + REAL mouse buttons/modifiers
-  (GetAsyncKeyState). Confirmed experimentally (garrison placement attempts failed while
-  UI clicks succeeded; F6 cursor matched posted moves but hover labels didn't move).
+| Offset | Field |
+|---|---|
+| 0x08 | enabled |
+| 0x0C / 0x10 | signed CLIENT x / y |
+| 0x14 | button bits left=1, right=2, middle=4 |
+| 0x18 | keys[8], u32 bitsets |
+| 0x38 | lock-key toggles |
+| 0x3C | heartbeat |
+| 0x40 | patch_count; 4 for this binary, GetKeyboardState is not imported |
+| 0x48 | u64 raw_hwnd |
+| 0x50 | raw_sent: emission count, NOT proof of consumption |
+| 0x54 | primary monitor width |
+| 0x58 | last abs-normalization failure: 1 metrics, 2 ClientToScreen |
+| 0x5C | pump tick counter |
+| 0x60 | reserved |
 
-## Paths to full map interaction (pick in order)
-1. **Rust hook DLL (RECOMMENDED, toolchain verified)**: `cargo build --release` works
-   (D:\zar-scratch\scripts\hookdll builds a cdylib). Write a cdylib that:
-   - is injected into zombies-arent-real.exe (VirtualAllocEx + LoadLibrary shellcode via
-     CreateRemoteThread — all doable from Python ctypes),
-   - IAT-hooks or inline-hooks `GetCursorPos`, `GetAsyncKeyState`, `GetKeyState` (maybe
-     `GetRawInputData`/`SetCursorPos`),
-   - serves scripted cursor/buttons/modifiers from a named pipe or memory-mapped file,
-   - lets each instance have a fully virtual mouse/keyboard → TRUE parallel automation,
-     no focus stealing, no real cursor movement.
-   Fallback if hooking raw input too: also fake WM_INPUT via the WndProc (sokol processes
-   it if registered with RIDEV_INPUTSINK).
-2. **SendInput bursts + temporary foreground** (no RE, mildly disruptive): SetForegroundWindow
-   (minimize/restore dance verified works), SetCursorPos over the instance window, SendInput
-   clicks/keys/modifiers, restore previous foreground. One instance at a time; cursor moves
-   visibly. OK for experiments; poor for long parallel training.
-3. **Co-op protocol** (--coop-host port): guest sends plan edits + deployments. Clean but
-   needs full protocol RE (framing unknown).
-4. **Plan-file (.prep NMPL) writes + battle_replay authored deployments**: no live input for
-   placements at all. Format partially decoded (see notes/prep-format.md); needs verification
-   that authored files load. Combine with (1) for battle-time actions.
+vi.diagnostics() returns these fields. VirtualInput(pid, inject=True) first reuses
+an existing valid section. New injection acquires sessions/.zarvi_<pid> exclusively;
+a failed injection requires a process restart, never reinjection. PID reuse is
+checked against creation time. Remote thread waits are bounded to 15 s. Native
+initialization is idempotent; external shared-state reads are volatile snapshots.
+Rename the old target/release/hookdll.dll before cargo build --release, then
+restart owned copies to load the new image. Never re-inject a mapped DLL.
 
-## Verified game behaviors used by the harness
-- Level load via keyboard: Space (skip welcome) → Enter (CAMPAIGN) → Enter (Boston selected)
-  → Enter (CONTINUE LEVEL 5). Esc cancels READY dialog; N does NOT. Esc opens pause menu;
-  RESUME button click works. READY confirm: Space=YES.
-- Game pauses in various situations (dialogs, F6 dump write); **Space unpauses** (verified).
-- Sim RUNS UNFOCUSED (verified: 123k moving pixels over 4s while user's game foreground).
-- F6 dump: heavy (275MB .state) and appears to pause the sim; use sparingly in loops;
-  prefer screenshots + .txt parse at low frequency.
-- The user's game is PID-identifiable by window rect (2695x1602 physical = their 1797x1068
-  virtual size); test instances show 1942x1256 physical (1295x837 virtual).
-
-## Harness sketch (per instance)
+## Boot and tests
+```python
+from zar_boot import boot, stop
+env = boot(r'D:\zar-scratch\game-copies\inst4', ('campaign', 'stage1'))
+try:
+    assert env.phase_now() == 'planning'
+finally:
+    stop(env)
 ```
-game-copies/instN/            # own steam_cloud, config.ini (features.dev=true), maps (boston only)
-scripts/game_drive.py         # keyboard/UI-click/shot driver (DPI-aware) — WORKS TODAY
-scripts/hookdll/              # Rust cdylib (build verified) → virtual input per instance
-scripts/inject.py             # TODO: ctypes injector (VirtualAllocEx/LoadLibrary/CreateRemoteThread)
-scripts/harness.py            # TODO: episode loop: load L5 → plan (via DLL-virtual input) →
-                              #       READY → speed 4x/8x → poll state → reward → next episode
-sessions/<run>/               # telemetry, checkpoints, episode records
-```
-- Checkpoints: snapshot `steam_cloud/` (plans/progress/outbreaks/unlocks/settings) per copy +
-  determinism (seed+plan+actions) + F6 .state for post-hoc analysis.
-- Mute: settings.ini master_volume=0 per copy (done in inst1/inst2 templates).
-- Reward: end-of-battle JSONL (schema in notes/engine.md) or F6 .txt saved_pct/counts;
-  screenshots for spatial observation; .state for full detail (offline parse).
+boot refuses foreign/busy directories and non-normal settings. It launches detached,
+waits <=90 s for a window, injects once, waits until 75 s after launch, navigates,
+then verifies Boston/stage/planning and fresh L1 money/civilians. Failed boots kill
+their owned process and report the step plus section diagnostics. An ESC fallback
+runs only after failing to enter the world: unconditional ESC backs out of a clear
+campaign page. Environment attachment is serialized around the existing memscan
+ctypes signature; launch and menu navigation remain concurrent.
+Destinations: ('campaign','stage1') and ('campaign','continue'); other destinations
+fail before launch. No progress edits unlock stages. Continue invokes to_planning
+when needed. Verify coverage in tracker; an API option alone is not live proof.
 
-## Open questions
-- Verify authored .prep loads (need one controlled plan↔bytes pair; game can't place without
-  real cursor — after hook DLL, place one unit and dump .prep to get the pair).
-- Whether authored [replay] deployment records are honored by features.battle_replay=true.
-- Exact zombie-outbreak math: observed 8,601 zombies at tick 273 on L5 (expected ~6 sites × 360
-  = 2,160) — conversions from bites inflate count; recheck semantics.
-- Whether GetKeyState (sync state) works for modifiers with LONG posted holds — tested 0.35s
-  hold, still failed → GetAsyncKeyState (async/global) confirmed in use. Hook DLL must cover it.
+```powershell
+$zarPython = "$env:LOCALAPPDATA\Python\pythoncore-3.14-64\python.exe"
+& $zarPython -B -m unittest discover -s scripts -p 'test_zar_*.py'
+cargo test --manifest-path scripts/hookdll/Cargo.toml
+& $zarPython -B scripts/test_interface.py --copy inst4 --repeat 2
+& $zarPython -B scripts/zar_boot.py inst1 inst2 inst3 inst4
+```
+Acceptance logs: analysis/interface-<timestamp>.log, PASS/FAIL table, nonzero failure
+exit. The parallel CLI checks all worlds coexist in planning, then kills its games
+in finally. Missing copies are cloned from inst4 including steam_cloud. It refuses
+busy copies. Neither script takes screenshots or uses console commands.
+
+Inst4's badges were intact (39.23, 34.31, 21.14, 13.69, 7.91). Backups before scale
+are in analysis/interface-progress-backups; no badge restoration was needed.
+Evidence: analysis/interface-*.log and interface-{pe-imports,raw-xrefs,raw-consumer}.json.
+Final results and process inventory: notes/tracker.md.
+
+## Historical game observations
+The following preserves prior battle/mechanics evidence. Current interface guidance
+above supersedes historical input claims. Console experiments below do not authorize
+console use in automation or acceptance tests.
 
 ## FREE PLAY path — VERIFIED LIVE (2026-11-15, inst2 pid 10100)
 Navigation (virtual input, all unfocused): globe home → click FREE PLAY → list.
@@ -156,22 +142,8 @@ The Free Play tab holds:
   separate from campaign progress (steam_cloud/sandbox/ folders per config paths).
 - Sandbox was toggled ON then back OFF live via virtual clicks; state restored to OFF.
 
-### Menu navigation notes (verified)
-- Launch behavior varies: a fresh launch resumes the last autosaved session directly
-  ("play_scenario started ... stage 4" at t=0 in logs/coop-*.txt) when the previous
-  instance died mid-session; otherwise it opens the globe home.
-- Pause menu: Esc in a level; MAIN MENU returns to the tab the level was entered from
-  (Free Play list if entered via Free Play).
-- Keyboard: Esc = BACK one menu level (verified); plain Down/Enter did NOT move the globe
-  home selection reliably (menu selection appears mouse-driven there) — use virtual clicks
-  with pixel-measured button positions (Read-tool image displays downscale the 1942x1256
-  physical captures ~1.33x; measure on the PNG file, then subtract client offset (11,45)).
-- Virtual clicks work on menu buttons (verified: SANDBOX toggle, level rows, PLAY NOW,
-  CONTINUE, MAIN MENU from pause). One transient freeze occurred during a globe transition
-  (window stopped pumping messages ~1 min; killed + relaunched); cause unknown — retry on
-  freeze, avoid stacking rapid menu clicks.
-- PrintWindow grab() blocks while the game's message loop is busy (map install/load) —
-  bound observation calls with timeouts when a load may be running.
+### Menu navigation
+Current interface guidance above supersedes these historical observations.
 
 ### Harness implications
 - For ML episodes on Boston L5 with the REAL campaign rules: use the Campaign tab path or
@@ -346,12 +318,7 @@ out-breeds any static defense. What wins (hypothesis to verify with the ML/heuri
 - `scripts/env_zar.py` ZAREnv(pid): obs via RVAs (see memory-map.md), ready(),
   cast(bar_key,x,y) (battle-bar hotkeys '1'-'6','T'), battle(policy) w/ early-stop.
   ZarGame restored in same file for recover.py's make_game imports.
-- HARD input rules: NEVER real mouse_event() (wedges UI; PrintWindow then hangs —
-  recovery = kill + recover.py relaunch->planning ~44s). vi.click = PostMessage,
-  CLIENT px = screenshot png px - (11,40), menus only. MAP placement needs
-  vi.button_down/button_up (the drag() path). Clicking menu CHOOSE (loadout)
-  WEDGES the game — set loadout via progress save file instead:
-  resume_loadout idx17=slot3, idx18=slot4 (23=CURE, 17=Cluster, 12=MGL, 8=Farngren).
+- Historical input assumptions are superseded by the current matrix above.
 - PAUSE trap: any stray SPACE at battle start toggles sim pause (counters frozen,
   cpu ~20%, looks alive). env.ready() now verifies tick movement and presses SPACE
   to self-heal; battle() presses SPACE after 3 static polls. ALWAYS gate on tick.

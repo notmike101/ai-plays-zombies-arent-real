@@ -90,12 +90,29 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   must never target live game PIDs. Check a real fresh worker sample at the next
   coordinated launch; a preview or isolated test does not prove live attachment.
 
+## CURRENT STATE — deterministic interface (2026-11-17)
+- Live results: notes/tracker.md. Contract and offsets: notes/automation.md.
+- scripts/zar_boot.py boots owned copies screenshot-free; scripts/test_interface.py
+  --copy inst4 --repeat 2 checks purchases, gestures, zoom, battle and retry.
+- Four-copy proof: python -B scripts/zar_boot.py inst1 inst2 inst3 inst4.
+- v3 stores CLIENT coordinates. Mouse gestures use the DLL virtual cursor plus one
+  PostMessage edge path. Raw-only menu/world actions FAILED the isolated audit;
+  do not repeat the superseded absolute-RawInput-only menu claim.
+- raw_sent counts emissions, not consumption. Validate actions with dumps/counters.
+- Injection is once per boot; reconnect to the section, never re-inject. Keep DLL
+  creation/version validation/client expectation equal (currently 3).
+
 ## Standing input traps (detail in notes/automation.md)
-- `key_press` needs scan codes (zar_input SC table); READY = SPACE (stray SPACE =
-  pause trap); placements = `vi.click` (CLICK MODE; drags dead in current build);
-  menu clicks = raw screenshot px; NEVER click CHOOSE; edit progress/config FILES
-  + restart instead of dead menu paths; never edit `scripts/*.py` while trainer
-  workers are live (they reimport per episode); F6 dumps freeze while dialogs open.
+- Keys require scan codes. READY=SPACE followed by dialog SPACE; stray SPACE pauses.
+- Menu clicks use GetClientRect fractions. Unconditional ESC can back out of the
+  campaign page; dismiss only a blocker. Never resize a running game.
+- Zones need a press at each corner then Enter; segment drags supply corner presses.
+  Walls need start/end presses. One freehand stroke does not commit either shape.
+- Wheel uses WM_MOUSEWHEEL at the virtual cursor; validate anchoring with F6 view.
+- Fresh dump economy is money truth: obs().money can return a stale positive mirror.
+  F6 writes in-world only and names files to one-second precision.
+- env_zar.py and trainer APIs remain unchanged. Never edit live trainer modules or
+  stop another owner's workers as part of interface maintenance.
 
 ## Phase-end checklist
 1. Tracker + notes updated with verified findings; lessons learned -> notes.
