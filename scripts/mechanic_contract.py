@@ -57,6 +57,18 @@ EXTRA_LABELS += ['Selected building present (0/1)','Selected building class / 7'
 EXTRA_LABELS += [f'Selected unit SP upgrade {i+1} (native level / 4)' for i in range(4)]
 
 
+STATE_CHANNELS = ('wall HP fraction','wall breached cell fraction','wall level / 4','wall construction remaining / 60',
+    'evac width / 1000','evac radius / 1000','evac attraction radius / 1000','evac hold suppressed',
+    'helicopter magazine log1p','helicopter cooldown / 60','helicopter damage log1p','helicopter leaving',
+    'helicopter rearm remaining / 60','helicopter mode / 8','helicopter target X / 10000','helicopter target Y / 10000',
+    'vehicle kind / 4','vehicle magazine log1p','vehicle damage log1p','vehicle returning','vehicle parked',
+    'vehicle rearm remaining / 60','vehicle leaving','vehicle carried log1p','vehicle landed log1p',
+    'vehicle routing','vehicle plowing','vehicle goal X / 10000','vehicle goal Y / 10000',
+    'medevac phase / 8','medevac carried log1p','medevac landed log1p','medevac damage log1p','medevac departure ordered',
+    'hazard kind / 8','hazard radius / 1000','hazard expiry sim time / 600')
+EXTRA_LABELS += [f'Native state {name} cell {i+1} (mean; 0 empty)' for name in STATE_CHANNELS for i in range(48)]
+
+
 def extra_cell_label(tool, cell):
     if tool.startswith('equip_') or tool == 'arm_slot': return f'{tool}: planning slot {cell+1}'
     if tool.startswith('perk_'): return f'{tool}: perk slot {cell+1}'

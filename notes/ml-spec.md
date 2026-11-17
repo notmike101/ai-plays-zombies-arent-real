@@ -7,7 +7,7 @@ normal difficulty. All strategy belongs to the policy.
 
 ## Observations
 
-The policy receives2485 floats per decision. The first332 retain schema3 meanings:
+The policy receives4261 floats per decision. The first332 retain schema3 meanings:
 - 32 scalar/legacy features: populations, money, elapsed time, population trends,
   four deck availability slots, previous action, purchase receipt, phase and spend.
   Thirteen legacy crowd features are currently constant because native-grid

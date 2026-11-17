@@ -8,7 +8,7 @@ from game_mechanics import UNITS, UNIT_IDS, PERKS
 from native_hud import read_panel
 from native_state import NativeState
 from spatial import project, centers, features, inside_polygon, grid_bins, closest_indices, XF, YF
-from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, GRID_CHANNELS, PANEL_ACTIONS
+from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, GRID_CHANNELS, PANEL_ACTIONS, STATE_CHANNELS
 
 PLACEMENTS = {2:'Garrison',3:'Mortar',4:'Napalm',5:'Nest',6:'Mine',7:'C4',8:'GasMortar'}
 PLACEMENTS.update({72+EXTRA_TOOLS.index('place_'+name):name for name in UNITS
@@ -166,6 +166,29 @@ def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, 
             g(buildings['area'][bi]),float(int(buildings['height_packed'][bi])&65535)/1000]
     result += detail
     result += [float(v)/4 for v in maps['upgrades'].get(int(u['id'][indices[0]]),[0]*4)] if len(indices) else [0.]*4
+    w=s['walls'];ev=s['evac'];he=s['helicopters'];ve=s['vehicles'];me=s['medevacs'];ha=s['hazards']
+    he=he[he['alive']!=0];ve=ve[ve['alive']!=0];me=me[me['alive']!=0]
+    hp=s.get('wall_hp',[])
+    wall_fraction=[float(np.mean(v))/max(float(w['full_hp'][i]),1) if len(v) else 0 for i,v in enumerate(hp)]
+    breached=[float(np.mean(v<=0)) if len(v) else 0 for v in hp]
+    log=lambda v:np.log1p(np.maximum(v,0))
+    groups=[((w['a']+w['b'])/2,[wall_fraction,breached,w['level']/4,w['build_left']/60]),
+        (ev['a'],[ev['half_width']*2/1000,ev['radius']/1000,ev['attract_r']/1000,ev['hold_suppressed']]),
+        (he['pos'],[log(he['mag']),he['cooldown']/60,log(he['dmg']),he['leaving'],he['rearm_t']/60,
+                    he['mode']/8,he['heli_target'][:,0]/10000,he['heli_target'][:,1]/10000]),
+        (ve['pos'],[ve['kind']/4,log(ve['mag']),log(ve['dmg']),ve['returning'],ve['parked'],ve['rearm_t']/60,
+                    ve['leaving'],log(ve['carried']),log(ve['landed']),ve['routing'],ve['plowing'],
+                    ve['goal'][:,0]/10000,ve['goal'][:,1]/10000]),
+        (me['pos'],[me['phase']/8,log(me['carried']),log(me['landed']),log(me['dmg']),me['ordered']]),
+        (ha['pos'],[ha['kind']/8,ha['radius']/1000,ha['until']/600])]
+    assert sum(len(values) for _,values in groups)==len(STATE_CHANNELS)
+    for points,values in groups:
+        xy=project(points,camera,width,height)
+        visible=(xy[:,0]>=0)&(xy[:,0]<width)&(xy[:,1]>=.07*height)&(xy[:,1]<.8*height)
+        bins=grid_bins(xy[visible],width,height)
+        count=np.maximum(np.bincount(bins,minlength=48),1)
+        for value in values:
+            result.extend(np.bincount(bins,weights=np.asarray(value)[visible],minlength=48)/count)
     assert len(result)==len(EXTRA_LABELS)
     if not np.isfinite(result).all():raise RuntimeError('Nonfinite mechanics observation')
     return list(map(float,result))

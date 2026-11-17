@@ -207,3 +207,20 @@ linear nearest-target selection, equivalent axis binning, cached unchanged
 building/playarea membership and avoiding civilian string classification.
 122 script tests,37 visualizer tests,12-step observer parity and graph PASS.
 Complete ability/follow-up proofs and final migrated training resume still pending.
+
+
+## Combat and transport state milestone
+
+Schema4 now4261 inputs/181 actions. Added37 spatial mean channels for wall
+HP/breach fraction/level/build progress, evac width/radius/suppression,
+helicopter ammo/cooldown/damage/rearm/target, vehicle kind/ammo/damage/route/
+passengers/return state, medevac phase/passengers/damage/departure order, and
+hazard kind/radius/expiry. Labels specify normalization and0-empty semantics.
+Native arrays remain read-only; policy gets status, not scripted reactions.
+123 script tests and37 visualizer tests pass, including nonzero wall/medevac
+normalization probes. Exact observer/plain outputs and sampled actions match
+for12 recurrent steps; warm medians0.209ms plain/0.473ms observed.
+Live diagnostic receipts: Police,CallArms,Rally,Medevac,Heli,Stungas,Firebomb,
+Missile,Bomber,Cluster consumed native stock. Demolition needs a tall eligible
+building; vehicle drops require valid open ground. Those proofs and medevac
+queued departure remain pending; mere clicks are not success evidence.

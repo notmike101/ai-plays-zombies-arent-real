@@ -88,6 +88,20 @@ class MechanicsTests(unittest.TestCase):
         self.assertEqual(values[EXTRA_LABELS.index('Simulation speed (native half ticks / 8)')],1.)
         self.assertEqual(values[EXTRA_LABELS.index('Gesture anchor cell (/ 48; -1 absent)')],-1.)
 
+    def test_transport_and_wall_state_preserves_normalization_and_empty_cells(self):
+        s=fixture();s['wall_hp']=[np.array([10.,0.])]
+        s['walls']=np.zeros(1,WALL);s['walls']['a']=[100,100];s['walls']['b']=[120,100];s['walls']['full_hp']=20
+        s['medevacs']=np.zeros(1,MEDEVAC);s['medevacs']['alive']=1;s['medevacs']['pos']=[100,100]
+        s['medevacs']['carried']=23;s['medevacs']['ordered']=1
+        values=observation(s,['-']*7,[dict(name='-',locked=False)]*3,{'actions':{}},0,True,0,1920,1200)
+        def channel(name):
+            start=EXTRA_LABELS.index(f'Native state {name} cell 1 (mean; 0 empty)')
+            return values[start:start+48]
+        self.assertAlmostEqual(sum(channel('wall HP fraction')),0.25)
+        self.assertAlmostEqual(sum(channel('wall breached cell fraction')),0.5)
+        self.assertAlmostEqual(sum(channel('medevac carried log1p')),np.log(24))
+        self.assertEqual(sum(channel('medevac departure ordered')),1.)
+
     def test_terrain_codes_bridge_bits_and_outside_sentinel(self):
         s=fixture();s['terrain']['codes'][:3]=[4,0,-1];s['terrain']['bridges'][1]=1
         values=observation(s,['-']*7,[dict(name='-',locked=False)]*3,{'actions':{}},0,True,0,1920,1200)
