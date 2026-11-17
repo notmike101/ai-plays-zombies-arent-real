@@ -120,3 +120,10 @@ Selection corrections from native selcycle and live edge selection:65c4f8 contai
 zone indices,65c4e0/65c4e8 are selected zone/edge (NOT helicopter/vehicle indices).
 65c4b8 is the standalone-wall selection array. Gate placement on the tested zone
 edge did not produce a gate, and roof-unit RMB moves still need investigation.
+
+Schema4 integration staging: mechanic_contract.py and policy_mechanics.py define
+99 appended actions and1991 appended observations (native per-unit variants,
+selected-unit state, roster/perks, camera, geometry, building classes, hazards,
+vehicles and HUD affordances). Three offline semantic/mask/target tests passed.
+A live refresh on inst13 succeeded. These modules are not yet wired into training;
+no schema/checkpoint migration has run, and terrain/follow-up proofs remain pending.
