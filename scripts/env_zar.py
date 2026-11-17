@@ -134,19 +134,29 @@ class ZAREnv:
             prev = o
         return self.obs()
 
-    def to_planning(self, max_r=6):
+    def to_planning(self, max_r=10):
         """R-loop back to PLANNING without starting a new battle (v2 episodes:
-        the NET decides when to READY). Menu/dead states raise."""
+        the NET decides when to READY). Frozen counters = wedge: escalate
+        SPACE (unpause) + ENTER (dismiss OK/loss) before R (verified seq).
+        Menu/dead states raise."""
+        last = None
         for _ in range(max_r):
             o = self.obs()
             if (o['civ'] or 0) > 0 and (o['zomb'] or 0) == 0 \
                     and o.get('money') is not None:
                 return o
+            sig = (o['civ'], o['zomb'])
             if (o['zomb'] or 0) > 0:
+                if sig == last:            # wedged: pause-modal or loss popup
+                    self.vi.key_press(0x20, sc=57, hold=0.25)
+                    time.sleep(1.2)
+                    self.vi.key_press(0x0D, sc=28, hold=0.25)
+                    time.sleep(1.2)
                 self.vi.key_press(0x52, sc=19, hold=0.25)
-                time.sleep(4.0)
-                continue
-            time.sleep(3.0)
+            elif (o['civ'] or 0) == 0 and o.get('money') is None:
+                self.vi.key_press(0x0D, sc=28, hold=0.25)   # loss screen OK
+            last = sig
+            time.sleep(3.5)
         o = self.obs()
         if (o['civ'] or 0) > 0 and (o['zomb'] or 0) == 0 \
                 and o.get('money') is not None:
