@@ -33,6 +33,15 @@ actual training launch/stop is tested with fakes while the real learner is activ
 
 ## Decisions and evidence
 
+### Follow-up: isolated Python environment (authorized 2026-11-17)
+- Add requirements.txt for the five verified runtime dependencies, using CPU-only
+  PyTorch; create an isolated .venv without modifying the active global environment.
+- Switch local.ps1 and visualizer/start.ps1 defaults to repository .venv. Validate
+  interpreter selection, pip consistency, offline regressions/checkpoint parity,
+  read-only preflight and isolated visualizer lifecycle under the new interpreter.
+- Update setup/recovery instructions and AGENTS/tracker. Keep trainer paths/game
+  artifacts explicitly local; this does not claim full game-install portability.
+
 - Reuse `D:\zar-scratch` and its existing Python/artifacts. Refuse a different
   checkout while trainer ROOT remains hard-coded, rather than loading another
   checkout's model silently. Portable paths/releases are deferred deliberately.

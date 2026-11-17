@@ -24,3 +24,6 @@ analysis/nn_hist3.jsonl
 analysis/nn3_*.log
 analysis/nn3_*.err
 analysis/nn3_operator.lock
+
+# Recreate locally from requirements.txt; never commit an interpreter/site-packages.
+.venv/

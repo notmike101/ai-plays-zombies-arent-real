@@ -1,0 +1,8 @@
+# Tested with CPython 3.14 x64 on Windows. CPU-only policy training.
+# Direct dependencies are pinned; pip resolves their transitive dependencies.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.15.0+cpu
+numpy==2.4.6
+psutil==7.2.2
+pefile==2024.8.26
+Pillow==12.3.0

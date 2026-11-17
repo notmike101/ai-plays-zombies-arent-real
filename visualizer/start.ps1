@@ -1,11 +1,11 @@
 param(
     [int]$Port = 8765,
     [switch]$Preview,
-    [string]$Python = "$env:LOCALAPPDATA\Python\pythoncore-3.14-64\python.exe"
+    [string]$Python = (Join-Path $PSScriptRoot '..\.venv\Scripts\python.exe')
 )
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path -LiteralPath $Python)) {
-    throw 'Python was not found. Supply -Python with the full path to your PyTorch Python executable.'
+    throw 'Repository .venv was not found. Follow README.md setup, or supply -Python with a prepared interpreter.'
 }
 $arguments = @('-B', (Join-Path $PSScriptRoot 'server.py'), '--host', '0.0.0.0', '--port', "$Port")
 if ($Preview) { $arguments += '--preview' }

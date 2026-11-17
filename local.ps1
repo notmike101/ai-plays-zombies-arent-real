@@ -1,8 +1,8 @@
-# Entry point for this computer's existing, tested Python environment.
+# Use the repository environment explicitly; activation and PATH are irrelevant.
 $ErrorActionPreference = 'Stop'
-$zarPython = "$env:LOCALAPPDATA\Python\pythoncore-3.14-64\python.exe"
+$zarPython = Join-Path $PSScriptRoot '.venv\Scripts\python.exe'
 if (-not (Test-Path -LiteralPath $zarPython)) {
-    throw 'Known Python is missing. Read notes/local-environment.md; do not reinstall or start random training.'
+    throw 'Repository .venv is missing. Follow the setup commands in README.md before running this tool.'
 }
 & $zarPython -B (Join-Path $PSScriptRoot 'scripts/local_agent.py') @args
 exit $LASTEXITCODE
