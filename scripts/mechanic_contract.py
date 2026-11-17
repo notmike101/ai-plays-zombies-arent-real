@@ -25,7 +25,7 @@ GLOBAL_LABELS = ['Camera X (native m / 10000)','Camera Y (native m / 10000)',
     'Camera zoom (pixels per m / 8)','Placement paint mode (0/1)',
     'READY land and budget legal (0/1)','Land covered (fraction)',
     'Draft polygon vertices (log1p count)','Selected units (log1p count)',
-    'Selected zones (log1p count)','Selected walls (log1p count)','Selected evac zones (log1p count)']
+    'Selected zones (log1p count)','Selected helicopters (log1p count)','Selected evac zones (log1p count)']
 GLOBAL_LABELS += [f'Planning slot {i+1} (native tool ID / 42)' for i in range(7)]
 GLOBAL_LABELS += [f'Perk slot {i+1} {field}' for i in range(3)
                   for field in ('(native ID+1 / 8; 0 empty)','locked (0/1)')]
@@ -37,6 +37,11 @@ SELECTED_FIELDS = ('kind / 10','payload / 5','trap kind / 2','level / 4',
 EXTRA_LABELS = GLOBAL_LABELS + [f'Selected unit {field}' for field in SELECTED_FIELDS] + [
     f'Native grid {channel} cell {i+1} (log1p count)' for channel in GRID_CHANNELS for i in range(48)] + [
     f'Native HUD {name} available (0/1)' for name in PANEL_ACTIONS]
+EXTRA_LABELS += [f'Grid play area cell {i+1} (center inside: 0/1)' for i in range(48)] + [
+    'Gesture anchor tool (extra tool index / 128; -1 absent)',
+    'Gesture anchor cell (/ 48; -1 absent)',
+    'Armed generic placement (native tool ID / 42)',
+    'Armed sniper placement (0/1)','Armed turret placement (0/1)']
 
 
 def extra_cell_label(tool, cell):

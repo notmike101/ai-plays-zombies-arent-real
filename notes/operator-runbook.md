@@ -48,7 +48,7 @@ dumps. Stale telemetry alone is not a hang. Read the actual traceback and
 ```
 
 Defaults: inst1, two episodes per batch, seed20261140, six batches, fresh L1 board,
-existing schema3 policy **and Adam state**, hidden background execution. Change
+existing schema4 policy **and Adam state**, hidden background execution. Change
 the duration deliberately (for example `--rounds 200`); `--copy instN` and `--seed`
 are supported. `--foreground` stays attached to the terminal. Neither mode
 silently creates a random policy. Run `local.ps1 --help` for all options.

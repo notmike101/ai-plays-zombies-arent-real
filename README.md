@@ -86,7 +86,7 @@ dependencies, artifacts and contribution tools on this computer.
 
 The working deployment is `D:\zar-scratch` on Windows. The current trainer is
 `scripts/nn_play2.py`, launched through `scripts/train_run.py`. Current weights
-are `sessions/nn_policy3.pt`; the filename `nn_play2.py` does not mean schema 2.
+are `sessions/nn_policy4.pt`; the filename `nn_play2.py` does not mean schema 2.
 The read-only [visualizer](visualizer/README.md) normally uses port 8765.
 
 **A Git clone alone cannot resume this model.** Current weights, their backup,

@@ -1,13 +1,13 @@
 # Model and learning contract
 
-Current implementation: `scripts/nn_play2.py`, schema3. This document supersedes
+Current implementation: `scripts/nn_play2.py`, schema4. This document supersedes
 the old screenshot-based/L5 draft; Git history retains that draft. The objective
 is at least35% actual civilians saved on every Boston level, consistently, at
 normal difficulty. All strategy belongs to the policy.
 
 ## Observations
 
-The policy receives332 floats per decision:
+The policy receives2376 floats per decision. The first332 retain schema3 meanings:
 - 32 scalar/legacy features: populations, money, elapsed time, population trends,
   four deck availability slots, previous action, purchase receipt, phase and spend.
   Thirteen legacy crowd features are currently constant because native-grid
@@ -20,24 +20,24 @@ The policy receives332 floats per decision:
 
 Native memory is read only after matching the supported executable SHA256.
 Positions use the live camera and client size. Zone geometry comes from fresh
-planning dumps. Inputs, meanings and normalizations are pinned by visualizer
+the native read-only snapshot. Inputs, meanings and normalizations are pinned by visualizer
 labels/tests. Changes require matching schema metadata; never reuse weights with
 silently different feature meanings.
 
-Important missing information: detailed static weapon placement/type/health,
-wall position/health/breaches, walkable terrain/water, playable-map boundary,
-weapon range, building classes and per-target price. Defender people counts are
-not a complete map of all turrets/garrisons/mortars. A GRU cannot reliably recover
-unobserved carried placements, especially when its state resets between episodes.
-The current viewport/grid also limits aiming precision and offscreen awareness.
+Schema4 appends2044 features: per-unit variants, selected-unit state, roster/perks,
+camera/paint mode, native geometry, building classes, hazards, vehicles, HUD
+availability, playable boundary and gesture/tool state. Exact meanings and
+normalizations live in mechanic_contract.py and visualizer/labels.py. Remaining
+coverage/proof gaps are tracked explicitly in mechanics-coverage.md; this is not
+yet a claim of complete game coverage. Viewport/grid aiming still limits precision.
 
 ## Policy and actions
 
-One128-unit single-layer GRU feeds72 tool logits,72x48 conditional cell logits
-and a value head (632,649 parameters). Sampling uses the legal tool mask, then
+One128-unit single-layer GRU feeds171 tool logits,171x48 conditional cell logits
+and a value head (2,043,324 parameters). Sampling uses the legal tool mask, then
 the selected tool's cell mask. Evaluation can use legal argmax (`greedy`).
 
-The72 tools comprise34 wait/READY/planning/battle tools and38 buy/refund loadout
+The original72 tools comprise34 wait/READY/planning/battle tools and38 buy/refund loadout
 choices (19 abilities each). Geometry uses two model-selected cells. Loadout
 controls use actual native ownership receipts; battle bindings use the saved
 roster including gaps. Native stock governs resource availability.
@@ -110,10 +110,10 @@ A proper persistent rollout state and stronger outcome evaluation remain needed.
 
 ## Checkpoints, evaluation and operations
 
-Default model: sessions/nn_policy3.pt; history: analysis/nn_hist3.jsonl. Writes are
+Default model: sessions/nn_policy4.pt; history: analysis/nn_hist4.jsonl. Writes are
 atomic and retain a.previous backup. Schema3 observation/action metadata is
 validated. Learning revision1 records reward coefficients and phase-aware GAE;
-older schema3 weights/Adam remain loadable. Policy2 is preserved separately.
+older schema4 weights/Adam remain loadable. Policy2 is preserved separately.
 `play`/`greedy` never optimize or write model checkpoints; use separate history.
 
 Report actual >=35% saved with minimum/mean and unknown/incomplete/error counts,
@@ -138,3 +138,8 @@ References: the [GAE paper](https://arxiv.org/abs/1506.02438) explains the trace
 estimator; [OpenAI PPO documentation](https://spinningup.openai.com/en/latest/algorithms/ppo.html)
 describes clipping limitations and a KL early-stop option. The phase-specific
 choice here is a project decision, not a claim that those sources validate it.
+
+Schema4 appends99 placement, roster/perk, selection/editing, native HUD, camera
+and timing actions. Migration preserves source schema3 weights and Adam moments
+in a new file; appended GRU input columns and Adam moments start at zero.
+The battle decision floor is0.1s; native action completion can take longer.

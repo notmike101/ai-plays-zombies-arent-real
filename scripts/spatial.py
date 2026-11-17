@@ -15,6 +15,16 @@ def centers(width, height):
     return np.array([(x*width, y*height) for y in YF for x in XF])
 
 
+def inside_polygon(points, vertices):
+    points=np.asarray(points).reshape(-1,2);vertices=np.asarray(vertices).reshape(-1,2)
+    inside=np.zeros(len(points),dtype=bool)
+    for a,b in zip(vertices,np.roll(vertices,-1,axis=0)):
+        crosses=(a[1]>points[:,1]) != (b[1]>points[:,1])
+        if a[1]!=b[1]:
+            inside ^= crosses & (points[:,0] < (b[0]-a[0])*(points[:,1]-a[1])/(b[1]-a[1])+a[0])
+    return inside
+
+
 def features(points, kinds, rectangles, zones, width, height):
     xy = centers(width, height)
     counts = np.zeros((5, NC), dtype=np.float32)
@@ -41,11 +51,5 @@ def features(points, kinds, rectangles, zones, width, height):
     for i in order[first]:
         targets[cells[i]] = points[i]
     for polygon in zones:
-        vertices = np.asarray(polygon)
-        inside = np.zeros(NC, dtype=bool)
-        for a, b in zip(vertices, np.roll(vertices, -1, axis=0)):
-            crosses = (a[1] > xy[:, 1]) != (b[1] > xy[:, 1])
-            if a[1] != b[1]:
-                inside ^= crosses & (xy[:, 0] < (b[0]-a[0])*(xy[:, 1]-a[1])/(b[1]-a[1])+a[0])
-        counts[4, inside] = 1
+        counts[4, inside_polygon(xy,polygon)] = 1
     return {'counts': counts, 'build_targets': targets}

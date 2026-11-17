@@ -7,7 +7,7 @@ from game_controls import Controls, KEY_ACTIONS
 from game_mechanics import UNITS, UNIT_IDS, PERKS
 from native_hud import read_panel
 from native_state import NativeState
-from spatial import project, centers, features, XF, YF
+from spatial import project, centers, features, inside_polygon, XF, YF
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, GRID_CHANNELS, PANEL_ACTIONS
 
 PLACEMENTS = {2:'Garrison',3:'Mortar',4:'Napalm',5:'Nest',6:'Mine',7:'C4',8:'GasMortar'}
@@ -23,11 +23,14 @@ def extra_masks(st):
     masks=np.zeros((len(EXTRA_TOOLS),48),dtype=np.float32)
     if 'native' not in st:return masks
     sel=st['native']['selection'];planning=st['planning'];polygon=len(sel['polygon'])
-    selected=any(len(sel[k]) for k in ('units','zones','walls','evac')) or sel['gate']>=0
+    selected=any(len(sel[k]) for k in ('units','zones','helicopters','evac')) or sel['gate']>=0
     for i,name in enumerate(EXTRA_TOOLS):
         mask=masks[i];mask[:]=np.repeat(YF<.70,len(XF))
         enabled=True
-        if name.startswith('place_'):enabled=planning and name[6:] in st['planning_roster']
+        if name.startswith('place_'):
+            enabled=planning and name[6:] in st['planning_roster']
+            if name[6:] in ('Sniper','FireMortar','Railgun','Howitzer','MLRS'):
+                mask *= [p is not None for p in st.get('build_targets',[None]*48)]
         elif name.startswith('equip_'):
             enabled=planning;mask[:]=0;mask[:7]=1
         elif name.startswith('perk_'):
@@ -46,8 +49,14 @@ def extra_masks(st):
             enabled=planning and (name=='zone_begin' or polygon>0)
             if name=='zone_finish':enabled=enabled and polygon>=3
         elif name=='undo':enabled=planning
-        elif name in ('move_selection','reaim_selection','officer_mode','officer_paint'):
-            enabled=selected
+        elif name=='move_selection':
+            u=st['native']['units']
+            enabled=planning and (bool(np.any((u['kind']==2)&np.isin(u['id'],sel['units']))) or bool(len(sel['helicopters'])))
+        elif name in ('officer_mode','officer_paint'):
+            u=st['native']['units']
+            enabled=planning and bool(np.any((u['kind']==2)&np.isin(u['id'],sel['units'])))
+        elif name=='reaim_selection':
+            enabled=planning and selected
         elif name=='refund_selection':enabled=planning or len(sel['evac'])>0
         elif name=='detonate_all':enabled=not planning and bool(np.any(st['native']['units']['kind']==9))
         elif name.startswith('speed_'):enabled=not planning
@@ -93,11 +102,12 @@ def unit_names(units, maps):
     return names
 
 
-def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, width, height):
+def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, width, height,
+                gesture_anchor=None, armed=(0,0,0)):
     s=snapshot;sel=s['selection'];u=s['units'];maps=s['unit_maps']
     camera=s['camera'];g=lambda x:math.log1p(max(float(x),0))
     result=[camera[0]/10000,camera[1]/10000,camera[2]/8,float(paint_mode),float(legal),land_fraction]
-    result += [g(len(sel[k])) for k in ('polygon','units','zones','walls','evac')]
+    result += [g(len(sel[k])) for k in ('polygon','units','zones','helicopters','evac')]
     result += [UNIT_IDS.get(name,0)/42 for name in roster]
     for perk in perks:
         result += [(PERKS.index(perk['name'])+1)/8 if perk['name']!='-' else 0,float(perk['locked'])]
@@ -133,6 +143,9 @@ def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, 
     assert len(channels)==len(GRID_CHANNELS)
     for points in channels:result.extend(np.log1p(histogram(points)).tolist())
     result += [float(name in hud['actions']) for name in PANEL_ACTIONS]
+    result.extend(inside_polygon(centers(width,height),project(s['playarea'],camera,width,height)))
+    result += [EXTRA_TOOLS.index(gesture_anchor[0])/128 if gesture_anchor else -1.,
+               gesture_anchor[1]/48 if gesture_anchor else -1.,armed[0]/42,*armed[1:]]
     assert len(result)==len(EXTRA_LABELS)
     if not np.isfinite(result).all():raise RuntimeError('Nonfinite mechanics observation')
     return list(map(float,result))
@@ -155,12 +168,16 @@ class Mechanics:
         st.update(grid=spatial['counts'],build_targets=spatial['build_targets'],native=s,hud=hud,
             planning_roster=roster,perks=perks,ready_legal=legal,
             mechanics_features=observation(s,roster,perks,hud,e.scalar(0x665160,'<B'),legal,
-                covered/max(total,1),e.cw,e.ch))
+                covered/max(total,1),e.cw,e.ch,st.get('gesture_anchor'),
+                [e.scalar(rva,'<B') for rva in (0x667060,0x65d2e1,0x65d309)]))
+        st['playarea_cells']=inside_polygon(centers(e.cw,e.ch),p(s['playarea']))
         kinds=s['units']['kind'];defenders=(kinds>=2)&(kinds!=3)
         targets=dict(unit=s['units']['pos'][defenders],building=s['buildings']['center'],
             wall=(s['walls']['a']+s['walls']['b'])/2,gate=s['gates'],evac=s['evac']['a'],
             corner=np.concatenate(s['zones']) if s['zones'] else np.empty((0,2)))
         st['targets']={key:nearest_per_cell(p(pts),e.cw,e.ch) for key,pts in targets.items()}
+        b=s['buildings'];valid=(b['destroyed']==0)&inside_polygon(b['center'],s['playarea'])
+        st['build_targets']=nearest_per_cell(p(b['center'][valid]),e.cw,e.ch)
         for slot in st.get('deck',[]):
             if slot['name']=='Heli':slot['alive']=bool(np.any(s['helicopters']['alive']))
 

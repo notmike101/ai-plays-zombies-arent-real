@@ -364,6 +364,7 @@ class VirtualInput:
     def move_to(self, cx, cy, post=True):
         """Virtual cursor to client coords (physical px). Also posts WM_MOUSEMOVE so
         the message-driven mouse path agrees."""
+        cx,cy=int(cx),int(cy)
         self._last_cx, self._last_cy = cx, cy
         self._wi32(OFF["cx"], int(cx))
         self._wi32(OFF["cy"], int(cy))

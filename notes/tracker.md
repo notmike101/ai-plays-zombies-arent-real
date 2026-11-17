@@ -2,7 +2,7 @@
 
 ## CURRENT STATE (2026-11-17 — complete-mechanics work in progress; training stopped)
 - User requires complete supported-game mechanic/action coverage and measured
-  decision/visualizer speed improvements. Work is ongoing; schema3 is incomplete.
+  decision/visualizer speed improvements. Work is ongoing; schema4 integration is under validation; complete coverage is still pending.
   Plan and explicit gaps: notes/mechanics-coverage-plan.md and mechanics-coverage.md.
 - Production run83bfa5642d1d ended after round3: finish_geometry could not verify
   automatic undo restored the board. Launcher cleaned game528. Last saved policy
@@ -12,7 +12,10 @@
   below-normal CPUs0-7. Revalidate process identity before action. Passive HUD observation
   and virtual input only. Installed game remains read-only. Clean probe at end.
 - Visualizer22604(created1794931712.9690397) remains on8765. Preserve/reuse.
-- Measured actual20-decision planning evaluation:27.04s; median published
+- Schema4:171 tools/2376 inputs; current offline checks pass. Source checkpoint3
+  remains unchanged; no production migration yet. Live20-decision evaluation7.03s
+  vs27.04s baseline with different actions/board (not controlled A/B).
+- Measured original20-decision planning evaluation:27.04s; median published
   interval0.918s, server observation delay0.254s. Main delays: native action
   sleeps/dumps/loadout scrolling. No browser-render or battle latency claim yet.
 - Full availability corrected from52 to59 entries:16 units,19 abilities,
@@ -21,7 +24,7 @@
   hidden/disabled in shipped config, distinct from their unlock availability.
 - New native picker controls select every16 roster unit with extended-arrow
   scan codes and receipts. Two advancing UI frames fix the picker layout race;48 consecutive
-  selections passed. Not yet integrated into policy.
+  selections passed. Now integrated into schema4; remaining proofs tracked in mechanics ledger.
 - Portability, pinned reproducible DLL and guarded checkpoint sharing remain.
   Local Codex share-zar-checkpoints automation enabled every6h, changed models
   only. First release checkpoint-35a8148ff8948406 on repository GitHub Releases.

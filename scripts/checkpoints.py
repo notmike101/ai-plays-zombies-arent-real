@@ -11,10 +11,10 @@ import tempfile
 
 from project import ROOT, load_config, config_path
 
-MODEL = ROOT/'sessions/nn_policy3.pt'
-HISTORY = ROOT/'analysis/nn_hist3.jsonl'
+MODEL = ROOT/'sessions/nn_policy4.pt'
+HISTORY = ROOT/'analysis/nn_hist4.jsonl'
 EXPORTS = ROOT/'sessions/exports'
-ASSETS = ('nn_policy3.pt', 'manifest.json', 'SHA256SUMS')
+ASSETS = ('nn_policy4.pt', 'manifest.json', 'SHA256SUMS')
 
 
 def sha(data): return hashlib.sha256(data).hexdigest()
@@ -49,7 +49,10 @@ def source_record():
                 meaning='Checkout at capture, NOT verified training revision of these weights',
                 files={str(p.relative_to(ROOT)).replace('\\', '/'): sha(p.read_bytes()) for p in
                        [ROOT/'scripts/nn_play2.py', ROOT/'scripts/env_zar.py', ROOT/'scripts/spatial.py',
-                        ROOT/'scripts/zar_input.py', ROOT/'visualizer/labels.py']})
+                        ROOT/'scripts/zar_input.py', ROOT/'scripts/native_state.py',
+                        ROOT/'scripts/native_hud.py', ROOT/'scripts/game_controls.py',
+                        ROOT/'scripts/game_mechanics.py', ROOT/'scripts/mechanic_contract.py',
+                        ROOT/'scripts/policy_mechanics.py', ROOT/'visualizer/labels.py']})
 
 
 def checkpoint_fields(raw):
@@ -89,15 +92,15 @@ def verify_bundle(bundle):
     from local_agent import inspect_checkpoint
     bundle = Path(bundle)
     sums = dict(line.split('  ', 1)[::-1] for line in (bundle/'SHA256SUMS').read_text().splitlines())
-    if set(sums) != {'nn_policy3.pt', 'manifest.json'}:
+    if set(sums) != {'nn_policy4.pt', 'manifest.json'}:
         raise ValueError('Unexpected checksum file entries')
     for name, digest in sums.items():
         if sha((bundle/name).read_bytes()) != digest: raise ValueError(f'{name} checksum mismatch')
     manifest = json.loads((bundle/'manifest.json').read_text())
-    if manifest['checkpoint_sha256'] != sums['nn_policy3.pt']:
+    if manifest['checkpoint_sha256'] != sums['nn_policy4.pt']:
         raise ValueError('Checkpoint checksum differs from manifest')
-    checkpoint_fields((bundle/'nn_policy3.pt').read_bytes())
-    info = inspect_checkpoint(bundle/'nn_policy3.pt')
+    checkpoint_fields((bundle/'nn_policy4.pt').read_bytes())
+    info = inspect_checkpoint(bundle/'nn_policy4.pt')
     if info['policy_id'] != manifest['policy_id']:
         raise ValueError('Policy identity differs from manifest')
     return manifest
@@ -117,8 +120,8 @@ def snapshot(model=MODEL, exports=EXPORTS):
         return target
     with tempfile.TemporaryDirectory(prefix='.snapshot-', dir=exports) as temp:
         stage = Path(temp)/'bundle'; stage.mkdir()
-        (stage/'nn_policy3.pt').write_bytes(raw)
-        info = inspect_checkpoint(stage/'nn_policy3.pt')
+        (stage/'nn_policy4.pt').write_bytes(raw)
+        info = inspect_checkpoint(stage/'nn_policy4.pt')
         manifest = dict(format=1, captured_at=datetime.now(timezone.utc).isoformat(),
                         checkpoint_sha256=digest, policy_id=info['policy_id'], run_id=info['run_id'],
                         schema=data['schema'], learning=data.get('learning'),
@@ -142,7 +145,7 @@ def import_bundle(bundle, destination=MODEL):
     destination = Path(destination)
     if destination.exists(): raise FileExistsError('Preserve/move the existing checkpoint before import')
     manifest = verify_bundle(bundle)
-    raw = (Path(bundle)/'nn_policy3.pt').read_bytes()
+    raw = (Path(bundle)/'nn_policy4.pt').read_bytes()
     if sha(raw) != manifest['checkpoint_sha256']: raise ValueError('Bundle changed during import')
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(dir=destination.parent, suffix='.tmp', delete=False) as f:

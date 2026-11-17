@@ -118,7 +118,8 @@ selection at65c520. Pan changed camera x; wheel changed zoom/anchor. A four-corn
 zone produced8 physical wall segments; HUD level-up/refund changed levels1->2->1.
 Selection corrections from native selcycle and live edge selection:65c4f8 contains
 zone indices,65c4e0/65c4e8 are selected zone/edge (NOT helicopter/vehicle indices).
-65c4b8 is the standalone-wall selection array. Gate placement on the tested zone
+65c4b8 was subsequently resolved as selected HELICOPTER indices (437850/437f60),
+not standalone walls. NativeState and schema labels now use that verified meaning. Gate placement on the tested zone
 edge did not produce a gate, and roof-unit RMB moves still need investigation.
 
 Schema4 integration staging: mechanic_contract.py and policy_mechanics.py define
@@ -127,3 +128,25 @@ selected-unit state, roster/perks, camera, geometry, building classes, hazards,
 vehicles and HUD affordances). Three offline semantic/mask/target tests passed.
 A live refresh on inst13 succeeded. These modules are not yet wired into training;
 no schema/checkpoint migration has run, and terrain/follow-up proofs remain pending.
+
+Native RMB handler448c30 and translation437850 resolve the roof-movement question:
+planning movement applies to officers and helicopters only. Roof guns stay anchored;
+Shift+RMB re-aim is separate. Battle direct commands are rejected by the native game.
+Officer paint428ab0 likewise explicitly refuses outbreak. Policy masks reflect these
+phase restrictions. Native playable polygon6652e0 includes curved/interpolated edges;
+read it directly instead of assuming the campaign file straight-edge shape.
+
+## Schema4 integrated milestone
+
+171 tools and2376 inputs now run through the policy. Native snapshots replace
+per-edit F6 dumps; geometry debt is model-recoverable with native READY gating.
+The gate hotkey used an incorrect C scan code; corrected G scan34 produced a
+native gate0->1 and selection/refund1->0. Roof guns do not support RMB movement.
+Live20-decision evaluation completed in7.03s (baseline27.04s with different
+actions/board; not controlled A/B), no optimization/checkpoint writes.
+Full offline suites:112 script tests and37 visualizer tests pass.
+Observer/plain outputs and sampled actions match over12 recurrent steps; warm
+median0.152ms plain and0.355ms with observation. Live server/browser latency
+remains to be measured. Migration is explicit/new-path-only; production
+checkpoint3 is preserved and has not yet been migrated. Remaining terrain,
+editing and ability proofs are pending.

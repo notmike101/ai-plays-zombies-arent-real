@@ -49,7 +49,7 @@ class FeedTests(unittest.TestCase):
 
     def test_malformed_oversized_and_nonfinite_data_are_ignored(self):
         (self.root / 'bad.json').write_text('{')
-        (self.root / 'big.json').write_text(' ' * (2 * 1024 * 1024 + 1))
+        (self.root / 'big.json').write_text(' ' * (8 * 1024 * 1024 + 1))
         self.write(frame('nan', float('nan')))
         self.assertEqual(self.feed.state(now=100)['status'], 'waiting')
 

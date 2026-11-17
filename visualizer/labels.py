@@ -1,4 +1,4 @@
-"""Input labels matching nn_play2.make_obs() output order (NOBS=332).
+"""Input labels matching nn_play2.make_obs() output order.
 
 MAINTENANCE CONTRACT (root AGENTS.md): any feature add/remove/reorder or
 semantic/normalization change in make_obs() MUST update, in the SAME change:
@@ -57,6 +57,12 @@ for name in ('Police', 'Bomber', 'Heli', 'Stungas', 'Firebomb', 'CallArms',
                      f'{name} pending arrival (remaining sim s / 60)']
 INPUT_LABELS += ['Unspent skill points (/ 10)', 'Geometry anchor tool (/ 72; -1 absent)',
                  'Geometry anchor cell (/ 48; -1 absent)']
+
+import sys
+from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from scripts.mechanic_contract import EXTRA_LABELS
+INPUT_LABELS += EXTRA_LABELS
 
 
 def validate(nobs=None, labels=None):

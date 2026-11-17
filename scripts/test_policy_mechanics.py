@@ -14,8 +14,9 @@ def fixture():
         timer=np.array([6.,2.]),contact=np.array([-2.,0.]),converting=np.zeros(2),ztype=np.zeros(2))
     maps={k:{} for k in ('payload','trap_kind','level','far_first','officer_kind','ai','kills','boosts')}
     maps['payload'][10]=2
-    selection={k:[] for k in ('units','zones','walls','evac','polygon')};selection['units']=[10];selection['gate']=-1
+    selection={k:[] for k in ('units','zones','helicopters','evac','polygon')};selection['units']=[10];selection['gate']=-1
     s=dict(units=units,unit_maps=maps,selection=selection,camera=[0.,0.,1.],
+        playarea=np.array([[-1000.,-1000.],[1000.,-1000.],[1000.,1000.],[-1000.,1000.]]),
         buildings=dict(center=np.array([[100.,100.]]),destroyed=np.array([0]),
                        damage=np.array([3.]),**{'class':np.array([2])}),
         paint=dict(pos=np.empty((0,2)),kind=np.array([])))
@@ -40,7 +41,8 @@ class MechanicsTests(unittest.TestCase):
     def test_masks_use_roster_native_choices_and_perk_constraints(self):
         s=fixture();st=dict(native=s,planning=True,planning_roster=['Sniper']+['-']*6,
             perks=[dict(name='Extra_Zones',locked=True),dict(name='Hot_Fire',locked=False),dict(name='-',locked=False)],
-            hud={'actions':{'target_toggle':(1,2)}},targets={k:[None]*48 for k in ('unit','building','wall','gate','evac','corner')})
+            hud={'actions':{'target_toggle':(1,2)}},build_targets=[(100,100)]*48,
+            targets={k:[None]*48 for k in ('unit','building','wall','gate','evac','corner')})
         masks=extra_masks(st);get=lambda name:masks[EXTRA_TOOLS.index(name)]
         self.assertTrue(get('place_Sniper').any());self.assertFalse(get('place_Battleship').any())
         self.assertEqual(np.flatnonzero(get('arm_slot')).tolist(),[0])

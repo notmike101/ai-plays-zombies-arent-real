@@ -14,7 +14,7 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   default to .venv; no activation is needed. Game/DLL/checkpoint prerequisites remain.
 - Run `.\local.ps1 status`, then `.\local.ps1 check` from this checkout. Preserve
   healthy active training. Use `.\local.ps1 train --rounds N` only when idle;
-  it resumes schema3 with one owned copy and inherited CPU/priority limits.
+  it resumes schema4 with one owned copy and inherited CPU/priority limits.
   Select the deployed copy from tracker with `--copy instN` on check/train;
   inst1 is only the default name, not a guarantee its older unlock profile is valid.
 - Use `.\local.ps1 visualizer-start` to reuse/start the server. Stop commands
@@ -23,8 +23,8 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 - With zero prior context, follow `notes/operator-runbook.md` for status checks,
   checkpoint resume and training/visualizer start/stop. Then read CURRENT STATE
   in `notes/tracker.md`; revalidate PIDs and creation times before acting.
-- Current training uses `scripts/train_run.py` -> `scripts/nn_play2.py`, schema3,
-  `sessions/nn_policy3.pt`. A fresh clone does not include this ignored checkpoint.
+- Current training uses `scripts/train_run.py` -> `scripts/nn_play2.py`, schema4,
+  `sessions/nn_policy4.pt`. A fresh clone does not include this ignored checkpoint.
   Missing resume weights are an error, never permission to start random training.
 - Active trainer/environment paths derive from this checkout. Copy zar.example.toml
   to ignored zar.local.toml and configure the read-only source game installation.
@@ -78,8 +78,8 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 
 ## Where things live
 - `notes/tracker.md` — CURRENT STATE, NEXT STEPS, PIDs, evidence index.
-- `notes/ml-spec.md` — model design; `scripts/nn_play2.py` — schema3 PPO trainer (train /
-  play / greedy; checkpoint `sessions/nn_policy3.pt`, history `analysis/nn_hist3.jsonl`).
+- `notes/ml-spec.md` — model design; `scripts/nn_play2.py` — schema4 PPO trainer (train /
+  play / greedy; checkpoint `sessions/nn_policy4.pt`, history `analysis/nn_hist4.jsonl`).
 - `scripts/env_zar.py` — ZAREnv(pid): memory-RVA observation + ready()/cast/place
   primitives; `scripts/zar_input.py` + `scripts/hookdll/` — virtual input.
 - `scripts/launch_boards.py <instN...>` — kill/relaunch/nav boards to planning.
@@ -223,8 +223,8 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
 — `graph.layers[input].labels` readable, no `label_warning` key present).
 
 ## Battle input and schema contract (2026-11-17)
-- `nn_play2` schema 3 uses 332 inputs, 72 tools and 48 conditional cells.
-  Checkpoints default to sessions/nn_policy3.pt. Never silently reinterpret v2
+- `nn_play2` schema 4 uses 2376 inputs, 171 tools and 48 conditional cells.
+  Checkpoints default to sessions/nn_policy4.pt. Never silently reinterpret v2
   weights: checkpoint metadata must match labels/action meanings exactly.
 - Battle hotkeys follow steam_cloud/settings.ini roster_battle, including gaps,
   plus bind_slot1..7. battle_order.txt controls the picker, not the equipped bar.
@@ -270,10 +270,9 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
   negative money is valid debt, not missing memory. See notes/automation.md.
 
 ## Planning geometry validity
-- After a model geometry edit, enforce native READY land/debt gates. If invalid,
-  undo exactly once and verify the previous board and balance. Never repeatedly
-  undo or clear the board to conceal an interface failure. The model chooses
-  all valid geometry; failed rollback must stop the worker.
+- After a model geometry edit, mask READY using native land/debt legality.
+  The model chooses undo/refund/reshape to recover; never automatically roll back
+  its strategy. Draft polygons and gesture anchors must be visible to the policy.
 
 ## Training dump retention
 - Trainer attachments discard only newly generated .state companions after reading
@@ -296,3 +295,13 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
   configuration in history/checkpoints. Timeouts have saved_frac=null; keep their
   HUD snapshot only as observed_saved_frac with timeout_phase. Never count it as
   terminal success. Reject non-finite outcomes/bootstrap values before PPO.
+
+## Expanded mechanics schema
+- Schema4 preserves the332-input/72-tool prefix and appends native mechanics.
+  All feature/action changes must update mechanic_contract.py, labels, schema,
+  tests and migration together. Coverage/proof gaps live in notes/mechanics-coverage.md.
+- Explicit migration: `.venv/Scripts/python.exe -B scripts/migrate_policy.py
+  sessions/nn_policy3.pt sessions/nn_policy4.pt` (one command). It requires a new
+  destination and preserves weights/Adam prefixes. Never reset learning silently.
+- Historical live probes have main guards; importing/discovering tests must never
+  launch, stop or send input to a game. Live diagnostics require explicit execution.

@@ -15,7 +15,7 @@ import torch
 from observer import Observer
 
 
-from fake_training import FakeGame, FakeClock
+from fake_training import FakeGame, FakeClock, FakeMechanics
 
 
 class IntegrationTests(unittest.TestCase):
@@ -56,6 +56,7 @@ class IntegrationTests(unittest.TestCase):
         clock = FakeClock(game)
         FakeGame.fail = fail
         overrides = dict(Observer=observer, PLAN_STEPS=1, BATTLE_T=.1,
+                         Mechanics=FakeMechanics,
                          load_bind_keys=lambda env: [], q_saved=lambda pid, dur: None,
                          time=clock)
         with patch.dict(self.globals, overrides), patch.dict(sys.modules, {'env_zar': SimpleNamespace(ZAREnv=lambda pid: game, ZAREnvError=RuntimeError)}):

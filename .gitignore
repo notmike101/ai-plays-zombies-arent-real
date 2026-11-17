@@ -29,3 +29,9 @@ analysis/nn3_operator.lock
 .venv/
 zar.local.toml
 sessions/exports/
+
+# Native mechanics schema checkpoints and diagnostic captures
+sessions/nn_policy4.pt*
+analysis/nn_hist4.jsonl
+analysis/coverage-*
+.playwright-cli/

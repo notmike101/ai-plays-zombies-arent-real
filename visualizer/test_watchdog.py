@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import torch
-from fake_training import FakeGame, FakeClock
+from fake_training import FakeGame, FakeClock, FakeMechanics
 
 
 def run_battle(rate=0, pause=False):
@@ -24,6 +24,7 @@ def run_battle(rate=0, pause=False):
             first = False
     game.vi.key_press = press
     with patch.dict(fn.__globals__, dict(Observer=None, PLAN_STEPS=1, BATTLE_T=3,
+                    Mechanics=FakeMechanics,
                     load_bind_keys=lambda e: [], time=clock)), \
             patch.dict(sys.modules, {'env_zar': SimpleNamespace(ZAREnv=lambda pid: game,
                          ZAREnvError=RuntimeError)}), \

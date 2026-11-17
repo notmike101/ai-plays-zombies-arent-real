@@ -28,13 +28,15 @@ class InputContract(unittest.TestCase):
             vi.inject()
 
     def test_v3_move_stores_client_coordinates(self):
+        import numpy as np
         vi = VirtualInput.__new__(VirtualInput)
         vi.buf = (ctypes.c_char * 256)()
         vi._hb = 0
         vi.hwnd = 1
         vi._origin = lambda: (76, 72, 11, 49, 1920, 1200)
-        with patch('zar_input.user32.PostMessageW'):
-            vi.move_to(960, 600)
+        with patch('zar_input.user32.PostMessageW') as post:
+            vi.move_to(np.int64(960), np.int64(600))
+            self.assertIs(type(post.call_args.args[3]),int)
         self.assertEqual(struct.unpack_from('<ii', vi.buf, OFF['cx']), (960, 600))
 
 

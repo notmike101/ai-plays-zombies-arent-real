@@ -17,8 +17,8 @@ import time
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
-MODEL = ROOT / 'sessions/nn_policy3.pt'
-HISTORY = ROOT / 'analysis/nn_hist3.jsonl'
+MODEL = ROOT / 'sessions/nn_policy4.pt'
+HISTORY = ROOT / 'analysis/nn_hist4.jsonl'
 LOCK = ROOT / 'analysis/nn3_operator.lock'
 
 

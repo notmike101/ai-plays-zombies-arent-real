@@ -49,7 +49,7 @@ def main():
             assert len(frame['values']['hu']) == source['NU']
             assert len(frame['values']['hc']) == source['NU']*source['NC']
             assert 'label_warning' not in frame
-            assert len(json.dumps(frame, separators=(',', ':')).encode()) < 2*1024*1024 - 40000, 'Keep room for masked probabilities in server frame cap'
+            assert len(json.dumps(frame, separators=(',', ':')).encode()) < 8*1024*1024 - 200000, 'Keep room for masked probabilities in server frame cap'
             inp = next(l for l in frame['graph']['layers']
                        if l['id'] == 'input')
             assert inp['labels'] == source['INPUT_LABELS'], \

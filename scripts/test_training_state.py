@@ -10,20 +10,17 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_planning_scan_codes_match_physical_keys(self):
+        from zar_input import SC
+        for vk,sc in train.U_HOTKEY.values():self.assertEqual(sc,SC[vk])
+
     def test_repeated_tool_selection_cancels_before_rearming(self):
-        from types import SimpleNamespace
-        events = []
         e = self.env()
-        e.cw, e.ch = 1920, 1200
-        e.vi = SimpleNamespace(
-            click=lambda *args, **kwargs: events.append(('click', args, kwargs)),
-            key_press=lambda *args, **kwargs: events.append(('key', args, kwargs)))
-        with patch.object(env_zar.time, 'sleep'):
+        with patch('game_controls.Controls') as controls:
             e._arm(0x42, 48)
             e._arm(0x42, 48)
-        self.assertEqual([x[0] for x in events], ['click','key','click','key'])
-        self.assertTrue(all(x[2].get('right') for x in events if x[0] == 'click'))
-        self.assertEqual(events[0][1], (960, 600))
+        self.assertEqual(controls.return_value.arm.call_args_list,
+                         [unittest.mock.call(0x42,48)]*2)
 
     def test_training_discards_only_its_new_replay_snapshots(self):
         from types import SimpleNamespace

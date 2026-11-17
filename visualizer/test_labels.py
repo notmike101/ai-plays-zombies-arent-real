@@ -63,11 +63,16 @@ EXPECT += [0.0]*240
 for i in range(19):
     EXPECT += [0., 1. if i < 4 else 0., 0.]
 EXPECT += [0., -1., -1.]
+from scripts.mechanic_contract import EXTRA_LABELS
+EXPECT += [0.]*len(EXTRA_LABELS)
 LABEL_PINS.update({32: 'grid civilians cell 1', 80: 'grid zombies cell 1',
                    128: 'grid defenders cell 1', 176: 'grid buildings cell 1',
                    224: 'grid safe zone cell 1', 272: 'police loadout',
                    273: 'police castable', 274: 'police pending',
                    329: 'unspent skill', 330: 'anchor tool', 331: 'anchor cell'})
+LABEL_PINS.update({332:'camera x',335:'placement paint',336:'ready land',
+    343:'planning slot 1',356:'selected unit kind',
+    332+len(EXTRA_LABELS)-1:'armed turret'})
 
 
 class Tiny(nn.Module):
@@ -120,7 +125,7 @@ class LabelTests(unittest.TestCase):
         np.testing.assert_allclose(obs[32:224], np.log1p(np.arange(192)))
         np.testing.assert_allclose(obs[224:272], np.arange(192,240))
         np.testing.assert_allclose(obs[272:329:3], np.arange(1,20)/10.)
-        np.testing.assert_allclose(obs[-3:], [.2,15/72,47/48])
+        np.testing.assert_allclose(obs[329:332], [.2,15/72,47/48])
 
     def test_crowd_missing_partial_full(self):
         obs = self.probe(blobs=[])

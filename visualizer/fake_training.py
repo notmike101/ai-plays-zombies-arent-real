@@ -93,3 +93,11 @@ class FakeClock:
         if self.game.phase == 'playing' and not self.game.paused:
             self.game.sim += seconds*8
             self.game.infections = min(100, int(self.game.sim*self.infection_rate))
+
+
+class FakeMechanics:
+    def __init__(self,game):self.game=game
+
+    def refresh(self,st):
+        spatial=self.game.spatial({})
+        st.update(grid=spatial['counts'],build_targets=spatial['build_targets'])

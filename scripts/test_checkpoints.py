@@ -34,7 +34,7 @@ class CheckpointTests(unittest.TestCase):
         self.assertEqual((bundle/'manifest.json').read_bytes(), first)
         self.assertEqual(self.model.read_bytes(), before)
         self.assertIn('not_evaluation', json.loads(first)['metrics'])
-        (bundle/'nn_policy3.pt').write_bytes(b'corrupt')
+        (bundle/'nn_policy4.pt').write_bytes(b'corrupt')
         with self.assertRaisesRegex(ValueError, 'checksum'): cp.verify_bundle(bundle)
 
     def test_import_refuses_active_writer_and_existing_destination(self):

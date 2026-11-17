@@ -106,7 +106,7 @@ class NativeState:
     def selection(self):
         e = self.env
         return dict(units=e.array(0x65c490,'<u8'),
-                    walls=e.array(0x65c4b8,'<i8'),
+                    helicopters=e.array(0x65c4b8,'<i8'),
                     zones=e.array(0x65c4f8,'<i8'),
                     evac=e.array(0x65c520,'<i8'),
                     zone=e.scalar(0x65c4e0,'<q'),
@@ -142,6 +142,7 @@ class NativeState:
                 wall_pointer = e.scalar(0x656bb0,'<Q')
                 wall_hp = [self.array_at(wall_pointer+i*192+80,'<f4') for i in range(len(walls))]
                 result = dict(units=units, unit_maps=maps, zones=self.zones(),
+                    playarea=e.array(0x6652e0,VEC,limit=10000),
                     walls=walls, wall_hp=wall_hp, paint=self.paint(), selection=self.selection(),
                     hazards=e.array(0x654ef0,PATCH,limit=100000),
                     evac=e.array(0x657e40,EVAC,limit=10000),

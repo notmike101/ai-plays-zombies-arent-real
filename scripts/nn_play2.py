@@ -1,6 +1,6 @@
 """ZAR recurrent PPO: the model chooses loadout, planning geometry and battle actions.
 
-Schema 3: 332 observations, 72 tools and 48 cells conditioned on the tool.
+Schema 4: native mechanics observations and 48 cells conditioned on the tool.
 Reward = -new infections / initial population + 5 * actual terminal saved fraction.
 Timeouts bootstrap; they never earn a terminal save reward. R carries the board.
 """
@@ -31,13 +31,15 @@ try:
     from visualizer.labels import INPUT_LABELS, validate as validate_labels
 except ImportError:
     Observer = None
-MODEL = os.path.join(ROOT, 'sessions', 'nn_policy3.pt')
-HIST = os.path.join(ROOT, 'analysis', 'nn_hist3.jsonl')
-NOBS, HID = 332, 128
+from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, extra_cell_label
+from policy_mechanics import Mechanics, PLACEMENTS, extra_masks
+MODEL = os.path.join(ROOT, 'sessions', 'nn_policy4.pt')
+HIST = os.path.join(ROOT, 'analysis', 'nn_hist4.jsonl')
+NOBS, HID = 332+len(EXTRA_LABELS), 128
 PLANNING_INDEX = INPUT_LABELS.index('Planning phase')
 BATTLE_GAMMA, BATTLE_LAMBDA = .99, .95
 SAVED_REWARD_SCALE = 5.
-NU, NC = 72, 48
+NU, NC = 72+len(EXTRA_TOOLS), 48
 TOOLS = ['wait', 'ready', 'garrison', 'mortar', 'napalm', 'turret', 'mine',
          'c4', 'gas_mortar', 'upgrade_unit', 'zone_rect', 'heli', 'cta',
          'rally', 'medevac', 'wall', 'gate', 'corridor', 'hold', 'seek',
@@ -51,7 +53,7 @@ TOOLS = ['wait', 'ready', 'garrison', 'mortar', 'napalm', 'turret', 'mine',
 # Unit | [G] Gate | [Tab] LOADOUT (SP picks) | [Space] READY
 U_HOTKEY = {2: (0x31, 2), 3: (0x32, 3), 4: (0x33, 4), 5: (0x34, 5),
             6: (0x35, 6), 7: (0x36, 7), 8: (0x54, 20), 9: (0x46, 33),
-            15: (0x5A, 44), 16: (0x47, 46), 17: (0x51, 16), 18: (0x45, 18)}
+            15: (0x5A, 44), 16: (0x47, 34), 17: (0x51, 16), 18: (0x45, 18)}
 
 
 # BATTLE DECK: purchased levels and actual saved roster determine hotkeys.
@@ -66,6 +68,8 @@ DECK_ORDER = ['Police', 'Bomber', 'Heli', 'Stungas', 'Firebomb', 'CallArms',
 U2ABILITY = {v: k for k, v in ABILITY_U.items()}
 TOOLS += [f'buy_{n}' for n in DECK_ORDER] + [f'refund_{n}' for n in DECK_ORDER]
 CELL_LABELS = [f'{tool}: cell {c+1}' for tool in TOOLS for c in range(NC)]
+TOOLS += EXTRA_TOOLS
+CELL_LABELS += [extra_cell_label(tool,c) for tool in EXTRA_TOOLS for c in range(NC)]
 PLANNING_U = list(range(11)) + [15, 16, 17, 18]
 BATTLE_GEOMETRY = {12, 20, 22, 24, 27, 28, 30, 33}
 from spatial import XF, YF
@@ -76,8 +80,7 @@ WORLD_CELLS = np.repeat(YF < .70, len(XF))  # The last grid row overlaps the 192
 
 PLAN_STEPS = 60            # harness bound on planning phase (cap, not strategy)
 BATTLE_T = 560.0
-STEP_S = 0.7               # battle step; at 8x ~5.6 s game-time; act() floor
-# now ~0.55 s (shorter input sleeps), matching real-time play cadence
+STEP_S = 0.1               # Bounded10 Hz decisions; action receipts can take longer.
 
 def cell_of_px(c, cw, ch):
     return (int(XF[c % 8] * cw), int(YF[c // 8] * ch))
@@ -130,8 +133,9 @@ def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
                      slot_castable_frac(st, slot) if slot else 0.,
                      max(0., slot.get('ready_t', st['sim'])-st['sim']) / 60. if slot else 0.])
     anchor = st.get('anchor')
-    base.extend([st.get('sp', 0) / 10., anchor[0]/NU if anchor else -1.,
+    base.extend([st.get('sp', 0) / 10., anchor[0]/72 if anchor else -1.,
                  anchor[1]/NC if anchor else -1.])
+    base.extend(st.get('mechanics_features', [0.]*len(EXTRA_LABELS)))
     return base
 
 
@@ -159,9 +163,17 @@ def masks_for(st):
             mc[np.arange(NC)//8 == c//8] = 0
             mc[np.arange(NC)%8 == c%8] = 0
         return mu, mc
+    if st.get('gesture_anchor'):
+        mu[72:] = extra_masks(st).any(axis=1)
+        return mu, mc
     if st['planning']:
         for u in PLANNING_U:
             mu[u] = 1
+        if 'ready_legal' in st:
+            mu[1] = st['ready_legal'] and not len(st['native']['selection']['polygon'])
+        if 'planning_roster' in st:
+            for u,name in PLACEMENTS.items():
+                if u < 72:mu[u] = name in st['planning_roster']
         if 'build_targets' in st and not any(p is not None and WORLD_CELLS[i]
                                              for i, p in enumerate(st['build_targets'])):
             mu[[2, 3, 5, 8, 9]] = 0
@@ -179,10 +191,13 @@ def masks_for(st):
             u = ABILITY_U.get(s['name'])
             if u is not None and slot_castable(st, s):
                 mu[u] = 1
+    mu[72:] = extra_masks(st).any(axis=1)
     return mu, mc
 
 
 def cell_mask(st, u, mc):
+    if u >= 72:
+        return extra_masks(st)[u-72].copy()
     mc = mc.copy()
     mc *= WORLD_CELLS
     if u in (0, 1) or u >= 34:
@@ -294,7 +309,7 @@ def refresh_battle_state(st, dump):
 
 
 def checkpoint_schema():
-    return dict(version=3, inputs=INPUT_LABELS, tools=TOOLS, cells=CELL_LABELS)
+    return dict(version=4, inputs=INPUT_LABELS, tools=TOOLS, cells=CELL_LABELS)
 
 
 def learning_config():
@@ -306,7 +321,7 @@ def learning_config():
 def load_pretrained(net, path):
     data = torch.load(path, weights_only=True)
     if data.get('schema') != checkpoint_schema():
-        raise ValueError('Incompatible checkpoint schema: v3 needs a new policy; v2 is preserved')
+        raise ValueError('Incompatible checkpoint schema: explicitly migrate v3 with migrate_policy.py')
     net.load_state_dict(data['policy'])
 
 
@@ -329,6 +344,7 @@ def run_episode(args):
     try:
         env = ZAREnv(pid)
         env.validate_build()
+        mechanics = Mechanics(env)
         env.discard_dump_states = True
         env.to_planning()
         initial = env.dump()
@@ -375,9 +391,6 @@ def run_episode(args):
             st['t'] = time.monotonic() - (battle_start or start)
             st['sim'], st['mult'] = state['sim'], state['mult']
             if not st['planning']:
-                if any(s['name'] == 'Heli' for s in st['deck']) and state['sim'] >= st.get('next_heli_check', 0):
-                    refresh_battle_state(st, env.dump())
-                    st['next_heli_check'] = state['sim'] + 5
                 stock = env.battle_stock()
                 for slot in st['deck']:
                     slot['charges'] = stock[slot['name']]
@@ -392,8 +405,7 @@ def run_episode(args):
                 if state['paused']:
                     raise ZAREnvError('Confirmed pause did not clear')
             frac = o['civ'] / civ0
-            spatial = env.spatial(plan)
-            st['grid'], st['build_targets'] = spatial['counts'], spatial['build_targets']
+            mechanics.refresh(st)
             blobs = []
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
             mu, mc = masks_for(st)
@@ -423,7 +435,14 @@ def run_episode(args):
             before = o
             previous_state = state
             action_started = time.monotonic()
-            if st['planning']:
+            if u in PLACEMENTS:
+                cx,cy=cell_of_px(c,env.cw,env.ch)
+                if PLACEMENTS[u] in ('Garrison','Sniper','Mortar','Nest','GasMortar','FireMortar','Railgun','Howitzer','MLRS'):
+                    cx,cy=map(int,st['build_targets'][c])
+                mechanics.controls.place(PLACEMENTS[u],(cx,cy))
+            elif u >= 72:
+                mechanics.execute(st,TOOLS[u],c)
+            elif st['planning']:
                 if u == 1:
                     state = ready_once(env)
                     battle_start = time.monotonic()
@@ -434,7 +453,7 @@ def run_episode(args):
                     stock = env.battle_stock()
                     for slot in st['deck']:
                         slot['charges'] = slot['max_charges'] = stock[slot['name']]
-                elif u >= 34:
+                elif 34 <= u < 72:
                     name = DECK_ORDER[(u-34) % 19]
                     delta = 1 if u < 53 else -1
                     st['loadout'] = env.change_loadout(name, delta)
@@ -443,9 +462,6 @@ def run_episode(args):
                     if not st.get('anchor'):
                         st['anchor'] = (u, c)
                     else:
-                        before_plan = env.dump()
-                        if not before_plan:
-                            raise ZAREnvError('Missing pre-geometry planning receipt')
                         x1, y1 = cell_of_px(st.pop('anchor')[1], env.cw, env.ch)
                         x2, y2 = cell_of_px(c, env.cw, env.ch)
                         env._arm(*((0x42, 48) if u == 10 else U_HOTKEY[u]))
@@ -457,17 +473,15 @@ def run_episode(args):
                             env.vi.drag(x1, y1, x2, y2)
                             if u == 15:
                                 env.vi.click(x2, y2)
-                        time.sleep(.2)
-                        plan = env.finish_geometry(before_plan)
+                        mechanics.controls.frames()
                 elif u in U_HOTKEY:
                     env._arm(*U_HOTKEY[u])
                     cx, cy = cell_of_px(c, env.cw, env.ch)
                     if u in (2, 3, 5, 8, 9):
                         cx, cy = map(int, st['build_targets'][c])
                     env.vi.move_to(cx, cy)
-                    time.sleep(.15)
-                    env.vi.click(hold=.15)
-                    time.sleep(.2)
+                    env.vi.click()
+                    mechanics.controls.frames()
             elif u in U2ABILITY:
                 slot = next(s for s in st['deck'] if s['name'] == U2ABILITY[u])
                 if u in BATTLE_GEOMETRY and not st.get('anchor'):
@@ -494,8 +508,7 @@ def run_episode(args):
                         slot['ready_t'] = env.game_state()['sim'] + slot['arrival']
                         slot['pending'] = slot['arrival'] > 0
                     if slot['name'] == 'Heli':
-                        receipt = env.dump()
-                        slot['alive'] = bool(receipt and int(receipt.get('counts', {}).get('helicopters', 0)))
+                        slot['alive'] = bool(np.any(mechanics.reader.snapshot()['helicopters']['alive']))
             # Observe after this action; outcomes belong to this transition.
             time.sleep(max(0., (.1 if st['planning'] else STEP_S) - (time.monotonic()-action_started)))
             o = env.obs()
@@ -533,8 +546,7 @@ def run_episode(args):
         if end == 'timeout' and net is not None:
             st['planning'] = state['phase'] == 'planning'
             st['t'] = time.monotonic()-(battle_start or start)
-            spatial = env.spatial(plan)
-            st['grid'] = spatial['counts']
+            mechanics.refresh(st)
             st['sim'] = state['sim']
             f = make_obs(st, o, o['civ']/civ0, trend, slope, [], prev_u, prev_c, succ)
             with torch.no_grad():
@@ -740,7 +752,7 @@ def main():
     a = ap.parse_args()
     validate_labels(NOBS, INPUT_LABELS)
     if a.mode != 'train' and not a.random and not os.path.exists(a.model):
-        ap.error('Evaluation requires an existing schema-3 checkpoint or --random')
+        ap.error('Evaluation requires an existing schema-4 checkpoint or --random')
     if a.mode == 'greedy':
         a.pids, a.eps, a.rounds = a.pid, 1, 1
         if a.random:
@@ -774,7 +786,7 @@ def main():
                     row = {k: v for k,v in tr.items() if k not in
                            ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'board')}
                     row.update(kind='episode', run_id=run_id, round=rnd, mode=a.mode,
-                               checkpoint_id=checkpoint_id, schema=3, learning=learning_config())
+                               checkpoint_id=checkpoint_id, schema=4, learning=learning_config())
                     fh.write(json.dumps(row) + '\n')
                     starts[tr['pid']] = 'next_level' if tr.get('advance') else 'carry'
                     if 'err' in tr:

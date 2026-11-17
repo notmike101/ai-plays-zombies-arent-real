@@ -78,10 +78,10 @@ class Feed:
                 continue
         # Abandoned crash files are bounded on read; normal observers remove their own files.
         paths.sort(key=lambda entry: entry[0], reverse=True)
-        for _, path in paths[:128]:
+        for _, path in paths[:32]:
             try:
                 stat = path.stat()
-                if stat.st_size > 2 * 1024 * 1024:
+                if stat.st_size > 8 * 1024 * 1024:
                     continue
                 raw = path.read_bytes()
                 cached = self.decoded.get(path)
