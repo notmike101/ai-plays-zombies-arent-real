@@ -1,23 +1,32 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — legality fix validated, training restarting with bounded storage)
-- Latest policy/Adam392c6079d5652b95 saved from valid episodes of run26956f65584d.
-  Previous launch48472 cleaned after an oversized safe zone blocked READY.
-- Three verified interface fixes: HUD boundary c743dc0; native debt dc63754;
-  READY-blocking geometry single-undo guard7df4ef6. Strategy remains model-owned.
-- Exact native land/budget gates found in matching-build existing Ghidra functions
-  0x1401c0520/0x1400982c0. Live PID48612 detected an illegal rectangle and restored
-  prior $3037.80/one garrison. All test copies and owned REA probes cleaned.
-- Validation:43 trainer/state/deck/spatial/reporting+34 visualizer tests PASS;
-  model observer parity12 recurrent steps and Node graph assertions PASS.
-- Launcher PID 11016 restarting inst1/inst2, seed20261129, eps2/rounds200, low graphics, normal
-  difficulty, BELOW_NORMAL priority and CPU0-7 (8 of24 logical CPUs).
-- Logs: analysis/nn3_training_20261117.log and nn3_training_launcher_20261117.log/.err.
-  Checkpoints sessions/nn_policy3.pt/.previous; history analysis/nn_hist3.jsonl.
-- Disk headroom13.4GiB prompted training-only replay cleanup (bab0862); old
-  evidence and text dumps preserved, new .state companions discarded.27 trainer/
-  state tests PASS. Prior launcher43936 stopped before training to deploy this.
-- Next: verify successive batches, current PIDs, observer frames and headroom.
+## CURRENT STATE (2026-11-17 — training LIVE, bounded resources/storage)
+- Active run99adb97241d2: launcher11016, trainer42216, worker39664, inst1 game31384.
+  Normal difficulty, low graphics, BELOW_NORMAL priority, CPU0-7 (8 of24 logical
+  CPUs), seed20261129,2 episodes/batch,200 rounds maximum (400 episodes).
+- Round0 completed two real aborted battles (5.72%,7.50% saved); PPO updated
+  and saved schema3 policy497094f9caaee5be with all10 Adam parameter states.
+  Round1 is active. This is pipeline proof, not the35%-on-every-level goal.
+- inst2 PID21768 failed during parallel injection with argument1 OverflowError
+  (int too long to convert) and was cleaned. Cause not yet isolated; the launcher
+  correctly continued with inst1. Do not start competing workers on31384.
+- Live samples: total CPU16.1-20.4%, GPU29-47%,13.29-13.34GiB available RAM,
+  VRAM3394-3460/10240MiB. D:13.31GiB free. Point-in-time checks, not auto-throttling.
+- Fresh worker39664/game31384 frames show332 semantic input labels, no label
+  warning, and advancing episode/sequence. Existing visualizer server retained.
+- New training dumps retain text but discard replay companions; last3 fresh
+  receipts had no .state. Old evidence is retained; boot diagnostics retain states.
+- Fixes: HUD cell boundary c743dc0; native debt dc63754; verified native legality
+  + single-action rollback7df4ef6; bounded replay storage bab0862. Model owns
+  strategy; no install writes, difficulty changes, admin console or real mouse.
+- Tests:27 learning/state+17 deck/spatial/reporting+34 visualizer PASS (78).
+  Model/observer parity12 recurrent steps and Node graph PASS. Live invalid zone
+  rolled back exactly, restoring $3037.80 and preserving one garrison. Probe and
+  owned REA processes cleaned. Notes/automation.md and memory-map.md hold evidence.
+- Logs: analysis/nn3_training_20261117.log; nn3_training_launcher_20261117.log/.err.
+  Checkpoint sessions/nn_policy3.pt with .previous; history analysis/nn_hist3.jsonl.
+- Next: confirm round1 update, then leave training running. Future work: sustained
+  learning/evaluation across L1-L5 and isolate parallel-injection failure.
 
 ## Prior snapshot (2026-11-17 — training improvements complete)
 - All four implementation milestones completed. Latest code092552d; earlier
