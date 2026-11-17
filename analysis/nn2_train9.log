@@ -1,0 +1,105 @@
+ep pid 18832 win False frac 0.0 R 1.22
+ep pid 18832 win False frac 0.0 R -1.52
+ep pid 35116 win False frac 0.0 R -4.18
+ep pid 35116 win False frac 0.0 R -4.73
+ep pid 40080 win True frac 1.0 R 15.59
+ep pid 40080 win False frac 0.0 R -0.73
+ep pid 19876 win False frac 0.0 R -2.41
+ep pid 19876 win False frac 0.0 R 0.67
+ep pid 46536 win False frac 0.0 R -2.59
+ep pid 46536 win False frac 0.0 R -2.82
+ppo2 batch loss 129.211
+ppo2 batch loss 119.475
+ppo2 batch loss 111.024
+ppo2 batch loss 102.805
+round 0: wins 1/10 meanfrac 0.100
+ep pid 18832 win False frac 0.0 R -7.23
+ep pid 18832 win False frac 0.0 R -1.79
+ep pid 35116 win False frac 0.0 R -7.29
+ep pid 35116 win False frac 0.0 R -7.51
+ep pid 40080 win True frac 1.0 R 15.3
+ep pid 40080 win False frac 0.0 R -0.65
+ep pid 19876 win False frac 0.0 R -6.57
+ep pid 19876 win False frac 0.0 R -6.46
+ep pid 46536 win False frac 0.0 R 1.0
+ep pid 46536 win False frac 0.0 R -0.77
+ppo2 batch loss 2161.742
+ppo2 batch loss 2121.121
+ppo2 batch loss 2083.842
+ppo2 batch loss 2044.736
+round 1: wins 1/10 meanfrac 0.100
+ep pid 18832 win False frac 0.0 R -1.94
+ep pid 18832 win False frac 0.0 R 1.22
+ep pid 35116 win False frac 0.0 R -2.96
+ep pid 35116 win False frac 0.0 R 1.33
+ep pid 40080 win True frac 1.0 R 16.17
+ep pid 40080 win False frac 0.0 R -0.88
+ep pid 19876 win False frac 0.0 R 0.1
+ep pid 19876 win False frac 0.0 R 1.66
+ep pid 46536 win False frac 0.0 R -2.14
+ep pid 46536 win False frac 0.0 R 1.99
+ppo2 batch loss 154.036
+ppo2 batch loss 142.749
+ppo2 batch loss 133.026
+ppo2 batch loss 122.42
+round 2: wins 1/10 meanfrac 0.100
+ep pid 18832 win False frac 0.0 R -7.12
+ep pid 18832 win False frac 0.0 R -3.75
+ep pid 35116 win False frac 0.0 R 2.32
+ep pid 35116 win False frac 0.0 R -0.78
+ep pid 40080 win False frac 0.0 R 1.97
+ep pid 40080 win False frac 0.0 R -3.58
+ep pid 19876 win False frac 0.0 R -1.38
+ep pid 19876 win False frac 0.0 R 0.06
+ep pid 46536 win True frac 1.0 R 13.24
+ep pid 46536 win False frac 0.0 R -0.79
+ppo2 batch loss 3200.522
+ppo2 batch loss 3150.343
+ppo2 batch loss 3106.053
+ppo2 batch loss 3059.159
+round 3: wins 1/10 meanfrac 0.100
+ep pid 18832 win False frac 0.0 R -6.89
+ep pid 18832 win False frac 0.0 R -0.41
+ep pid 35116 win False frac 0.0 R -1.41
+ep pid 35116 win False frac 0.0 R 1.55
+ep pid 40080 win True frac 1.0 R 15.82
+ep pid 40080 win False frac 0.0 R -1.98
+ep pid 19876 win False frac 0.0 R -4.47
+ep pid 19876 win False frac 0.0 R -0.83
+ep pid 46536 win False frac 0.0 R -3.08
+ep pid 46536 win False frac 0.0 R -2.53
+ppo2 batch loss 88.935
+ppo2 batch loss 80.481
+ppo2 batch loss 73.187
+ppo2 batch loss 65.43
+round 4: wins 1/10 meanfrac 0.100
+ep pid 18832 win False frac 0.0 R 0.78
+ep pid 18832 win False frac 0.0 R -3.56
+ep pid 35116 win False frac 0.0 R -0.63
+ep pid 35116 win False frac 0.0 R 1.22
+ep pid 40080 win False frac 0.0 R -0.54
+ep pid 40080 win False frac 0.0 R -0.33
+ep pid 19876 win False frac 0.0 R -0.1
+ep pid 19876 win False frac 0.0 R -4.57
+ep pid 46536 win False frac 0.0 R 1.33
+ep pid 46536 win False frac 0.0 R -1.71
+ppo2 batch loss 3289.434
+ppo2 batch loss 3235.249
+ppo2 batch loss 3181.019
+ppo2 batch loss 3125.538
+round 5: wins 0/10 meanfrac 0.000
+ep pid 18832 win False frac 0.0 R -7.0
+ep pid 18832 win False frac 0.0 R -1.75
+ep pid 35116 win False frac 0.0 R -0.88
+ep pid 35116 win False frac 0.0 R -6.54
+ep pid 40080 win False frac 0.0 R -7.11
+ep pid 40080 win False frac 0.0 R -5.84
+ep pid 19876 win False frac 0.0 R 2.21
+ep pid 19876 win False frac 0.0 R -1.63
+ep pid 46536 win False frac 0.0 R -1.8
+ep pid 46536 win False frac 0.0 R 1.22
+ppo2 batch loss 123.34
+ppo2 batch loss 114.229
+ppo2 batch loss 105.177
+ppo2 batch loss 95.45
+round 6: wins 0/10 meanfrac 0.000

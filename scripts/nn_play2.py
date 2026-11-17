@@ -35,7 +35,7 @@ except ImportError:
     Observer = None
 MODEL = os.path.join(ROOT, 'sessions', 'nn_policy2.pt')
 HIST = os.path.join(ROOT, 'analysis', 'nn_hist2.jsonl')
-NOBS, HID = 22, 128
+NOBS, HID = 32, 128
 NU, NC = 15, 12
 TOOLS = ['wait', 'ready', 'napalm', 'mortar', 'sniper', 'turret', 'mine',
          'c4', 'gas_mortar', 'upgrade_unit', 'zone_rect', 'para', 'heli',
@@ -56,8 +56,8 @@ YS = [260, 500, 740]
 CELLS = [(x, y) for y in YS for x in XS]
 PLAN_STEPS = 60            # harness bound on planning phase (cap, not strategy)
 BATTLE_T = 560.0
-STEP_S = 1.0               # battle step period; at 8x = ~10 s game time,
-# winning-recipe cadence, near the ~1.3 s act()-bound cycle floor
+STEP_S = 0.7               # battle step; at 8x ~5.6 s game-time; act() floor
+# now ~0.55 s (shorter input sleeps), matching real-time play cadence
 
 def cell_of(i):
     return CELLS[i % 12]
@@ -76,7 +76,7 @@ class PolicyNet2(nn.Module):
         return self.hu(out), self.hc(out), self.val(out).squeeze(-1), h
 
 
-def make_obs(st, o, frac, trend, slope, blob, prev_u, prev_c, succ):
+def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
     g = lambda v: math.log1p(max(v or 0, 0))
     ch = st['charges']
     money = o['money'] or 0.0
@@ -85,9 +85,10 @@ def make_obs(st, o, frac, trend, slope, blob, prev_u, prev_c, succ):
             frac, max(-3, min(3, trend / 1000.0)), max(-1, min(1, slope)),
             float(ch['para']), float(st['heli_up']), float(ch['gas']),
             ch['ac130'] / 3.0,
-            -1 if blob is None else blob[0] / 1920.0,
-            -1 if blob is None else blob[1] / 1200.0,
-            -1.0 if blob is None else min(blob[2] / 4000.0, 1.0),
+            *[v / s for bv in (blobs or [])[:4]
+              for v, s in ((bv[0], 1920.0), (bv[1], 1200.0), (bv[2], 6000.0))],
+            *([-1.0] * (12 - 3 * min(len(blobs or []), 4))),
+            min(len(blobs or []) / 4.0, 1.0),
             float(prev_u), float(prev_c), float(succ),
             1.0 if st['planning'] else 0.0,
             min(st['spend_frac'], 1.0)]
@@ -122,6 +123,45 @@ def ready_once(env):
         if (zo['zomb'] or 0) > 0:
             break
         time.sleep(2.0)
+
+def q_saved(pid, dur):
+    """Game's own saved_pct from its battle telemetry (queue.jsonl); the
+    BADGE metric counts evacuation + in-zone, which the live 'civ' memory
+    field misses (zones evacuate -> alive falls). Only losers queue rows;
+    match by duration. None = row absent (win or lag)."""
+    try:
+        import psutil
+        d = psutil.Process(pid).exe().split('\\')[3]
+        p = rf'{ROOT}\game-copies\{d}\cache\usage\queue.jsonl'
+        with open(p, encoding='utf-8', errors='ignore') as fh:
+            *_, last = fh
+        row = json.loads(last)
+        if abs(row.get('battle_s', -99) - dur) < 15:
+            return float(row.get('saved_pct', 0.0)) / 100.0
+    except Exception:
+        pass
+    return None
+
+
+def load_pretrained(net, path):
+    """Warm start: map an older narrower-obs checkpoint column-wise onto the
+    current input width (old columns keep trained weights)."""
+    try:
+        old = torch.load(path)
+    except FileNotFoundError:
+        return
+    new = net.state_dict()
+    if old['gru.weight_ih_l0'].shape[1] != NOBS:
+        for key in tuple(old):
+            if key.startswith(('gru.weight_ih', 'gru.weight_hh',
+                               'hu.weight', 'hc.weight', 'val.weight')) \
+                    and old[key].ndim == 2:
+                w = new[key].clone()
+                oc = min(old[key].shape[-1], w.shape[-1])
+                w[..., :oc] = old[key][..., :oc]
+                old[key] = w
+    net.load_state_dict(old)
+
 
 def run_episode(args):
     pid, sd, eps_rand, tag = args
@@ -170,13 +210,15 @@ def run_episode(args):
                 max(dt * civ0, 1e-6)
             frac = (o['civ'] or 0) / civ0
             kills = max((prev_o['zomb'] or 0) - (o['zomb'] or 0), 0)
-            blob = None
-            if o['zomb'] and not st['planning']:
-                hs = env.hot_spot()
-                blob = (hs[0], hs[1], 2000) if hs else None
+            blobs, tot = (None, 0)
+            if o['zomb']:
+                blobs, tot = env.crowd_topk()
+                if not blobs and st['planning']:
+                    hs = env.hot_spot()
+                    blobs = [(hs[0], hs[1], 2000)] if hs else []
             mu, mc = masks_for(st)
-            f = make_obs(st, o, frac, trend, slope, blob, prev_u, prev_c, succ)
-            obs.append(f)
+            f = make_obs(st, o, frac, trend, slope, blobs or [], prev_u,
+                         prev_c, succ)
             mus.append((mu, mc))
             x = torch.tensor([f], dtype=torch.float32).unsqueeze(0)
             with torch.no_grad():
@@ -239,7 +281,9 @@ def run_episode(args):
                     time.sleep(0.12)
                     env.vi.click()
                     time.sleep(0.18)
-                did = True
+                env.vi.key_press(0x0D, sc=28)   # CLOSE loop: ENTER or no zone
+                time.sleep(0.8)
+                did = True        # bonus paid only if money actually fell
             elif not st['planning'] and u in BATTLE_U:
                 key, name, _ = BATTLE_U[u]
                 cx, cy = cell_of(c)
@@ -265,6 +309,7 @@ def run_episode(args):
                 r -= 0.01
                 if st['planning'] and u not in (0, 1):
                     r += 0.12    # shapes board-building: money fell = bought
+            r = max(r, -0.25)     # floor: evacuation waves are saves, not spiral
             rews.append(r)
             if o['zomb'] > 0:
                 fought = True
@@ -299,8 +344,10 @@ def run_episode(args):
             if bt > BATTLE_T:
                 break
             time.sleep(max(STEP_S - (time.time() - step_at), 0.3))
-            step_at = time.time()
-        R_final = (3.0 if win else 0.0) + 5.0 * frac ** 1.5
+        battle_dur = st['t']
+        sp = q_saved(pid, battle_dur)
+        eff = max(frac, sp or 0.0)
+        R_final = (3.0 if win else 0.0) + 5.0 * eff ** 1.5
         if win:
             # USER DIRECTIVE 2026-11-16: STAY ON LEVEL 1 until told otherwise.
             # Replay THIS level (R = dialog, 2nd R = YES): keeps placements +
@@ -390,7 +437,7 @@ def main():
     a = ap.parse_args()
     if a.mode == 'greedy':
         net = PolicyNet2()
-        net.load_state_dict(torch.load(MODEL))
+        load_pretrained(net, MODEL)
         ep = run_episode((int(a.pid), net.state_dict(), False, 'eval'))
         print('GREEDY', {k: ep[k] for k in
                          ('win', 'frac', 't', 'R') if k in ep}, flush=True)
@@ -398,10 +445,7 @@ def main():
     pids = [int(p) for p in a.pids.split(',')]
     net = PolicyNet2()
     if os.path.exists(MODEL):
-        try:
-            net.load_state_dict(torch.load(MODEL))
-        except RuntimeError:
-            print('stale ckpt: fresh init', flush=True)
+        load_pretrained(net, MODEL)
     sd = net.state_dict()
     with mp.Pool(len(pids)) as pool:
         for rnd in range(a.rounds):

@@ -182,11 +182,11 @@ class ZAREnv:
         vk = {'1': 0x31, '2': 0x32, '3': 0x33, '4': 0x34, '5': 0x35, '6': 0x36, 'T': 0x54}[bar_key]
         sc = {'1': 2, '2': 3, '3': 4, '4': 5, '5': 6, '6': 7, 'T': 20}[bar_key]
         self.vi.key_press(vk, sc=sc)
-        time.sleep(0.4)
+        time.sleep(0.2)
         self.vi.move_to(cx, cy)
-        time.sleep(0.25)
+        time.sleep(0.15)
         self.vi.click(cx, cy)
-        time.sleep(0.4)
+        time.sleep(0.2)
 
     # ---------------- planning actions (pre-READY) ----------------
     # PLACEMENTS ARE CLICK-DRIVEN in the game's CLICK MODE (HUD bottom-right
@@ -196,7 +196,7 @@ class ZAREnv:
     # PHYSICAL px (GetClientRect, e.g. 1920x1200 for the windowed copies).
     def _arm(self, vk, sc):
         self.vi.key_press(vk, sc=sc)
-        time.sleep(0.4)
+        time.sleep(0.2)
 
     def _place(self, vk, sc, x, y):
         self._arm(vk, sc)
@@ -291,6 +291,30 @@ class ZAREnv:
         (bx, by), _n = max(bins.items(), key=lambda kv: kv[1])
         return (int(min(bx * 60 + 30 - 11, self.cw - 30)),
                 int(min(by * 60 + 30 - 48, int(self.ch * 0.8))))
+
+    def crowd_topk(self, k=4):
+        """Player-view segmentation (ONE grab, like hot_spot): fire-tracer
+        green UNION zombie-body green binned to 60 px cells ->
+        ([(client_x, client_y, px_n)][:k], total_px). Where the crowd IS."""
+        from harness import grab
+        import numpy as _np
+        img = _np.asarray(grab(self.hwnd).convert('RGB')).astype(int)
+        r, g, b = img[..., 0], img[..., 1], img[..., 2]
+        m = (((g > 140) & (g - r > 50) & (g - b > 40)) |
+             ((g > r + 8) & (g > b + 8) & (g > 40) & (g < 110)))
+        m[:130, :] = False
+        m[int(self.ch * 0.80):, :] = False
+        ys, xs = _np.nonzero(m)
+        if len(xs) < 30:
+            return [], 0
+        bins = {}
+        for x, y in zip(xs // 60, ys // 60):
+            bins[(x, y)] = bins.get((x, y), 0) + 1
+        top = sorted(bins.items(), key=lambda kv: -kv[1])[:k]
+        out = [(int(min(bx * 60 + 30 - 11, self.cw - 30)),
+                int(min(by * 60 + 30 - 48, int(self.ch * 0.8))), n)
+               for (bx, by), n in top]
+        return out, len(xs)
 
     def battle(self, policy, max_s=900, stop_frac=0.05, log=None,
                score_t=None, auto_heli=0.0, heli_key='2'):
