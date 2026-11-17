@@ -31,6 +31,105 @@ class Controls:
         self.env = env
         env.validate_build()
 
+    def frames(self, count=2):
+        frame = self.env.scalar(0x68e590, '<Q')
+        wait_until(lambda: self.env.scalar(0x68e590, '<Q') >= frame+count, 'UI frames')
+
+    def tool_active(self):
+        # Discriminator bytes (e.g. corridor vs hold) persist after cancellation.
+        return any(self.env.scalar(rva,'<B') for rva in (
+            0x667060,0x65c488,0x65d2e1,0x65d2e2,0x65d309,0x65d30b,
+            0x65d368,0x65d369,0x65cc80,0x65ddb8,0x65ddb9,
+            0x6651e0,0x6651e2,0x665161,0x6651f0,0x6651f1))
+
+    def cancel(self):
+        if self.tool_active():
+            self.env.vi.click(30, 60, right=True)
+            self.frames()
+        # A right-click with no tool moves selected units; deselect on empty HUD space.
+        self.env.vi.click(30, 60)
+        self.frames()
+
+    def arm(self, vk, sc):
+        if self.tool_active():
+            self.env.vi.click(30, 60, right=True)
+            self.frames()
+        self.env.vi.key_press(vk, sc=sc)
+        self.frames()
+
+    def place(self, name, point, end=None, erase=False):
+        roster = self.planning_roster()
+        if name not in roster:
+            raise ValueError('Unit must be equipped before placement')
+        if erase and name not in ('Spikes', 'Oil'):
+            raise ValueError('Only painted spikes/oil support Shift erase')
+        slot = roster.index(name)
+        vk, sc = [(49,2),(50,3),(51,4),(52,5),(53,6),(54,7),(84,20)][slot]
+        self.arm(vk, sc)
+        vi = self.env.vi
+        if erase: vi.key_down(16, sc=42)
+        try:
+            if end is None: vi.click(*point)
+            else: vi.drag(*point, *end)
+        finally:
+            if erase: vi.key_up(16, sc=42)
+        self.frames()
+
+    def select(self, point, end=None, additive=False):
+        if not additive:
+            self.cancel()
+        elif self.tool_active():
+            raise ZAREnvError('Additive selection requires selection mode')
+        vi = self.env.vi
+        if additive: vi.key_down(16, sc=42)
+        try:
+            if end is None: vi.click(*point)
+            else: vi.drag(*point, *end)
+        finally:
+            if additive: vi.key_up(16, sc=42)
+        self.frames()
+
+    def move_selection(self, point, reaim=False):
+        if self.tool_active():
+            raise ZAREnvError('Move/reaim requires selection mode')
+        vi = self.env.vi
+        if reaim: vi.key_down(16, sc=42)
+        try: vi.click(*point, right=True)
+        finally:
+            if reaim: vi.key_up(16, sc=42)
+        self.frames()
+
+    def polygon_corner(self, point, begin=False):
+        if begin: self.arm(66,48)
+        elif self.env.scalar(0x65c488,'<B') != 1:
+            raise ZAREnvError('No active safe-zone polygon')
+        self.env.vi.click(*point)
+        self.frames()
+
+    def polygon_finish(self):
+        if self.env.scalar(0x65c488,'<B') != 1:
+            raise ZAREnvError('No active safe-zone polygon')
+        self.env.vi.key_press(13,sc=28)
+        self.frames()
+
+    def polygon_back(self):
+        if self.env.scalar(0x65c488,'<B') != 1:
+            raise ZAREnvError('No active safe-zone polygon')
+        self.env.vi.key_press(8,sc=14)
+        self.frames()
+
+    def refund(self, point=None):
+        if point is not None: self.env.vi.move_to(*point)
+        self.env.vi.key_press(88,sc=45)
+        self.frames()
+        if self.env.scalar(0x667868,'<B'):
+            self.env.vi.key_press(13,sc=28)
+            self.frames()
+
+    def undo(self):
+        self.env.vi.combo_press([17],90,sc=44)
+        self.frames()
+
     def planning_roster(self):
         names = {value: key for key, value in UNIT_IDS.items()} | {0: '-'}
         try:
@@ -63,8 +162,7 @@ class Controls:
         e.vi.key_press(9, sc=15)
         wait_until(lambda: e.scalar(0x6553e8, '<I') == 1, 'loadout open')
         # App mode changes before the loadout's first layout/hit-test frame.
-        frame = e.scalar(0x68e590, '<Q')
-        wait_until(lambda: e.scalar(0x68e590, '<Q') >= frame+2, 'loadout layout')
+        self.frames()
 
     def close_loadout(self):
         e = self.env

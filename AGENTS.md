@@ -161,6 +161,12 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   creation/version validation/client expectation equal (currently 3).
 
 ## Standing input traps (detail in notes/automation.md)
+- Expanded mechanic work is tracked in `notes/mechanics-coverage.md`; action names
+  or sent keys alone never establish coverage. Shared `game_controls.py` uses
+  native receipts and UI-frame synchronization; `native_state.py` reads typed
+  simulation state only. Never confuse toolbar IDs with simulation entity kinds.
+- Right-click without an active tool can move selected units. Check tool state
+  before using it to cancel; ESC can open a menu while phase still says planning.
 - Keys require scan codes. READY=SPACE; confirm with SPACE only when needed; stray SPACE pauses.
 - Menu clicks use calibrated GetClientRect fractions (1920x1200 or 3840x2160,
   English UI scale 1); the layouts have different fractions. Unconditional ESC can back out of the

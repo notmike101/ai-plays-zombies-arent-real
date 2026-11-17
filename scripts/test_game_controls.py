@@ -7,6 +7,29 @@ from game_mechanics import UNITS
 
 
 class ControlsTests(unittest.TestCase):
+    def test_cancel_never_issues_move_order_without_active_tool(self):
+        env = Mock()
+        c = Controls(env)
+        c.frames = Mock()
+        c.tool_active = Mock(return_value=False)
+        c.cancel()
+        env.vi.click.assert_called_once_with(30, 60)
+        env.vi.click.reset_mock()
+        c.tool_active.return_value = True
+        c.cancel()
+        self.assertEqual(env.vi.click.call_args_list,
+                         [unittest.mock.call(30,60,right=True),unittest.mock.call(30,60)])
+
+    def test_additive_selection_preserves_existing_selection(self):
+        env = Mock()
+        c = Controls(env)
+        c.frames, c.cancel = Mock(), Mock()
+        c.tool_active = Mock(return_value=False)
+        c.select((300,400),additive=True)
+        c.cancel.assert_not_called()
+        env.vi.click.assert_called_once_with(300,400)
+        env.vi.key_up.assert_called_once_with(16,sc=42)
+
     def test_picker_replaces_current_entry_with_clear_and_preserves_order(self):
         self.assertEqual(unit_choices('-'), list(UNITS))
         self.assertEqual(unit_choices('Mortar'), ['-']+[n for n in UNITS if n != 'Mortar'])
