@@ -4,6 +4,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import math
 from pathlib import Path
+import subprocess
+import sys
 import threading
 import time
 from urllib.parse import parse_qs, urlsplit
@@ -123,13 +125,21 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--host', default='0.0.0.0')
     parser.add_argument('--port', type=int, default=8765)
+    parser.add_argument('--preview', action='store_true', help='Run a separate synthetic PyTorch preview process')
     args = parser.parse_args()
     server = make_server(args.host, args.port)
     print(f'Policy visualizer listening on {args.host}:{server.server_port}', flush=True)
     print(f'Open http://localhost:{server.server_port}', flush=True)
+    preview_process = None
     try:
+        if args.preview:
+            preview_process = subprocess.Popen([sys.executable, '-B', str(ROOT / 'demo.py')],
+                                               creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
         server.server_close()
+        if preview_process is not None:
+            preview_process.terminate()
+            preview_process.wait(timeout=5)
