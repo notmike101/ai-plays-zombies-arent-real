@@ -1,4 +1,4 @@
-# Large/runtime artifacts — never commit
+# Large/runtime artifacts â€” never commit
 game-copies/
 sessions/inst2/
 sessions/.zarvi_*
@@ -17,3 +17,9 @@ scripts/hookdll/target/
 *.pyc
 .omp/
 *.tmp
+
+# Schema-3 live training artifacts (checkpoints are atomically backed up)
+sessions/nn_policy3.pt*
+analysis/nn_hist3.jsonl
+analysis/nn3_*.log
+analysis/nn3_*.err

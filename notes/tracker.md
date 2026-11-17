@@ -1,6 +1,21 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — training improvements complete)
+## CURRENT STATE (2026-11-17 — schema3 training starting)
+- User requested resumed training while keeping the computer usable.
+- Launcher41484: train_run.py --copies inst1 inst2 --eps2 --rounds200
+  --seed20261117. Games inst1=34196, inst2=2792; initial welcome/boot stage.
+- Parent and both games verified BELOW_NORMAL priority and affinity CPU0-7
+  (8 of24 logical CPUs). Both copies use low graphics, normal difficulty.
+- Baseline:8% system CPU,14.0GiB available RAM; GPU23%,3191/10240MiB.
+- No schema3 checkpoint existed; starting fresh schema3 weights. Original
+  nn_policy2.pt preserved. Output: sessions/nn_policy3.pt (with .previous),
+  analysis/nn_hist3.jsonl. Main log analysis/nn3_resume_20261117.log;
+  boot/exit logs analysis/nn3_launcher_20261117.log and .err.
+- Next: verify planning barriers, first PPO/checkpoint, and battle resource use.
+  Keep two copies unless measured headroom supports more. Training instances
+  are intentionally retained; they are not temporary validation games.
+
+## Prior snapshot (2026-11-17 — training improvements complete)
 - All four implementation milestones completed. Latest code092552d; earlier
   milestones a20786a/5dd479f/804fdd9/e3e042e; regular conventional commits.
 - Final77 Python tests PASS; model parity12 recurrent steps and Node graph PASS.
