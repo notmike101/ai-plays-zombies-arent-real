@@ -192,7 +192,7 @@ not a health check:
 
 ```powershell
 @'
-import pathlib, psutil
+import os, pathlib, psutil
 target_pid = 0                 # Replace with CURRENT server or trainer PID
 created = 0.0                  # Replace with its CURRENT create_time
 expected = pathlib.Path('D:/zar-scratch/visualizer/server.py')
@@ -202,7 +202,10 @@ assert abs(p.create_time() - created) < .01, 'PID identity changed'
 assert any(pathlib.Path(a).resolve() == expected.resolve() for a in p.cmdline()[1:]
            if a.endswith('.py')), 'Wrong script'
 children = p.children(recursive=True)
-assert all(c.exe() == p.exe() for c in children), 'Unexpected child; inspect manually'
+allowed = {pathlib.Path(p.exe()).resolve(),
+           (pathlib.Path(os.environ['SystemRoot']) / 'System32/conhost.exe').resolve()}
+assert all(pathlib.Path(c.exe()).resolve() in allowed for c in children), \
+    'Unexpected child; inspect manually'
 p.kill()                       # Stop parent first so it cannot create more workers
 for c in children:
     try:
@@ -223,8 +226,9 @@ Do not kill an unrelated game or another owner's worker. Borrowed `--pids` games
 require explicit cleanup by their owner. If any process is unidentifiable, report
 the ambiguity rather than guessing. Never use `Stop-Process -Name python`.
 
-For the visualizer, the captured child is its optional synthetic preview; force
-stopping just the server would otherwise orphan it. Verify its listener and preview
+Captured children can include Windows' console host and Python workers/preview.
+For the visualizer, force stopping just the server can orphan its optional
+synthetic preview. Verify its listener and preview
 are gone. Training should remain unchanged. Do not delete runtime files to stop
 processes; abruptly orphaned telemetry ages out on its own.
 
