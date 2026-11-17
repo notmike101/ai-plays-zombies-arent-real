@@ -13,6 +13,10 @@ import project
 
 
 class PortabilityTests(unittest.TestCase):
+    def test_build_pin_is_readable_without_importing_native_environment(self):
+        from game_mechanics import BUILD_SHA256
+        self.assertEqual(prepare.expected_hash(), BUILD_SHA256)
+
     def test_relocated_active_modules_use_their_own_checkout(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)/'checkout with spaces'

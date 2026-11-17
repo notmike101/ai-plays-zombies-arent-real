@@ -122,7 +122,7 @@ def snapshot(model=MODEL, exports=EXPORTS):
         manifest = dict(format=1, captured_at=datetime.now(timezone.utc).isoformat(),
                         checkpoint_sha256=digest, policy_id=info['policy_id'], run_id=info['run_id'],
                         schema=data['schema'], learning=data.get('learning'),
-                        supported_game_sha256=source_constant(ROOT/'scripts/env_zar.py', 'BUILD_SHA256'),
+                        supported_game_sha256=source_constant(ROOT/'scripts/game_mechanics.py', 'BUILD_SHA256'),
                         source_at_capture=source_record(), training_source_revision=None,
                         metrics=metrics(info),
                         limitations=['Not a complete campaign/board/RNG snapshot',

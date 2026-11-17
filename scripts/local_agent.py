@@ -140,7 +140,7 @@ def preflight(copy='inst1'):
         path = owned_copy(copy)
         with (path/'zombies-arent-real.exe').open('rb') as f:
             digest = hashlib.file_digest(f, 'sha256').hexdigest()
-        if digest != source_constant(ROOT/'scripts/env_zar.py', 'BUILD_SHA256'):
+        if digest != source_constant(ROOT/'scripts/game_mechanics.py', 'BUILD_SHA256'):
             raise ValueError('Unsupported game executable; offsets need revalidation')
         if (path/'steam_appid.txt').read_text().strip() != '5185890':
             raise ValueError('Wrong steam_appid.txt')

@@ -49,7 +49,7 @@ bind_slot7 = T
 
 def expected_hash():
     from local_agent import source_constant
-    return source_constant(ROOT/'scripts/env_zar.py', 'BUILD_SHA256')
+    return source_constant(ROOT/'scripts/game_mechanics.py', 'BUILD_SHA256')
 
 
 def is_link(path):
