@@ -1,170 +1,88 @@
 # Zero-context operator runbook
 
-Read `../AGENTS.md` first. This is the operating procedure; `tracker.md` CURRENT
-STATE supplies the latest run/log identifiers. Historical tracker sections do
-not describe current processes. Commands below use PowerShell on the existing
-Windows deployment. Do not copy an old PID into a stop command.
+Read `../AGENTS.md` first. This guide operates the existing Windows deployment at
+`D:\zar-scratch`. CURRENT STATE in `tracker.md` is a dated handoff; always inspect
+actual processes. `local-environment.md` records dependencies and recovery steps.
 
-## 1. Mission, boundaries and local state
-
-The policy must learn to save >=35% of civilians on **every** Boston level at
-normal difficulty. This is still an unmet objective. Let the model choose buys,
-placement, loadout, deployment and casts. Do not script winning strategies,
-change difficulty, use the admin console, or drive the real mouse.
-
-Work in `D:\zar-scratch`; never write the installed game under `C:\Games`.
-Owned copies are `game-copies\instN`. Never resize a running game. Keep one
-training copy until the parallel injection failure is resolved. Preserve machine
-headroom; eight logical CPUs and below-normal priority are the current starting
-limits, not GPU/RAM caps. Check usage after launching and reduce/stop if needed.
-
-The current implementation and reward explanation are in `ml-spec.md`.
-`nn_play2.py` is the **schema-3** trainer (332 inputs, 72 tools, 48 cells/tool).
-Do not launch the legacy `nn_play.py` or load `nn_policy2.pt` into schema 3.
-
-Required local state (not supplied by a Git clone):
-
-- `sessions/nn_policy3.pt`: saved policy, Adam optimizer and schema/learning metadata.
-- `sessions/nn_policy3.pt.previous`: previous atomic checkpoint, when available.
-- `analysis/nn_hist3.jsonl`: episode outcomes and completed PPO update records.
-- Owned game copies, their settings/progress, and the installed Python environment.
-
-Same-machine new sessions reuse these files. On another machine, transfer local
-artifacts separately and configure the native environment; this is not a portable
-installation guide. Never force-add ignored artifacts. Back up checkpoints while
-training is stopped for a consistent transfer. Resume restores saved policy and
-optimizer, **not** an in-flight episode, exact RNG state or recurrent memory.
-
-## 2. Inspect before starting anything
+## 1. Inspect and check
 
 ```powershell
 Set-Location D:\zar-scratch
-$zarPython = "$env:LOCALAPPDATA\Python\pythoncore-3.14-64\python.exe"
-Get-Content notes/tracker.md -TotalCount 55
-@'
-import pathlib, psutil
-root = pathlib.Path('D:/zar-scratch')
-for p in psutil.process_iter(['pid', 'exe', 'cmdline', 'create_time']):
-    try:
-        a = p.info
-        exe, cmd = a['exe'] or '', ' '.join(a['cmdline'] or [])
-        game = str(root / 'game-copies').lower() in exe.lower()
-        python = 'python' in pathlib.Path(exe).name.lower()
-        if game or (python and any(s in cmd for s in
-                    ('train_run.py', 'nn_play2.py', 'server.py', 'demo.py'))):
-            print(a, 'cwd=', p.cwd())
-            print('children=', [(c.pid, c.create_time(), c.cmdline())
-                                for c in p.children(recursive=True)])
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
-        pass
-print('CPU %', psutil.cpu_percent(interval=1),
-      'available GiB', round(psutil.virtual_memory().available / 2**30, 2))
-'@ | & $zarPython -B -
-Get-NetTCPConnection -State Listen -LocalPort 8765 -ErrorAction SilentlyContinue |
-    Select-Object LocalAddress,LocalPort,OwningProcess
-Get-Content analysis/nn_hist3.jsonl -Tail 4
+.\local.ps1 status
+.\local.ps1 check
 ```
 
-Read the current log path from the actual launcher's command or tracker; inspect
-its last 30 lines. `nvidia-smi` gives GPU utilization/VRAM on this machine.
-Check drive space too (`Get-PSDrive D`). PIDs, creation times and executable paths
-must agree with this checkout. A healthy existing run should be left running:
-**never create competing trainers writing the same checkpoint/history**.
+`status` reports this checkout's launchers/trainers/games/visualizer, PID creation
+times, commands, CPU affinity/priority, available RAM/disk and recent history.
+It reports the owner of port8765 even if that owner is foreign. It does not attach
+to a game or send input. `check` loads a CPU copy of the checkpoint for exact
+schema, weight and optimizer validation, checks dependencies, hashes inst1's game
+executable, and inspects the DLL. It never changes the checkpoint or games.
+Use `check --copy instN` for another existing copy.
 
-Progress means new episodes and `kind: update` history rows plus saved checkpoints,
-not just a running process. Boot normally takes about 95 seconds. Planning, menus
-and modal dialogs can pause simulation/dumps. Stale telemetry alone is not proof
-of a hang. For errors, read `automation.md`, `learning-audit.md` and the actual
-traceback before retrying; do not repeatedly launch new copies.
-Judge results by `saved_frac`, `end`, `scenario` and `advance`: a planning timeout
-has `saved_frac=null`. Its `observed_saved_frac`/legacy `frac` may be 1.0 because
-the battle never started; that is not a 100% save or a win.
+If `training_active=true`, inspect the log from its actual command or tracker and
+preserve healthy training. New history rows with `kind=update` establish saved
+PPO updates; a running process alone does not. Judge outcomes by `saved_frac`,
+`end`, `scenario` and `advance`. Planning timeouts have `saved_frac=null`; their
+observed/legacy fraction may be1.0 because the battle never started, not a win.
 
-## 3. Resume training only when no trainer is active
+Boot normally takes about95 seconds. Planning/dialogs can pause simulation and
+dumps. Stale telemetry alone is not a hang. Read the actual traceback and
+`automation.md` before retrying errors. Do not launch competing copies blindly.
 
-First check dependencies and the **existing** checkpoint without modifying it:
+## 2. Resume only when idle
 
 ```powershell
-if (!(Test-Path -LiteralPath sessions/nn_policy3.pt)) {
-    throw 'Resume checkpoint missing; recover it before training.'
-}
-@'
-import torch, numpy, psutil, pefile, PIL
-c = torch.load('sessions/nn_policy3.pt', map_location='cpu', weights_only=True)
-assert c['schema']['version'] == 3 and len(c['schema']['inputs']) == 332
-assert c['policy'] and c['optimizer']['state'], 'Missing learned policy/Adam state'
-print('Saved run:', c['run_id'], 'learning:', c.get('learning'))
-'@ | & $zarPython -B -
-if ($LASTEXITCODE -ne 0) { throw 'Checkpoint/dependency preflight failed' }
+.\local.ps1 train --rounds 6
 ```
 
-The trainer also checks exact schema compatibility. Do not bypass a mismatch.
-If the main checkpoint is corrupt, stop writers, preserve that file, validate
-`.previous` with the same read-only check, then explicitly restore the validated
-backup. Never promote `.tmp` blindly. If both are unavailable, report that resume
-is impossible; a random policy would be a separate experiment.
+Defaults: inst1, two episodes per batch, seed20261140, six batches, fresh L1 board,
+existing schema3 policy **and Adam state**, hidden background execution. Change
+the duration deliberately (for example `--rounds 200`); `--copy instN` and `--seed`
+are supported. `--foreground` stays attached to the terminal. Neither mode
+silently creates a random policy. Run `local.ps1 --help` for all options.
 
-Use a single idle owned copy. This bounded example runs six batches of two
-episodes; increase rounds deliberately for an unattended run. Inspect the copy's
-existing settings before boot: low graphics, normal difficulty, supported window
-size (1920x1200 or 3840x2160). Never edit the install or a live window.
+The command preflights, refuses existing training or a busy copy, and takes an
+OS-released lock while the foreground operator owns its run. It applies
+below-normal priority and at most8 CPUs (at most half the initially available
+logical CPUs) **before** launching the existing `train_run.py`. It refuses startup
+below4GiB available RAM or2GiB free disk. These are startup safeguards, not
+continuous CPU/GPU/RAM quotas. One copy is intentional while parallel injection
+remains unresolved. Do not bypass checks with the low-level launcher.
+
+The immediate result says `starting` and gives the background operator's PID/log.
+That is a spawn acknowledgement, not boot success. Read that log; it prints the
+underlying trainer command and training-log path. Run `status` again to confirm
+launchers, game, trainer and inherited CPU/priority. Verify the first completed
+batch and resource headroom (`nvidia-smi` for GPU, Task Manager if needed).
+Record identities, log paths and evidence in tracker before leaving a long run.
+
+Resume restores the last saved policy/optimizer, not an unfinished battle, exact
+RNG state or recurrent memory. Fresh L1 refers to the **board**, not the weights.
+The launcher owns and cleans its `--copies` games on exit. Lower-level `--pids`
+borrows games and does not clean them; it is not the normal operating path.
+
+## 3. Start/reuse the visualizer
 
 ```powershell
-$stamp = Get-Date -Format yyyyMMdd-HHmmss
-$trainArgs = @('-B','D:\zar-scratch\scripts\train_run.py',
-    '--copies','inst1','--eps','2','--rounds','6','--start','fresh',
-    '--model','D:\zar-scratch\sessions\nn_policy3.pt',
-    '--history','D:\zar-scratch\analysis\nn_hist3.jsonl',
-    '--seed','20261140','--log',"D:\zar-scratch\analysis\nn3_$stamp.log")
-$launcher = Start-Process -FilePath $zarPython -ArgumentList $trainArgs `
-    -WorkingDirectory D:\zar-scratch -WindowStyle Hidden -PassThru `
-    -RedirectStandardOutput "D:\zar-scratch\analysis\nn3_${stamp}_launcher.log" `
-    -RedirectStandardError "D:\zar-scratch\analysis\nn3_${stamp}_launcher.err"
-$launcher.PriorityClass = 'BelowNormal'
-$launcher.ProcessorAffinity = [IntPtr]255  # CPUs 0-7 on this 24-logical-CPU machine
-$launcher.Id
+.\local.ps1 visualizer-start
 ```
 
-`--start fresh` starts a fresh L1 **board** while loading the existing model and
-optimizer. It does not mean random weights. Do not pass `--random` for resume.
-`--start continue` selects saved campaign progress and is not a checkpoint-resume
-switch. The launcher owns/cleans games started with `--copies`; `--pids` borrows
-already-planning games and does not clean them. Prefer `--copies` for normal use.
-
-Re-run the inventory to verify inherited priority/affinity and new game/trainer
-PIDs. Record launch time, seed, log paths and identities in tracker before leaving
-the run. Check the first completed batch, checkpoint and resource usage. A healthy
-process/first update does not prove strong play or all five levels are mastered.
-
-## 4. Start or reuse the visualizer independently
-
-If port 8765 already has a listener, match its PID/command/cwd to this checkout's
-`visualizer/server.py`. Reuse it. An unrelated listener is a port conflict, not
-permission to kill it. The visualizer is read-only; starting/stopping it does not
-start/stop training or change checkpoints.
-
-Foreground (Ctrl+C in that terminal stops server and its optional preview):
+Open `http://localhost:8765`. The command reuses a matching server from this
+checkout, starts a hidden server if absent, and refuses a foreign port owner.
+Reused means the process/listener was identified; verify HTTP/live data separately.
+The server normally binds0.0.0.0 (LAN-accessible under existing firewall rules,
+without authentication). For a separate test use an unused port and loopback:
 
 ```powershell
-.\visualizer\start.ps1
+.\local.ps1 visualizer-start --port 8766 --host 127.0.0.1
 ```
 
-Background, only when no server owns the port:
-
-```powershell
-$server = Start-Process -FilePath $zarPython -WindowStyle Hidden -PassThru `
-    -WorkingDirectory D:\zar-scratch `
-    -ArgumentList @('-B','D:\zar-scratch\visualizer\server.py','--host','0.0.0.0','--port','8765')
-$server.Id
-```
-
-Open `http://localhost:8765`. Default binding permits LAN access under existing
-firewall rules; telemetry has no authentication. No firewall change is needed.
-To test lifecycle separately, use `--host 127.0.0.1 --port 8766` after checking
-that port is unused. For an intentionally synthetic preview, use `start.ps1
--Preview`; never present preview activity as live-model evidence.
-
-Health check (wait briefly for startup, then run):
+The command reports its PID/create_time. A custom-port server also appears in
+`status`'s process list. Server logs are ignored `analysis/nn3_visualizer_PORT.log`.
+These commands never start a synthetic preview or change training. The separate
+`visualizer/start.ps1 -Preview` remains available for explicitly synthetic UI
+tests; see `../visualizer/README.md`. Foreground Ctrl+C closes that server/preview.
 
 ```powershell
 $view = Invoke-RestMethod http://127.0.0.1:8765/api/state
@@ -172,98 +90,71 @@ $view | Select-Object status,age
 $view.frame | Select-Object worker_pid,game_pid,phase,sequence,preview,model_revision
 ```
 
-A connected waiting/stale display can be normal between decisions. A fresh real
-frame must have `preview=false`, matching worker/game PIDs, 332 input labels and
-no `label_warning`. See `../visualizer/README.md` for display semantics. The UI's
-Pause freezes the display only. Restarting a server clears its sampled history;
-it reconnects to existing worker files without a trainer restart. Server health
-alone does not prove current live attachment or successful game actions.
+A fresh real frame has `preview=false`, the actual worker/game PIDs,332 input
+labels and no `label_warning`. The worker PID must belong to the trainer's child
+process tree (inspect with psutil if needed). Pausing the UI pauses only the view.
+Restarting the server clears sampled history, then reconnects to worker files;
+no trainer restart is needed. HTTP health is not proof of executed game actions.
 
-## 5. Stop precisely; do not kill by process name
+## 4. Stop an identified process
 
-Let a bounded training run finish when possible. There is currently no cooperative
-"stop after this batch" command. Forced stop loses the unfinished batch; the last
-atomically saved checkpoint remains the resume point. Killing only the launcher
-can leave the trainer/worker/game running.
+Let bounded training finish when possible. There is no cooperative "stop after
+this batch" command. A forced stop loses unfinished batch data; the last atomic
+checkpoint remains the resume point. Never stop only the background operator or
+launcher: its children could continue running.
 
-For a background visualizer, target the verified **server** PID. For training,
-target the verified **nn_play2.py trainer** PID, not the launcher. First repeat
-the inventory and copy that process's PID and creation time into this block.
-Choose the matching expected script. The placeholders intentionally fail until
-replaced; do not use a historical tracker PID. This is a destructive stop command,
-not a health check:
+Run `status` immediately before stopping. Use the actual **trainer** identity for
+training, or **visualizer** identity for its server. Substitute the PID and full
+create_time in these examples; do not use historical tracker values:
 
 ```powershell
-@'
-import os, pathlib, psutil
-target_pid = 0                 # Replace with CURRENT server or trainer PID
-created = 0.0                  # Replace with its CURRENT create_time
-expected = pathlib.Path('D:/zar-scratch/visualizer/server.py')
-# For training instead: expected = pathlib.Path('D:/zar-scratch/scripts/nn_play2.py')
-p = psutil.Process(target_pid)
-assert abs(p.create_time() - created) < .01, 'PID identity changed'
-assert any(pathlib.Path(a).resolve() == expected.resolve() for a in p.cmdline()[1:]
-           if a.endswith('.py')), 'Wrong script'
-children = p.children(recursive=True)
-allowed = {pathlib.Path(p.exe()).resolve(),
-           (pathlib.Path(os.environ['SystemRoot']) / 'System32/conhost.exe').resolve()}
-assert all(pathlib.Path(c.exe()).resolve() in allowed for c in children), \
-    'Unexpected child; inspect manually'
-p.kill()                       # Stop parent first so it cannot create more workers
-for c in children:
-    try:
-        c.kill()               # Captured psutil objects guard against PID reuse
-    except psutil.NoSuchProcess:
-        pass
-_, alive = psutil.wait_procs([p, *children], timeout=15)
-assert not alive, [c.pid for c in alive]
-'@ | & $zarPython -B -
-if ($LASTEXITCODE -ne 0) { throw 'Stop failed; inspect before further action' }
+.\local.ps1 train-stop --pid TRAINER_PID --created CREATE_TIME
+.\local.ps1 visualizer-stop --pid SERVER_PID --created CREATE_TIME
 ```
 
-For training, allow the launcher to observe trainer exit and clean its owned
-games. Repeat the inventory to verify launcher, workers and owned game actually
-exited. If cleanup failed or the launcher was already gone, match each residual
-game by **exe directory**, PID and creation time, then stop only that owned copy.
-Do not kill an unrelated game or another owner's worker. Borrowed `--pids` games
-require explicit cleanup by their owner. If any process is unidentifiable, report
-the ambiguity rather than guessing. Never use `Stop-Process -Name python`.
+The placeholders deliberately fail until replaced. Stop verifies creation time,
+script path and checkout, validates descendants, then stops only the identified
+process and captured Python/console-host children. Unknown children or changed
+identity cause refusal. Never use a process-name wildcard such as "kill python".
 
-Captured children can include Windows' console host and Python workers/preview.
-For the visualizer, force stopping just the server can orphan its optional
-synthetic preview. Verify its listener and preview
-are gone. Training should remain unchanged. Do not delete runtime files to stop
-processes; abruptly orphaned telemetry ages out on its own.
+After `train-stop`, allow the existing launcher to clean its owned game, then
+run `status` to confirm trainer/workers/launcher/game exited. The stop command's
+success confirms its targeted process tree, not launcher/game cleanup. If the
+launcher had already disappeared or cleanup fails, enumerate residual games by
+exact exe directory and creation time; stop only the verified owned copy. Report
+ambiguity instead of guessing. Borrowed games belong to their original owner.
 
-## 6. Evidence, maintenance and next-session prompt
+After `visualizer-stop`, verify the listener and any owned preview are gone;
+training should continue unchanged. Do not delete runtime files to stop processes.
 
-After work, replace CURRENT STATE in tracker with dated observed state, run IDs,
-PIDs/creation times, checkpoint/update evidence, resource samples, remaining
-uncertainties and next steps. Stop temporary test instances; preserve intended
-training. Commit only your changes through the identity helper, with Conventional
-Commits; push at milestones. Do not include ignored checkpoints/logs or unrelated
-pre-existing dirty files.
+## 5. Exit codes and failures
 
-Use `node D:/github-agent/identity.mjs git ...` for **all** Git commands and the
-same helper with `gh` for GitHub. For example, after staging only your named files:
-`node D:/github-agent/identity.mjs git commit -m "docs: update operator handoff"`,
-then `node D:/github-agent/identity.mjs git push`. The helper supplies contribution
-identity; do not bypass it with personal credentials or amend unrelated history.
+Commands print JSON. Exit0 means the requested check/action succeeded; `starting`
+still needs later verification. Exit1 means a failed check/action with an error;
+exit2 means invalid arguments. Never ignore a nonzero exit and assume success.
+Preflight reports individual failures. Recovery guidance is in
+`local-environment.md`; the tool does not download, reinstall or restore anything.
+The duplicate-training guard also detects older direct launchers on this checkout.
+Its lock coordinates operator commands; bypassing the wrapper forfeits that lock.
 
-For model/feature/telemetry changes, run the checks required by AGENTS.md. Tests,
-live validation and remaining learning gaps are recorded in `learning-audit.md`
-and `training-improvements.md`. Do not change live trainer source for operational
-documentation or visualizer maintenance. No dependency reinstall is needed on
-the existing working machine.
+## 6. Mission and handoff
 
-Suggested prompt for a new agent:
+Save >=35% civilians on every Boston level consistently, at normal difficulty.
+The model owns strategy. Never script buys/placement/casts, use the admin console,
+touch the real mouse, modify the installed game, or resize a live window. The
+objective is unmet. Read `ml-spec.md` before changing observations/actions/rewards.
 
-> Work in D:\zar-scratch. Read AGENTS.md, notes/operator-runbook.md and only the
-> CURRENT STATE of notes/tracker.md first, then notes/ml-spec.md. Verify actual
-> process identities and checkpoint availability. Preserve a healthy existing
-> training run; otherwise resume schema-3 weights/Adam with one owned copy and
-> resource headroom. Reuse or start the read-only visualizer on port 8765. Never
-> start random training because a checkpoint is missing, script strategy, or
-> touch the installed game/real mouse. Verify a completed update and fresh live
-> telemetry, update tracker, and commit your documentation changes. Report limits
-> honestly; the >=35% goal is not yet achieved.
+After work, update CURRENT STATE in tracker with dated evidence, identities, log
+paths, completed updates, resource samples, uncertainties and next steps. Stop
+temporary test instances while preserving intended training. Commit only your
+named changes with Conventional Commits through
+`node D:/github-agent/identity.mjs git ...`; push milestones. Preserve unrelated
+dirty files and ignored artifacts. Read `local-environment.md` for safe test
+commands; AGENTS.md has the required model/visualizer maintenance checks.
+
+Minimal prompt for a new agent:
+
+> Work in D:\zar-scratch. Read AGENTS.md and follow notes/operator-runbook.md.
+> Train the existing model with resource headroom, preserve a healthy active run,
+> keep the visualizer available, and improve the repository with tested changes.
+> Update the tracker and commit milestones. Never silently start random training.

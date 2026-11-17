@@ -8,12 +8,21 @@ hand-script strategy the model should learn. Curriculum L1->L5 (START OVER resta
 the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 
 ## New session entry point
+- Run `.\local.ps1 status`, then `.\local.ps1 check` from this checkout. Preserve
+  healthy active training. Use `.\local.ps1 train --rounds N` only when idle;
+  it resumes schema3 with one owned copy and inherited CPU/priority limits.
+- Use `.\local.ps1 visualizer-start` to reuse/start the server. Stop commands
+  require current PID AND create_time; see `local.ps1 --help` and the runbook.
+  Do not bypass duplicate-run/missing-checkpoint/foreign-process refusal checks.
 - With zero prior context, follow `notes/operator-runbook.md` for status checks,
   checkpoint resume and training/visualizer start/stop. Then read CURRENT STATE
   in `notes/tracker.md`; revalidate PIDs and creation times before acting.
 - Current training uses `scripts/train_run.py` -> `scripts/nn_play2.py`, schema3,
   `sessions/nn_policy3.pt`. A fresh clone does not include this ignored checkpoint.
   Missing resume weights are an error, never permission to start random training.
+- This is a same-computer handoff. `notes/local-environment.md` records local
+  dependencies and recovery. A different checkout is deliberately refused while
+  live trainer modules still target D:\zar-scratch; no hidden cross-checkout use.
 
 ## Process rules (every turn)
 - TRACKER: live state, evidence, PIDs and next steps live in `notes/tracker.md`.

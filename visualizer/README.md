@@ -9,6 +9,11 @@ It covers existing-server detection, background start/stop, process identity
 checks and training resume. Read CURRENT STATE in `../notes/tracker.md` for the
 latest deployment snapshot; revalidate its PIDs before using them.
 
+For this computer, `..\local.ps1 visualizer-start` from this directory reuses or
+starts the background server. `..\local.ps1 status` reports its PID/create_time;
+`visualizer-stop --pid PID --created TIME` stops that verified server. These
+commands do not control training. The foreground launcher below remains supported.
+
 From PowerShell in `D:\zar-scratch`:
 
 ```powershell
