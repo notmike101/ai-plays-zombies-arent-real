@@ -96,8 +96,10 @@ an existing valid section. New injection acquires sessions/.zarvi_<pid> exclusiv
 a failed injection requires a process restart, never reinjection. PID reuse is
 checked against creation time. Remote thread waits are bounded to 15 s. Native
 initialization is idempotent; external shared-state reads are volatile snapshots.
-Rename the old target/release/hookdll.dll before cargo build --release, then
-restart owned copies to load the new image. Never re-inject a mapped DLL.
+Run `local.ps1 build-input` while all owned games are stopped. The pinned Rust,
+locked dependencies and deterministic linker flags are checked with two clean
+builds before atomic deployment. See `scripts/hookdll/README.md`. Never re-inject
+a mapped DLL; restart owned copies to load the new image.
 
 ## Boot and tests
 ```python
@@ -122,6 +124,10 @@ Destinations: ('campaign','stage1') and ('campaign','continue'); other destinati
 fail before launch. CONTINUE requires a partially cleared campaign (1-4 badges);
 completed and zero-badge saves are rejected before launch for this destination.
 Boot reads progress to choose the layout; it never changes or unlocks progress.
+No progress file means the shorter, never-played campaign panel: on1920x1200,
+PLAY NOW is at client(.446,.610), not the previously played START OVER location.
+This distinction was verified from fresh-copy menu captures. Unplayed3840x2160
+is deliberately uncalibrated/refused; default fresh windowed copies use1920x1200.
 Continue invokes to_planning when needed. Verify live coverage in tracker.
 
 ```powershell
@@ -133,8 +139,15 @@ cargo test --manifest-path scripts/hookdll/Cargo.toml
 ```
 Acceptance logs: analysis/interface-<timestamp>.log, PASS/FAIL table, nonzero failure
 exit. The parallel CLI checks all worlds coexist in planning, then kills its games
-in finally. Missing copies are cloned from inst4 including steam_cloud. It refuses
-busy copies. Neither script takes screenshots or uses console commands.
+in finally. Missing copies must first be created with `local.ps1 prepare-game`;
+it never implicitly clones another copy's saved progress. It refuses busy copies.
+Neither script takes screenshots or uses console commands.
+
+Fresh-copy preparation uses the full availability profile requested by the user:
+16 units,19 abilities,16 upgrades and Extra_Zones. This is training setup, not
+earned progression. Normal difficulty, native money/SP and empty boards remain;
+the model must purchase/select/place actions itself. Availability does not expand
+the policy action heads: unsupported mechanics still need interface/model work.
 
 Inst4's badges were intact (39.23, 34.31, 21.14, 13.69, 7.91). Backups before scale
 are in analysis/interface-progress-backups; no badge restoration was needed.

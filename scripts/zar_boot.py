@@ -10,7 +10,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import ctypes
 from pathlib import Path
 import re
-import shutil
 import subprocess
 import threading
 import time
@@ -199,8 +198,7 @@ def main():
         parser.error('Copies must be distinct')
     for path in paths:
         if not path.exists():
-            shutil.copytree(COPIES / 'inst4', path,
-                            ignore=shutil.ignore_patterns('debug_dumps', '*.log'))
+            raise ValueError(f'Missing {path.name}; run local.ps1 prepare-game --copy {path.name} first')
     envs, failed = [], False
     try:
         with ThreadPoolExecutor(max_workers=len(paths)) as pool:

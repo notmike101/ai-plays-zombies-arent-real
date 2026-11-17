@@ -132,6 +132,6 @@ def prepare_copy(source, name, unlocks=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--copy', default='inst1')
-    parser.add_argument('--unlocks-from', type=Path, help='Explicit existing earned unlocks.ini; never synthesizes unlocks')
+    parser.add_argument('--unlocks-from', type=Path, help='Override full availability with an explicit existing unlocks.ini')
     args = parser.parse_args()
     print(prepare_copy(config_path(load_config(), 'game', 'install_dir'), args.copy, args.unlocks_from))

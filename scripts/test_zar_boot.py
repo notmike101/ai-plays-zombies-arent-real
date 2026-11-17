@@ -2,10 +2,18 @@
 import unittest
 from unittest.mock import patch
 
-from zar_boot import COPIES, boot, copy_path, menu_points, campaign_in_progress
+from zar_boot import COPIES, boot, copy_path, menu_points, campaign_in_progress, main
 
 
 class BootBoundary(unittest.TestCase):
+    def test_cli_requires_explicit_preparation_of_missing_copies(self):
+        with patch('sys.argv', ['zar_boot.py', 'inst99999']), \
+                patch('zar_boot.Path.exists', return_value=False), \
+                patch('zar_boot.subprocess.Popen') as launch:
+            with self.assertRaisesRegex(ValueError, 'prepare-game'):
+                main()
+            launch.assert_not_called()
+
     def test_unplayed_campaign_uses_shorter_play_now_panel(self):
         self.assertEqual(menu_points(1920, 1200, unplayed=True)[2], (.446, .610))
         self.assertNotEqual(menu_points(1920, 1200)[2], (.446, .610))
