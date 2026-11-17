@@ -40,7 +40,11 @@ struct Shared {
     _pad0: u32,
     raw_hwnd: u64,
     raw_sent: u32,
-    _pad: [u32; 44],
+    dbg0: u32, // MON_W
+    dbg1: u32, // last abs_norm fail: 1=metrics 2=ClientToScreen, 0=ok
+    dbg2: u32, // pump ticks
+    dbg3: u32, // thread alive stamp (heartbeat mirror)
+    _pad: [u32; 40],
 }
 
 static mut SHARED: *mut Shared = core::ptr::null_mut();
@@ -57,10 +61,27 @@ static mut LAST_Y: i32 = 0;
 static mut PREV_BTN: u32 = 0;
 static mut HAVE_LAST: u32 = 0;
 static mut PREV_ENAB: u32 = 0;
+static mut MON_W: i32 = 0;
+static mut MON_H: i32 = 0;
+static mut ABS_DIRTY: u32 = 0; // emit a lock-in abs record as soon as enabled
+static mut LAST_HB: u32 = 0;
+
+unsafe fn emit_abs(hwnd: u64, bflags: u16, cx: i32, cy: i32) {
+    // client px (physical) -> physical screen -> 0..65535 of the primary monitor
+    let mut pt = POINT { x: cx, y: cy };
+    if ClientToScreen(hwnd as *mut c_void, &mut pt) == 0 || MON_W <= 1 || MON_H <= 1 {
+        return;
+    }
+    let ax = (pt.x.max(0).min(MON_W - 1) as i64 * 65535 / (MON_W as i64 - 1)) as i32;
+    let ay = (pt.y.max(0).min(MON_H - 1) as i64 * 65535 / (MON_H as i64 - 1)) as i32;
+    emit(hwnd, 0x0001, bflags, ax, ay); // MOUSE_MOVE_ABSOLUTE
+}
 
 #[link(name = "user32")]
 extern "system" {
     fn PostMessageW(hwnd: *mut c_void, msg: u32, wparam: usize, lparam: *const c_void) -> i32;
+    fn GetSystemMetrics(index: i32) -> i32;
+    fn ClientToScreen(hwnd: *mut c_void, pt: *mut POINT) -> i32;
 }
 
 type PGetRawInputData = unsafe extern "system" fn(
@@ -91,6 +112,15 @@ extern "system" {
         newprot: u32,
         oldprot: *mut u32,
     ) -> i32;
+    fn CreateThread(
+        sa: *mut c_void,
+        stack: usize,
+        start: unsafe extern "system" fn(*mut c_void) -> u32,
+        arg: *mut c_void,
+        flags: u32,
+        tid: *mut u32,
+    ) -> *mut c_void;
+    fn Sleep(ms: u32);
 }
 
 // --- user32/kb state FFI signatures for the originals --------------------------------
@@ -112,7 +142,7 @@ unsafe fn shared() -> Option<&'static Shared> {
         return None;
     }
     let s = &*p;
-    if s.magic == MAGIC && s.version == 1 {
+    if s.magic == MAGIC && s.version == 3 {
         Some(s)
     } else {
         None
@@ -155,42 +185,82 @@ unsafe fn emit(hwnd: u64, flags: u16, bflags: u16, dx: i32, dy: i32) {
     }
 }
 
-unsafe fn pump(s: &Shared) {
-    let en = s.enabled;
-    if en != 0 && PREV_ENAB == 0 {
-        HAVE_LAST = 0;
+unsafe fn abs_norm(hwnd: u64, cx: i32, cy: i32) -> Option<(i32, i32)> {
+    let mut pt = POINT { x: cx, y: cy };
+    if MON_W <= 1 || MON_H <= 1 {
+        if !SHARED.is_null() { core::ptr::addr_of_mut!((*SHARED).dbg1).write(1); }
+        return None;
     }
-    PREV_ENAB = en;
-    if en == 0 || s.raw_hwnd == 0 {
+    if ClientToScreen(hwnd as *mut c_void, &mut pt) == 0 {
+        if !SHARED.is_null() { core::ptr::addr_of_mut!((*SHARED).dbg1).write(2); }
+        return None;
+    }
+    let ax = pt.x.max(0).min(MON_W - 1) * 65535 / (MON_W - 1);
+    let ay = pt.y.max(0).min(MON_H - 1) * 65535 / (MON_H - 1);
+    Some((ax, ay))
+}
+
+unsafe fn pump(s: &Shared) {
+    if !SHARED.is_null() {
+        let t = core::ptr::addr_of!((*SHARED).dbg2).read();
+        core::ptr::addr_of_mut!((*SHARED).dbg2).write(t.wrapping_add(1));
+    }
+    let en = s.enabled;
+    if en == 0 {
+        PREV_ENAB = 0;
         return;
     }
-    if HAVE_LAST == 0 {
+    if s.raw_hwnd == 0 {
+        return;
+    }
+    if PREV_ENAB == 0 {
+        PREV_ENAB = 1;
         LAST_X = s.cursor_x;
         LAST_Y = s.cursor_y;
         PREV_BTN = s.buttons;
-        HAVE_LAST = 1;
-        return;
+        ABS_DIRTY = 1;
     }
-    let dx = s.cursor_x - LAST_X;
-    let dy = s.cursor_y - LAST_Y;
-    if dx != 0 || dy != 0 {
-        emit(s.raw_hwnd, 0, 0, dx, dy);
-        LAST_X = s.cursor_x;
-        LAST_Y = s.cursor_y;
-    }
+    // Absolute mode: the game's raw pointer MUST equal our virtual cursor.
+    // Emit an abs record on enable lock-in, on any move, periodically, and
+    // before/after every button edge (edges carry the abs coords too).
+    let moved = s.cursor_x != LAST_X || s.cursor_y != LAST_Y;
     let btn = s.buttons;
     let ch = btn ^ PREV_BTN;
-    if ch & 1 != 0 {
-        emit(s.raw_hwnd, 0, if btn & 1 != 0 { 0x0001 } else { 0x0002 }, 0, 0);
+    let stale = s.heartbeat.wrapping_sub(LAST_HB) > 30;
+    if en != 0 && (ABS_DIRTY != 0 || moved || ch != 0 || stale) {
+        if abs_norm(s.raw_hwnd, s.cursor_x, s.cursor_y).is_some() {
+            if ABS_DIRTY != 0 || moved || stale {
+                emit_abs(s.raw_hwnd, 0, s.cursor_x, s.cursor_y);
+                LAST_X = s.cursor_x;
+                LAST_Y = s.cursor_y;
+                ABS_DIRTY = 0;
+                LAST_HB = s.heartbeat;
+            }
+            if ch & 1 != 0 {
+                emit_abs(s.raw_hwnd, if btn & 1 != 0 { 0x0001 } else { 0x0002 }, s.cursor_x, s.cursor_y);
+            }
+            if ch & 2 != 0 {
+                emit_abs(s.raw_hwnd, if btn & 2 != 0 { 0x0004 } else { 0x0008 }, s.cursor_x, s.cursor_y);
+            }
+            if ch & 4 != 0 {
+                emit_abs(s.raw_hwnd, if btn & 4 != 0 { 0x0010 } else { 0x0020 }, s.cursor_x, s.cursor_y);
+            }
+            PREV_BTN = btn;
+        }
+    } else {
+        PREV_BTN = btn;
     }
-    if ch & 2 != 0 {
-        emit(s.raw_hwnd, 0, if btn & 2 != 0 { 0x0004 } else { 0x0008 }, 0, 0);
-    }
-    if ch & 4 != 0 {
-        emit(s.raw_hwnd, 0, if btn & 4 != 0 { 0x0010 } else { 0x0020 }, 0, 0);
-    }
-    PREV_BTN = btn;
 }
+
+unsafe extern "system" fn pump_thread(_arg: *mut c_void) -> u32 {
+    loop {
+        if let Some(s) = shared() {
+            pump(&s);
+        }
+        Sleep(16);
+    }
+}
+
 
 unsafe extern "system" fn Hook_GetRawInputData(
     hraw: *mut c_void,
@@ -215,7 +285,21 @@ unsafe extern "system" fn Hook_GetRawInputData(
         return need;
     }
     let orig: PGetRawInputData = core::mem::transmute(ORIG_RAW);
-    orig(hraw, cmd, data, psize, hdrsize)
+    let r = orig(hraw, cmd, data, psize, hdrsize);
+    // Override real MOUSE records with our virtual cursor (abs) while enabled,
+    // so no physical input can desync the game pointer. Keyboard passes through.
+    if let Some(s) = shared() {
+        if s.enabled != 0 && cmd == 0 && !data.is_null() && r >= 40 && s.raw_hwnd != 0 {
+            if core::ptr::read_unaligned(data as *const u32) == 0 {
+                if let Some((ax, ay)) = abs_norm(s.raw_hwnd, s.cursor_x, s.cursor_y) {
+                    core::ptr::write_unaligned(data.add(16) as *mut u16, 0x0001);
+                    core::ptr::write_unaligned(data.add(24) as *mut i32, ax);
+                    core::ptr::write_unaligned(data.add(28) as *mut i32, ay);
+                }
+            }
+        }
+    }
+    r
 }
 
 
@@ -514,10 +598,38 @@ unsafe fn init() {
     core::ptr::write_bytes(view as *mut u8, 0, SECTION_SIZE);
     let s = view as *mut Shared;
     (*s).magic = MAGIC;
-    (*s).version = 1;
+    (*s).version = 3;
+    MON_W = GetSystemMetrics(0);
+    MON_H = GetSystemMetrics(1);
     (*s).enabled = 0; // passthrough until the driver enables it
     SHARED = s;
+    core::ptr::addr_of_mut!((*s).dbg0).write(MON_W as u32);
+    core::ptr::addr_of_mut!((*s).dbg2).write(99999);
+    CreateThread(core::ptr::null_mut(), 0, pump_thread, core::ptr::null_mut(), 0, core::ptr::null_mut());
 
     let n = patch_iat(base);
     (*s).patch_count = n as u32;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn raw_input_matches_win32_x64() {
+        unsafe {
+            emit(0, 1, 1, 12345, 23456);
+            let handle = RING.as_mut_ptr().add(RING_IDX as usize * 40);
+            let mut size = 0;
+            assert_eq!(Hook_GetRawInputData(handle.cast(), 0x10000003,
+                       core::ptr::null_mut(), &mut size, 24), 0);
+            assert_eq!(size, 48);
+            let mut bytes = [0u8; 48];
+            assert_eq!(Hook_GetRawInputData(handle.cast(), 0x10000003,
+                       bytes.as_mut_ptr(), &mut size, 24), 48);
+            assert_eq!(u16::from_le_bytes(bytes[24..26].try_into().unwrap()), 1);
+            assert_eq!(u16::from_le_bytes(bytes[28..30].try_into().unwrap()), 1);
+            assert_eq!(i32::from_le_bytes(bytes[36..40].try_into().unwrap()), 12345);
+            assert_eq!(i32::from_le_bytes(bytes[40..44].try_into().unwrap()), 23456);
+        }
+    }
 }
