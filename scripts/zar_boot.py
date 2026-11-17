@@ -110,16 +110,17 @@ def boot(copy_dir, dest=('campaign', 'stage1')):
         click_fraction(vi, .4245, .844)
         step = 'campaign'
         click_fraction(vi, .207, .368)
-        # Boston is the persisted/default first campaign. Verify its identity below.
-        step = dest[1]
-        target = (.451, .738) if dest[1] == 'stage1' else (.446, .813)
-        click_fraction(vi, *target)
-        vi.key_press(0x0D, sc=28, hold=.15)
-        time.sleep(5)
         # memscan.module_base installs a per-call ctypes Structure signature.
         # Serialize attachments so concurrent copies cannot replace that type.
         with _ENV_ATTACH_LOCK:
             env = ZAREnv(process.pid)
+        # Boston is the persisted/default first campaign. Verify its identity below.
+        step = dest[1]
+        target = (.451, .738) if dest[1] == 'stage1' else (.446, .813)
+        click_fraction(vi, *target)
+        if not env.obs()['civ']:
+            vi.key_press(0x0D, sc=28, hold=.15)
+        time.sleep(5)
         if not env.obs()['civ']:
             # Only attempt ESC when the first start did not enter a world: an
             # unconditional ESC backs out of an unobstructed campaign page.
@@ -127,10 +128,16 @@ def boot(copy_dir, dest=('campaign', 'stage1')):
             vi.key_press(0x1B, sc=1, hold=.15)
             time.sleep(1)
             click_fraction(vi, *target)
-            vi.key_press(0x0D, sc=28, hold=.15)
+            if not env.obs()['civ']:
+                vi.key_press(0x0D, sc=28, hold=.15)
             time.sleep(5)
         step = 'verify world'
         dump = env.dump()
+        if not dump and env.obs()['civ']:
+            # A world counter plus a silent dump can mean a modal owns input.
+            vi.key_press(0x1B, sc=1, hold=.15)
+            time.sleep(1.1)
+            dump = env.dump()
         if dest[1] == 'continue' and dump and dump.get('where', {}).get('phase') != 'planning':
             env.to_planning()
             time.sleep(1.1)

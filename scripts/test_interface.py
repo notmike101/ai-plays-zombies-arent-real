@@ -108,6 +108,12 @@ def exercise(env):
     vi.key_press(0x70, sc=59)  # Normal 1x speed; inherited dev speed is not a difficulty setting.
     vi.key_press(0x20, sc=57, hold=.15)
     time.sleep(.4)
+    vi.click(*point(.59, .567), hold=.15)  # NO on the READY confirmation.
+    cancelled = snapshot(env)
+    check('dialog NO click', cancelled['where']['phase'] == 'planning'
+          and env.obs()['zomb'] == 0, 'posted click cancels READY, no battle')
+    vi.key_press(0x20, sc=57, hold=.15)
+    time.sleep(.4)
     vi.key_press(0x20, sc=57, hold=.15)
     deadline = time.monotonic() + 8
     obs = env.obs()
