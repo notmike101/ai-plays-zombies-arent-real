@@ -1,19 +1,25 @@
 """Local operator entry point. No game attachment or input during status/check."""
 import argparse
 import ast
+from contextlib import contextmanager
 import hashlib
 import importlib
 import importlib.metadata
 import json
+import math
 import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import sys
+import time
+import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL = ROOT / 'sessions/nn_policy3.pt'
 HISTORY = ROOT / 'analysis/nn_hist3.jsonl'
+LOCK = ROOT / 'analysis/nn3_operator.lock'
 
 
 def script_role(command, cwd, root=ROOT):
@@ -170,17 +176,176 @@ def status():
                 checkpoint_exists=MODEL.is_file(), history=recent_history(),
                 available_ram_gib=round(psutil.virtual_memory().available/2**30, 2),
                 disk_free_gib=round(shutil.disk_usage(ROOT).free/2**30, 2),
+                visualizer=listener(8765),
                 next_step='Preserve active training; otherwise run check before train. '
                           'See notes/operator-runbook.md. History is a snapshot, not monitoring.')
 
 
+def require_idle(rows, copy, self_pid=None, parent_pid=None):
+    for row in rows:
+        if row['pid'] == self_pid:
+            continue
+        if row['pid'] == parent_pid and row['role'] == 'operator':
+            continue  # The brief background-launch parent may not have exited yet.
+        if row['role'] in ('operator', 'launcher', 'trainer'):
+            raise ValueError(f"Training already active: {row['role']} PID {row['pid']}; reuse it")
+    for row in rows:
+        if row['role'] == 'game' and Path(row['exe']).parent == owned_copy(copy):
+            raise ValueError(f"{copy} already running as PID {row['pid']}; do not take over")
+
+
+@contextmanager
+def training_lock(path):
+    import msvcrt
+    with path.open('a+b') as f:
+        if f.tell() == 0:
+            f.write(b'0')
+            f.flush()
+        f.seek(0)
+        try:
+            msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError as e:
+            raise ValueError('Another local operator holds the training lock') from e
+        try:
+            yield
+        finally:
+            f.seek(0)
+            msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+
+
+def limit_resources():
+    import psutil
+    if psutil.virtual_memory().available < 4*2**30 or shutil.disk_usage(ROOT).free < 2*2**30:
+        raise ValueError('Insufficient headroom: need 4 GiB available RAM and 2 GiB free disk')
+    p = psutil.Process()
+    cpus = p.cpu_affinity()
+    p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+    p.cpu_affinity(cpus[:min(8, max(1, len(cpus)//2))])
+
+
+def train(args):
+    owned_copy(args.copy)
+    if args.rounds < 1:
+        raise ValueError('Rounds must be positive')
+    require_idle(inventory(), args.copy, os.getpid(), os.getppid() if args.foreground else None)
+    report = preflight(args.copy)
+    if not report['ok']:
+        raise ValueError('; '.join(report['errors']))
+    stamp = time.strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:6]
+    if not args.foreground:
+        log = ROOT / f'analysis/nn3_operator_{stamp}.log'
+        command = [sys.executable, '-B', str(Path(__file__).resolve()), 'train',
+                   '--foreground', '--copy', args.copy, '--rounds', str(args.rounds),
+                   '--seed', str(args.seed)]
+        with log.open('w') as f:
+            p = subprocess.Popen(command, cwd=ROOT, stdout=f, stderr=subprocess.STDOUT,
+                                 creationflags=subprocess.CREATE_NO_WINDOW)
+        return dict(ok=True, status='starting', pid=p.pid, log=str(log),
+                    next_step='Read this log and run status. Starting is not proof of a completed update.')
+    with training_lock(LOCK):
+        require_idle(inventory(), args.copy, os.getpid(), os.getppid())
+        limit_resources()  # Applied before the launcher can spawn any game or worker.
+        command = [sys.executable, '-B', str(ROOT/'scripts/train_run.py'),
+                   '--copies', args.copy, '--eps', '2', '--rounds', str(args.rounds),
+                   '--seed', str(args.seed), '--start', 'fresh', '--model', str(MODEL),
+                   '--history', str(HISTORY), '--log', str(ROOT/f'analysis/nn3_{stamp}.log')]
+        print(json.dumps(dict(status='launching', command=command)), flush=True)
+        rc = subprocess.call(command, cwd=ROOT)
+        return dict(ok=rc == 0, status='finished', returncode=rc)
+
+
+def listener(port):
+    import psutil
+    owners = {c.pid for c in psutil.net_connections(kind='tcp')
+              if c.status == psutil.CONN_LISTEN and c.laddr.port == port}
+    if not owners:
+        return None
+    if len(owners) != 1 or None in owners:
+        raise ValueError(f'Port {port} has ambiguous owners: {owners}')
+    p = psutil.Process(owners.pop())
+    return dict(pid=p.pid, create_time=p.create_time(), command=p.cmdline(),
+                role=script_role(p.cmdline(), p.cwd()), port=port)
+
+
+def start_visualizer(port, host):
+    current = listener(port)
+    if current:
+        if current['role'] != 'visualizer':
+            raise ValueError(f'Port {port} belongs to another process; refusing to replace it')
+        return dict(ok=True, status='already_running', **current)
+    log = ROOT/f'analysis/nn3_visualizer_{port}.log'
+    with log.open('w') as f:
+        p = subprocess.Popen([sys.executable, '-B', str(ROOT/'visualizer/server.py'),
+                              '--host', host, '--port', str(port)], cwd=ROOT, stdout=f, stderr=f,
+                             creationflags=subprocess.CREATE_NO_WINDOW)
+    import psutil
+    created = psutil.Process(p.pid).create_time()
+    for _ in range(40):
+        if p.poll() is not None:
+            raise ValueError(f'Visualizer exited; inspect {log}')
+        current = listener(port)
+        if current and current['pid'] == p.pid:
+            return dict(ok=True, status='listening', **current,
+                        url=f'http://localhost:{port}', log=str(log))
+        time.sleep(.1)
+    # Do not leave an unconfirmed server behind after reporting failure.
+    stop_process(p.pid, created, 'visualizer')
+    raise ValueError(f'Visualizer did not bind within 4 seconds; inspect {log}')
+
+
+def stop_process(pid, created, role):
+    import psutil
+    p = psutil.Process(pid)
+    if not math.isfinite(created) or abs(p.create_time()-created) >= .01:
+        raise ValueError('Process identity changed; run status again')
+    if script_role(p.cmdline(), p.cwd()) != role:
+        raise ValueError('Wrong script/checkout; refusing to stop it')
+    children = p.children(recursive=True)
+    allowed = {Path(p.exe()).resolve(),
+               (Path(os.environ['SystemRoot'])/'System32/conhost.exe').resolve()}
+    if any(Path(c.exe()).resolve() not in allowed for c in children):
+        raise ValueError('Unexpected child process; inspect before stopping')
+    p.kill()
+    for child in children:
+        try:
+            child.kill()
+        except psutil.NoSuchProcess:
+            pass
+    _, alive = psutil.wait_procs([p, *children], timeout=15)
+    if alive:
+        raise ValueError(f'Processes remain: {[p.pid for p in alive]}')
+    return dict(ok=True, status='stopped', pid=pid,
+                next_step='Run status to verify launcher/game cleanup. Unsaved training batch is lost.'
+                          if role == 'trainer' else 'Visualizer stopped; training is independent.')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['status', 'check'])
+    parser.add_argument('command', choices=['status', 'check', 'train', 'train-stop',
+                                           'visualizer-start', 'visualizer-stop'])
     parser.add_argument('--copy', default='inst1')
+    parser.add_argument('--rounds', type=int, default=6)
+    parser.add_argument('--seed', type=int, default=20261140)
+    parser.add_argument('--foreground', action='store_true', help='Keep training attached to this terminal')
+    parser.add_argument('--port', type=int, default=8765)
+    parser.add_argument('--host', choices=['0.0.0.0', '127.0.0.1'], default='0.0.0.0')
+    parser.add_argument('--pid', type=int)
+    parser.add_argument('--created', type=float, help='Exact create_time from current status output')
     args = parser.parse_args()
+    if args.command.endswith('-stop') and (not args.pid or args.created is None):
+        parser.error('Stop requires --pid and --created from a fresh status result')
     try:
-        result = status() if args.command == 'status' else preflight(args.copy)
+        if args.command == 'status':
+            result = status()
+        elif args.command == 'check':
+            result = preflight(args.copy)
+        elif args.command == 'train':
+            result = train(args)
+        elif args.command == 'visualizer-start':
+            result = start_visualizer(args.port, args.host)
+        else:
+            result = stop_process(args.pid, args.created,
+                                  'trainer' if args.command == 'train-stop' else 'visualizer')
         print(json.dumps(result, indent=2))
         return 0 if result.get('ok', True) else 1
     except Exception as e:

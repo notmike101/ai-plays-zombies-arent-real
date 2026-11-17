@@ -15,7 +15,7 @@ This is the existing Windows deployment, not a portable distribution project.
   Inventory verified script paths/PIDs/creation times, resources, latest history,
   dependencies, supported owned copy/DLL and exact checkpoint compatibility.
   Test missing/wrong checkpoint, foreign process paths and malformed history.
-- [ ] Guarded lifecycle: same CLI plus `local.ps1`. Resume existing weights only,
+- [x] Guarded lifecycle: same CLI plus `local.ps1`. Resume existing weights only,
   refuse concurrent trainers, serialize wrapper launches, apply CPU/priority
   limits before spawning the existing launcher. Reuse matching visualizer;
   refuse foreign port owners. Stop only an explicitly identified server/trainer,
@@ -39,3 +39,8 @@ actual training launch/stop is tested with fakes while the real learner is activ
 - No dependency reinstall, checkpoint publication or extra game copy is needed.
 - Milestone 1: five offline tests passed after the expected missing-module failure;
   actual read-only preflight passed for schema3/Adam, inst1 executable and x64 DLL.
+- Milestone 2: eleven tests pass, including lock contention, explicit resume paths,
+  process identity refusal and resource-limit ordering. Actual duplicate start was
+  rejected. Isolated server29688 on8766 started/reused/served HTTP/stopped; stale
+  creation time refused without stopping it. Production identities unchanged.
+  Parent-launch race and NaN creation time are covered. No live training stop.

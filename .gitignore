@@ -23,3 +23,4 @@ sessions/nn_policy3.pt*
 analysis/nn_hist3.jsonl
 analysis/nn3_*.log
 analysis/nn3_*.err
+analysis/nn3_operator.lock
