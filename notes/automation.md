@@ -30,7 +30,7 @@ Drag sends held-button moves and releases in finally. No desktop input is sent.
 | Wheel | vi.wheel(+1/-1), WM_MOUSEWHEEL | Zoom .5795 -> .6374 -> .5795; world cursor unchanged |
 | READY confirmation | SPACE then SPACE, correct scan codes | Zombies >0 |
 | Restart confirmation | Existing env.to_planning() R loop | Planning, placements and budget retained |
-| Other dialogs | Bound Enter/Space/Esc keys | Arbitrary dialog mouse targets were not audited |
+| READY NO dialog button | vi.click at client fraction (.59,.567) | Covered by the acceptance suite; other dialogs use their bound keys |
 | Raw-only menu/world mouse actions | Not the supported action path | Isolated tests produced no successful action |
 
 A segment drag starts with a press, which supplies a polygon corner. Four such
@@ -103,7 +103,10 @@ finally:
 ```
 boot refuses foreign/busy directories and non-normal settings. It launches detached,
 waits <=90 s for a window, injects once, waits until 75 s after launch, navigates,
-then verifies Boston/stage/planning and fresh L1 money/civilians. Failed boots kill
+then verifies Boston/stage/planning and fresh L1 money/civilians. It sends ENTER
+only if world civilians are still zero: when START OVER enters planning directly,
+an extra ENTER opens READY and blocks F6. One ESC may close a world modal before
+verification is retried. Failed boots kill
 their owned process and report the step plus section diagnostics. An ESC fallback
 runs only after failing to enter the world: unconditional ESC backs out of a clear
 campaign page. Environment attachment is serialized around the existing memscan
@@ -351,3 +354,10 @@ out-breeds any static defense. What wins (hypothesis to verify with the ML/heuri
   sequential per pid); lost battles auto-return via R(retry). NOTE: each retry
   permanently shrinks civ0 (99k->80k->66k->64k observed) — frac normalized per
   episode but absolute difficulty drifts (easier crowds).
+
+## Boot blocker diagnosis (2026-11-17)
+The failed parallel probes were not a focus or long-key-hold problem. A one-off
+PrintWindow capture (analysis/interface-blocking-surface.png, ignored artifact)
+showed the READY confirmation over a fresh L1 board. The unconditional ENTER
+following a direct START OVER had opened it. ESC restored F6 immediately.
+The boot and acceptance scripts do not capture images.
