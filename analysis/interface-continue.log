@@ -1,0 +1,14 @@
+inst1 launched pid=33236
+restored progress; remaining []
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\zar_boot.py", line 160, in boot
+    raise ZAREnvError(f'World mismatch: {where}; obs={env.obs()}')
+env_zar.ZAREnvError: World mismatch: {}; obs={'civ': 0, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': None}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "<stdin>", line 10, in <module>
+  File "D:\zar-scratch\scripts\zar_boot.py", line 177, in boot
+    raise ZAREnvError(f'{path.name} failed at {step}: {error}; section={debug}') from error
+env_zar.ZAREnvError: inst1 failed at verify world: World mismatch: {}; obs={'civ': 0, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': None}; section={'pid': 33236, 'version': 3, 'enabled': 1, 'cx': 856, 'cy': 976, 'buttons': 0, 'toggles': 0, 'heartbeat': 3, 'patches': 4, 'raw_hwnd': 53219644, 'raw_sent': 6, 'monitor_width': 3840, 'abs_error': 0, 'pump_ticks': 105736}

@@ -1,0 +1,2 @@
+post-only 960 600 3037.800048828125
+{'view': {'cursor': '1630.95 1318.59', 'cursor_map': '10636.95 11528.59', 'camera_center': '1630.95 1318.59', 'camera_zoom': '0.5795', 'camera_pitch': '0.0000', 'camera_yaw': '0.0000', 'cursor_cell': '1076303 (col 815 row 659) obstacle = 1'}, 'economy': {'money': '3037.80'}, 'plan': None, 'walls': None}

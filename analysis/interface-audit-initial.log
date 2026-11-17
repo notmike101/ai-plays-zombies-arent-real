@@ -1,0 +1,17 @@
+kill stale 3588 D:\zar-scratch\game-copies\inst7\zombies-arent-real.exe
+kill stale 10428 D:\zar-scratch\game-copies\inst5\zombies-arent-real.exe
+kill stale 17224 D:\zar-scratch\game-copies\inst8\zombies-arent-real.exe
+kill stale 29948 D:\zar-scratch\game-copies\inst6\zombies-arent-real.exe
+kill stale 44716 D:\zar-scratch\game-copies\inst3\zombies-arent-real.exe
+{"tag": "before", "obs": {"civ": 8142, "zomb": 0, "converting": 0, "corpses": 0, "police": 0, "money": 3111.0}, "where": {"app_mode": "play", "phase": "planning", "mode": "Command", "map_key": "Boston, MA", "map_path": "maps\\custom_us_boston_d13ba0.map", "campaign": "Boston, MA", "campaign_active": "true", "stage": "0 (stage 1 of 5)", "custom_map": "false", "hardcore": "false", "ultra_hardcore": "false", "difficulty": "Adaptive", "assist_level": "0", "crowd_keep_permille": "1000", "world": "3262.0 3258.0", "map_origin": "9006.000 10210.000"}, "view": {"cursor": "3280.70 1529.12", "cursor_map": "12286.70 11739.12", "camera_center": "1630.95 1318.59", "camera_zoom": "0.5795", "camera_pitch": "0.0000", "camera_yaw": "0.0000"}, "counts": {"garrisons": "0", "mortars": "0", "walls": "0"}}
+{"tag": "raw center", "obs": {"civ": 8142, "zomb": 0, "converting": 0, "corpses": 0, "police": 0, "money": 3111.0}, "where": {"app_mode": "play", "phase": "planning", "mode": "Command", "map_key": "Boston, MA", "map_path": "maps\\custom_us_boston_d13ba0.map", "campaign": "Boston, MA", "campaign_active": "true", "stage": "0 (stage 1 of 5)", "custom_map": "false", "hardcore": "false", "ultra_hardcore": "false", "difficulty": "Adaptive", "assist_level": "0", "crowd_keep_permille": "1000", "world": "3262.0 3258.0", "map_origin": "9006.000 10210.000"}, "view": {"cursor": "3280.70 1529.12", "cursor_map": "12286.70 11739.12", "camera_center": "1630.95 1318.59", "camera_zoom": "0.5795", "camera_pitch": "0.0000", "camera_yaw": "0.0000"}, "counts": {"garrisons": "0", "mortars": "0", "walls": "0"}}
+raw-click 960 600 3111.0 3111.0
+raw-click 800 600 3111.0 3111.0
+raw-click 1000 700 3111.0 3111.0
+raw-click 800 500 3111.0 3111.0
+raw-click 1100 500 3111.0 3111.0
+raw-click 700 650 3111.0 3111.0
+raw-click 1100 650 3111.0 3111.0
+{"tag": "garrison", "obs": {"civ": 8142, "zomb": 0, "converting": 0, "corpses": 0, "police": 0, "money": 3111.0}, "where": {"app_mode": "play", "phase": "planning", "mode": "Command", "map_key": "Boston, MA", "map_path": "maps\\custom_us_boston_d13ba0.map", "campaign": "Boston, MA", "campaign_active": "true", "stage": "0 (stage 1 of 5)", "custom_map": "false", "hardcore": "false", "ultra_hardcore": "false", "difficulty": "Adaptive", "assist_level": "0", "crowd_keep_permille": "1000", "world": "3262.0 3258.0", "map_origin": "9006.000 10210.000"}, "view": {"cursor": "3280.70 1529.12", "cursor_map": "12286.70 11739.12", "camera_center": "1630.95 1318.59", "camera_zoom": "0.5795", "camera_pitch": "0.0000", "camera_yaw": "0.0000"}, "counts": {"garrisons": "0", "mortars": "0", "walls": "0"}}
+zone drag money 3111.0
+{"tag": "zone close", "obs": {"civ": 8142, "zomb": 0, "converting": 0, "corpses": 0, "police": 0, "money": 3111.0}, "where": null, "view": null, "counts": null}

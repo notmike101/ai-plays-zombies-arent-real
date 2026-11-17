@@ -1,0 +1,5 @@
+inst3 launched pid=29028
+inst3 READY pid=29028 obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}
+PASS inst3 boot
+PASS simultaneous planning: 1/1
+PASS cleanup remaining=[]

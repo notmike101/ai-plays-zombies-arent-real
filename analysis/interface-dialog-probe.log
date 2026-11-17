@@ -1,0 +1,7 @@
+inst1 launched pid=35080
+diagnostic capture True
+ESC then dump True
+inst1 READY pid=35080 obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}
+PASS inst1 boot
+PASS simultaneous planning: 1/1
+PASS cleanup remaining=[]

@@ -1,0 +1,12 @@
+inst3 launched pid=50172
+inst4 launched pid=27672
+inst2 launched pid=38512
+inst1 launched pid=12956
+FAIL inst3 inst3 failed at stage1: argument 3: TypeError: expected LP_MI instance instead of pointer to MI; section={'pid': 50172, 'version': 3, 'enabled': 1, 'cx': 1732, 'cy': 1594, 'buttons': 0, 'toggles': 0, 'heartbeat': 12, 'patches': 4, 'raw_hwnd': 4723284, 'raw_sent': 4, 'monitor_width': 3840, 'abs_error': 0, 'pump_ticks': 105068}
+FAIL inst4 inst4 failed at stage1: argument 3: TypeError: expected LP_MI instance instead of pointer to MI; section={'pid': 27672, 'version': 3, 'enabled': 1, 'cx': 866, 'cy': 886, 'buttons': 0, 'toggles': 0, 'heartbeat': 12, 'patches': 4, 'raw_hwnd': 4132598, 'raw_sent': 4, 'monitor_width': 3840, 'abs_error': 0, 'pump_ticks': 105066}
+inst1 READY pid=12956 obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}
+PASS inst1 boot
+inst2 READY pid=38512 obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}
+PASS inst2 boot
+FAIL simultaneous planning: 2/4
+PASS cleanup remaining=[]

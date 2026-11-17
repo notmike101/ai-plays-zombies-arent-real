@@ -1,0 +1,14 @@
+inst3 launched pid=44352
+inst1 launched pid=14252
+inst2 launched pid=13668
+inst4 launched pid=29448
+inst3 READY pid=44352 obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}
+PASS inst3 boot
+inst2 READY pid=13668 obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}
+PASS inst2 boot
+inst1 READY pid=14252 obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}
+PASS inst1 boot
+inst4 READY pid=29448 obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}
+PASS inst4 boot
+PASS simultaneous planning: 4/4
+PASS cleanup remaining=[]

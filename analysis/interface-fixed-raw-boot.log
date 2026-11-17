@@ -1,0 +1,5 @@
+launched 19848
+injected {'pid': 19848, 'version': 3, 'enabled': 1, 'cx': 0, 'cy': 0, 'buttons': 0, 'toggles': 0, 'heartbeat': 1, 'patches': 4, 'raw_hwnd': 25561736, 'raw_sent': 0, 'monitor_width': 3840, 'abs_error': 0, 'pump_ticks': 100000}
+PlayNow raw {'pid': 19848, 'version': 3, 'enabled': 1, 'cx': 815, 'cy': 1013, 'buttons': 0, 'toggles': 0, 'heartbeat': 4, 'patches': 4, 'raw_hwnd': 25561736, 'raw_sent': 4, 'monitor_width': 3840, 'abs_error': 0, 'pump_ticks': 104584}
+campaign raw
+OBS {'civ': 0, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': None} PHASE None

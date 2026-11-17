@@ -1,0 +1,2 @@
+{'civ': 209867, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 27047.044921875}
+{'app_mode': 'play', 'phase': 'planning', 'mode': 'Command', 'map_key': 'Boston, MA', 'map_path': 'maps\\custom_us_boston_d13ba0.map', 'campaign': 'Boston, MA', 'campaign_active': 'true', 'stage': '4 (stage 5 of 5)', 'custom_map': 'false', 'hardcore': 'false', 'ultra_hardcore': 'false', 'difficulty': 'Adaptive', 'assist_level': '0', 'crowd_keep_permille': '1000', 'world': '20024.0 18312.0', 'map_origin': '768.000 3028.000'}

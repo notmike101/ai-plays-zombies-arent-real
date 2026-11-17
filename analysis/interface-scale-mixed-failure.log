@@ -1,0 +1,10 @@
+inst1 launched pid=22212
+inst2 launched pid=48300
+inst4 launched pid=42792
+inst3 launched pid=23456
+FAIL inst1 inst1 failed at verify world: World mismatch: {}; obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}; section={'pid': 22212, 'version': 3, 'enabled': 1, 'cx': 866, 'cy': 886, 'buttons': 0, 'toggles': 0, 'heartbeat': 3, 'patches': 4, 'raw_hwnd': 2299250, 'raw_sent': 5, 'monitor_width': 3840, 'abs_error': 0, 'pump_ticks': 105345}
+FAIL inst2 inst2 failed at verify world: World mismatch: {}; obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}; section={'pid': 48300, 'version': 3, 'enabled': 1, 'cx': 866, 'cy': 886, 'buttons': 0, 'toggles': 0, 'heartbeat': 3, 'patches': 4, 'raw_hwnd': 2823572, 'raw_sent': 5, 'monitor_width': 3840, 'abs_error': 0, 'pump_ticks': 105391}
+FAIL inst4 inst4 failed at verify world: World mismatch: {}; obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}; section={'pid': 42792, 'version': 3, 'enabled': 1, 'cx': 866, 'cy': 886, 'buttons': 0, 'toggles': 0, 'heartbeat': 3, 'patches': 4, 'raw_hwnd': 2101640, 'raw_sent': 5, 'monitor_width': 3840, 'abs_error': 0, 'pump_ticks': 105387}
+FAIL inst3 inst3 failed at verify world: World mismatch: {}; obs={'civ': 0, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': None}; section={'pid': 23456, 'version': 3, 'enabled': 1, 'cx': 1732, 'cy': 1594, 'buttons': 0, 'toggles': 0, 'heartbeat': 3, 'patches': 4, 'raw_hwnd': 25235854, 'raw_sent': 5, 'monitor_width': 3840, 'abs_error': 0, 'pump_ticks': 105853}
+FAIL simultaneous planning: 0/4
+PASS cleanup remaining=[]

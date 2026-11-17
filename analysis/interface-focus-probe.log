@@ -1,0 +1,12 @@
+inst1 launched pid=15196
+inst2 launched pid=37456
+F6 initial silence 15196
+F6 initial silence 37456
+F6 longer hold 15196 False
+F6 longer hold 37456 False
+F6 posted focus 15196 False
+FAIL inst1 inst1 failed at verify world: World mismatch: {}; obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}; section={'pid': 15196, 'version': 3, 'enabled': 1, 'cx': 866, 'cy': 886, 'buttons': 0, 'toggles': 0, 'heartbeat': 7, 'patches': 4, 'raw_hwnd': 5310734, 'raw_sent': 5, 'monitor_width': 3840, 'abs_error': 0, 'pump_ticks': 105828}
+F6 posted focus 37456 False
+FAIL inst2 inst2 failed at verify world: World mismatch: {}; obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}; section={'pid': 37456, 'version': 3, 'enabled': 1, 'cx': 866, 'cy': 886, 'buttons': 0, 'toggles': 0, 'heartbeat': 7, 'patches': 4, 'raw_hwnd': 3413346, 'raw_sent': 5, 'monitor_width': 3840, 'abs_error': 0, 'pump_ticks': 105858}
+FAIL simultaneous planning: 0/2
+PASS cleanup remaining=[]

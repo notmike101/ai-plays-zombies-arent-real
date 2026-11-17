@@ -1,0 +1,20 @@
+Log: D:\zar-scratch\analysis\interface-20261117-092314.log
+
+Fresh boot 1/2
+inst4 launched pid=9252
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\zar_boot.py", line 141, in boot
+    raise ZAREnvError(f'World mismatch: {where}; obs={env.obs()}')
+env_zar.ZAREnvError: World mismatch: {}; obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\zar-scratch\scripts\test_interface.py", line 143, in main
+    env = boot(path)
+  File "D:\zar-scratch\scripts\zar_boot.py", line 158, in boot
+    raise ZAREnvError(f'{path.name} failed at {step}: {error}; section={debug}') from error
+env_zar.ZAREnvError: inst4 failed at verify world: World mismatch: {}; obs={'civ': 8142, 'zomb': 0, 'converting': 0, 'corpses': 0, 'police': 0, 'money': 3111.0}; section={'pid': 9252, 'version': 3, 'enabled': 1, 'cx': 866, 'cy': 886, 'buttons': 0, 'toggles': 0, 'heartbeat': 3, 'patches': 4, 'raw_hwnd': 4527464, 'raw_sent': 5, 'monitor_width': 3840, 'abs_error': 0, 'pump_ticks': 105349}
+PASS | cleanup                  | remaining=[]
+
+FAIL interface acceptance (2 requested boots)
