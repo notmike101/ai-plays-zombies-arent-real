@@ -112,7 +112,7 @@ def inspect_checkpoint(path=MODEL):
         raise ValueError('Checkpoint contains non-finite policy weights')
     optimizer = torch.optim.Adam(net.parameters())
     optimizer.load_state_dict(c['optimizer'])
-    return dict(path=str(path), run_id=c.get('run_id'), schema=c['schema']['version'],
+    return dict(path=str(path), run_id=c.get('run_id'), policy_id=train.policy_id(net), schema=c['schema']['version'],
                 inputs=len(c['schema']['inputs']), learning=c.get('learning'),
                 optimizer_states=len(c['optimizer']['state']))
 
@@ -323,7 +323,8 @@ def stop_process(pid, created, role):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=['status', 'check', 'prepare-game', 'build-input', 'train', 'train-stop',
-                                           'visualizer-start', 'visualizer-stop'])
+                                           'visualizer-start', 'visualizer-stop', 'checkpoint-export',
+                                           'checkpoint-publish', 'checkpoint-verify', 'checkpoint-import'])
     parser.add_argument('--copy', default='inst1')
     parser.add_argument('--rounds', type=int, default=6)
     parser.add_argument('--seed', type=int, default=20261140)
@@ -332,11 +333,20 @@ def main():
     parser.add_argument('--host', choices=['0.0.0.0', '127.0.0.1'], default='0.0.0.0')
     parser.add_argument('--pid', type=int)
     parser.add_argument('--created', type=float, help='Exact create_time from current status output')
+    parser.add_argument('--bundle', type=Path, help='Directory containing checkpoint, manifest and SHA256SUMS')
     args = parser.parse_args()
     if args.command.endswith('-stop') and (not args.pid or args.created is None):
         parser.error('Stop requires --pid and --created from a fresh status result')
+    if args.command in ('checkpoint-verify', 'checkpoint-import') and args.bundle is None:
+        parser.error('Checkpoint verify/import requires --bundle')
     try:
-        if args.command == 'status':
+        if args.command.startswith('checkpoint-'):
+            from checkpoints import snapshot, publish, verify_bundle, import_bundle
+            if args.command == 'checkpoint-export': result = dict(ok=True, bundle=str(snapshot()))
+            elif args.command == 'checkpoint-publish': result = dict(ok=True, **publish(snapshot()))
+            elif args.command == 'checkpoint-verify': result = dict(ok=True, manifest=verify_bundle(args.bundle))
+            else: result = dict(ok=True, manifest=import_bundle(args.bundle))
+        elif args.command == 'status':
             result = status()
         elif args.command == 'check':
             result = preflight(args.copy)
