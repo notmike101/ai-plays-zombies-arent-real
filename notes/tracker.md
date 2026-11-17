@@ -1,6 +1,6 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — legality fix validated, training restarting)
+## CURRENT STATE (2026-11-17 — legality fix validated, training restarting with bounded storage)
 - Latest policy/Adam392c6079d5652b95 saved from valid episodes of run26956f65584d.
   Previous launch48472 cleaned after an oversized safe zone blocked READY.
 - Three verified interface fixes: HUD boundary c743dc0; native debt dc63754;
@@ -10,10 +10,13 @@
   prior $3037.80/one garrison. All test copies and owned REA probes cleaned.
 - Validation:43 trainer/state/deck/spatial/reporting+34 visualizer tests PASS;
   model observer parity12 recurrent steps and Node graph assertions PASS.
-- Restarting inst1/inst2, seed20261129, eps2/rounds200, low graphics, normal
+- Launcher PID 11016 restarting inst1/inst2, seed20261129, eps2/rounds200, low graphics, normal
   difficulty, BELOW_NORMAL priority and CPU0-7 (8 of24 logical CPUs).
-- Logs: analysis/nn3_resume_valid_20261117.log and nn3_launcher_valid_20261117.log/.err.
+- Logs: analysis/nn3_training_20261117.log and nn3_training_launcher_20261117.log/.err.
   Checkpoints sessions/nn_policy3.pt/.previous; history analysis/nn_hist3.jsonl.
+- Disk headroom13.4GiB prompted training-only replay cleanup (bab0862); old
+  evidence and text dumps preserved, new .state companions discarded.27 trainer/
+  state tests PASS. Prior launcher43936 stopped before training to deploy this.
 - Next: verify successive batches, current PIDs, observer frames and headroom.
 
 ## Prior snapshot (2026-11-17 — training improvements complete)
