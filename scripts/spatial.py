@@ -33,11 +33,13 @@ def features(points, kinds, rectangles, zones, width, height):
     rectangles = np.asarray(rectangles).reshape(-1, 4)
     mids = (rectangles[:, :2]+rectangles[:, 2:])/2
     bins, visible = indices(mids)
-    for point, cell in zip(mids[visible], bins[visible]):
-        counts[3, cell] += 1
-        old = targets[cell]
-        if old is None or np.square(point-xy[cell]).sum() < np.square(old-xy[cell]).sum():
-            targets[cell] = point
+    points, cells = mids[visible], bins[visible]
+    counts[3] = np.bincount(cells, minlength=NC)
+    # Stable distance order preserves the first building when distances tie.
+    order = np.argsort(np.square(points-xy[cells]).sum(axis=1), kind='stable')
+    _, first = np.unique(cells[order], return_index=True)
+    for i in order[first]:
+        targets[cells[i]] = points[i]
     for polygon in zones:
         vertices = np.asarray(polygon)
         inside = np.zeros(NC, dtype=bool)

@@ -24,6 +24,14 @@ class SpatialTests(unittest.TestCase):
         self.assertEqual(result['counts'][0].sum(), 0)
         self.assertGreater(result['counts'][4].sum(), 0)
 
+    def test_building_target_matches_nearest_with_stable_ties(self):
+        center = spatial.centers(1920, 1200)[10]
+        points = np.array([center+[5., 0.], center+[-5., 0.], center+[20., 0.]])
+        rectangles = np.column_stack((points-1, points+1))
+        result = spatial.features(np.empty((0, 2)), np.array([]), rectangles, [], 1920, 1200)
+        np.testing.assert_array_equal(result['build_targets'][10], points[0])
+        self.assertEqual(result['counts'][3, 10], 3)
+
 
 if __name__ == '__main__':
     unittest.main()
