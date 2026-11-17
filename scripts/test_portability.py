@@ -56,8 +56,9 @@ class PortabilityTests(unittest.TestCase):
                 self.assertFalse((second/'steam_cloud/private').exists())
                 earned = source/'steam_cloud/unlocks.ini'
                 earned.write_text('breach_restarts = 2\nunlock = unit Garrison\n')
-                third = prepare.prepare_copy(source, 'inst3', unlocks=earned)
-                self.assertEqual((third/'steam_cloud/unlocks.ini').read_bytes(), earned.read_bytes())
+                third = prepare.prepare_copy(source, 'inst3')
+                self.assertNotEqual((third/'steam_cloud/unlocks.ini').read_bytes(), earned.read_bytes())
+                self.assertIn('unlock = upgrade Garrison_Rate', (third/'steam_cloud/unlocks.ini').read_text())
                 unlocked = (target/'steam_cloud/unlocks.ini').read_text()
                 self.assertIn('unlock = unit Garrison', unlocked)
                 self.assertIn('unlock = ability Police', unlocked)

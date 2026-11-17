@@ -88,7 +88,7 @@ def full_unlock_profile(source):
             'breach_restarts = 0\n'+''.join(f'unlock = {kind} {name}\n' for kind, name in sorted(entries))).encode()
 
 
-def prepare_copy(source, name, unlocks=None):
+def prepare_copy(source, name):
     source = Path(source)
     if not re.fullmatch(r'inst\d+', name):
         raise ValueError('Copy must be named instN')
@@ -102,12 +102,11 @@ def prepare_copy(source, name, unlocks=None):
     target = copies/name
     if target.exists():
         raise FileExistsError(f'Refusing to overwrite {target}; choose a new copy')
-    profile = Path(unlocks).read_bytes() if unlocks is not None else None
     files = checked_files(source)
     expected = expected_hash()
     if sha256(source/'zombies-arent-real.exe') != expected:
         raise ValueError('Unsupported game build; revalidate native offsets before copying')
-    if profile is None: profile = full_unlock_profile(source)
+    profile = full_unlock_profile(source)
     needed = sum(f.stat().st_size for f in files)
     if shutil.disk_usage(ROOT).free < needed + 2*2**30:
         raise ValueError('Not enough disk headroom for the copy plus 2 GiB reserve')
@@ -132,6 +131,5 @@ def prepare_copy(source, name, unlocks=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--copy', default='inst1')
-    parser.add_argument('--unlocks-from', type=Path, help='Override full availability with an explicit existing unlocks.ini')
     args = parser.parse_args()
-    print(prepare_copy(config_path(load_config(), 'game', 'install_dir'), args.copy, args.unlocks_from))
+    print(prepare_copy(config_path(load_config(), 'game', 'install_dir'), args.copy))

@@ -335,7 +335,6 @@ def main():
                                            'visualizer-start', 'visualizer-stop', 'checkpoint-export',
                                            'checkpoint-publish', 'checkpoint-verify', 'checkpoint-import'])
     parser.add_argument('--copy', default='inst1')
-    parser.add_argument('--unlocks-from', type=Path, help='Explicit earned unlocks.ini for a new game copy')
     parser.add_argument('--rounds', type=int, default=6)
     parser.add_argument('--seed', type=int, default=20261140)
     parser.add_argument('--foreground', action='store_true', help='Keep training attached to this terminal')
@@ -363,7 +362,7 @@ def main():
         elif args.command == 'prepare-game':
             from prepare_game import prepare_copy
             from project import load_config, config_path
-            result = dict(ok=True, copy=str(prepare_copy(config_path(load_config(), 'game', 'install_dir'), args.copy, args.unlocks_from)))
+            result = dict(ok=True, copy=str(prepare_copy(config_path(load_config(), 'game', 'install_dir'), args.copy)))
         elif args.command == 'build-input':
             from build_hook import build
             result = dict(ok=True, build=build())
