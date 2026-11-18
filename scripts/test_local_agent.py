@@ -137,20 +137,20 @@ class LifecycleTests(unittest.TestCase):
             launch.assert_not_called()
 
     def test_foreground_training_passes_explicit_resume_paths_and_limits_before_launch(self):
-        args = SimpleNamespace(copy='inst1', extra_copy='inst2', episodes_per_copy=1, rounds=2, seed=42, foreground=True)
+        args = SimpleNamespace(copy='inst1', extra_copy=['inst2', 'inst3', 'inst4'], episodes_per_copy=1, rounds=2, seed=42, foreground=True)
         with tempfile.TemporaryDirectory() as d, \
              patch.object(ops, 'LOCK', Path(d)/'lock'), \
              patch.object(ops, 'inventory', return_value=[]), \
              patch.object(ops, 'preflight', return_value=dict(ok=True)), \
              patch.object(ops, 'limit_resources') as limits, \
              patch('subprocess.call', return_value=0) as call:
-            call.side_effect = lambda *a, **k: (limits.assert_called_once_with(2), 0)[1]
+            call.side_effect = lambda *a, **k: (limits.assert_called_once_with(4), 0)[1]
             self.assertTrue(ops.train(args)['ok'])
             argv = call.call_args.args[0]
             self.assertEqual(argv[argv.index('--model')+1], str(ops.MODEL))
             self.assertEqual(argv[argv.index('--history')+1], str(ops.HISTORY))
             start = argv.index('--copies') + 1
-            self.assertEqual(argv[start:start+2], ['inst1', 'inst2'])
+            self.assertEqual(argv[start:start+4], ['inst1', 'inst2', 'inst3', 'inst4'])
             self.assertEqual(argv[argv.index('--eps')+1], '1')
             self.assertNotIn('--random', argv)
 
