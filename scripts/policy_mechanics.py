@@ -74,6 +74,10 @@ def extra_masks(st):
         if name in NONSPATIAL or name.startswith('pan_'):
             mask[:]=0;mask[0]=1
         if not enabled:mask[:]=0
+    if planning:
+        for tool, cell in st.get('picker_blocked', ()):
+            if tool >= 72:
+                masks[tool-72,cell] = 0
     if st.get('gesture_anchor'):
         active=st['gesture_anchor'][0]
         for i,name in enumerate(EXTRA_TOOLS):

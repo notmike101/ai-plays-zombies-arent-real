@@ -40,6 +40,16 @@ class LearningTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'elapsed'):
             train.gae([0.], [0.], sim_elapsed=[float('nan')])
 
+    def test_picker_cooldown_masks_only_the_rejected_purchase(self):
+        st=dict(planning=True, costs={'Police': 1, 'Bomber': 1},
+                unlocked=['Police', 'Bomber'], sp=2)
+        police, bomber = (train.TOOLS.index('buy_'+name) for name in ('Police','Bomber'))
+        self.assertEqual(train.masks_for(st)[0][bomber],1)
+        st['picker_blocked']=[(bomber,0)]
+        mask,_=train.masks_for(st)
+        self.assertEqual(mask[bomber],0)
+        self.assertEqual(mask[police],1)
+
     def test_spatial_actions_cannot_click_the_planning_hud(self):
         st = dict(planning=True, deck=[])
         for tool in range(2, 34):

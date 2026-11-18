@@ -82,6 +82,10 @@ class MechanicsTests(unittest.TestCase):
         self.assertFalse(get('perk_Hot_Fire').any());self.assertEqual(np.flatnonzero(get('perk_clear')).tolist(),[1])
         self.assertFalse(get('panel_medevac_leave').any());self.assertTrue(get('panel_target_toggle')[0])
         self.assertFalse(get('zone_finish').any());self.assertFalse(get('select_building').any())
+        equip=EXTRA_TOOLS.index('equip_Sniper')
+        st['picker_blocked']=[(72+equip,2)]
+        self.assertEqual(np.flatnonzero(extra_masks(st)[equip]).tolist(),[0,1,3,4,5,6])
+
 
     def test_targets_are_visible_and_nearest_with_stable_ties(self):
         points=[(200,200),(210,200),(200,200),(-100,0)]

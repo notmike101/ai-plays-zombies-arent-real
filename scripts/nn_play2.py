@@ -194,6 +194,10 @@ def masks_for(st):
                 mu[u] = 1
     for u,targets in st.get('battle_targets',{}).items():
         if not any(p is not None and st.get('world_cells',WORLD_CELLS)[i] for i,p in enumerate(targets)):mu[u]=0
+    if st['planning']:
+        for tool, _ in st.get('picker_blocked', ()):
+            if tool < 72:
+                mu[tool] = 0
     mu[72:] = extra_masks(st).any(axis=1)
     return mu, mc
 
@@ -425,6 +429,7 @@ def run_episode(args):
         end = None
         nbuy = 0
         picker_rejections = {}
+        picker_retry_at = {}
         plan_limit = options.get('plan_steps', PLAN_STEPS)
         state = env.game_state()
         while end is None:
@@ -443,6 +448,8 @@ def run_episode(args):
                     if not slot_castable(st, slot):
                         st.pop('anchor')
             frac = o['civ'] / civ0
+            st['picker_blocked'] = [pair for pair, retry_at in picker_retry_at.items()
+                                    if len(rows['obs']) < retry_at]
             mechanics.refresh(st)
             blobs = []
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
@@ -473,15 +480,14 @@ def run_episode(args):
             before = o
             previous_state = state
             action_started = time.monotonic()
+            picker_rejected = False
             if u in PLACEMENTS:
                 cx,cy=cell_of_px(c,env.cw,env.ch)
                 if PLACEMENTS[u] in ('Garrison','Sniper','Mortar','Nest','GasMortar','FireMortar','Railgun','Howitzer','MLRS'):
                     cx,cy=map(int,st['build_targets'][c])
                 mechanics.controls.place(PLACEMENTS[u],(cx,cy))
             elif u >= 72:
-                if mechanics.execute(st,TOOLS[u],c) is False:
-                    name = TOOLS[u]
-                    picker_rejections[name] = picker_rejections.get(name, 0) + 1
+                picker_rejected = mechanics.execute(st,TOOLS[u],c) is False
             elif st['planning']:
                 if u == 1:
                     state = ready_once(env)
@@ -496,8 +502,7 @@ def run_episode(args):
                 elif 34 <= u < 72:
                     name = DECK_ORDER[(u-34) % 19]
                     delta = 1 if u < 53 else -1
-                    if not apply_loadout_action(env, st, name, delta):
-                        picker_rejections[name] = picker_rejections.get(name, 0) + 1
+                    picker_rejected = not apply_loadout_action(env, st, name, delta)
                 elif u in (10, 15, 17, 18):
                     if not st.get('anchor'):
                         st['anchor'] = (u, c)
@@ -549,6 +554,10 @@ def run_episode(args):
                         slot['pending'] = slot['arrival'] > 0
                     if slot['name'] == 'Heli':
                         slot['alive'] = bool(np.any(mechanics.reader.snapshot()['helicopters']['alive']))
+            if picker_rejected:
+                picker_rejections[TOOLS[u]] = picker_rejections.get(TOOLS[u], 0) + 1
+                # Try other actions before reopening a picker that just rejected this choice.
+                picker_retry_at[u, c] = len(rows['obs']) + 5
             # Observe after this action; outcomes belong to this transition.
             time.sleep(max(0., (.1 if st['planning'] else STEP_S) - (time.monotonic()-action_started)))
             o = env.obs()
