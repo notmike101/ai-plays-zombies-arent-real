@@ -17,7 +17,9 @@ buildings, roster/perks, geometry/land legality, ammunition/health/boosts, vehic
 and evac passengers, terrain/bridges, fire spread, hazards, mutation sites, camera,
 normal timing, active tools, gestures and native HUD/modal affordances.
 
-All native memory reads require the supported executable SHA256. Positions use
+All native memory reads require the supported executable SHA256. Parallel unit
+arrays must share a simulation tick; independent systems are sampled separately
+with bounds/occupancy checks. A complete observation can span ticks. Positions use
 the current top-down camera and client size. Sparse terrain/fire sampling stays
 bounded to48 grid points; bridge damage records identify their native span anchor.
 Undamaged bridges have no damage record, explicitly distinguished from zero HP.

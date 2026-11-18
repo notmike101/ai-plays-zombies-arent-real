@@ -1,5 +1,7 @@
 """Read-only, SHA-pinned player state. Layouts come from the native F6 reflection tables.
 
+Parallel unit arrays share a tick; other systems are sampled independently.
+This is bounded live telemetry, not an atomic snapshot of the whole simulation.
 Entity kinds are simulation kinds, not toolbar IDs: mortar payloads distinguish
 Gas/Fire/Howitzer/MLRS and turret payloads distinguish Railgun.
 """
@@ -196,6 +198,9 @@ class NativeState:
                     raise ZAREnvError('Nonfinite native entity state')
                 if np.any(units['kind'] > 10):
                     raise ZAREnvError('Unknown native entity kind')
+                # Align parallel unit arrays; independent systems may advance during the rest.
+                if tick != e.scalar(0x6514e8,'<q'):
+                    continue
                 maps = {name: self.mapping(rva, dtype) for name,rva,dtype in (
                     ('level',0x6508d8,'<i8'), ('far_first',0x6508f8,'u1'),
                     ('payload',0x650988,'u1'), ('trap_kind',0x6509a8,'u1'),
@@ -229,8 +234,7 @@ class NativeState:
                         ('area',0x658d70,'<f4'), ('center',0x658d98,VEC))},
                     camera=camera,
                     tick=tick)
-                if tick == e.scalar(0x6514e8,'<q'):
-                    return result
+                return result
             except ZAREnvError:
                 if _ == 4:
                     raise

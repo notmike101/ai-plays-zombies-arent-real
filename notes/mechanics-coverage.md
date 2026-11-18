@@ -368,3 +368,11 @@ then additive selection, move and re-aim each returned to selection mode; both
 placement-mode keys produced native receipts. Test game was closed in finally.
 Post-fix production run2eb2247938d5 resumed policy3360e4ef2f89f803/Adam on inst14
 and saved updates. Current outcomes/PIDs are in tracker; no battle success claim.
+
+Battle-speed diagnostic reached playing at normal2x and reproduced Native snapshot
+changed during read. Whole-world same-tick validation was too broad after adding
+sparse terrain/fire reads. Unit SoA arrays retain the equal-count/same-tick guard;
+independent systems retain bounds/map occupancy checks and retries, but may span
+ticks. Observations are explicitly sampled, not an atomic whole-world snapshot.
+Regression advances time after units (allowed), and during units (must retry).
+The separate initial-dump failure remains under investigation.

@@ -9,6 +9,35 @@ from native_state import NativeState, WALL, EVAC, HELI, VEHICLE, MEDEVAC, AI
 
 
 class NativeTests(unittest.TestCase):
+    def snapshot_reader(self):
+        e=Mock(base=0,cw=1920,ch=1200);clock=[0];reads=[]
+        e.scalar.side_effect=lambda r,f:clock[0] if r==0x6514e8 else 1 if r==0x6553b4 else 0
+        def array(r,dtype,**kwargs):
+            reads.append(r)
+            if r==0x656bb0:clock[0]+=1  # Other systems can advance after coherent units.
+            return np.zeros(0,dtype=dtype)
+        e.array.side_effect=array
+        state=NativeState(e)
+        for name in ('mapping','zones','terrain','fire','bridge_health','paint','selection'):
+            setattr(state,name,Mock(return_value={}))
+        return state,clock,reads
+
+    def test_world_read_can_cross_tick_after_coherent_unit_arrays(self):
+        state,clock,reads=self.snapshot_reader()
+        result=state.snapshot()
+        self.assertEqual(result['tick'],0);self.assertEqual(clock[0],1)
+        self.assertEqual(reads.count(0x650280),1)
+
+    def test_unit_arrays_retry_if_tick_changes_during_aligned_read(self):
+        state,clock,reads=self.snapshot_reader();original=state.env.array.side_effect
+        def array(r,dtype,**kwargs):
+            result=original(r,dtype,**kwargs)
+            if r==0x650410 and reads.count(r)==1:clock[0]+=1
+            return result
+        state.env.array.side_effect=array
+        result=state.snapshot()
+        self.assertEqual(result['tick'],1);self.assertEqual(reads.count(0x650280),2)
+
     def test_terrain_requires_matching_storage_and_known_codes(self):
         e=Mock(base=0);e.scalar.side_effect=lambda r,f:{0x656a48:2,0x656a50:2,0x656a40:2.}[r]
         state=NativeState(e)
