@@ -59,6 +59,26 @@ class StateTests(unittest.TestCase):
             self.assertIsNotNone(e.dump())
             self.assertTrue((dumps/'fresh.state').exists())
 
+    def test_picker_rejection_preserves_skill_points_and_verifies_no_purchase(self):
+        from game_controls import PickerNavigationError
+        from unittest.mock import Mock
+
+        env = Mock()
+        initial = {'Rally': 0}
+        st = dict(loadout=initial, sp=2, costs={'Rally': 2})
+        env.change_loadout.side_effect = PickerNavigationError('missed row')
+        env.loadout_levels.return_value = initial
+        self.assertFalse(train.apply_loadout_action(env, st, 'Rally', 1))
+        self.assertEqual(st['sp'], 2)
+        self.assertEqual(st['loadout'], initial)
+        env.loadout_levels.return_value = {'Rally': 1}
+        with self.assertRaises(PickerNavigationError):
+            train.apply_loadout_action(env, st, 'Rally', 1)
+        env.change_loadout.side_effect = None
+        env.change_loadout.return_value = {'Rally': 1}
+        self.assertTrue(train.apply_loadout_action(env, st, 'Rally', 1))
+        self.assertEqual(st['sp'], 0)
+
     def test_planning_cap_allows_one_policy_dialog_decision(self):
         self.assertTrue(train.planning_limit_reached(60, 60, False))
         self.assertFalse(train.planning_limit_reached(60, 60, True))

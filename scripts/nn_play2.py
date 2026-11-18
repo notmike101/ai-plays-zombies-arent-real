@@ -350,6 +350,20 @@ def transition_reward(before, after, civ0):
     return -max(after['infections'] - before['infections'], 0) / civ0
 
 
+def apply_loadout_action(env, st, name, delta):
+    from game_controls import PickerNavigationError
+
+    try:
+        levels = env.change_loadout(name, delta)
+    except PickerNavigationError:
+        if env.loadout_levels() != st['loadout']:
+            raise
+        return False
+    st['loadout'] = levels
+    st['sp'] -= delta*st['costs'][name]
+    return True
+
+
 def planning_limit_reached(steps, limit, modal_open):
     # Give the policy one decision to handle a dialog raised by the last action.
     return steps >= limit + int(bool(modal_open))
@@ -410,6 +424,7 @@ def run_episode(args):
         battle_start = None
         end = None
         nbuy = 0
+        picker_rejections = {}
         plan_limit = options.get('plan_steps', PLAN_STEPS)
         state = env.game_state()
         while end is None:
@@ -479,8 +494,8 @@ def run_episode(args):
                 elif 34 <= u < 72:
                     name = DECK_ORDER[(u-34) % 19]
                     delta = 1 if u < 53 else -1
-                    st['loadout'] = env.change_loadout(name, delta)
-                    st['sp'] -= delta*st['costs'][name]
+                    if not apply_loadout_action(env, st, name, delta):
+                        picker_rejections[name] = picker_rejections.get(name, 0) + 1
                 elif u in (10, 15, 17, 18):
                     if not st.get('anchor'):
                         st['anchor'] = (u, c)
@@ -598,7 +613,7 @@ def run_episode(args):
         return dict(rows, level=tag, pid=pid, win=end == 'won', advance=advance, end=end,
                     saved_frac=saved if end != 'timeout' else None,
                     observed_saved_frac=saved, timeout_phase=state['phase'] if end == 'timeout' else None,
-                    planning_blockers=planning_blockers,
+                    planning_blockers=planning_blockers, picker_rejections=picker_rejections,
                     reward_components=rewards, frac=o['civ']/civ0, bootstrap=bootstrap,
                     civ0=civ0, t=time.monotonic()-start, sim=state['sim'],
                     R=sum(rows['rews']), nbuy=nbuy, ndeck=len(st['deck']),
