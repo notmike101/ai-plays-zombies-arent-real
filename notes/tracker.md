@@ -1,55 +1,57 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — boundary diagnostic in progress; production stopped)
-- Run2eb2247938d5 stopped after round4: next episode failed to produce its initial
-  F6 planning dump. Last valid policyc30d8dd4df23b6ce/Adam saved. Game28408 cleaned.
-  Live boundary diagnostic owns inst14 PID33632,script analysis/coverage-boundary.py;
-  read-only policy evaluation,no optimizer/save. It records modal/menu/tool flags
-  on each boundary and retries only the observational dump on failure. Close at end.
-  Prior live identities below are historical; do not treat them as current.
-
-- Supported normal-campaign interface:185 tools/4889 inputs,all16 units/19 battle
-  abilities/8 perks,editing/HUD/environment controls. Current scoped proofs and
-  native-disabled/conditional branches: notes/mechanics-coverage.md. Catalog
-  coverage does not imply exhaustive combinations or the35% gameplay objective.
--132 script tests,37 visualizer tests,12-step exact observer/policy parity,Node
+## CURRENT STATE (2026-11-17 — schema4 training LIVE in battle)
+- Normal-campaign mechanic catalog integrated:185 tools/4889 inputs,all16 units,
+  19 abilities,8 perks,editing/HUD/environment controls. Coverage/proofs and native
+  disabled/conditional branches: notes/mechanics-coverage.md. This is interface
+  coverage,not exhaustive combinations or evidence of the35% objective.
+-135 script tests,37 visualizer tests,12-step exact observer/policy parity,Node
   graph,4889-input browser SSE/reconnect/pause/isolation and mobile WebGPU/Canvas2D
-  checks passed. Native selection-transition follow-up passed and test game closed.
-- LIVE run2eb2247938d5,inst14 game28408(created1794961293.128883),trainer43460
-  (1794961382.6545413),worker32564; launcher25644(1794961292.9303908),operator49304
-  (1794961289.4957128). Venv redirectors31764/41516/2468 also appear in status.
-  Revalidate with local.ps1 status. One game,below-normal,CPU0-7,200 batches of2,
-  seed20261145. Operator log analysis/nn3_operator_20261117-182129-61f48c.log;
-  trainer log analysis/nn3_20261117-182132-8bf092.log; history analysis/nn_hist4.jsonl.
-- Post-fix updates through round2 observed; recent episodes timed out in planning,
-  saved_frac=null and reward0. These are NOT wins. Follow whether the policy learns
-  legal geometry/budget recovery and READY; do not restore automatic strategy undo
-  or silently count unstarted battles as civilian success. Objective remains unmet.
-- sessions/nn_policy4.pt preserves prior weights and10 Adam states; original3 SHA
+  passed. Final12 fixed-policy diagnostic rollouts completed:4 battle (normal2x/4x),
+  8 planning timeouts,no interface exception. No optimizer/checkpoint writes there.
+- LIVE production runb5ffb8d56db5,inst14 game33804(created1794962209.28102),
+  trainer36516(1794962298.8164513),worker28984(1794962300.9953175),launcher8156
+  (1794962209.0816593),operator38968(1794962205.2084763). Venv redirectors23604,
+  13192,33360 also appear. Revalidate via local.ps1 status. One game,below-normal,
+  CPU0-7,200 batches of2,seed20261153. Last sample:r0/ep0 BATTLE,sequence132,
+  real4889-label frame,no warning,ancestry verified. First update of this latest
+  restart still pending; do not confuse live inference with a saved update.
+- Operator log analysis/nn3_operator_20261117-183645-a7dd17.log;
+  trainer log analysis/nn3_20261117-183649-f8d399.log;history analysis/nn_hist4.jsonl.
+  Nine saved schema4 updates were verified across earlier runs; latest saved policy
+  c30d8dd4df23b6ce/Adam was resumed. Earlier training batches timed out in planning,
+  saved_frac=null,reward0. These are not wins. Track actual battle results/updates.
+- Earlier failures:select_add while armed fixed by shared disarm; old fixed-roster
+  preflight now accepts known seven-slot rosters/empty slots. Native armed->add/
+  move/reaim and click/paint transitions passed. A whole-world tick guard failed at
+  accelerated battle speed: now only parallel unit arrays require matching ticks;
+  independent systems retain bounded validated reads and may span ticks.
+- One missing initial F6 dump did not reproduce in12 follow-up rollouts. Added one
+  bounded retry only in an unobstructed game world; blocked UI is not dismissed.
+  Live fault injection dropped first request and recovered on second. Persistent
+  failures still stop and now report phase/modal/menu state. Cause of the original
+  one-off miss remains unconfirmed; retain this limitation when assessing reliability.
+- sessions/nn_policy4.pt retains weights and10 Adam states. Source3 SHA256
   c78e1635664667f32153479d6cf0ea33e12dfb6c5a8143a58490cd37609fa6f0 is preserved.
-  Initial migrated policy18653dd50efd8da3. Explicit stock feature correction removes
-  false +alive-helicopter bonus. Superseded initial migration retained as ignored
-  sessions/nn_policy4.pt.pre-stock-correction. Never overwrite source3 with4.
-- Earlier run70bb1ee8363d saved4 updates,then select_add while placement armed failed.
-  Fixed shared disarm preserving selection; actual armed->add/move/reaim receipts
-  passed. Old fixed-roster preflight also corrected: policy-selected valid7-slot
-  rosters/empty slots are accepted. Resume started from saved3360e4ef2f89f803.
-- Visualizer6716(created1794957272.1076765) serves8765. Fresh current worker32564 /
-  game28408 frame has4889 labels,no warning,preview=false and verified ancestry.
-  Earlier same-schema browser worker44888/game40284 inputs/actions matched10frames.
-  Warm forward~0.2ms/plain,~0.5ms/observed.60 planning decisions took14.24-14.46s.
-  Browser receive133-375ms,median274; two-RAF display248-667ms,median378. Viewer
-  samples<=5Hz; action mix/machine load prevent a controlled speedup claim.
-- Compatible snapshot checkpoint-0705ea2e67ab923e published and remote assets
-  downloaded/verified. See notes/checkpoint-sharing.md. Six-hour changed-only
-  sharing automation remains active; no game files/DLL/saves/logs publish.
-- Latest resource sample:10.4% systemCPU,11.0GiB RAM available,9.95GiB D:free;
-  GPU sample0%,2960/10240MiB VRAM. These are point-in-time readings,not quotas.
-- All owned diagnostic games/preview8766/browser test sessions are closed. inst13
-  was returned to fresh L1 for the final transition check; prior imported L5 board
-  was diagnostic only. Original backup analysis/coverage-inst13-before-l5.progress.
-- Preserve unrelated policy2/history2 dirt and old untracked analysis files.
-  External Ghidra Java2316/45920 belong elsewhere. No subagents were used.
+  Migration explicitly corrects false +alive-helicopter stock semantics. Superseded
+  initial migration is ignored sessions/nn_policy4.pt.pre-stock-correction.
+- Visualizer6716(created1794957272.1076765),port8765 reused. Final-size browser
+  worker44888/game40284 inputs/actions matched10frames. Warm forward~0.2ms/plain,
+  ~0.5ms/observed;60 planning decisions14.24-14.46s. Browser receive133-375ms,
+  median274;two-RAF display248-667ms,median378. Viewer<=5Hz; action mix/load mean
+  these are scoped measurements,not a controlled before/after speedup claim.
+- Compatible checkpoint-e9a6e7cf40a7d0b5 published,remote assets downloaded/verified;
+  policyc30d8dd4df23b6ce and Adam. Six-hour changed-only sharing remains active.
+  See notes/checkpoint-sharing.md. No game assets/DLL/saves/logs publish.
+- Latest resource sample:10.6% systemCPU,11.6GiB available RAM; preceding GPU0%,
+  2960/10240MiB VRAM. Startup guards are not continuous quotas. Keep one game.
+- All owned diagnostic games,preview8766 and browser test sessions closed. Final
+  diagnostic37776 was verified gone. inst13 remains a diagnostic copy,fresh L1;
+  imported L5 fixture was never used for learning. Original progress backup:
+  analysis/coverage-inst13-before-l5.progress. Installed game remained read-only.
+- All source/docs changes committed conventionally and pushed at milestones.
+  Preserve unrelated policy2/history2 dirt and old untracked analysis files.
+  External Ghidra Java2316/45920 belong elsewhere. No subagents used.
 
 ## Prior snapshot (2026-11-17 — isolated Python environment verified, training LIVE)
 - New .venv created with Python3.14.4 x64, include-system-site-packages=false;
