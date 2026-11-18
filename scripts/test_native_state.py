@@ -32,11 +32,11 @@ class NativeTests(unittest.TestCase):
         state,clock,reads=self.snapshot_reader();original=state.env.array.side_effect
         def array(r,dtype,**kwargs):
             result=original(r,dtype,**kwargs)
-            if r==0x650410 and reads.count(r)==1:clock[0]+=1
+            if r==0x650410 and reads.count(r)<=5:clock[0]+=1
             return result
         state.env.array.side_effect=array
         result=state.snapshot()
-        self.assertEqual(result['tick'],1);self.assertEqual(reads.count(0x650280),2)
+        self.assertEqual(result['tick'],5);self.assertEqual(reads.count(0x650280),6)
 
     def test_terrain_requires_matching_storage_and_known_codes(self):
         e=Mock(base=0);e.scalar.side_effect=lambda r,f:{0x656a48:2,0x656a50:2,0x656a40:2.}[r]

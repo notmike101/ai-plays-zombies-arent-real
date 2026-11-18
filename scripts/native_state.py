@@ -184,7 +184,8 @@ class NativeState:
 
     def snapshot(self):
         e = self.env
-        for _ in range(5):
+        attempts = 12
+        for attempt in range(attempts):
             try:
                 tick = e.scalar(0x6514e8, '<q')
                 units = {name: e.array(rva, dtype) for name, rva, dtype in (
@@ -192,15 +193,15 @@ class NativeState:
                     ('timer',0x650320,'<f4'), ('converting',0x650348,'u1'),
                     ('hp',0x650370,'<f4'), ('ztype',0x650398,'u1'),
                     ('contact',0x6503c0,'<f4'), ('id',0x650410,'<u8'))}
+                # Align parallel unit arrays; independent systems may advance during the rest.
+                if tick != e.scalar(0x6514e8,'<q'):
+                    continue
                 if len({len(a) for a in units.values()}) != 1:
                     continue
                 if any(not np.isfinite(units[k]).all() for k in ('pos','dir','timer','hp','contact')):
                     raise ZAREnvError('Nonfinite native entity state')
                 if np.any(units['kind'] > 10):
                     raise ZAREnvError('Unknown native entity kind')
-                # Align parallel unit arrays; independent systems may advance during the rest.
-                if tick != e.scalar(0x6514e8,'<q'):
-                    continue
                 maps = {name: self.mapping(rva, dtype) for name,rva,dtype in (
                     ('level',0x6508d8,'<i8'), ('far_first',0x6508f8,'u1'),
                     ('payload',0x650988,'u1'), ('trap_kind',0x6509a8,'u1'),
@@ -236,6 +237,6 @@ class NativeState:
                     tick=tick)
                 return result
             except ZAREnvError:
-                if _ == 4:
+                if attempt == attempts - 1:
                     raise
         raise ZAREnvError('Native snapshot changed during read')
