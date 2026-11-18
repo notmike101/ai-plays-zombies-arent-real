@@ -244,6 +244,9 @@ def train(args):
         if extra_copy == args.copy:
             raise ValueError('Parallel training requires distinct game copies')
         copies.append(extra_copy)
+    episodes = getattr(args, 'episodes_per_copy', 2)
+    if episodes < 1:
+        raise ValueError('Episodes per copy must be positive')
     if args.rounds < 1:
         raise ValueError('Rounds must be positive')
     ancestors = [p.pid for p in psutil.Process().parents()]
@@ -259,6 +262,8 @@ def train(args):
         command = [sys.executable, '-B', str(Path(__file__).resolve()), 'train',
                    '--foreground', '--copy', args.copy, '--rounds', str(args.rounds),
                    '--seed', str(args.seed)]
+        if episodes != 2:
+            command.extend(['--episodes-per-copy', str(episodes)])
         if extra_copy:
             command.extend(['--extra-copy', extra_copy])
         with log.open('w') as f:
@@ -272,7 +277,7 @@ def train(args):
             require_idle(processes, copy, os.getpid(), ancestor_pids=ancestors)
         limit_resources(len(copies))  # Applied before the launcher can spawn any game or worker.
         command = [sys.executable, '-B', str(ROOT/'scripts/train_run.py'),
-                   '--copies', *copies, '--eps', '2', '--rounds', str(args.rounds),
+                   '--copies', *copies, '--eps', str(episodes), '--rounds', str(args.rounds),
                    '--seed', str(args.seed), '--start', 'fresh', '--model', str(MODEL),
                    '--history', str(HISTORY), '--log', str(ROOT/f'analysis/nn3_{stamp}.log')]
         print(json.dumps(dict(status='launching', command=command)), flush=True)
@@ -355,6 +360,8 @@ def main():
                                            'checkpoint-publish', 'checkpoint-verify', 'checkpoint-import'])
     parser.add_argument('--copy', default='inst1')
     parser.add_argument('--extra-copy', help='Second owned game copy for parallel training')
+    parser.add_argument('--episodes-per-copy', type=int, default=2,
+                        help='Sequential episodes per game per update (default: 2)')
     parser.add_argument('--rounds', type=int, default=6)
     parser.add_argument('--seed', type=int, default=20261140)
     parser.add_argument('--foreground', action='store_true', help='Keep training attached to this terminal')

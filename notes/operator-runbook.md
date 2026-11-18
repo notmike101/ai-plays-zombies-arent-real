@@ -63,7 +63,7 @@ below4GiB available RAM or2GiB free disk. These are startup safeguards, not
 continuous CPU/GPU/RAM quotas. Add --extra-copy instN to train with a second,
 distinct prepared copy. Both copies pass preflight and share the existing CPU
 cap and one optimizer. Two copies require at least 6 GiB available RAM at launch.
-The default remains one copy.
+The default remains one copy. With two copies, --episodes-per-copy 1 collects\ntwo episodes per update and updates as soon as both copies finish one episode.\nThe default is two episodes per copy per update.
 
 The immediate result says `starting` and gives the background operator's PID/log.
 That is a spawn acknowledgement, not boot success. Read that log; it prints the

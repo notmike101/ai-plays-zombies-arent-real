@@ -137,7 +137,7 @@ class LifecycleTests(unittest.TestCase):
             launch.assert_not_called()
 
     def test_foreground_training_passes_explicit_resume_paths_and_limits_before_launch(self):
-        args = SimpleNamespace(copy='inst1', extra_copy='inst2', rounds=2, seed=42, foreground=True)
+        args = SimpleNamespace(copy='inst1', extra_copy='inst2', episodes_per_copy=1, rounds=2, seed=42, foreground=True)
         with tempfile.TemporaryDirectory() as d, \
              patch.object(ops, 'LOCK', Path(d)/'lock'), \
              patch.object(ops, 'inventory', return_value=[]), \
@@ -151,6 +151,7 @@ class LifecycleTests(unittest.TestCase):
             self.assertEqual(argv[argv.index('--history')+1], str(ops.HISTORY))
             start = argv.index('--copies') + 1
             self.assertEqual(argv[start:start+2], ['inst1', 'inst2'])
+            self.assertEqual(argv[argv.index('--eps')+1], '1')
             self.assertNotIn('--random', argv)
 
     def test_visualizer_reuses_own_listener_and_rejects_foreign_listener(self):
