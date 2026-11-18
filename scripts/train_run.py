@@ -43,8 +43,10 @@ def main():
     try:
         if a.copies:
             with ThreadPoolExecutor(max_workers=len(a.copies)) as pool:
-                futs = {pool.submit(zar_boot.boot,
-                                    zar_boot.COPIES / c, ('campaign', 'stage1' if a.start == 'fresh' else 'continue')): c for c in a.copies}
+                destination = ('campaign', 'stage1' if a.start == 'fresh' else 'continue')
+                futs = {pool.submit(zar_boot.boot, zar_boot.COPIES / copy, destination,
+                                    discard_dump_states=a.mode == 'train'): copy
+                        for copy in a.copies}
                 for fut in as_completed(futs):
                     c = futs[fut]
                     try:

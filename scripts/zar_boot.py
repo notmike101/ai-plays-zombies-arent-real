@@ -100,7 +100,7 @@ def placement_bindings(settings):
     return settings
 
 
-def boot(copy_dir, dest=('campaign', 'stage1')):
+def boot(copy_dir, dest=('campaign', 'stage1'), *, discard_dump_states=False):
     """Launch, inject once, navigate with client fractions, verify planning.
 
     Busy copies are refused. Boot waits 75 s for the welcome service, then
@@ -157,6 +157,7 @@ def boot(copy_dir, dest=('campaign', 'stage1')):
         # Serialize attachments so concurrent copies cannot replace that type.
         with _ENV_ATTACH_LOCK:
             env = ZAREnv(process.pid)
+            env.discard_dump_states = discard_dump_states
         # Boston is the persisted/default first campaign. Verify its identity below.
         step = dest[1]
         target = fresh if dest[1] == 'stage1' else resume
