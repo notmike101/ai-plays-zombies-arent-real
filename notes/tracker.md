@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-17 — schema4 training LIVE; post-fix battle update saved)
+- Scheduled sharing check 2026-11-18 03:02 UTC (2026-11-17 local): published
+  checkpoint-8cd35915e548c51c, policyb3cb363529189588, runb5ffb8d56db5.
+  URL: https://github.com/notmike101/ai-plays-zombies-arent-real/releases/tag/checkpoint-8cd35915e548c51c
+  checkpoint-publish downloaded and verified remote checkpoint/manifest/checksums
+  before publishing; command returned ok=true,status=published. Only this tracker
+  was edited. Training/visualizer state was not rechecked or changed by sharing;
+  live-state facts below remain their previously dated observations. No new claim
+  about gameplay strength or continuous monitoring.
 - Normal-campaign mechanic catalog integrated:185 tools/4889 inputs,all16 units,
   19 abilities,8 perks,editing/HUD/environment controls. Coverage/proofs and native
   disabled/conditional branches: notes/mechanics-coverage.md. This is interface
