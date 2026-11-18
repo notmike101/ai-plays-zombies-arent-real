@@ -60,8 +60,10 @@ OS-released lock while the foreground operator owns its run. It applies
 below-normal priority and at most8 CPUs (at most half the initially available
 logical CPUs) **before** launching the existing `train_run.py`. It refuses startup
 below4GiB available RAM or2GiB free disk. These are startup safeguards, not
-continuous CPU/GPU/RAM quotas. One copy is intentional while parallel injection
-remains unresolved. Do not bypass checks with the low-level launcher.
+continuous CPU/GPU/RAM quotas. Add --extra-copy instN to train with a second,
+distinct prepared copy. Both copies pass preflight and share the existing CPU
+cap and one optimizer. Two copies require at least 6 GiB available RAM at launch.
+The default remains one copy.
 
 The immediate result says `starting` and gives the background operator's PID/log.
 That is a spawn acknowledgement, not boot success. Read that log; it prints the

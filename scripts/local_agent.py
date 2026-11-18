@@ -225,10 +225,11 @@ def training_lock(path):
             msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
 
 
-def limit_resources():
+def limit_resources(copy_count=1):
     import psutil
-    if psutil.virtual_memory().available < 4*2**30 or shutil.disk_usage(ROOT).free < 2*2**30:
-        raise ValueError('Insufficient headroom: need 4 GiB available RAM and 2 GiB free disk')
+    ram_gib = 4 + 2*(copy_count-1)
+    if psutil.virtual_memory().available < ram_gib*2**30 or shutil.disk_usage(ROOT).free < 2*2**30:
+        raise ValueError(f'Insufficient headroom: need {ram_gib} GiB available RAM and 2 GiB free disk')
     p = psutil.Process()
     cpus = p.cpu_affinity()
     p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
@@ -237,30 +238,41 @@ def limit_resources():
 
 def train(args):
     import psutil
-    owned_copy(args.copy)
+    copies = [args.copy]
+    extra_copy = getattr(args, 'extra_copy', None)
+    if extra_copy:
+        if extra_copy == args.copy:
+            raise ValueError('Parallel training requires distinct game copies')
+        copies.append(extra_copy)
     if args.rounds < 1:
         raise ValueError('Rounds must be positive')
     ancestors = [p.pid for p in psutil.Process().parents()]
-    require_idle(inventory(), args.copy, os.getpid(), ancestor_pids=ancestors)
-    report = preflight(args.copy)
-    if not report['ok']:
-        raise ValueError('; '.join(report['errors']))
+    processes = inventory()
+    for copy in copies:
+        require_idle(processes, copy, os.getpid(), ancestor_pids=ancestors)
+        report = preflight(copy)
+        if not report['ok']:
+            raise ValueError(f"{copy}: " + '; '.join(report['errors']))
     stamp = time.strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:6]
     if not args.foreground:
         log = ROOT / f'analysis/nn3_operator_{stamp}.log'
         command = [sys.executable, '-B', str(Path(__file__).resolve()), 'train',
                    '--foreground', '--copy', args.copy, '--rounds', str(args.rounds),
                    '--seed', str(args.seed)]
+        if extra_copy:
+            command.extend(['--extra-copy', extra_copy])
         with log.open('w') as f:
             p = subprocess.Popen(command, cwd=ROOT, stdout=f, stderr=subprocess.STDOUT,
                                  creationflags=subprocess.CREATE_NO_WINDOW)
         return dict(ok=True, status='starting', pid=p.pid, log=str(log),
                     next_step='Read this log and run status. Starting is not proof of a completed update.')
     with training_lock(LOCK):
-        require_idle(inventory(), args.copy, os.getpid(), ancestor_pids=ancestors)
-        limit_resources()  # Applied before the launcher can spawn any game or worker.
+        processes = inventory()
+        for copy in copies:
+            require_idle(processes, copy, os.getpid(), ancestor_pids=ancestors)
+        limit_resources(len(copies))  # Applied before the launcher can spawn any game or worker.
         command = [sys.executable, '-B', str(ROOT/'scripts/train_run.py'),
-                   '--copies', args.copy, '--eps', '2', '--rounds', str(args.rounds),
+                   '--copies', *copies, '--eps', '2', '--rounds', str(args.rounds),
                    '--seed', str(args.seed), '--start', 'fresh', '--model', str(MODEL),
                    '--history', str(HISTORY), '--log', str(ROOT/f'analysis/nn3_{stamp}.log')]
         print(json.dumps(dict(status='launching', command=command)), flush=True)
@@ -342,6 +354,7 @@ def main():
                                            'visualizer-start', 'visualizer-stop', 'checkpoint-export',
                                            'checkpoint-publish', 'checkpoint-verify', 'checkpoint-import'])
     parser.add_argument('--copy', default='inst1')
+    parser.add_argument('--extra-copy', help='Second owned game copy for parallel training')
     parser.add_argument('--rounds', type=int, default=6)
     parser.add_argument('--seed', type=int, default=20261140)
     parser.add_argument('--foreground', action='store_true', help='Keep training attached to this terminal')
@@ -351,6 +364,8 @@ def main():
     parser.add_argument('--created', type=float, help='Exact create_time from current status output')
     parser.add_argument('--bundle', type=Path, help='Directory containing checkpoint, manifest and SHA256SUMS')
     args = parser.parse_args()
+    if args.extra_copy and args.command != 'train':
+        parser.error('--extra-copy applies only to train')
     if args.command.endswith('-stop') and (not args.pid or args.created is None):
         parser.error('Stop requires --pid and --created from a fresh status result')
     if args.command in ('checkpoint-verify', 'checkpoint-import') and args.bundle is None:
