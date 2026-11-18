@@ -1,40 +1,36 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — complete-mechanics work in progress; training stopped)
-- User requires complete supported-game mechanic/action coverage and measured
-  decision/visualizer speed improvements. Work is ongoing; schema4 integration is under validation; complete coverage is still pending.
-  Plan and explicit gaps: notes/mechanics-coverage-plan.md and mechanics-coverage.md.
-- Production run83bfa5642d1d ended after round3: finish_geometry could not verify
-  automatic undo restored the board. Launcher cleaned game528. Last saved policy
-  c46cf2f2f5696822 and Adam remain in sessions/nn_policy3.pt. Do not overwrite this
-  checkpoint with diagnostic evaluation. Resume only after validated changes.
-- Owned diagnostic inst13 game28440(created1794957967.8232367), no trainer,
-  below-normal CPUs0-7. Revalidate process identity before action. Passive HUD observation
-  and virtual input only. Current board is an imported existing normal L5 save,
-  used only for diagnostic coverage, never learning/performance credit. Installed
-  game remains read-only. Original inst13 progress backed up under analysis/coverage-*.
-  Clean probe at end.
-- Visualizer6716(created1794957272.1076765) now serves8765 after guarded restart.
-  Real2378-label worker/browser sample passed. Isolated preview8766 cleaned.
-- Schema4:185 tools/4889 inputs; current offline checks pass. Source checkpoint3
-  remains unchanged; no production migration yet. Live20-decision evaluation7.03s
-  vs27.04s baseline with different actions/board (not controlled A/B).
-- Measured original20-decision planning evaluation:27.04s; median published
-  interval0.918s, server observation delay0.254s. Main delays: native action
-  sleeps/dumps/loadout scrolling. No browser-render or battle latency claim yet.
-- Full availability corrected from52 to59 entries:16 units,19 abilities,
-  16 upgrades,8 perks. inst13 was prepared/rebooted with all59 entries; inst12 still predates
-  the perk correction, so prepare it while stopped before use. SP tower upgrades are
-  hidden/disabled in shipped config, distinct from their unlock availability.
-- New native picker controls select every16 roster unit with extended-arrow
-  scan codes and receipts. Two advancing UI frames fix the picker layout race;48 consecutive
-  selections passed. Now integrated into schema4; remaining proofs tracked in mechanics ledger.
-- Portability, pinned reproducible DLL and guarded checkpoint sharing remain.
-  Local Codex share-zar-checkpoints automation enabled every6h, changed models
-  only. First release checkpoint-35a8148ff8948406 on repository GitHub Releases.
-- Preserve unrelated policy2/history2 changes and old analysis artifacts.
-  Current diagnostic evidence is under analysis/coverage-*; source/docs are
-  committed conventionally at tested milestones. No subagents.
+## CURRENT STATE (2026-11-17 — schema4 deployed; first update validation pending)
+- Supported normal-campaign mechanic catalog is integrated:185 tools/4889 inputs,
+  all16 units/19 battle abilities/8 perks, native editing/HUD/environment controls.
+  Current scope/proofs/conditional restrictions: notes/mechanics-coverage.md.
+  No claim of35% skill or exhaustive combination/timing validation.
+- Source through f0db17f pushed to main.130 script tests,37 visualizer tests,
+  observer12-step parity,graph,final-width SSE/mobile WebGPU+Canvas2D passed.
+- New sessions/nn_policy4.pt migrated from preserved policy3 SHA256
+  c78e1635664667f32153479d6cf0ea33e12dfb6c5a8143a58490cd37609fa6f0.
+  10 Adam states retained; initial policy18653dd50efd8da3. False free-helicopter
+  stock feature explicitly corrected in migration/labels. Pre-correction local
+  migration is retained separately as nn_policy4-pre-stock-correction.pt.
+- Production inst14 boot underway, game40284; operator44348. Revalidate identities
+  with local.ps1 status. One copy,below-normal,CPU0-7,200 batches/2 episodes,
+  seed20261144. Log analysis/nn3_operator_20261117-181508-90a0f7.log;
+  trainer log analysis/nn3_20261117-181512-bc6892.log. First saved update/fresh
+  real4889-label browser sample and compatible checkpoint release still pending.
+- Diagnostic inst13 game28440 stopped. Its imported L5 board was diagnostic only,
+  never trained; original progress backup analysis/coverage-inst13-before-l5.progress.
+  Earlier inst14 boot was stopped for the placement-mode mask correction; no
+  completed update came from that attempt. Preview8766 processes cleaned.
+- Production visualizer6716(created1794957272.1076765),port8765 remains available.
+  Inference warm median0.198ms plain/.453ms observed in final check. Earlier actual
+ 40 decisions14.64s; browser transport122-388ms after firstframe584ms. Different
+  action mixes prevent treating before/after throughput as controlled A/B.
+- Share-zar-checkpoints automation remains enabled every6h,changed checkpoints only.
+  Prior release checkpoint-35a8148ff8948406 is schema3,not compatible with current4.
+  Publish verified schema4 after firstupdate; tool captures source revision and
+  downloads remote bytes for verification before making release public.
+- Preserve unrelated policy2/history2 changes and old untracked analysis files.
+  Pre-existing Ghidra Java2316/45920 belong elsewhere; do not stop them.
 
 ## Prior snapshot (2026-11-17 — isolated Python environment verified, training LIVE)
 - New .venv created with Python3.14.4 x64, include-system-site-packages=false;
