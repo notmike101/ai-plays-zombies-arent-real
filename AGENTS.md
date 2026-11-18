@@ -194,6 +194,9 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 3. Kill test instances (enumerate via psutil dirname).
 
 ## Training ownership and persistence
+- For a live spatial-head comparison, use scripts/compare_spatial.py with idle,
+  preflighted copies. Both arms use the training lock, fresh boards and private
+  weights. Telemetry is off for both arms in this experiment. See the runbook.
 - Schedule one sequential episode batch per unique game PID. Never submit
   multiple episodes for the same PID as independent pool jobs.
 - Keep one optimizer across PPO rounds. Checkpoints include optimizer state and

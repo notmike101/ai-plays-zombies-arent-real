@@ -25,14 +25,14 @@ LOCK = ROOT / 'analysis/nn3_operator.lock'
 def script_role(command, cwd, root=ROOT):
     scripts = {'scripts/train_run.py': 'launcher', 'scripts/nn_play2.py': 'trainer',
                'visualizer/server.py': 'visualizer', 'visualizer/demo.py': 'preview',
-               'scripts/local_agent.py': 'operator'}
+               'scripts/local_agent.py': 'operator', 'scripts/compare_spatial.py': 'operator'}
     for arg in command[1:]:
         if arg.endswith('.py'):
             path = Path(arg)
             path = (Path(cwd) / path).resolve()
             for relative, role in scripts.items():
                 if path == (root / relative).resolve():
-                    return role if role != 'operator' or 'train' in command else None
+                    return role if relative != 'scripts/local_agent.py' or 'train' in command else None
             return None
     return None
 

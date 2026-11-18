@@ -179,3 +179,17 @@ Minimal prompt for a new agent:
 > Train the existing model with resource headroom, preserve a healthy active run,
 > keep the visualizer available, and improve the repository with tested changes.
 > Update the tracker and commit milestones. Never silently start random training.
+### Comparing spatial targeting on live games
+
+When training is idle, run
+`.venv/Scripts/python.exe -B scripts/compare_spatial.py --copies inst13 inst14 inst15 inst16`
+from the checkout. Choose distinct prepared copies in pairs. The command checks
+both training ownership and hardware headroom. Each pair shares a policy seed
+on fresh normal Boston L1 boards. Round zero trains each arm for one PPO update.
+Rounds one and two evaluate fixed weights and exchange the copies between arms.
+Both arms start from the production GRU and tool/value heads with fresh Adam
+state. The candidate initializes a new cell scorer. Native game randomness
+can vary between copies. Trial weights and episode records go in an ignored
+`analysis/coverage-spatial-*` directory. The production checkpoint resumes
+through the usual operator. The visualizer receives no frames from either trial arm.
+

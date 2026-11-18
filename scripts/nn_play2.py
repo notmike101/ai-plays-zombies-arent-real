@@ -373,7 +373,7 @@ def planning_limit_reached(steps, limit, modal_open):
     return steps >= limit + int(bool(modal_open))
 
 
-def run_episode(args):
+def run_episode(args, *, policy_factory=None, telemetry=True):
     pid, sd, eps_rand, tag, *extra = args
     options = extra[0] if extra else {}
     if 'seed' in options:
@@ -415,10 +415,10 @@ def run_episode(args):
                   costs={name: _rule({k.removeprefix('loadout_'): v for k, v in config.items()}, name, '_cost')
                          for name in DECK_ORDER})
         plan = initial
-        net = None if eps_rand else PolicyNet2().eval()
+        net = None if eps_rand else (policy_factory or PolicyNet2)().eval()
         if net is not None:
             net.load_state_dict(sd)
-            if Observer is not None:
+            if Observer is not None and telemetry:
                 observer = Observer(net, pid, tag, labels={
                     'input': INPUT_LABELS, 'hu': TOOLS, 'hc': CELL_LABELS})
         rows = {k: [] for k in ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'sim_elapsed')}
