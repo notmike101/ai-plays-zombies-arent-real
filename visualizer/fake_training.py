@@ -54,6 +54,9 @@ class FakeGame:
         self.closed_log = True
         return {'phase': self.phase, 'stats': {'saved_pct': 100-self.infections}}
 
+    def geometry_blockers(self):
+        return []
+
     def loadout_levels(self):
         return {}
 

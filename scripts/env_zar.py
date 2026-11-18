@@ -105,7 +105,10 @@ class ZAREnv:
                 raise ZAREnvError('Unsupported game build: revalidate memory offsets')
 
     def geometry_legal(self):
-        """Matching-build READY land/budget gates; never refresh native caches by writing."""
+        return not self.geometry_blockers()
+
+    def geometry_blockers(self):
+        """Return the native READY land and budget blockers independently."""
         for _ in range(10):
             if self.scalar(0x659258, '<B') and not self.scalar(0x65ce58, '<B'):
                 break
@@ -123,7 +126,10 @@ class ZAREnv:
         if large > small and area > small:
             cap = large_cap if area >= large else math.floor(cap + (large_cap-cap) *
                 ((math.sqrt(area)-math.sqrt(small))/(math.sqrt(large)-math.sqrt(small))) + .5)
-        return money >= -.5 and covered*100./total <= cap + .0001
+        return [reason for reason, blocked in (
+            ("safe_zones_too_big", covered*100./total > cap + .0001),
+            ("over_budget", money < -.5),
+        ) if blocked]
 
     def finish_geometry(self, before):
         """Reject a READY-blocking edit by undoing exactly that edit, with receipts."""

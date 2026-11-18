@@ -565,6 +565,18 @@ def run_episode(args):
             with torch.no_grad():
                 _, _, value, _ = net(torch.tensor([[f]], dtype=torch.float32), h)
                 bootstrap = float(value.item())
+        planning_blockers = None
+        if end == 'timeout' and state['phase'] == 'planning':
+            try:
+                planning_blockers = env.geometry_blockers()
+            except ZAREnvError:
+                planning_blockers = ["geometry_unavailable"]
+            if len(st.get('native', {}).get('selection', {}).get('polygon', ())):
+                planning_blockers.append('unfinished_polygon')
+            if st.get('dialog'):
+                planning_blockers.append('modal_dialog')
+            if st.get('anchor') or st.get('gesture_anchor'):
+                planning_blockers.append('unfinished_gesture')
         rewards = dict(infections=sum(rows['rews']), terminal=outcome_reward(saved, end))
         if rows['rews']:
             rows['rews'][-1] += rewards['terminal']
@@ -574,6 +586,7 @@ def run_episode(args):
         return dict(rows, level=tag, pid=pid, win=end == 'won', advance=advance, end=end,
                     saved_frac=saved if end != 'timeout' else None,
                     observed_saved_frac=saved, timeout_phase=state['phase'] if end == 'timeout' else None,
+                    planning_blockers=planning_blockers,
                     reward_components=rewards, frac=o['civ']/civ0, bootstrap=bootstrap,
                     civ0=civ0, t=time.monotonic()-start, sim=state['sim'],
                     R=sum(rows['rews']), nbuy=nbuy, ndeck=len(st['deck']),

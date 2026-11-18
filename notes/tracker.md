@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — schema4 training LIVE; post-fix battle update saved)
+## CURRENT STATE (2026-11-17 — planning timeout diagnostics added)
+- Training idle at check. Latest inspected run a0edb1da145e saved six PPO updates
+  and had 12 planning timeouts. Last checkpoint c07d20bcea16a40b.
+- Planning timeout history now separates land, budget, and UI blockers.
+  Training-state (18) and visualizer integration (3) tests passed.
+  Live diagnostic output is unverified. Reward and schema remain compatible.
+- Revalidate previous process observations below before acting.
+
+## Prior snapshot (2026-11-17 — post-fix battle update saved)
 - Scheduled sharing check 2026-11-18 03:02 UTC (2026-11-17 local): published
   checkpoint-8cd35915e548c51c, policyb3cb363529189588, runb5ffb8d56db5.
   URL: https://github.com/notmike101/ai-plays-zombies-arent-real/releases/tag/checkpoint-8cd35915e548c51c

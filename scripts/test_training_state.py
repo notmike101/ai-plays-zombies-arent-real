@@ -68,6 +68,7 @@ class StateTests(unittest.TestCase):
         e.money = lambda: 0.
         self.assertTrue(e.geometry_legal())
         values[0x659308] = 31
+        self.assertEqual(e.geometry_blockers(), ["safe_zones_too_big"])
         self.assertFalse(e.geometry_legal())
         values[0x659308] = 13
         values[0x65d9e0] = 159.
@@ -75,7 +76,10 @@ class StateTests(unittest.TestCase):
         values[0x659308] = 12
         self.assertTrue(e.geometry_legal())
         e.money = lambda: -.51
+        self.assertEqual(e.geometry_blockers(), ["over_budget"])
         self.assertFalse(e.geometry_legal())
+        values[0x659308] = 13
+        self.assertEqual(e.geometry_blockers(), ["safe_zones_too_big", "over_budget"])
         values[0x659258] = 0
         with patch.object(env_zar.time, 'sleep'), self.assertRaises(env_zar.ZAREnvError):
             e.geometry_legal()

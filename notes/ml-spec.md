@@ -141,3 +141,12 @@ Schema4 appends113 placement, roster/perk, selection/editing, native HUD, camera
 and timing actions. Migration preserves source schema3 weights and Adam moments
 in a new file; appended GRU input columns and Adam moments start at zero.
 The battle decision floor is0.1s; native action completion can take longer.
+
+The curriculum advances to the next Boston level only after a verified win with
+at least 35% saved. Valid lower-scoring attempts still contribute to PPO.
+Completed batches retain both weights and Adam state across runs.
+
+Planning timeouts record planning_blockers for diagnosis: oversized zones,
+debt, unfinished polygons or gestures, modal dialogs, or unavailable geometry.
+An empty list means no listed blocker was found at the end of the rollout.
+This history field does not feed the policy or reward.
