@@ -189,15 +189,18 @@ class Observer:
                 current = frame.get('graph')
                 if current is not None:
                     if current is not graph:
-                        encoded_graph = json.dumps(current, allow_nan=False, separators=(',', ':'))
+                        encoded_graph = (',"graph":' + json.dumps(
+                            current, allow_nan=False, separators=(',', ':')) + '}').encode('utf-8')
                         graph = current
                     # Topology dominates file size and is immutable between revisions.
                     data = json.dumps({k: v for k, v in frame.items() if k != 'graph'},
                                       allow_nan=False, separators=(',', ':'))
-                    data = data[:-1]+',"graph":'+encoded_graph+'}'
+                    with temporary.open('wb') as output:
+                        output.write(data[:-1].encode('utf-8'))
+                        output.write(encoded_graph)
                 else:
                     data = json.dumps(frame, allow_nan=False, separators=(',', ':'))
-                temporary.write_text(data, encoding='utf-8')
+                    temporary.write_text(data, encoding='utf-8')
                 os.replace(temporary, destination)
             except (OSError, ValueError, TypeError):
                 pass

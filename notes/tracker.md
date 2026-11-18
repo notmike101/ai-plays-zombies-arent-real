@@ -1,6 +1,16 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — eight-copy training resumes after cleanup)
+- CPU transfer probe: run `.venv/Scripts/python.exe -B scripts/probe_spatial_transfer.py`.
+  Three seeds, frozen checkpoint GRU, 30 training locations and 10 held-out
+  locations. Dense and dense-plus-shared heads scored 0/128 held-out per seed;
+  shared-only scored 128/128 each on the synthetic largest-cluster task. This
+  motivates an isolated gameplay trial of shared tool-conditioned targeting.
+  Hand-labeled probe targets must never be used as campaign rewards.
+- Observer cached UTF-8 topology bytes and writes them directly. Alternating
+  40 writes per method on a 5,117,864-byte real frame yielded identical bytes,
+  median 12.68 ms before and 7.04 ms after. This measures local serialization
+  and buffered file writes only. All 37 visualizer tests and graph checks passed.
 - Architecture review: a tail sample of 175 revision-2 Boston L1 episodes had
   163 early retries, one loss, 11 timeouts and zero wins. Active training saved
   checkpoint 2c29005d6d100d63. The sample does not isolate a memory bottleneck.

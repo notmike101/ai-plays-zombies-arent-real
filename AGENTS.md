@@ -101,6 +101,7 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   The sampler wakes SSE viewers after sampling; do not add a second viewer poll
   delay. Cache decoded files by actual bytes, not only size/mtime. Keep decision
   count/interval distinct from published sequence and telemetry age.
+  Cache encoded topology bytes across decisions at the same model revision.
 - Recent decisions are sampled telemetry: 200 compact records in server memory
   across all workers/modes, latest 50 for the selected stream in the Inspector.
   Reconnect sends current topology and retained history; restart clears history.
