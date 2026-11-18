@@ -1,6 +1,6 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — schema4 training LIVE in battle)
+## CURRENT STATE (2026-11-17 — schema4 training LIVE; post-fix battle update saved)
 - Normal-campaign mechanic catalog integrated:185 tools/4889 inputs,all16 units,
   19 abilities,8 perks,editing/HUD/environment controls. Coverage/proofs and native
   disabled/conditional branches: notes/mechanics-coverage.md. This is interface
@@ -13,13 +13,13 @@
   trainer36516(1794962298.8164513),worker28984(1794962300.9953175),launcher8156
   (1794962209.0816593),operator38968(1794962205.2084763). Venv redirectors23604,
   13192,33360 also appear. Revalidate via local.ps1 status. One game,below-normal,
-  CPU0-7,200 batches of2,seed20261153. Last sample:r0/ep0 BATTLE,sequence132,
-  real4889-label frame,no warning,ancestry verified. First update of this latest
-  restart still pending; do not confuse live inference with a saved update.
+  CPU0-7,200 batches of2,seed20261153. Round0 completed:aborted battle6.31% saved atsim74.60s,then
+  planning timeout. PPO saved bf985cae9aa3606b. Last sample:r1/ep0 planning,
+  sequence31,real4889-label frame,no warning,ancestry verified.
 - Operator log analysis/nn3_operator_20261117-183645-a7dd17.log;
   trainer log analysis/nn3_20261117-183649-f8d399.log;history analysis/nn_hist4.jsonl.
-  Nine saved schema4 updates were verified across earlier runs; latest saved policy
-  c30d8dd4df23b6ce/Adam was resumed. Earlier training batches timed out in planning,
+  Ten saved schema4 updates verified across these runs; source policy
+  c30d8dd4df23b6ce/Adam was resumed and latest is bf985cae9aa3606b. Earlier training batches timed out in planning,
   saved_frac=null,reward0. These are not wins. Track actual battle results/updates.
 - Earlier failures:select_add while armed fixed by shared disarm; old fixed-roster
   preflight now accepts known seven-slot rosters/empty slots. Native armed->add/

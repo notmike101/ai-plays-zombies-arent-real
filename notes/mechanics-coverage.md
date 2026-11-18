@@ -391,3 +391,8 @@ two F6 attempts observed; test game closed.135 script tests and37 visualizer tes
 pass,as do12-step parity and Node graph. Compatible snapshot
 checkpoint-e9a6e7cf40a7d0b5 contains policyc30d8dd4df23b6ce/Adam,verified remotely.
 Production resumed with a fresh4889-label stream; see tracker for identities.
+
+Final production acceptance:b5ffb8d56db5/r0 consumed an aborted battle (6.31% saved,
+sim74.60s,wall63.25s) and a planning timeout,then PPO saved bf985cae9aa3606b.
+Next batch produced fresh live telemetry. This proves post-fix battle/outcome/
+update/save flow,not improved playing strength or the35% objective.
