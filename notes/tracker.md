@@ -1,6 +1,28 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-18 — continued eight-copy training, learning revision 2)
+## CURRENT STATE (2026-11-18 — six-copy training continues)
+- User asked to keep training until told to stop. Active local supervisor
+  analysis/coverage-supervise-20261118-zar-v3.ps1 cycles fresh single-batch runs,
+  tiles game windows at unchanged 1920x1200, and guards resource headroom.
+  It uses up to six copies after eight-copy picker/HUD failures. Known transient
+  failures trigger bounded restarts; unknown failures are surfaced for inspection.
+- Starting at 13:28 Central, commits through a993d22 passed 143 script tests and
+  three visualizer integration tests. Native map sampling verifies the header;
+  stale HUD frames have a bounded retry. Unconfirmed picker failures are logged
+  only as no-ops when native roster/perks/ability levels remain unchanged.
+  That exact tool/cell waits five decisions before another retry.
+- At 13:48 Central, four cooldown batches saved four updates, 22 aborted battles,
+  two planning timeouts and no interface exceptions. Four episodes logged picker
+  rejections; the largest repeated count of a single choice was two. The earlier
+  verified no-op recovery had preserved one episode with 32 Bomber rejections.
+- Latest verified checkpoint 2c0a082fb0050d44. New launch seed 20262960
+  operator log analysis/nn3_operator_20261118-134801-fb3370.log. Revalidate
+  current game and supervisor identities before changes. No win or improvement
+  in civilian survival established. Learning revision 2 remains active.
+- To hold at a clean boundary before changing live source, create the ignored
+  analysis/coverage-supervise-hold file and wait for the supervisor and trainer.
+
+## Prior snapshot (2026-11-18 — continued eight-copy training, learning revision 2)
 - User asked to continue training and necessary modifications until told to stop.
   Local supervisor analysis/coverage-supervise-20261118-continuing.ps1 cycles
   fresh one-batch launches, tiles owned windows without resizing, and uses
