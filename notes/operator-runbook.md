@@ -62,8 +62,8 @@ logical CPUs) **before** launching the existing `train_run.py`. It refuses start
 below4GiB available RAM or2GiB free disk. These are startup safeguards, not
 continuous CPU/GPU/RAM quotas. Repeat --extra-copy instN for up to eight distinct
 prepared copies. They share the CPU cap and one optimizer. Startup requires
-4, 6, 8, 10 or 12 GiB available RAM for one through five copies, and 13 GiB for
-six through eight copies.
+4, 6, 8 or 10 GiB available RAM for one through four copies, and 12 GiB for
+five through eight copies.
 With --episodes-per-copy 1, each copy supplies one episode per update. Updates
 still wait for the slowest copy. The defaults are one copy and two sequential
 episodes per copy.
