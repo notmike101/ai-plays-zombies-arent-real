@@ -117,6 +117,15 @@ def inspect_checkpoint(path=MODEL):
                 optimizer_states=len(c['optimizer']['state']))
 
 
+def planning_roster(settings):
+    from game_mechanics import UNITS
+    match=re.search(r'^roster_plan[ \t]*=[ \t]*([^\r\n]*)$',settings,re.M)
+    roster=match[1].split() if match else []
+    if len(roster)!=7 or any(name not in (*UNITS,'-') for name in roster):
+        raise ValueError('Invalid planning roster; expected seven supported unit/empty slots')
+    return roster
+
+
 def preflight(copy='inst1'):
     checks, errors = {}, []
 
@@ -147,9 +156,7 @@ def preflight(copy='inst1'):
         settings = (path/'steam_cloud/settings.ini').read_text()
         if not re.search(r'^difficulty\s*=\s*normal\s*$', settings, re.M):
             raise ValueError('Owned copy must use normal difficulty')
-        kit = 'Garrison Mortar Napalm Nest Mine C4 GasMortar'
-        if not re.search(r'^roster_plan\s*=\s*'+kit+r'\s*$', settings, re.M):
-            raise ValueError('Planning roster differs from the trained hotkey layout')
+        planning_roster(settings)  # The policy can persist a different valid roster.
         from prepare_game import full_unlock_profile
         unlocks = (path/'steam_cloud/unlocks.ini').read_text()
         wanted = set(re.findall(r'^unlock\s*=\s*(\w+\s+\w+)\s*$', full_unlock_profile(path).decode(), re.M))

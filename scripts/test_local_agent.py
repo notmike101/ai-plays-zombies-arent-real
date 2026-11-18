@@ -51,6 +51,12 @@ class InspectionTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'optimizer'):
                 ops.inspect_checkpoint(p)
 
+    def test_preflight_accepts_policy_selected_roster_and_empty_slots(self):
+        self.assertEqual(ops.planning_roster('roster_plan = Oil Sniper - Garrison Mine C4 MLRS'),
+                         ['Oil','Sniper','-','Garrison','Mine','C4','MLRS'])
+        for line in ('', 'roster_plan = Garrison', 'roster_plan = Unknown - - - - - -'):
+            with self.assertRaisesRegex(ValueError,'roster'):ops.planning_roster(line)
+
     def test_copy_name_cannot_escape_owned_directory(self):
         for name in ('../inst1', 'inst1/../inst2', 'C:/Games', 'instX'):
             with self.assertRaises(ValueError):

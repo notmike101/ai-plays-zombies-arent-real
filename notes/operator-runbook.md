@@ -9,6 +9,8 @@ next normal restart. Never recreate/update an environment while it has workers.
 For a new checkout, configure zar.local.toml, run build-input and prepare-game,
 then import a verified checkpoint as described in README.md. Fresh copies use
 full availability as requested: unlocked options, but no purchases or placements.
+The policy may persist any valid seven-slot planning roster; preflight accepts
+known units and empty slots rather than requiring the original starting kit.
 For sharing/restore use notes/checkpoint-sharing.md; the six-hour local automation
 publishes changed snapshots only and never restarts training.
 
