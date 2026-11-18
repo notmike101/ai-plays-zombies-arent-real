@@ -116,7 +116,7 @@ def main():
                 results = collect_pairs(pool, jobs, directory)
                 batch_seconds = time.monotonic() - start
                 for job, row in zip(jobs, results):
-                    summary = {k: row.get(k) for k in ('end','saved_frac','win','advance','sim','t','err','board_id','timeout_phase')}
+                    summary = {k: row.get(k) for k in ('end','saved_frac','win','advance','sim','t','err','board_id','timeout_phase','log_started')}
                     summary.update(copy=job[0], arm=job[1], seed=job[3], round=rnd,
                                    phase='train' if training else 'evaluation',
                                    decisions=len(row.get('obs', [])), batch_seconds=batch_seconds)

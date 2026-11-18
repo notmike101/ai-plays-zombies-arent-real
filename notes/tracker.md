@@ -1,6 +1,26 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-18 — live comparisons finished, production training resumed)
+## CURRENT STATE (2026-11-18 — sustained comparison complete, production GRU resumed)
+- At 17:27 Central the eight-copy production supervisor resumed (operator log
+  analysis/nn3_operator_20261118-172747-0cddf2.log). Recheck live ownership.
+- Sustained outcome: 32 training episodes per arm, eight PPO updates, then 16
+  frozen evaluations per arm. Both recorded zero qualifying wins, zero
+  discordant success pairs, exact one-sided p=1. Retain production dense head.
+  Shared entered battle 16/16, dense 13/16 (3 planning timeouts). Every battle
+  ended at early retry. Among battles, shared HUD percentages min/mean/max
+  5.50/9.05/10.00, dense 0.64/8.07/9.92. Median simulated seconds to retry
+  were 32.33 and 27.67 respectively. No natural battle endings in evaluation.
+- Frozen decisions in battle: dense 3,238, shared 4,098. Among game logs
+  matched by copy, round wall-time window and footer score/phase, 12 dense
+  and 13 shared attempts recorded five and two native deploy events respectively.
+  Partial log coverage; deployments exclude passive defenses.
+- Evidence: original snapshot policy 01b03674c135ca3b; accepted training
+  rounds 0-2 in analysis/coverage-spatial-ef2f839094 and rounds 3-7 plus
+  all evaluations in analysis/coverage-spatial-92acc343c0. A clean boot
+  retry resumed both Adam states from paired.pt. Earlier interrupted pilot
+  coverage-spatial-3db79a6a49 had no evaluations and was excluded entirely.
+  An offline interrupted/resumed update matched both sets of weights and
+  Adam tensors exactly. Future trial summaries include native log header wall.
 - Sustained L1 comparison protocol set before rollout: seed 87430, eight copies,
   eight PPO updates on four episodes per arm per update, then four alternating
   frozen rounds (16 paired policy seeds). Primary outcome is a confirmed game
