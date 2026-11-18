@@ -22,6 +22,7 @@ def fixture():
                        damage=np.array([3.]),**{'class':np.array([2])}),
         paint=dict(pos=np.empty((0,2)),kind=np.array([])),
         terrain=dict(codes=np.zeros(48,dtype=np.int16),bridges=np.zeros(48,dtype='u1')))
+    s['bridges']=dict(pos=np.empty((0,2)),hp=np.array([]),full=np.array([]))
     s['fire']={name:np.zeros(48) for name in ('flags','green','burnt','oil')}
     s.update({name:np.zeros(0,dtype) for name,dtype in [('walls',WALL),('evac',EVAC),
         ('helicopters',HELI),('vehicles',VEHICLE),('medevacs',MEDEVAC),('hazards',PATCH),('mutations',MOSH)]})

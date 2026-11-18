@@ -291,3 +291,15 @@ Cells without such targets are masked; the second drag point remains free world
 geometry. Live L5 refresh produced3 garrison cells and11 candidate demolition
 cells.129 script tests and37 visualizer tests pass, including target-vs-direction
 masking. Other casts keep model-selected world points and native legality checks.
+
+
+Bridge damage records at656b38 are24-byte triples of signed64-bit key/hp/full,
+not floats. The key is the minimum native terrain cell of the span (bridgesel
+02cb20);049940/054b90 use the same record for the HUD health display. Untouched
+spans have no record. Added spatial presence,clamped HP/full and log1p full HP at
+the span's anchor cell, alongside the existing sampled bridge bits. C4 live test
+recorded full816/current616 and multiple nonpositive/collapsed spans; the new
+reader/finite observation path passed on those records. Test pins native-cell
+projection, negative damaged HP and invalid key rejection. Schema4 now4889 inputs/
+185 tools,3,096,810 parameters.130 script tests,37 visualizer tests,observer parity
+and graph pass. Warm medians0.246ms plain/0.620ms observed in this check.

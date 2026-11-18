@@ -172,7 +172,7 @@ def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, 
             g(buildings['area'][bi]),float(int(buildings['height_packed'][bi])&65535)/1000]
     result += detail
     result += [float(v)/4 for v in maps['upgrades'].get(int(u['id'][indices[0]]),[0]*4)] if len(indices) else [0.]*4
-    w=s['walls'];ev=s['evac'];he=s['helicopters'];ve=s['vehicles'];me=s['medevacs'];ha=s['hazards'];mo=s['mutations']
+    w=s['walls'];ev=s['evac'];he=s['helicopters'];ve=s['vehicles'];me=s['medevacs'];ha=s['hazards'];mo=s['mutations'];br=s['bridges']
     he=he[he['alive']!=0];ve=ve[ve['alive']!=0];me=me[me['alive']!=0]
     hp=s.get('wall_hp',[])
     wall_fraction=[float(np.mean(v))/max(float(w['full_hp'][i]),1) if len(v) else 0 for i,v in enumerate(hp)]
@@ -188,7 +188,8 @@ def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, 
         (me['pos'],[me['phase']/8,log(me['carried']),log(me['landed']),log(me['dmg']),me['ordered']]),
         (ha['pos'],[ha['kind']/8,ha['radius']/1000,ha['until']/600]),
         (mo['pos'],[np.ones(len(mo)),mo['radius']/1000,mo['start']/600,mo['until']/600,
-                    log(mo['members']),mo['kind']/8])]
+                    log(mo['members']),mo['kind']/8]),
+        (br['pos'],[np.ones(len(br['hp'])),np.maximum(br['hp'],0)/br['full'],log(br['full'])])]
     assert sum(len(values) for _,values in groups)==len(STATE_CHANNELS)
     for points,values in groups:
         xy=project(points,camera,width,height)

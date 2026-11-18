@@ -37,6 +37,15 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(result['burnt'].tolist(),[.25,0.,0.])
         self.assertTrue(all(c.args[1]<=0x1c10 for c in state.read.call_args_list))
 
+    def test_bridge_damage_keys_project_to_native_anchor_cells(self):
+        e=Mock(base=0);e.scalar.side_effect=lambda r,f:{0x656a48:10,0x656a50:20,0x656a40:2.}[r]
+        e.array.return_value=np.array([[23,60,100],[24,-10,100]],dtype='<i8')
+        state=NativeState(e);b=state.bridge_health()
+        np.testing.assert_array_equal(b['pos'],[[7.,5.],[9.,5.]])
+        self.assertEqual(b['hp'].tolist(),[60,-10])
+        e.array.return_value=np.array([[200,60,100]],dtype='<i8')
+        with self.assertRaisesRegex(RuntimeError,'bridge'):state.bridge_health()
+
     def test_fixed_record_strides_and_offsets(self):
         for dtype, size in [(WALL,192),(EVAC,52),(HELI,144),(VEHICLE,400),(MEDEVAC,96)]:
             self.assertEqual(dtype.itemsize,size)

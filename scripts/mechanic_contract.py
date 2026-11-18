@@ -67,7 +67,9 @@ STATE_CHANNELS = ('wall HP fraction','wall breached cell fraction','wall level /
     'medevac phase / 8','medevac carried log1p','medevac landed log1p','medevac damage log1p','medevac departure ordered',
     'hazard kind / 8','hazard radius / 1000','hazard expiry sim time / 600',
     'mutation presence','mutation radius / 1000','mutation start sim time / 600',
-    'mutation completion sim time / 600','mutation members log1p','mutation kind / 8')
+    'mutation completion sim time / 600','mutation members log1p','mutation kind / 8',
+    'recorded bridge presence at anchor','recorded bridge HP fraction at anchor',
+    'recorded bridge full HP log1p at anchor')
 EXTRA_LABELS += [f'Native state {name} cell {i+1} (mean; 0 empty)' for name in STATE_CHANNELS for i in range(48)]
 
 EXTRA_LABELS += ['Modal dialog open (0/1)','Corridor tool armed (0/1)',

@@ -146,6 +146,17 @@ class NativeState:
                 bits[i]=(word>>(index%64))&1
         return dict(codes=codes,bridges=bits)
 
+    def bridge_health(self):
+        e=self.env;rows=e.array(0x656b38,('<i8',3),limit=10000)
+        cols=e.scalar(0x656a48,'<q');height=e.scalar(0x656a50,'<q');size=e.scalar(0x656a40,'<f')
+        if cols<=0 or height<=0 or not np.isfinite(size) or size<=0:
+            raise ZAREnvError('Invalid bridge grid dimensions')
+        keys=rows[:,0]
+        if np.any((keys<0)|(keys>=cols*height)) or np.any(rows[:,2]<=0):
+            raise ZAREnvError('Invalid native bridge damage record')
+        return dict(pos=np.column_stack((keys%cols+.5,keys//cols+.5))*size,
+                    hp=rows[:,1],full=rows[:,2])
+
     def fire(self, points):
         e=self.env
         cols,rows,tcols,trows=[e.scalar(r,'<q') for r in (0x654f40,0x654f48,0x654f50,0x654f58)]
@@ -199,6 +210,7 @@ class NativeState:
                     raise ZAREnvError('Invalid native camera')
                 points=(centers(e.cw,e.ch)-[e.cw/2,e.ch/2])/[camera[2],-camera[2]]+camera[:2]
                 result = dict(units=units, unit_maps=maps, zones=self.zones(),terrain=self.terrain(points),fire=self.fire(points),
+                    bridges=self.bridge_health(),
                     playarea=e.array(0x6652e0,VEC,limit=10000),
                     walls=walls, wall_hp=wall_hp, paint=self.paint(), selection=self.selection(),
                     hazards=e.array(0x654ef0,PATCH,limit=100000),
