@@ -1,6 +1,26 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-18 — six-copy training continues)
+## CURRENT STATE (2026-11-18 — eight-copy training resumes after cleanup)
+- Trainer boot now applies its existing new-replay-companion retention guard
+  (3cf5d59). Eight-copy start at 14:24:45 Central produced 24 retained .txt
+  dumps and zero retained .state companions across boot and first episode setup.
+  The offline boot and training-state suites passed (8 and 20 tests).
+- At user request, archived 1,288 older ignored images and 189 older ignored
+  binary replay companions, ~4.63 GiB total. Original relative paths, sizes and
+  SHA256 are in manifest.jsonl under C:/Users/me/ZAR-archive, directories
+  workspace-images-2026-11-18 and workspace-replays-before-2026-11-18.
+  Verified copies before removing workspace originals. Tracked references,
+  text receipts, active runtime, checkpoints and today's replay evidence kept.
+- Active local supervisor analysis/coverage-supervise-20261118-zar-v4.ps1.
+  Seed 20263170 run operator log analysis/nn3_operator_20261118-142445-e33e47.log;
+  all eight owned copies booted and tiled. Last known saved revision-2 policy at
+  check 8a78fbf74ee38406; this boot's first update pending at that moment.
+  6.92 GiB D:free during battle at 14:28 Central. Revalidate identities before action.
+- Latest reviewed stable cooldown cohort: ten batches, 54 aborted battles,
+  four planning timeouts, zero interface errors. Median abort 32.58 game seconds,
+  best 10% saved. No sustained survival improvement established.
+
+## Prior snapshot (2026-11-18 — six-copy training continues)
 - User asked to keep training until told to stop. Active local supervisor
   analysis/coverage-supervise-20261118-zar-v3.ps1 cycles fresh single-batch runs,
   tiles game windows at unchanged 1920x1200, and guards resource headroom.
