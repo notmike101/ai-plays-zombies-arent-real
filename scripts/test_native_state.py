@@ -93,9 +93,14 @@ class NativeTests(unittest.TestCase):
             0x10000:struct.pack('<8Q',0,0,41,0,0,99,0,0),
             0x10040:bytes([0,0,5,0,0,2,0,0]),
             0x10048:struct.pack('<8Q',0,0,71,0,0,83,0,0)}
-        state.read=lambda address,size:memory[address]
+        payload = b''.join(memory[x] for x in (0x10000, 0x10040, 0x10048))
+        state.read=Mock(side_effect=[memory[100], payload, memory[100]])
         self.assertEqual(state.mapping(100,'u1'),{41:5,99:2})
-        memory[100]=struct.pack('<Qq',0x10000|3,3)
+        self.assertEqual(state.read.call_args_list[1].args, (0x10000, len(payload)))
+        changed = struct.pack('<Qq',0x20000|3,2)
+        state.read=Mock(side_effect=[memory[100], payload, changed])
+        with self.assertRaisesRegex(RuntimeError,'changed'):state.mapping(100,'u1')
+        state.read=Mock(side_effect=[struct.pack('<Qq',0x10000|3,3), payload])
         with self.assertRaisesRegex(RuntimeError,'changed'):state.mapping(100,'u1')
 
     def test_map_values_skip_native_cache_line_padding(self):
@@ -110,7 +115,8 @@ class NativeTests(unittest.TestCase):
                     0x10000:struct.pack('<8Q',0,0,0,42,0,0,0,0),
                     0x10040:bytes(raw),
                     0x10040+extent:struct.pack('<8Q',0,0,0,71,0,0,0,0)}
-                state.read=lambda address,size:memory[address]
+                payload = b''.join(memory[x] for x in (0x10000, 0x10040, 0x10040+extent))
+                state.read=Mock(side_effect=[memory[100], payload, memory[100]])
                 result=state.mapping(100,dtype)
                 self.assertEqual(list(result),[42])
                 if np.dtype(dtype).names:

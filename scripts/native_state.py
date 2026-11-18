@@ -71,7 +71,9 @@ class NativeState:
 
     def mapping(self, rva, dtype):
         """Native integer-key map; value groups never straddle64-byte cache lines."""
-        header, count = struct.unpack('<Qq', self.read(self.env.base+rva, 16))
+        address = self.env.base+rva
+        original = self.read(address, 16)
+        header, count = struct.unpack('<Qq', original)
         if count == 0:
             return {}
         power, pointer = header & 63, header & ~63
@@ -81,11 +83,21 @@ class NativeState:
         if not 0<dtype.itemsize<=64:raise ZAREnvError('Unsupported native map value size')
         per_line=64//dtype.itemsize
         def offset(index):return (index//per_line)*64+(index%per_line)*dtype.itemsize
-        keys = np.frombuffer(self.read(pointer, capacity*8), '<u8')
-        values = self.read(pointer+capacity*8,offset(capacity))
-        hashes = np.frombuffer(self.read(pointer+capacity*8+offset(capacity), capacity*8), '<u8')
+        key_bytes = capacity*8
+        value_bytes = offset(capacity)
+        total = 2*key_bytes + value_bytes
+        if total <= 64*1024*1024:
+            # A single native read narrows the race between keys, values and hashes.
+            raw = self.read(pointer, total)
+            keys = np.frombuffer(raw, '<u8', count=capacity)
+            values = memoryview(raw)[key_bytes:key_bytes+value_bytes]
+            hashes = np.frombuffer(raw, '<u8', offset=key_bytes+value_bytes)
+        else:
+            keys = np.frombuffer(self.read(pointer, key_bytes), '<u8')
+            values = self.read(pointer+key_bytes, value_bytes)
+            hashes = np.frombuffer(self.read(pointer+key_bytes+value_bytes, key_bytes), '<u8')
         used = np.flatnonzero(hashes)
-        if len(used) != count:
+        if len(used) != count or self.read(address, 16) != original:
             raise ZAREnvError('Native map changed during read')
         return {int(keys[i]): np.frombuffer(values,dtype,count=1,offset=offset(int(i)))[0].copy()
                 for i in used}
