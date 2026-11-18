@@ -1,6 +1,18 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — planning timeout diagnostics added)
+## CURRENT STATE (2026-11-17 — supervised training on inst14)
+- At about 22:15 local, started 360 batches, two episodes per batch, seed 20261169,
+  from saved policy d1c3c6c59e43a31d. Game 33244 reached verified planning.
+  Operator log analysis/nn3_operator_20261117-221502-1ffbf2.log; trainer log
+  analysis/nn3_20261117-221505-5382b5.log. Revalidate identities via local.ps1 status.
+- Prior run fbda0049da2f timed out over budget with a modal open. The modal
+  prevented the next episode's initial F6 dump. Commit fb54d2e allows one
+  additional model decision to resolve a modal at the planning limit.
+  Script suite (136 tests) and visualizer integration (3 tests) passed.
+- User requested a few hours of supervised training. Check saved updates,
+  battle outcomes, planning blockers, and launcher errors during the run.
+
+## Prior snapshot (2026-11-17 — planning timeout diagnostics added)
 - Training idle at check. Latest inspected run a0edb1da145e saved six PPO updates
   and had 12 planning timeouts. Last checkpoint c07d20bcea16a40b.
 - Planning timeout history now separates land, budget, and UI blockers.
