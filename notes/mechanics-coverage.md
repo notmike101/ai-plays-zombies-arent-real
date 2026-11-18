@@ -31,7 +31,7 @@ Unavailable native controls stay explicitly conditional. Cosmetic overlays/3D ti
 external/social UI, admin/debug controls and changing difficulty are outside the
 policy scope. Native geometry/height/class information supplies gameplay facts.
 
-Final offline milestone:132 script tests,37 visualizer Python tests, exact policy/
+Final offline milestone:135 script tests,37 visualizer Python tests, exact policy/
 observer outputs and sampled actions over12 recurrent steps,Node graph checks.
 Final4889-input browser preview passed SSE/reconnect/pause/isolation,WebGPU and
 Canvas2D touch/desktop checks. Preview and diagnostic game processes were cleaned.
@@ -384,3 +384,10 @@ one bounded observer-request retry only in a verified world without modal/menu;
 it never dismisses UI or alters strategy. Persistent failures still stop training
 and now report phase/modal/menu state. Fault-injection checks cover dropped first
 request,blocked UI,outside-world refusal and a second missing request.
+
+Final live fault injection: owned inst13 PID37776 deliberately dropped the first
+F6 request; the second produced a valid planning dump without UI changes. Exactly
+two F6 attempts observed; test game closed.135 script tests and37 visualizer tests
+pass,as do12-step parity and Node graph. Compatible snapshot
+checkpoint-e9a6e7cf40a7d0b5 contains policyc30d8dd4df23b6ce/Adam,verified remotely.
+Production resumed with a fresh4889-label stream; see tracker for identities.

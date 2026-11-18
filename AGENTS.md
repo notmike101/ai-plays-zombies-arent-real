@@ -332,3 +332,10 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
 - Larger observations require bounded telemetry; preserve the8MiB frame limit,
   cached topology/200ms sampler and read-only observer. Policy step floor is100ms,
   not a promise of10 decisions/sec; native action/observation cost also matters.
+
+- Native snapshots require matching counts/tick for parallel unit arrays. Other
+  systems are sampled independently with bounded reads and validation; do not
+  require the entire terrain/fire/world read to fit inside one accelerated tick.
+- Missing F6 observer requests get one bounded retry only in an unobstructed game
+  world. Never dismiss modal/menu state merely to force an observation. Persistent
+  initial-dump failures report phase/modal/menu state and still stop the run.
