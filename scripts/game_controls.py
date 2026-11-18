@@ -244,16 +244,30 @@ class Controls:
         e = self.env
         wait_until(lambda: e.scalar(0x6560f0, '<B'), 'picker open')
         e.vi.move_to(30, 30)
+        self.frames()
         current = e.scalar(0x656100, '<q')
         if not 0 <= current <= 72 or not 0 <= index <= 72:
             raise ZAREnvError('Invalid picker index')
         direction = 1 if index > current else -1
+        vk, sc = (0x28, 0x150) if direction > 0 else (0x26, 0x148)
         while current != index:
-            # Arrow keys are E0 extended scan codes, not numpad2/numpad8.
-            e.vi.key_press(0x28 if direction > 0 else 0x26,
-                           sc=0x150 if direction > 0 else 0x148, hold=.025)
-            current += direction
-            wait_until(lambda: e.scalar(0x656100, '<q') == current, 'picker selection')
+            expected = current + direction
+            for hold in (.05, .075):
+                # Arrow keys use E0 extended scan codes.
+                e.vi.key_press(vk, sc=sc, hold=hold)
+                try:
+                    wait_until(lambda: e.scalar(0x656100, '<q') != current, 'picker selection')
+                except ZAREnvError:
+                    if not e.scalar(0x6560f0, '<B'):
+                        raise ZAREnvError('Picker closed during arrow selection')
+                actual = e.scalar(0x656100, '<q')
+                if actual == expected:
+                    break
+                if actual != current:
+                    raise ZAREnvError(f'Picker selection moved from {current} to {actual}, expected {expected}')
+            else:
+                raise ZAREnvError(f'Timed out waiting for picker selection {current} -> {expected} (target {index})')
+            current = expected
         e.vi.key_press(13, sc=28)
         wait_until(lambda: not e.scalar(0x6560f0, '<B'), 'picker accepted')
 

@@ -60,6 +60,40 @@ class ControlsTests(unittest.TestCase):
         self.assertEqual(unit_choices('Mortar'), ['-']+[n for n in UNITS if n != 'Mortar'])
         with self.assertRaises(ValueError): unit_choices('unknown')
 
+    def test_picker_retries_missed_arrow_and_rejects_wrong_row(self):
+        from env_zar import ZAREnvError
+
+        for target, succeeds in ((1, True), (2, False)):
+            with self.subTest(target=target):
+                c = Controls(Mock())
+                c.frames = Mock()
+                current, opened, arrows = 0, True, []
+                c.env.scalar.side_effect = lambda rva, _: opened if rva == 0x6560f0 else current
+
+                def press(vk, **kwargs):
+                    nonlocal current, opened
+                    if vk == 13:
+                        opened = False
+                    else:
+                        arrows.append(kwargs['hold'])
+                        if len(arrows) == 2:
+                            current = target
+
+                def receipt(predicate, description):
+                    if not predicate():
+                        raise ZAREnvError('Timed out waiting for ' + description)
+
+                c.env.vi.key_press.side_effect = press
+                with patch('game_controls.wait_until', side_effect=receipt):
+                    if succeeds:
+                        c.pick(1)
+                        self.assertFalse(opened)
+                    else:
+                        with self.assertRaisesRegex(ZAREnvError, 'expected 1'):
+                            c.pick(1)
+                        self.assertTrue(opened)
+                self.assertEqual(arrows, [.05, .075])
+
     def test_wait_is_bounded_and_returns_the_receipt(self):
         self.assertEqual(wait_until(lambda: {'money': 42}, 'receipt'), {'money': 42})
         with self.assertRaisesRegex(RuntimeError, 'receipt'):
