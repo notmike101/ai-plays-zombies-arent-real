@@ -227,7 +227,7 @@ def training_lock(path):
 
 def limit_resources(copy_count=1):
     import psutil
-    ram_gib = 4 + 2*(copy_count-1)
+    ram_gib = min(13, 4 + 2*(copy_count-1))
     if psutil.virtual_memory().available < ram_gib*2**30 or shutil.disk_usage(ROOT).free < 2*2**30:
         raise ValueError(f'Insufficient headroom: need {ram_gib} GiB available RAM and 2 GiB free disk')
     p = psutil.Process()

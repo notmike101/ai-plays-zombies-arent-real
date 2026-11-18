@@ -60,10 +60,12 @@ OS-released lock while the foreground operator owns its run. It applies
 below-normal priority and at most8 CPUs (at most half the initially available
 logical CPUs) **before** launching the existing `train_run.py`. It refuses startup
 below4GiB available RAM or2GiB free disk. These are startup safeguards, not
-continuous CPU/GPU/RAM quotas. Add --extra-copy instN to train with a second,
-distinct prepared copy. Both copies pass preflight and share the existing CPU
-cap and one optimizer. Two copies require at least 6 GiB available RAM at launch.
-The default remains one copy. With two copies, --episodes-per-copy 1 collects\ntwo episodes per update and updates as soon as both copies finish one episode.\nThe default is two episodes per copy per update.
+continuous CPU/GPU/RAM quotas. Repeat --extra-copy instN for up to six distinct
+prepared copies. They share the CPU cap and one optimizer. Startup requires
+4, 6, 8, 10, 12 or 13 GiB available RAM for one through six copies respectively.
+With --episodes-per-copy 1, each copy supplies one episode per update. Updates
+still wait for the slowest copy. The defaults are one copy and two sequential
+episodes per copy.
 
 The immediate result says `starting` and gives the background operator's PID/log.
 That is a spawn acknowledgement, not boot success. Read that log; it prints the
