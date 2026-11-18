@@ -54,18 +54,18 @@ class Controls:
             0x65d458,0x665162,0x660fd1,0x665038,0x6650c8,
             0x6650e0,0x65d30c,0x65d260,0x65d418))
 
-    def cancel(self):
+    def disarm(self):
         if self.tool_active():
             self.env.vi.click(30, 60, right=True)
             self.frames()
+    def cancel(self):
+        self.disarm()
         # A right-click with no tool moves selected units; deselect on empty HUD space.
         self.env.vi.click(30, 60)
         self.frames()
 
     def arm(self, vk, sc):
-        if self.tool_active():
-            self.env.vi.click(30, 60, right=True)
-            self.frames()
+        self.disarm()
         self.env.vi.key_press(vk, sc=sc)
         self.frames()
 
@@ -90,8 +90,8 @@ class Controls:
     def select(self, point, end=None, additive=False):
         if not additive:
             self.cancel()
-        elif self.tool_active():
-            raise ZAREnvError('Additive selection requires selection mode')
+        else:
+            self.disarm()
         vi = self.env.vi
         if additive: vi.key_down(16, sc=42)
         try:
@@ -114,8 +114,7 @@ class Controls:
         self.frames(1)
 
     def move_selection(self, point, reaim=False):
-        if self.tool_active():
-            raise ZAREnvError('Move/reaim requires selection mode')
+        self.disarm()
         vi = self.env.vi
         if reaim: vi.key_down(16, sc=42)
         try: vi.click(*point, right=True)

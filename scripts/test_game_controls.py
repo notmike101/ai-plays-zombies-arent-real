@@ -45,6 +45,16 @@ class ControlsTests(unittest.TestCase):
         env.vi.click.assert_called_once_with(300,400)
         env.vi.key_up.assert_called_once_with(16,sc=42)
 
+    def test_selection_and_reaim_disarm_without_deselecting(self):
+        for method in ('add','move','reaim'):
+            c=Controls(Mock());c.frames=Mock();c.tool_active=Mock(return_value=True)
+            if method=='add':c.select((300,400),additive=True)
+            else:c.move_selection((300,400),reaim=method=='reaim')
+            expected=[unittest.mock.call(30,60,right=True),
+                      unittest.mock.call(300,400,**({} if method=='add' else {'right':True}))]
+            self.assertEqual(c.env.vi.click.call_args_list,expected)
+            if method!='move':c.env.vi.key_up.assert_called_once_with(16,sc=42)
+
     def test_picker_replaces_current_entry_with_clear_and_preserves_order(self):
         self.assertEqual(unit_choices('-'), list(UNITS))
         self.assertEqual(unit_choices('Mortar'), ['-']+[n for n in UNITS if n != 'Mortar'])

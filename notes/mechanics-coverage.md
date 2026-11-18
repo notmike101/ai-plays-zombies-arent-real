@@ -341,3 +341,13 @@ battle masks both. Regression reproduced failure before the fix. Owned launch
 was stopped before continuing deployment; diagnostic inst13 is closed. Final
 4889-input preview passed SSE/reconnect/pause/isolation and both WebGPU/Canvas2D
 mobile interaction suites; preview processes were cleaned.
+
+## Live rollout transition correction
+
+The first production run saved four schema4 updates, then stopped safely when
+select_add followed an armed placement. Shared Controls.disarm now cancels only
+an active tool before additive selection or move/reaim, preserving selection.
+It also serves ordinary cancel/arm, preventing divergent cancellation behavior.
+The regression reproduces the exception before the fix and checks exact click
+order/modifier release for all three paths. Native-mode transitions are input
+plumbing; target choices and strategy remain policy-owned.
