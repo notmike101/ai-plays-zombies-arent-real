@@ -1,6 +1,20 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — supervised training on inst14)
+## CURRENT STATE (2026-11-18 — two-copy training verified)
+- Guarded parallel launch commit 8962417. Run 9b64abc585d8 booted inst13 PID 8908
+  and inst14 PID 12620. Both produced battle episodes in the first batch and saved
+  PPO checkpoint 7db4fd7372d5b1f2. In batch 1, inst13 supplied two battles while
+  inst14 timed out twice; PPO saved 52926148d65dc039. No throughput A/B measured.
+- Parallel operator log analysis/nn3_operator_20261117-235544-f6f118.log; trainer
+  log analysis/nn3_20261117-235548-c6df3c.log. Local ignored supervisor
+  analysis/coverage-supervise-parallel-20261118.ps1 checks until 01:15 Central.
+  It only starts another finite two-copy run after a clean exit.
+- A single-copy battle stopped on native tick races. Commit cb6c1f2 moved the
+  tick check earlier and increased bounded read retries from 5 to 12.
+  Native reader tests (11) and two-copy operator tests (16) passed.
+- Revalidate PIDs with local.ps1 status before acting.
+
+## Prior snapshot (2026-11-17 — supervised training on inst14)
 - At about 22:15 local, started 360 batches, two episodes per batch, seed 20261169,
   from saved policy d1c3c6c59e43a31d. Game 33244 reached verified planning.
   Operator log analysis/nn3_operator_20261117-221502-1ffbf2.log; trainer log

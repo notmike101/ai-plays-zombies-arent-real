@@ -14,7 +14,9 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   default to .venv; no activation is needed. Game/DLL/checkpoint prerequisites remain.
 - Run `.\local.ps1 status`, then `.\local.ps1 check` from this checkout. Preserve
   healthy active training. Use `.\local.ps1 train --rounds N` only when idle;
-  it resumes schema4 with one owned copy and inherited CPU/priority limits.
+  it resumes schema4 with one owned copy by default and inherited CPU/priority limits.
+  Add --extra-copy instN for one further prepared copy under the same shared CPU
+  cap and optimizer. Verify both game PIDs contribute before judging throughput.
   Select the deployed copy from tracker with `--copy instN` on check/train;
   inst1 is only the default name, not a guarantee its older unlock profile is valid.
 - Use `.\local.ps1 visualizer-start` to reuse/start the server. Stop commands
