@@ -1,6 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — schema4 training LIVE; mechanic catalog integrated)
+## CURRENT STATE (2026-11-17 — boundary diagnostic in progress; production stopped)
+- Run2eb2247938d5 stopped after round4: next episode failed to produce its initial
+  F6 planning dump. Last valid policyc30d8dd4df23b6ce/Adam saved. Game28408 cleaned.
+  Live boundary diagnostic owns inst14 PID33632,script analysis/coverage-boundary.py;
+  read-only policy evaluation,no optimizer/save. It records modal/menu/tool flags
+  on each boundary and retries only the observational dump on failure. Close at end.
+  Prior live identities below are historical; do not treat them as current.
+
 - Supported normal-campaign interface:185 tools/4889 inputs,all16 units/19 battle
   abilities/8 perks,editing/HUD/environment controls. Current scoped proofs and
   native-disabled/conditional branches: notes/mechanics-coverage.md. Catalog
