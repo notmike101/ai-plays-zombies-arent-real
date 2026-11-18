@@ -246,7 +246,10 @@ class Controls:
 
     def pick(self, index):
         e = self.env
-        wait_until(lambda: e.scalar(0x6560f0, '<B'), 'picker open')
+        try:
+            wait_until(lambda: e.scalar(0x6560f0, '<B'), 'picker open')
+        except ZAREnvError as exc:
+            raise PickerNavigationError('Timed out waiting for picker open') from exc
         e.vi.move_to(30, 30)
         self.frames()
         current = e.scalar(0x656100, '<q')

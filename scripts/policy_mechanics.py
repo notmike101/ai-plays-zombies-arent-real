@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 
-from game_controls import Controls, KEY_ACTIONS
+from game_controls import Controls, KEY_ACTIONS, PickerNavigationError
 from game_mechanics import UNITS, UNIT_IDS, PERKS
 from native_hud import read_panel
 from native_state import NativeState
@@ -271,8 +271,20 @@ class Mechanics:
             if not st.get('corridor_armed'):c.arm(81,16)
             return c.zoom(1 if name=='corridor_wider' else -1,xy)
         if name.startswith('dialog_'):return c.dialog(name=='dialog_confirm')
-        if name.startswith('equip_'):return c.equip_unit(name[6:].replace('clear','-'),cell)
-        if name.startswith('perk_'):return c.equip_perk(name[5:].replace('clear','-'),cell)
+        if name.startswith('equip_'):
+            try:
+                return c.equip_unit(name[6:].replace('clear','-'),cell)
+            except PickerNavigationError:
+                if c.planning_roster() != st['planning_roster']:
+                    raise
+                return False
+        if name.startswith('perk_'):
+            try:
+                return c.equip_perk(name[5:].replace('clear','-'),cell)
+            except PickerNavigationError:
+                if c.perks() != st['perks']:
+                    raise
+                return False
         if name.startswith('panel_'):return c.panel_action(name[6:])
         if name.startswith('select_') and name[7:] in SELECTORS:
             return c.select(st['targets'][name[7:]][cell])

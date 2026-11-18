@@ -30,6 +30,18 @@ def fixture():
 
 
 class MechanicsTests(unittest.TestCase):
+    def test_planning_picker_rejects_without_claiming_a_roster_change(self):
+        from game_controls import PickerNavigationError
+
+        m=Mechanics.__new__(Mechanics);m.env=Mock(cw=1920,ch=1200);m.controls=Mock()
+        initial=['-']*7
+        m.controls.equip_unit.side_effect=PickerNavigationError('picker did not open')
+        m.controls.planning_roster.return_value=initial
+        self.assertIs(m.execute({'planning_roster': initial}, 'equip_Sniper', 0), False)
+        m.controls.planning_roster.return_value=['Sniper']+initial[1:]
+        with self.assertRaises(PickerNavigationError):
+            m.execute({'planning_roster': initial}, 'equip_Sniper', 0)
+
     def test_building_boundary_cache_invalidates_on_geometry_change(self):
         m=Mechanics.__new__(Mechanics);m.building_membership=None
         points=np.array([[1.,1.],[4.,4.]])

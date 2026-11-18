@@ -479,7 +479,9 @@ def run_episode(args):
                     cx,cy=map(int,st['build_targets'][c])
                 mechanics.controls.place(PLACEMENTS[u],(cx,cy))
             elif u >= 72:
-                mechanics.execute(st,TOOLS[u],c)
+                if mechanics.execute(st,TOOLS[u],c) is False:
+                    name = TOOLS[u]
+                    picker_rejections[name] = picker_rejections.get(name, 0) + 1
             elif st['planning']:
                 if u == 1:
                     state = ready_once(env)
