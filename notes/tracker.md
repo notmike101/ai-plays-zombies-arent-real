@@ -9,8 +9,16 @@
   prevented the next episode's initial F6 dump. Commit fb54d2e allows one
   additional model decision to resolve a modal at the planning limit.
   Script suite (136 tests) and visualizer integration (3 tests) passed.
-- User requested a few hours of supervised training. Check saved updates,
-  battle outcomes, planning blockers, and launcher errors during the run.
+- Supervision uses the ignored local script analysis/coverage-supervise-20261117.ps1
+  through 01:15 Central on November 18. It runs one finite batch session at a time,
+  restarting with a fresh board and preserved checkpoint after six consecutive
+  planning timeouts sharing a land or budget blocker. A matching known modal
+  start failure can be retried. Unexpected failures stop supervision for inspection.
+- First supervised restarts validated in logs. Through about 22:42 Central, the
+  session saved 23 updates across five runs. Thirteen attempts reached battle,
+  with best saved fraction 10%. Timeouts repeatedly involved budget debt.
+  No campaign advancement observed. Check current identities before intervention.
+
 
 ## Prior snapshot (2026-11-17 — planning timeout diagnostics added)
 - Training idle at check. Latest inspected run a0edb1da145e saved six PPO updates
