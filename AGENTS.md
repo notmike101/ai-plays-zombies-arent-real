@@ -15,7 +15,7 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 - Run `.\local.ps1 status`, then `.\local.ps1 check` from this checkout. Preserve
   healthy active training. Use `.\local.ps1 train --rounds N` only when idle;
   it resumes schema4 with one owned copy by default and inherited CPU/priority limits.
-  Repeat --extra-copy instN for up to four prepared copies under the shared CPU
+  Repeat --extra-copy instN for up to six prepared copies under the shared CPU
   cap and optimizer. Verify all game PIDs contribute before judging throughput.
   Select the deployed copy from tracker with `--copy instN` on check/train;
   inst1 is only the default name, not a guarantee its older unlock profile is valid.

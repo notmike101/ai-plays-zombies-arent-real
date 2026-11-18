@@ -240,8 +240,8 @@ def train(args):
     import psutil
     extra_copies = getattr(args, 'extra_copy', None) or []
     copies = [args.copy, *extra_copies]
-    if len(copies) > 4:
-        raise ValueError('Parallel training is limited to four game copies')
+    if len(copies) > 6:
+        raise ValueError('Parallel training is limited to six game copies')
     if len(set(copies)) != len(copies):
         raise ValueError('Parallel training requires distinct game copies')
     episodes = getattr(args, 'episodes_per_copy', 2)
@@ -359,7 +359,7 @@ def main():
                                            'visualizer-start', 'visualizer-stop', 'checkpoint-export',
                                            'checkpoint-publish', 'checkpoint-verify', 'checkpoint-import'])
     parser.add_argument('--copy', default='inst1')
-    parser.add_argument('--extra-copy', action='append', help='Additional owned game copy, up to four copies total')
+    parser.add_argument('--extra-copy', action='append', help='Additional owned game copy, up to six copies total')
     parser.add_argument('--episodes-per-copy', type=int, default=2,
                         help='Sequential episodes per game per update (default: 2)')
     parser.add_argument('--rounds', type=int, default=6)
