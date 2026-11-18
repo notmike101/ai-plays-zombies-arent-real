@@ -1,27 +1,47 @@
-# Mechanics coverage ledger â€” work in progress
+# Normal-campaign mechanics coverage
 
-This is an implementation/proof ledger, not a claim of100% coverage. Supported
-EXE SHA256 is env_zar.BUILD_SHA256. Scope and acceptance are in
-mechanics-coverage-plan.md. Existing model schema3 is not complete.
+Current interface: schema4,4889 inputs,185 actions,48 spatial cells. Scope is the
+pinned native build and normal Boston campaign described in mechanics-coverage-plan.md.
+Every catalog category below has an observation and model control path where the
+game offers one. This is mechanic/interface coverage, not proof of strong play or
+exhaustive coverage of every combination, location and timing. The8x6 viewport
+representation remains approximate; pan/zoom and native target snapping help.
 
-| Mechanic | Native evidence | Implementation / proof still needed |
-| --- | --- | --- |
-| All16 planning units | unlocks.ini, native planning picker, game_mechanics.UNITS | Roster selection/swap/refund and each placement/aim/paint receipt |
-| All19 battle abilities | battle_order.txt, env_zar.NATIVE_ABILITIES | Existing policy actions; audit all gestures, charges and follow-up controls |
-| All8 perks,3 slots | native name table0x14077e000, en.lang perk.*, Ghidra0x1400f5be0 | Copy unlocks corrected; model picks/refunds and native slot/lock observations pending |
-| Money stacking/level refunds | config.ini, statpanel strings | Existing level-up; selection/level-down receipts and features pending |
-| All16 SP tower upgrades/refunds | unlocks.ini, config.ini[upgrades], Ghidra0x140283d80 | Shipped hide_unit_upgrades=true disables these; conditional interface/masks needed, never claim active from unlocks alone |
-| Safe-zone polygon/corners/undo/cancel | config.ini[safe_zone] | Existing rectangle only; arbitrary vertices, reshape/move/delete/land limits pending |
-| Walls/gates,levels/refunds | config.ini[walls], live wall RTTI | Native wall geometry/HP observations and edit/selection receipts pending |
-| Corridor/hold geometry | config.ini, existing action primitives | Width/radius/reshape/delete/undo and native observations pending |
-| Selection/multiselect/move/reaim | en.lang hud.planning.*,statpanel.reaim | Actions, stable selection state and receipts pending |
-| Officer behavior/paint | bind_officer_mode,bind_paint, config.ini | Planning controls and observations pending; battle orders constrained by native rules |
-| Building class special picks | config.ini[building_class], statpanel.pick_ability | Choices, eligibility/classes/reach and selected-special state pending |
-| C4/Napalm detonation | bind_detonate,statpanel.detonate* | Selected/all detonations, stock/charge observations pending |
-| Vehicle follow-up/evac/target mode | statpanel.leave_now,target_near/far,status_* | Selection, follow-up actions and native status/health/ammo pending |
-| Camera/pan/zoom/view overlays | settings bindings, native camera RVAs | Policy actions and observation transforms pending |
-| Pause/speed/READY/retry/continue | native phase/clock, existing helpers | Audit timing controls and preserve curriculum/normal difficulty |
-| Native combat/environment | config.ini, native entity/wall/building arrays | Health/ammo/status/range, terrain/playable boundary, hazards and carried placement coverage pending |
+| Mechanic | Implementation and verification |
+| --- | --- |
+| All16 planning units | Roster equip/clear, click/drag/paint/erase, native variant counts;48 consecutive picker selections and every placement have live receipts. |
+| All19 battle abilities | Buy/refund, real binding/stock/unlock/arrival, click/drag and target masks; every ability consumed stock in scoped live trials. Seek snaps to garrison; Demolition starts on eligible buildings. |
+| All8 perks | Home slot is campaign-owned; all7 optional perks selected/cleared live. Native slot locks observed. Quick Deploy reduced heli unlock30s to20.1s, stock consumed at20.37s. |
+| Money levels/refunds/targeting | Native selected-panel availability and individual state; garrison up/down/far-first and wall1->2->1 verified. |
+| All16 SP tower upgrades | Four native buy/refund rows per eligible unit and native levels observed. Shipped hide_unit_upgrades=true disables the UI; actions stay masked. Conditional branch tested offline, not falsely reported as a normal live feature. |
+| Safe zones and editing | Arbitrary vertices/back/finish/cancel, drag corner/edge, insert/remove, selected refund/undo, native legality/land limits. Live5-vertex construction, insertion/removal, drag and undo receipts. |
+| Walls/gates | Native geometry, cell health/breaches, construction/level, selection/refund. Live gate0->1->0 and wall level receipts. |
+| Corridors/holds | Endpoint geometry, selection/refund/undo, native width/radius/attraction/suppression. Live EVAC records; corridor width150->165 gives half-width82.5. Context-sensitive wheel masks prevent accidental zoom. |
+| Selection/movement/aim | Unit/building/wall/gate/evac/corner/aircraft/vehicle selectors, additive/box selection, native selected IDs, Shift-RMB aim. Sniper aim verified. Native planning movement supports officers/helis only; roof guns and battle direct orders are rejected and masked. |
+| Officer mode/paint | Selected-officer planning-only commands and AI/boost/subtype observations. Native code restricts outbreak orders. These conditional planning commands have offline dispatch/mask checks; normal deployment produces officers during battle. |
+| Building specials | All11 native choice buttons and both officer subtypes have live receipts; class/height/area/damage/selected ability and boosts observed. |
+| C4/Napalm | Selected-panel and armed click-near detonation; live ID removal and ignition receipts. Shift+T arms a tool, not global detonation. |
+| Aircraft/vehicles/evac | Native health/ammo/rearm/routing/targets/passenger state. Medevac departure ordered0->1 live. Existing helicopter grants no free cast; autonomous rearm/hunting remain game-owned. |
+| Camera and timing | Pan/zoom transforms, native paused/speed, normal.5/1/2/4 controls verified. No developer8x. READY requires native legality; retry/continue retain curriculum and doomed-run abort rules. |
+| Modal dialogs | Native modal flag masks world input and exposes confirm/cancel. Live mutation tutorial confirm resumed simulation; cancel dispatch tested offline. |
+| Combat/environment | Unit variants/zombie types, magazines/reload/boosts, walls/buildings, terrain/playable boundary, bridge span health, sparse fire/oil/burnt masks, hazard patches and mutation sites. Live fire flags1->3/burnt0->1, natural mutation and bridge816->616/collapse receipts. |
+
+No supported normal-campaign catalog category remains without an interface path.
+Unavailable native controls stay explicitly conditional. Cosmetic overlays/3D tilt,
+external/social UI, admin/debug controls and changing difficulty are outside the
+policy scope. Native geometry/height/class information supplies gameplay facts.
+
+Final offline milestone:130 script tests,37 visualizer Python tests, exact policy/
+observer outputs and sampled actions over12 recurrent steps,Node graph checks.
+Final4889-input browser preview passed SSE/reconnect/pause/isolation,WebGPU and
+Canvas2D touch/desktop checks. Preview and diagnostic game processes were cleaned.
+Migrated schema3 weights and10 Adam states into a new policy4 file; original3 is
+preserved. Deployment/update evidence belongs in tracker.md.
+
+## Historical milestone evidence
+
+Entries below are chronological. Their intermediate schema widths and pending
+items describe that milestone only; the current table above supersedes them.
 
 ## Measured starting latency
 
@@ -77,8 +97,8 @@ Validate runtime reads against dumps before using them as policy observations.
   targets/counts including deterministic tie behavior. These are scoped timings,
   not completed worker/browser benchmarks.
 
-The expanded controls/readers are not yet all integrated into policy schema3.
-The completion ledger above remains authoritative about outstanding work.
+At this early milestone the expanded controls were not yet integrated. Later
+schema4 milestones below and the current table supersede those pending items.
 
 ## Visualizer delivery milestone
 

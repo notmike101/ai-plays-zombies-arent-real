@@ -319,3 +319,15 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
   first mutation tutorial does this). Preserve explicit dialog observation and
   model confirm/cancel actions; mask world actions until the dialog is closed.
   Do not diagnose a static clock alone as a hang or send unconditional SPACE.
+
+## Complete mechanics interface maintenance
+- Current policy schema4 has4889 inputs/185 tools. Keep the catalog/status table in
+  notes/mechanics-coverage.md synchronized with supported native controls. Existing
+  stock features now mean charges/max: a live helicopter grants no free cast.
+- Test action reachability as well as dispatch. Placement mode toggles share the
+  place_ prefix with units but must not require roster membership.
+- Native-disabled SP tower upgrades and planning-only officer orders stay conditional;
+  never enable cheats/config modifications to fabricate normal-campaign coverage.
+- Larger observations require bounded telemetry; preserve the8MiB frame limit,
+  cached topology/200ms sampler and read-only observer. Policy step floor is100ms,
+  not a promise of10 decisions/sec; native action/observation cost also matters.
