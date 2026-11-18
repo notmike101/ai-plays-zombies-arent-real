@@ -15,7 +15,7 @@ class MigrationTests(unittest.TestCase):
         opt=torch.optim.Adam(old.parameters())
         sum(p.sum() for p in old.parameters()).backward();opt.step()
         schema=train.checkpoint_schema()
-        return old,dict(policy=old.state_dict(),optimizer=opt.state_dict(),learning=train.learning_config(),
+        return old,dict(policy=old.state_dict(),optimizer=opt.state_dict(),learning=train.learning_config(legacy=True),
             schema=dict(version=3,inputs=schema3_inputs(),tools=schema['tools'][:72],cells=schema['cells'][:72*48]),run_id='test')
 
     def test_preserves_recurrent_outputs_old_heads_and_adam_prefixes(self):

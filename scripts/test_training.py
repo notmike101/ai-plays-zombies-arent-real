@@ -27,6 +27,19 @@ class LearningTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             train.gae([1.], [0.], planning=[])
 
+    def test_paused_decisions_do_not_attenuate_battle_credit(self):
+        _, normal = train.gae([0., -1.], [.2, .3], sim_elapsed=[.1, .1])
+        _, paused = train.gae([0., 0., 0., -1.], [.2, .2, .2, .3],
+                              sim_elapsed=[0., 0., .1, .1])
+        self.assertAlmostEqual(normal[0], paused[0])
+
+    def test_battle_discount_scales_with_simulation_elapsed(self):
+        _, ret = train.gae([0., 1.], [0., 0.], gamma=.9, lam=.8,
+                           sim_elapsed=[.2, .1])
+        self.assertAlmostEqual(ret[0], (.9 * .8)**2)
+        with self.assertRaisesRegex(ValueError, 'elapsed'):
+            train.gae([0.], [0.], sim_elapsed=[float('nan')])
+
     def test_spatial_actions_cannot_click_the_planning_hud(self):
         st = dict(planning=True, deck=[])
         for tool in range(2, 34):
@@ -46,7 +59,7 @@ class LearningTests(unittest.TestCase):
         mu, mc = np.zeros(train.NU), np.zeros(train.NC)
         mu[2], mc[3] = 1, 1
         tr = dict(obs=obs, us=[2,2], cs=[3,3], ulps=[0.,0.], clps=[0.,0.],
-                  masks=[(mu,mc)]*2, rews=[0.,1.], bootstrap=0.)
+                  masks=[(mu,mc)]*2, rews=[0.,1.], sim_elapsed=[.1,.1], bootstrap=0.)
         before = train.policy_id(net)
         opt = torch.optim.Adam(net.parameters(), lr=3e-4)
         diag = train.ppo_update(net, [tr], opt, epochs=1)

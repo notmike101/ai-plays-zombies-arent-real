@@ -328,10 +328,14 @@ def checkpoint_schema():
     return dict(version=4, inputs=INPUT_LABELS, tools=TOOLS, cells=CELL_LABELS)
 
 
-def learning_config():
-    return dict(revision=1, infection_cost=1., terminal_saved_scale=SAVED_REWARD_SCALE,
-                planning_gamma=1., planning_lambda=1.,
-                battle_gamma=BATTLE_GAMMA, battle_lambda=BATTLE_LAMBDA)
+def learning_config(*, legacy=False):
+    config = dict(revision=1 if legacy else 2, infection_cost=1.,
+                  terminal_saved_scale=SAVED_REWARD_SCALE,
+                  planning_gamma=1., planning_lambda=1.,
+                  battle_gamma=BATTLE_GAMMA, battle_lambda=BATTLE_LAMBDA)
+    if not legacy:
+        config['battle_discount_reference_sim_seconds'] = STEP_S
+    return config
 
 
 def load_pretrained(net, path):
@@ -399,7 +403,7 @@ def run_episode(args):
             if Observer is not None:
                 observer = Observer(net, pid, tag, labels={
                     'input': INPUT_LABELS, 'hu': TOOLS, 'hc': CELL_LABELS})
-        rows = {k: [] for k in ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail')}
+        rows = {k: [] for k in ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'sim_elapsed')}
         h = None
         prev_u = prev_c = succ = trend = slope = 0.
         start = time.monotonic()
@@ -542,6 +546,7 @@ def run_episode(args):
             st['spend_frac'] = max(0., (m0-o['money']) / max(m0, 1))
             prev_u, prev_c = float(u), float(c)
             rows['rews'].append(transition_reward(before, o, civ0))
+            rows['sim_elapsed'].append(max(0., state['sim'] - previous_state['sim']))
             rows['trail'].append((state['sim'], o['civ'], o['zomb'], o['money'], u, c))
             for slot in st['deck']:
                 if slot['pending'] and state['sim'] >= slot['ready_t']:
@@ -619,15 +624,19 @@ def run_episode(args):
 
 
 def gae(rews, vals, lam=BATTLE_LAMBDA, gamma=BATTLE_GAMMA, bootstrap=0.0,
-        planning=None):
+        planning=None, sim_elapsed=None):
     planning = [False]*len(rews) if planning is None else planning
-    if len(rews) != len(vals) or len(rews) != len(planning):
-        raise ValueError('Rewards, values and phases must have equal lengths')
+    elapsed = [STEP_S]*len(rews) if sim_elapsed is None else sim_elapsed
+    if not len(rews) == len(vals) == len(planning) == len(elapsed):
+        raise ValueError('Rewards, values, phases and elapsed times must have equal lengths')
+    if any(not math.isfinite(dt) or dt < 0 for dt in elapsed):
+        raise ValueError('Invalid elapsed simulation time')
     adv, last = [], 0.0
     next_value = bootstrap
-    for r, v, is_planning in zip(rews[::-1], vals[::-1], planning[::-1]):
-        # Planning consumes decisions, not simulation time: preserve battle credit.
-        discount, trace = (1., 1.) if is_planning else (gamma, lam)
+    for r, v, is_planning, dt in zip(rews[::-1], vals[::-1], planning[::-1], elapsed[::-1]):
+        # Frame count and camera actions while paused must not shorten the credit horizon.
+        time_steps = 0. if is_planning else dt / STEP_S
+        discount, trace = gamma**time_steps, lam**time_steps
         delta = r + discount * next_value - v
         last = delta + discount * trace * last
         adv.append(last)
@@ -669,7 +678,7 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015):
             _, _, v, _ = net(X)
         vals = v.squeeze(0).numpy()
         adv, ret = gae(list(RW), list(vals), bootstrap=t.get('bootstrap', 0.0),
-                       planning=X[0, :, PLANNING_INDEX].bool().tolist())
+                       planning=X[0, :, PLANNING_INDEX].bool().tolist(), sim_elapsed=t['sim_elapsed'])
         seqs.append((X, U, C, ULP, CLP, MU,
                      torch.tensor(adv, dtype=torch.float32),
                      torch.tensor(ret, dtype=torch.float32), MC))
@@ -817,7 +826,7 @@ def main():
             with open(a.history, 'a', encoding='utf-8') as fh:
                 for tr in trajs:
                     row = {k: v for k,v in tr.items() if k not in
-                           ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'board')}
+                           ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'sim_elapsed', 'board')}
                     row.update(kind='episode', run_id=run_id, round=rnd, mode=a.mode,
                                checkpoint_id=checkpoint_id, schema=4, learning=learning_config())
                     fh.write(json.dumps(row) + '\n')

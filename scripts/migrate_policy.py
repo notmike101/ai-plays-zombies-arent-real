@@ -20,7 +20,7 @@ def migrate(data):
     if old.get('version')!=3 or old.get('inputs')!=schema3_inputs() or any(
             old.get(k)!=new[k][:n] for k,n in [('tools',72),('cells',72*48)]):
         raise ValueError('Expected exact schema3 meanings; refusing reinterpretation')
-    if data.get('learning')!=train.learning_config():
+    if data.get('learning')!=train.learning_config(legacy=True):
         raise ValueError('Learning contract differs; review before migration')
     result=copy.deepcopy(data)
     with torch.random.fork_rng():
