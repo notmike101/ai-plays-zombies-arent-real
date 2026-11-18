@@ -1,6 +1,27 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-18 — three-hour training supervision complete)
+## CURRENT STATE (2026-11-18 — morning training and four-copy trial)
+- User requested further supervision, about 08:24–11:24 Central. Training resumed
+  from ce8f55232bad6291. Two-copy run with two episodes per copy produced 24
+  aborted battles and 6 updates in about 22 minutes. First one-episode-per-copy
+  trial produced 24 aborted battles and 12 updates in about 24 minutes. Median
+  game seconds to abort fell from 31.55 to 28.55; no causal comparison.
+- 10% is the early abort threshold vicinity, not a win. Samples mostly record
+  roughly 90% infections at abort. Earlier 11/44 versus later 50/52 episodes
+  reached battle, but differing seeds and board carry prevent attribution.
+- In one observed episode on each of inst13/inst14, game logs show 46/41
+  pause-resume cycles and 2/1 deployments. Decision-based battle discount may
+  distort credit for such timing actions; causal effects are untested.
+- Four-copy guarded launch eec96b6 booted inst13/14/15/16, all sharing eight
+  CPU slots, with 10.13 GiB RAM available and GPU 40% (point-in-time). Run
+  0400c917186d operator log analysis/nn3_operator_20261118-101728-6044e8.log.
+- Native logs showed all four first plans at zoom .5795; retries began at
+  1.1292–2.6627 after the model zoomed in during battle. Second battles reached
+  native zoom 8. The ignored local supervisor analysis/coverage-supervise-20261118-fresh.ps1
+  waits for a clean exit then uses one batch per fresh launch until 11:24.
+  No scripted camera actions. Check the board and checkpoint again at cutoff.
+
+## Prior snapshot (2026-11-18 — three-hour training supervision complete)
 - Supervised about 22:15–01:15 Central. At cutoff, the history recorded 67 saved
   PPO updates, 111 battles with aborted outcomes, 62 planning timeouts, and
   one native-read error. Best observed score 10% saved; no level advancement.
