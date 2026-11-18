@@ -362,3 +362,9 @@ planning rollouts14.46/14.24s; both timed out before battle, not successful play
 Resume preflight now accepts every known seven-slot roster, including empty slots.
 A policy-selected Battleship/Oil/Mine/Garrison/ChemMine/Mortar/GasMortar roster
 reproduced the old fixed-kit refusal; actual preflight passed after correction.
+
+Post-fix native check: owned inst13 PID31520 booted to fresh L1. Armed placement
+then additive selection, move and re-aim each returned to selection mode; both
+placement-mode keys produced native receipts. Test game was closed in finally.
+Post-fix production run2eb2247938d5 resumed policy3360e4ef2f89f803/Adam on inst14
+and saved updates. Current outcomes/PIDs are in tracker; no battle success claim.

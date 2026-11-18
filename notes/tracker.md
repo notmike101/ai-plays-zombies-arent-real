@@ -1,36 +1,48 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-17 — schema4 deployed; first update validation pending)
-- Supported normal-campaign mechanic catalog is integrated:185 tools/4889 inputs,
-  all16 units/19 battle abilities/8 perks, native editing/HUD/environment controls.
-  Current scope/proofs/conditional restrictions: notes/mechanics-coverage.md.
-  No claim of35% skill or exhaustive combination/timing validation.
-- Source through f0db17f pushed to main.130 script tests,37 visualizer tests,
-  observer12-step parity,graph,final-width SSE/mobile WebGPU+Canvas2D passed.
-- New sessions/nn_policy4.pt migrated from preserved policy3 SHA256
-  c78e1635664667f32153479d6cf0ea33e12dfb6c5a8143a58490cd37609fa6f0.
-  10 Adam states retained; initial policy18653dd50efd8da3. False free-helicopter
-  stock feature explicitly corrected in migration/labels. Pre-correction local
-  migration is retained separately as nn_policy4-pre-stock-correction.pt.
-- Production inst14 boot underway, game40284; operator44348. Revalidate identities
-  with local.ps1 status. One copy,below-normal,CPU0-7,200 batches/2 episodes,
-  seed20261144. Log analysis/nn3_operator_20261117-181508-90a0f7.log;
-  trainer log analysis/nn3_20261117-181512-bc6892.log. First saved update/fresh
-  real4889-label browser sample and compatible checkpoint release still pending.
-- Diagnostic inst13 game28440 stopped. Its imported L5 board was diagnostic only,
-  never trained; original progress backup analysis/coverage-inst13-before-l5.progress.
-  Earlier inst14 boot was stopped for the placement-mode mask correction; no
-  completed update came from that attempt. Preview8766 processes cleaned.
-- Production visualizer6716(created1794957272.1076765),port8765 remains available.
-  Inference warm median0.198ms plain/.453ms observed in final check. Earlier actual
- 40 decisions14.64s; browser transport122-388ms after firstframe584ms. Different
-  action mixes prevent treating before/after throughput as controlled A/B.
-- Share-zar-checkpoints automation remains enabled every6h,changed checkpoints only.
-  Prior release checkpoint-35a8148ff8948406 is schema3,not compatible with current4.
-  Publish verified schema4 after firstupdate; tool captures source revision and
-  downloads remote bytes for verification before making release public.
-- Preserve unrelated policy2/history2 changes and old untracked analysis files.
-  Pre-existing Ghidra Java2316/45920 belong elsewhere; do not stop them.
+## CURRENT STATE (2026-11-17 — schema4 training LIVE; mechanic catalog integrated)
+- Supported normal-campaign interface:185 tools/4889 inputs,all16 units/19 battle
+  abilities/8 perks,editing/HUD/environment controls. Current scoped proofs and
+  native-disabled/conditional branches: notes/mechanics-coverage.md. Catalog
+  coverage does not imply exhaustive combinations or the35% gameplay objective.
+-132 script tests,37 visualizer tests,12-step exact observer/policy parity,Node
+  graph,4889-input browser SSE/reconnect/pause/isolation and mobile WebGPU/Canvas2D
+  checks passed. Native selection-transition follow-up passed and test game closed.
+- LIVE run2eb2247938d5,inst14 game28408(created1794961293.128883),trainer43460
+  (1794961382.6545413),worker32564; launcher25644(1794961292.9303908),operator49304
+  (1794961289.4957128). Venv redirectors31764/41516/2468 also appear in status.
+  Revalidate with local.ps1 status. One game,below-normal,CPU0-7,200 batches of2,
+  seed20261145. Operator log analysis/nn3_operator_20261117-182129-61f48c.log;
+  trainer log analysis/nn3_20261117-182132-8bf092.log; history analysis/nn_hist4.jsonl.
+- Post-fix updates through round2 observed; recent episodes timed out in planning,
+  saved_frac=null and reward0. These are NOT wins. Follow whether the policy learns
+  legal geometry/budget recovery and READY; do not restore automatic strategy undo
+  or silently count unstarted battles as civilian success. Objective remains unmet.
+- sessions/nn_policy4.pt preserves prior weights and10 Adam states; original3 SHA
+  c78e1635664667f32153479d6cf0ea33e12dfb6c5a8143a58490cd37609fa6f0 is preserved.
+  Initial migrated policy18653dd50efd8da3. Explicit stock feature correction removes
+  false +alive-helicopter bonus. Superseded initial migration retained as ignored
+  sessions/nn_policy4.pt.pre-stock-correction. Never overwrite source3 with4.
+- Earlier run70bb1ee8363d saved4 updates,then select_add while placement armed failed.
+  Fixed shared disarm preserving selection; actual armed->add/move/reaim receipts
+  passed. Old fixed-roster preflight also corrected: policy-selected valid7-slot
+  rosters/empty slots are accepted. Resume started from saved3360e4ef2f89f803.
+- Visualizer6716(created1794957272.1076765) serves8765. Fresh current worker32564 /
+  game28408 frame has4889 labels,no warning,preview=false and verified ancestry.
+  Earlier same-schema browser worker44888/game40284 inputs/actions matched10frames.
+  Warm forward~0.2ms/plain,~0.5ms/observed.60 planning decisions took14.24-14.46s.
+  Browser receive133-375ms,median274; two-RAF display248-667ms,median378. Viewer
+  samples<=5Hz; action mix/machine load prevent a controlled speedup claim.
+- Compatible snapshot checkpoint-0705ea2e67ab923e published and remote assets
+  downloaded/verified. See notes/checkpoint-sharing.md. Six-hour changed-only
+  sharing automation remains active; no game files/DLL/saves/logs publish.
+- Latest resource sample:10.4% systemCPU,11.0GiB RAM available,9.95GiB D:free;
+  GPU sample0%,2960/10240MiB VRAM. These are point-in-time readings,not quotas.
+- All owned diagnostic games/preview8766/browser test sessions are closed. inst13
+  was returned to fresh L1 for the final transition check; prior imported L5 board
+  was diagnostic only. Original backup analysis/coverage-inst13-before-l5.progress.
+- Preserve unrelated policy2/history2 dirt and old untracked analysis files.
+  External Ghidra Java2316/45920 belong elsewhere. No subagents were used.
 
 ## Prior snapshot (2026-11-17 — isolated Python environment verified, training LIVE)
 - New .venv created with Python3.14.4 x64, include-system-site-packages=false;

@@ -42,8 +42,8 @@ before publishing so GitHub can create its tag. Schema4 snapshots are roughly37M
 changed snapshots accumulate, with no automatic deletion policy.
 
 Compatible schema4 snapshot (2026-11-17):
-[checkpoint-f010f6ee77f6c5c3](https://github.com/notmike101/ai-plays-zombies-arent-real/releases/tag/checkpoint-f010f6ee77f6c5c3).
-It contains policy afb8af17d8401c82 and Adam after a completed update; its batch
+[checkpoint-0705ea2e67ab923e](https://github.com/notmike101/ai-plays-zombies-arent-real/releases/tag/checkpoint-0705ea2e67ab923e).
+It contains policy 1e07191e50136c6c and Adam after a completed update; its batch
 ended in planning timeouts, not wins. Schema3 releases are incompatible with
 current4. Prefer a newer verified schema4 snapshot when one is available.
 
