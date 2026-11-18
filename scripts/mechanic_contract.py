@@ -65,11 +65,16 @@ STATE_CHANNELS = ('wall HP fraction','wall breached cell fraction','wall level /
     'vehicle rearm remaining / 60','vehicle leaving','vehicle carried log1p','vehicle landed log1p',
     'vehicle routing','vehicle plowing','vehicle goal X / 10000','vehicle goal Y / 10000',
     'medevac phase / 8','medevac carried log1p','medevac landed log1p','medevac damage log1p','medevac departure ordered',
-    'hazard kind / 8','hazard radius / 1000','hazard expiry sim time / 600')
+    'hazard kind / 8','hazard radius / 1000','hazard expiry sim time / 600',
+    'mutation presence','mutation radius / 1000','mutation start sim time / 600',
+    'mutation completion sim time / 600','mutation members log1p','mutation kind / 8')
 EXTRA_LABELS += [f'Native state {name} cell {i+1} (mean; 0 empty)' for name in STATE_CHANNELS for i in range(48)]
 
 EXTRA_LABELS += ['Modal dialog open (0/1)','Corridor tool armed (0/1)',
     'Hold tool armed (0/1)','Corridor full width (native m / 1000)']
+
+EXTRA_LABELS += [f'Grid fire {name} cell {i+1}' for name in (
+    'native flags / 255','green subcell fraction','burnt subcell fraction','oil subcell fraction') for i in range(48)]
 
 
 def extra_cell_label(tool, cell):

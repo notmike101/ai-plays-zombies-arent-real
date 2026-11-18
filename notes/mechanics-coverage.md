@@ -264,3 +264,21 @@ unreleased action arm_detonation. Armed click removed the remaining3 charges;
 no incorrect Detonate All promise remains. Native multiselection/panel handles
 selected groups. Schema4:4265 inputs/185 tools.127 script tests,37 visualizer
 tests,12-step observer parity and graph pass. Live mechanics refresh passed.
+
+
+## Fire spread and mutation observations
+
+Fire_Spread native root654f40 has8m cells and sparse32x32 pointer tiles. Reflected
+tile size1c10: state bytes0, green/burnt/oil1024-element u16 masks at400/c00/1400.
+The reader samples only the48 policy points and caches each touched tile within
+that snapshot. Native ignition162790 sets state bit2 and the burnt subcell mask.
+Live Napalm on green ground: flags1->3, green1, burnt0->1. Both C4 and Napalm
+selected-panel detonations have native receipts. No game memory writes.
+Mosh_Pit reflected type775860:40-byte records at6511f0, position/radius/start/
+until/members/kind offsets0/8/12/16/24/32. Natural L5 mutation observed atsim15.07,
+center(14009.38,11041.36),radius15,until25.00,members7,kind1. Finite live policy
+observations include its location, size, population and completion time.
+Schema4 now4745 inputs/185 tools.128 script tests,37 visualizer tests,12-step
+observer parity and graph pass. Sparse-fire tests cover null tiles, partial masks
+and bounded reads. The new REA inquiry completed and its owned engine was cleaned;
+pre-existing external Ghidra/OMP sessions were left untouched.

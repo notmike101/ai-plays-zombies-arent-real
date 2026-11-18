@@ -76,8 +76,8 @@ LABEL_PINS.update({332:'camera x',335:'placement paint',336:'ready land',
     332+EXTRA_LABELS.index('Simulation paused (0/1)'):'simulation paused',
     332+EXTRA_LABELS.index('Simulation speed (native half ticks / 8)'):'simulation speed',
     332+EXTRA_LABELS.index('Selected unit SP upgrade 4 (native level / 4)'):'selected unit sp upgrade 4',
-    332+len(EXTRA_LABELS)-4:'modal dialog open',
-    332+len(EXTRA_LABELS)-1:'corridor full width'})
+    332+EXTRA_LABELS.index('Modal dialog open (0/1)'):'modal dialog open',
+    332+len(EXTRA_LABELS)-1:'grid fire oil subcell fraction'})
 
 
 class Tiny(nn.Module):

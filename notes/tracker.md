@@ -16,7 +16,7 @@
   Clean probe at end.
 - Visualizer6716(created1794957272.1076765) now serves8765 after guarded restart.
   Real2378-label worker/browser sample passed. Isolated preview8766 cleaned.
-- Schema4:185 tools/4265 inputs; current offline checks pass. Source checkpoint3
+- Schema4:185 tools/4745 inputs; current offline checks pass. Source checkpoint3
   remains unchanged; no production migration yet. Live20-decision evaluation7.03s
   vs27.04s baseline with different actions/board (not controlled A/B).
 - Measured original20-decision planning evaluation:27.04s; median published

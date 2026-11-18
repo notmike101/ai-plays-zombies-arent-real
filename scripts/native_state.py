@@ -20,6 +20,8 @@ def record(size, fields):
 VEC = ('<f4', 2)
 AI = record(56, [('mode',0,'u1'), ('way',16,VEC), ('way_t',24,'<f4'),
     ('walled',40,'u1'), ('fire_turn',44,VEC), ('fire_until',52,'<f4')])
+MOSH = record(40, [('pos',0,VEC),('radius',8,'<f4'),('start',12,'<f4'),
+    ('until',16,'<f4'),('members',24,'<i8'),('kind',32,'u1')])
 PATCH = record(48, [('kind',0,'u1'), ('pos',4,VEC), ('radius',12,'<f4'),
     ('start',16,'<f4'), ('until',20,'<f4'), ('shooter',24,'<u8'), ('source',32,'u1')])
 WALL = record(192, [('a',120,VEC), ('b',128,VEC), ('full_hp',152,'<f4'),
@@ -144,6 +146,29 @@ class NativeState:
                 bits[i]=(word>>(index%64))&1
         return dict(codes=codes,bridges=bits)
 
+    def fire(self, points):
+        e=self.env
+        cols,rows,tcols,trows=[e.scalar(r,'<q') for r in (0x654f40,0x654f48,0x654f50,0x654f58)]
+        if not (0<cols<=100000 and 0<rows<=100000 and tcols==(cols+31)//32 and trows==(rows+31)//32):
+            raise ZAREnvError('Invalid native fire dimensions')
+        pointer,count=struct.unpack('<Qq',self.read(e.base+0x654f60,16))
+        if count!=tcols*trows or pointer<65536:raise ZAREnvError('Invalid native fire storage')
+        result={name:np.zeros(len(points)) for name in ('flags','green','burnt','oil')}
+        tiles={}
+        for i,(x,y) in enumerate(np.floor(np.asarray(points)/8).astype(np.int64)):
+            if not (0<=x<cols and 0<=y<rows):continue
+            index=int((y//32)*tcols+x//32)
+            if index not in tiles:
+                address=struct.unpack('<Q',self.read(pointer+index*8,8))[0]
+                tiles[index]=self.read(address,0x1c10) if address else None
+            tile=tiles[index]
+            if tile is None:continue
+            cell=int((y%32)*32+x%32)
+            result['flags'][i]=tile[cell]
+            for name,offset in [('green',0x400),('burnt',0xc00),('oil',0x1400)]:
+                result[name][i]=struct.unpack_from('<H',tile,offset+cell*2)[0].bit_count()/16
+        return result
+
     def snapshot(self):
         e = self.env
         for _ in range(5):
@@ -173,10 +198,11 @@ class NativeState:
                 if not np.isfinite(camera).all() or camera[2]<=0:
                     raise ZAREnvError('Invalid native camera')
                 points=(centers(e.cw,e.ch)-[e.cw/2,e.ch/2])/[camera[2],-camera[2]]+camera[:2]
-                result = dict(units=units, unit_maps=maps, zones=self.zones(),terrain=self.terrain(points),
+                result = dict(units=units, unit_maps=maps, zones=self.zones(),terrain=self.terrain(points),fire=self.fire(points),
                     playarea=e.array(0x6652e0,VEC,limit=10000),
                     walls=walls, wall_hp=wall_hp, paint=self.paint(), selection=self.selection(),
                     hazards=e.array(0x654ef0,PATCH,limit=100000),
+                    mutations=e.array(0x6511f0,MOSH,limit=1000),
                     evac=e.array(0x657e40,EVAC,limit=10000),
                     gates=e.array(0x65d3d8,VEC,limit=10000),
                     helicopters=e.array(0x65c580,HELI,limit=10000),

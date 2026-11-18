@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import Mock
 import numpy as np
 
-from native_state import WALL, EVAC, HELI, VEHICLE, MEDEVAC, PATCH
+from native_state import WALL, EVAC, HELI, VEHICLE, MEDEVAC, PATCH, MOSH
 from policy_mechanics import observation, unit_names, nearest_per_cell, extra_masks, SELECTORS, Mechanics
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, GLOBAL_LABELS, GRID_CHANNELS
 
@@ -22,8 +22,9 @@ def fixture():
                        damage=np.array([3.]),**{'class':np.array([2])}),
         paint=dict(pos=np.empty((0,2)),kind=np.array([])),
         terrain=dict(codes=np.zeros(48,dtype=np.int16),bridges=np.zeros(48,dtype='u1')))
+    s['fire']={name:np.zeros(48) for name in ('flags','green','burnt','oil')}
     s.update({name:np.zeros(0,dtype) for name,dtype in [('walls',WALL),('evac',EVAC),
-        ('helicopters',HELI),('vehicles',VEHICLE),('medevacs',MEDEVAC),('hazards',PATCH)]})
+        ('helicopters',HELI),('vehicles',VEHICLE),('medevacs',MEDEVAC),('hazards',PATCH),('mutations',MOSH)]})
     return s
 
 
@@ -89,7 +90,9 @@ class MechanicsTests(unittest.TestCase):
         self.assertEqual(values[EXTRA_LABELS.index('Gesture anchor cell (/ 48; -1 absent)')],-1.)
 
     def test_transport_and_wall_state_preserves_normalization_and_empty_cells(self):
-        s=fixture();s['wall_hp']=[np.array([10.,0.])]
+        s=fixture();s['mutations']=np.zeros(1,MOSH);s['mutations']['pos']=[100,100]
+        s['mutations']['until']=55.;s['mutations']['members']=99
+        s['wall_hp']=[np.array([10.,0.])]
         s['walls']=np.zeros(1,WALL);s['walls']['a']=[100,100];s['walls']['b']=[120,100];s['walls']['full_hp']=20
         s['medevacs']=np.zeros(1,MEDEVAC);s['medevacs']['alive']=1;s['medevacs']['pos']=[100,100]
         s['medevacs']['carried']=23;s['medevacs']['ordered']=1
@@ -101,6 +104,8 @@ class MechanicsTests(unittest.TestCase):
         self.assertAlmostEqual(sum(channel('wall breached cell fraction')),0.5)
         self.assertAlmostEqual(sum(channel('medevac carried log1p')),np.log(24))
         self.assertEqual(sum(channel('medevac departure ordered')),1.)
+        self.assertAlmostEqual(sum(channel('mutation completion sim time / 600')),55/600,places=6)
+        self.assertAlmostEqual(sum(channel('mutation members log1p')),np.log(100))
 
     def test_modal_masks_block_world_actions_and_preserve_policy_confirmation(self):
         masks=extra_masks({'dialog':True})
@@ -111,7 +116,8 @@ class MechanicsTests(unittest.TestCase):
     def test_corridor_width_observation_and_contextual_wheel(self):
         values=observation(fixture(),['-']*7,[dict(name='-',locked=False)]*3,
             {'actions':{}},0,True,0,1920,1200,evac_tool=(True,False,165.))
-        self.assertEqual(values[-3:],[1.,0.,.165])
+        i=EXTRA_LABELS.index('Corridor tool armed (0/1)')
+        self.assertEqual(values[i:i+3],[1.,0.,.165])
         m=Mechanics.__new__(Mechanics);m.env=Mock(cw=1920,ch=1200);m.controls=Mock()
         m.execute({'corridor_armed':True},'corridor_wider',9)
         m.controls.arm.assert_not_called();m.controls.zoom.assert_called_once_with(1,(422,336))

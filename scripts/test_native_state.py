@@ -24,6 +24,19 @@ class NativeTests(unittest.TestCase):
         memory[0x656a58]=struct.pack('<Qq',0x10000,3)
         with self.assertRaisesRegex(RuntimeError,'storage'):state.terrain([])
 
+    def test_fire_samples_sparse_tiles_and_subcell_masks(self):
+        e=Mock(base=0);e.scalar.side_effect=lambda r,f:{0x654f40:64,0x654f48:32,0x654f50:2,0x654f58:1}[r]
+        state=NativeState(e);tile=bytearray(0x1c10);tile[0]=3
+        struct.pack_into('<H',tile,0x400,65535);struct.pack_into('<H',tile,0xc00,15)
+        memory={0x654f60:struct.pack('<Qq',0x10000,2),0x10000:struct.pack('<Q',0x20000),
+            0x10008:struct.pack('<Q',0),0x20000:bytes(tile)}
+        state.read=Mock(side_effect=lambda address,size:memory[address])
+        result=state.fire([(1,1),(257,1),(-1,1)])
+        self.assertEqual(result['flags'].tolist(),[3,0,0])
+        self.assertEqual(result['green'].tolist(),[1.,0.,0.])
+        self.assertEqual(result['burnt'].tolist(),[.25,0.,0.])
+        self.assertTrue(all(c.args[1]<=0x1c10 for c in state.read.call_args_list))
+
     def test_fixed_record_strides_and_offsets(self):
         for dtype, size in [(WALL,192),(EVAC,52),(HELI,144),(VEHICLE,400),(MEDEVAC,96)]:
             self.assertEqual(dtype.itemsize,size)
