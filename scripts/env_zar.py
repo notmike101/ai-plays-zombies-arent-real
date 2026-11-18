@@ -292,6 +292,18 @@ class ZAREnv:
         return out
 
     def dump(self, wait_s=3.5):
+        """One bounded retry for a missing observer request, never dismissing UI."""
+        result=self._dump_once(wait_s)
+        if result is not None:return result
+        try:
+            self.game_state()
+            if self.scalar(0x667868,'<B') or self.scalar(0x666870,'<B'):
+                return None
+        except ZAREnvError:
+            return None
+        return self._dump_once(wait_s)
+
+    def _dump_once(self, wait_s):
         """Press F6, wait for the NEW debug_dumps txt, parse sections.
         Returns None when the writer never ran (menu/title/workshop)."""
         d = os.path.join(self.copy_dir(), 'debug_dumps')

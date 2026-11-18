@@ -365,7 +365,9 @@ def run_episode(args):
         env.to_planning()
         initial = env.dump()
         if not initial or initial.get('where', {}).get('phase') != 'planning':
-            raise ZAREnvError('No confirmed initial planning dump')
+            raise ZAREnvError(f'No confirmed initial planning dump; state={env.game_state()}, '
+                                  f'modal={env.scalar(0x667868, "<B")}, '
+                                  f'menu={env.scalar(0x666870, "<B")}')
         header = env.start_log()
         logging = True
         session = header['session']

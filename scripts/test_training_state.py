@@ -22,6 +22,20 @@ class StateTests(unittest.TestCase):
         self.assertEqual(controls.return_value.arm.call_args_list,
                          [unittest.mock.call(0x42,48)]*2)
 
+    def test_dump_retries_one_missing_request_only_in_unobstructed_world(self):
+        from unittest.mock import Mock
+        e=self.env();expected={'where':{'phase':'planning'}}
+        e._dump_once=Mock(side_effect=[None,expected]);e.scalar=Mock(return_value=0)
+        e.game_state=Mock(return_value={'phase':'planning'})
+        self.assertEqual(e.dump(),expected);self.assertEqual(e._dump_once.call_count,2)
+        for blocked in ('modal','menu','outside'):
+            e._dump_once=Mock(return_value=None)
+            e.scalar=Mock(side_effect=lambda r,f:int(r==(0x667868 if blocked=='modal' else 0x666870)))
+            e.game_state=Mock(side_effect=env_zar.ZAREnvError('outside') if blocked=='outside' else None)
+            self.assertIsNone(e.dump());self.assertEqual(e._dump_once.call_count,1)
+        e._dump_once=Mock(return_value=None);e.scalar=Mock(return_value=0);e.game_state=Mock()
+        self.assertIsNone(e.dump());self.assertEqual(e._dump_once.call_count,2)
+
     def test_training_discards_only_its_new_replay_snapshots(self):
         from types import SimpleNamespace
         e = self.env()

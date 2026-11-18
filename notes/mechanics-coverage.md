@@ -376,3 +376,11 @@ independent systems retain bounds/map occupancy checks and retries, but may span
 ticks. Observations are explicitly sampled, not an atomic whole-world snapshot.
 Regression advances time after units (allowed), and during units (must retry).
 The separate initial-dump failure remains under investigation.
+
+After the read fix,12 consecutive fixed-policy diagnostic rollouts completed:
+4 entered battle (including native2x/4x),8 ended in planning,with no snapshot or
+dump failure. Original one-off missing initial dump was not reproduced. Added
+one bounded observer-request retry only in a verified world without modal/menu;
+it never dismisses UI or alters strategy. Persistent failures still stop training
+and now report phase/modal/menu state. Fault-injection checks cover dropped first
+request,blocked UI,outside-world refusal and a second missing request.
