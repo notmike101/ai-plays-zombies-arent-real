@@ -1,6 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — live comparisons finished, production training resumed)
+- Sustained L1 comparison protocol set before rollout: seed 87430, eight copies,
+  eight PPO updates on four episodes per arm per update, then four alternating
+  frozen rounds (16 paired policy seeds). Primary outcome is a confirmed game
+  win with at least 35% saved. Use a one-sided exact paired sign test on
+  discordant successes at 0.05 to advance the candidate to more levels.
+  Treat a timeout as an unsuccessful attempt with unknown saved fraction.
+  Report retry scores, survival and battle actions descriptively.
 - Replayed the pre-change observer from 261e6ab and the current writer in
   separate eight-copy live batches. Both loaded policy 37379673093ca3d4 and
   its Adam state, used the same eight policy seeds, fresh L1 boards and active

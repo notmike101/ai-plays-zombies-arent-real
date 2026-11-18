@@ -186,8 +186,10 @@ When training is idle, run
 `.venv/Scripts/python.exe -B scripts/compare_spatial.py --copies inst13 inst14 inst15 inst16`
 from the checkout. Choose distinct prepared copies in pairs. The command checks
 both training ownership and hardware headroom. Each pair shares a policy seed
-on fresh normal Boston L1 boards. Round zero trains each arm for one PPO update.
-Rounds one and two evaluate fixed weights and exchange the copies between arms.
+on fresh normal Boston L1 boards. By default one training round precedes two
+fixed-weight evaluation rounds. Use `--train-rounds 8 --eval-rounds 4` for
+eight optimizer updates followed by four evaluations per copy. Copies alternate
+arms every round. The evaluation round count must be even for balanced exposure.
 Both arms start from the production GRU and tool/value heads with fresh Adam
 state. The candidate initializes a new cell scorer. Native game randomness
 can vary between copies. Trial weights and episode records go in an ignored

@@ -4,6 +4,7 @@ import json
 import os
 import time
 import uuid
+from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -48,8 +49,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--copies', nargs='+', required=True)
     parser.add_argument('--seed', type=int, default=81251)
+    parser.add_argument('--train-rounds', type=int, default=1)
+    parser.add_argument('--eval-rounds', type=int, default=2)
     args = parser.parse_args()
     copies = args.copies
+    if args.train_rounds < 1 or args.eval_rounds < 2 or args.eval_rounds % 2:
+        parser.error('Use positive training rounds and an even number of evaluation rounds')
     if len(copies) not in (2, 4, 6, 8) or len(set(copies)) != len(copies):
         parser.error('Use two to eight distinct copies in pairs')
     with operator.training_lock(operator.LOCK):
@@ -73,7 +78,8 @@ def main():
         directory.mkdir()
         print(directory, 'source policy', trainer.policy_id(baseline), flush=True)
         with ProcessPoolExecutor(len(copies)) as pool:
-            for rnd in range(3):
+            for rnd in range(args.train_rounds + args.eval_rounds):
+                training = rnd < args.train_rounds
                 jobs = []
                 for i, copy in enumerate(copies):
                     arm = ('dense', 'shared')[(i+rnd)%2]
@@ -85,15 +91,19 @@ def main():
                 for job, row in zip(jobs, results):
                     summary = {k: row.get(k) for k in ('end','saved_frac','win','advance','sim','t','err','board_id','timeout_phase')}
                     summary.update(copy=job[0], arm=job[1], seed=job[3], round=rnd,
+                                   phase='train' if training else 'evaluation',
                                    decisions=len(row.get('obs', [])), batch_seconds=batch_seconds)
+                    summary['battle_actions'] = dict(Counter(
+                        trainer.TOOLS[u] for u, obs in zip(row.get('us', []), row.get('obs', []))
+                        if not obs[trainer.PLANNING_INDEX]))
                     with (directory/'results.jsonl').open('a') as f:
                         f.write(json.dumps(summary)+'\n')
                     print(summary, flush=True)
                 if any(not trainer.valid_trajectory(row) for row in results):
                     raise RuntimeError('Invalid trajectory; see trial results')
-                if rnd == 0:
+                if training:
                     for arm, net in models.items():
-                        np.random.seed(args.seed)
+                        np.random.seed(args.seed + rnd)
                         trainer.ppo_update(net, [row for job,row in zip(jobs,results) if job[1]==arm], optimizers[arm])
                         torch.save(net.state_dict(), directory/(arm+'.pt'))
 
