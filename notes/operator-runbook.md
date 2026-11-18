@@ -179,6 +179,7 @@ Minimal prompt for a new agent:
 > Train the existing model with resource headroom, preserve a healthy active run,
 > keep the visualizer available, and improve the repository with tested changes.
 > Update the tracker and commit milestones. Never silently start random training.
+
 ### Comparing spatial targeting on live games
 
 When training is idle, run
@@ -192,4 +193,3 @@ state. The candidate initializes a new cell scorer. Native game randomness
 can vary between copies. Trial weights and episode records go in an ignored
 `analysis/coverage-spatial-*` directory. The production checkpoint resumes
 through the usual operator. The visualizer receives no frames from either trial arm.
-

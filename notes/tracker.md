@@ -1,6 +1,16 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — eight-copy training resumes after cleanup)
+- Live comparison coverage-spatial-773232f51e forked policy 37379673093ca3d4.
+  Each arm received four fresh Boston L1 trajectories, one PPO update, then
+  eight fixed-weight evaluations with paired seeds and exchanged copies.
+  Seven of eight reached battle in each arm; each had one planning timeout.
+  Dense: six early retries, one loss, zero wins, HUD/terminal percentages
+  min/mean/max 0/6.59/9.97, median battle 30.80 simulated seconds.
+  Shared: seven early retries, zero wins, percentages 2.55/7.79/9.95,
+  median battle 36.60 simulated seconds. Early retry scores precede a natural
+  battle ending. Neither reached 35%. Keep the production GRU checkpoint.
+  Private weights and per-episode results are in analysis/coverage-spatial-773232f51e.
 - CPU transfer probe: run `.venv/Scripts/python.exe -B scripts/probe_spatial_transfer.py`.
   Three seeds, frozen checkpoint GRU, 30 training locations and 10 held-out
   locations. Dense and dense-plus-shared heads scored 0/128 held-out per seed;
