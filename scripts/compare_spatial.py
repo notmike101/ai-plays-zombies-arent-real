@@ -45,12 +45,26 @@ def episode(job):
         zar_boot.stop(env)
 
 
+def collect_pairs(pool, jobs, directory):
+    results = list(pool.map(episode, jobs))
+    for start in range(0, len(jobs), 2):
+        pair = slice(start, start + 2)
+        errors = [r['err'] for r in results[pair] if 'err' in r]
+        if errors and all('Timed out waiting for UI frames' in e or
+                          'Stale native HUD frame' in e for e in errors):
+            with (directory/'interface-retries.jsonl').open('a') as f:
+                f.write(json.dumps(dict(pair=[job[4] for job in jobs[pair]], errors=errors))+'\n')
+            results[pair] = list(pool.map(episode, jobs[pair]))
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--copies', nargs='+', required=True)
     parser.add_argument('--seed', type=int, default=81251)
     parser.add_argument('--train-rounds', type=int, default=1)
     parser.add_argument('--eval-rounds', type=int, default=2)
+    parser.add_argument('--resume', type=Path, help='Resume both arms from a paired training snapshot')
     args = parser.parse_args()
     copies = args.copies
     if args.train_rounds < 1 or args.eval_rounds < 2 or args.eval_rounds % 2:
@@ -73,12 +87,25 @@ def main():
             getattr(candidate, name).load_state_dict(getattr(baseline, name).state_dict())
         models = {'dense': baseline, 'shared': candidate}
         optimizers = {arm: torch.optim.Adam(net.parameters(), lr=3e-4) for arm, net in models.items()}
+        config = dict(seed=args.seed, copies=copies, train_rounds=args.train_rounds,
+                      eval_rounds=args.eval_rounds, schema=trainer.checkpoint_schema(),
+                      learning=trainer.learning_config())
+        first_round = 0
+        source = trainer.policy_id(baseline)
+        if args.resume:
+            snapshot = torch.load(args.resume, weights_only=True)
+            if snapshot['config'] != config or not 0 < snapshot['next_round'] <= args.train_rounds:
+                parser.error('Trial configuration differs from the paired snapshot')
+            first_round, source = snapshot['next_round'], snapshot['source']
+            for arm, net in models.items():
+                net.load_state_dict(snapshot['weights'][arm])
+                optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
         tag = 'coverage-spatial-' + uuid.uuid4().hex[:10]
         directory = Path(operator.ROOT, 'analysis', tag)
         directory.mkdir()
-        print(directory, 'source policy', trainer.policy_id(baseline), flush=True)
+        print(directory, 'source policy', source, 'starting round', first_round, flush=True)
         with ProcessPoolExecutor(len(copies)) as pool:
-            for rnd in range(args.train_rounds + args.eval_rounds):
+            for rnd in range(first_round, args.train_rounds + args.eval_rounds):
                 training = rnd < args.train_rounds
                 jobs = []
                 for i, copy in enumerate(copies):
@@ -86,7 +113,7 @@ def main():
                     jobs.append((copy, arm, models[arm].state_dict(), args.seed+rnd*100+i//2,
                                  f'{tag}/{rnd}/{arm}/{copy}'))
                 start = time.monotonic()
-                results = list(pool.map(episode, jobs))
+                results = collect_pairs(pool, jobs, directory)
                 batch_seconds = time.monotonic() - start
                 for job, row in zip(jobs, results):
                     summary = {k: row.get(k) for k in ('end','saved_frac','win','advance','sim','t','err','board_id','timeout_phase')}
@@ -106,6 +133,11 @@ def main():
                         np.random.seed(args.seed + rnd)
                         trainer.ppo_update(net, [row for job,row in zip(jobs,results) if job[1]==arm], optimizers[arm])
                         torch.save(net.state_dict(), directory/(arm+'.pt'))
+                    temp = directory/'paired.tmp'
+                    torch.save(dict(next_round=rnd+1, source=source, config=config,
+                                    weights={a:n.state_dict() for a,n in models.items()},
+                                    optimizers={a:o.state_dict() for a,o in optimizers.items()}), temp)
+                    temp.replace(directory/'paired.pt')
 
 
 if __name__ == '__main__':

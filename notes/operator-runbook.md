@@ -195,3 +195,11 @@ state. The candidate initializes a new cell scorer. Native game randomness
 can vary between copies. Trial weights and episode records go in an ignored
 `analysis/coverage-spatial-*` directory. The production checkpoint resumes
 through the usual operator. The visualizer receives no frames from either trial arm.
+
+If an interface failure interrupts a longer comparison, inspect its log and
+resolve the failure. The harness retries a matched pair once for UI-frame or
+stale-HUD timeouts. Each completed update atomically saves both policies and
+both Adam states in `paired.pt`. Repeat the original command with
+`--resume analysis/<trial-directory>/paired.pt` and identical trial arguments.
+The new directory starts at the next training round. A resume during evaluation
+starts the frozen evaluation block again. Use one complete evaluation block.
