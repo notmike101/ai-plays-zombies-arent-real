@@ -269,7 +269,7 @@ class Controls:
                 if actual == expected:
                     break
                 if actual != current:
-                    raise ZAREnvError(f'Picker selection moved from {current} to {actual}, expected {expected}')
+                    raise PickerNavigationError(f'Picker selection moved from {current} to {actual}, expected {expected}')
             else:
                 raise PickerNavigationError(f'Timed out waiting for picker selection {current} -> {expected} (target {index})')
             current = expected

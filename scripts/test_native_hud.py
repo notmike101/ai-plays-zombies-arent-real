@@ -43,9 +43,20 @@ class HudTests(unittest.TestCase):
         env=Mock(cw=1920,ch=1200)
         env.scalar.return_value=1
         self.assertFalse(read_panel(env)['valid']);env.vi.hud_snapshot.assert_not_called()
-        env.scalar.side_effect=[2,100]
+        env.scalar.side_effect=[2,100,101,102,103]
         env.vi.hud_snapshot.return_value=dict(frame=80,valid=True,panel=self.panel())
         with self.assertRaisesRegex(RuntimeError,'Stale'):read_panel(env)
+
+    def test_stale_hud_frame_can_be_retried(self):
+        env=Mock(cw=1920,ch=1200)
+        env.scalar.side_effect=[2,100,101]
+        env.vi.hud_snapshot.side_effect=[
+            dict(frame=80,valid=True,panel=self.panel()),
+            dict(frame=100,valid=True,panel=self.panel()),
+        ]
+        with patch('native_hud.time.sleep'):
+            self.assertTrue(read_panel(env)['valid'])
+        self.assertEqual(env.vi.hud_snapshot.call_count,2)
 
     def test_shared_mapping_seqlock_and_protocol(self):
         raw=ctypes.create_string_buffer(4096)

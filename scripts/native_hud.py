@@ -1,6 +1,7 @@
 """Decode the game's observed selection panel; no game calls or memory writes."""
 import math
 import struct
+import time
 
 from env_zar import ZAREnvError
 
@@ -57,9 +58,14 @@ def panel_actions(panel, width, height):
 def read_panel(env):
     if env.scalar(0x6553e8,'<I') != 2:
         return dict(actions={}, valid=False)
-    snapshot=env.vi.hud_snapshot()
-    age=env.scalar(0x68e590,'<Q')-snapshot['frame']
-    if not 0 <= age <= 8:
+    for attempt in range(4):
+        if attempt:
+            time.sleep(.02)
+        snapshot=env.vi.hud_snapshot()
+        age=env.scalar(0x68e590,'<Q')-snapshot['frame']
+        if 0 <= age <= 8:
+            break
+    else:
         raise ZAREnvError('Stale native HUD frame')
     if not snapshot['valid']:
         return dict(actions={},valid=False)
