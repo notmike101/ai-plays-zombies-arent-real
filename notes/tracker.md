@@ -1,6 +1,17 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-18 — eight-copy training resumes after cleanup)
+## CURRENT STATE (2026-11-18 — live comparisons finished, production training resumed)
+- Replayed the pre-change observer from 261e6ab and the current writer in
+  separate eight-copy live batches. Both loaded policy 37379673093ca3d4 and
+  its Adam state, used the same eight policy seeds, fresh L1 boards and active
+  telemetry, and wrote private checkpoints. Measured boot through per-episode
+  cleanup, PPO and save. Old: 234.88 s, 1,267 decisions, 258.80 sim seconds.
+  Current: 229.28 s, 1,082 decisions, 242.87 sim seconds. Rates were 5.39 vs
+  4.72 decisions per wall second. Episode throughput was 122.6 vs 125.6/hour.
+  Different trajectories and one batch per writer preclude a causal speedup claim.
+  Evidence: analysis/coverage-writer-live.log. The eight-copy production
+  supervisor resumed at seed 20263410 (analysis/coverage-supervise-after-trial.ps1;
+  operator log analysis/nn3_operator_20261118-152740-a751c6.log).
 - Live comparison coverage-spatial-773232f51e forked policy 37379673093ca3d4.
   Each arm received four fresh Boston L1 trajectories, one PPO update, then
   eight fixed-weight evaluations with paired seeds and exchanged copies.
