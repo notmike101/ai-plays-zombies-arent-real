@@ -1,6 +1,25 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-18 — morning supervision complete, eight copies live)
+## CURRENT STATE (2026-11-18 — continued eight-copy training, learning revision 2)
+- User asked to continue training and necessary modifications until told to stop.
+  Local supervisor analysis/coverage-supervise-20261118-continuing.ps1 cycles
+  fresh one-batch launches, tiles owned windows without resizing, and uses
+  2–8 copies according to startup headroom. Known interface errors cause a
+  bounded restart with fewer copies. Unexpected errors and resource limits stop it.
+  For code edits, create ignored analysis/coverage-supervise-hold and wait for
+  the current finite launcher to exit before changing live trainer modules.
+- Earlier carry run saved two updates, then one native map read failed. Fresh
+  baseline 44dd48abe913 saved 57067e5ab8bc3476 but reported a picker timeout.
+  Commit 5f18c93 reads map segments together when bounded and rechecks the header.
+- Learning revision 2 (484078e): battle GAE discount and trace now use elapsed
+  simulation time. Zero-sim decisions no longer shorten credit. Exact schema4
+  observations, outcome reward, weights and optimizer remain compatible.
+  138 script tests, 37 visualizer tests, observer parity and graph checks passed.
+- First revised launch: operator log analysis/nn3_operator_20261118-115030-b213f0.log,
+  seed 20262330, inst13–20 tiled at 1920x1200. Verify live revision-2 update in
+  analysis/nn_hist4.jsonl. Gameplay benefit and native race recurrence unverified.
+
+## Prior snapshot (2026-11-18 — morning supervision complete, eight copies live)
 - Supervised 08:24–11:31 Central. By the end of the final supervised batch,
   61 updates saved from 187 aborted battles and 3 planning timeouts.
   Best recorded survival 10%, no wins/advancement. Latest verified checkpoint
