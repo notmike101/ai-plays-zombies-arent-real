@@ -1,4 +1,4 @@
-"""Schema4 additions. Existing schema3 feature/action prefixes stay unchanged."""
+"""Schema4 additions. Schema3 ordering retained; stock semantics corrected in labels.py."""
 from scripts.game_mechanics import UNITS, PERKS
 
 MISSING_UNITS = ('Sniper','Battleship','FireMortar','Railgun','Howitzer','MLRS','ChemMine','Spikes','Oil')

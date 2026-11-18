@@ -61,6 +61,11 @@ class MechanicsTests(unittest.TestCase):
             targets={k:[None]*48 for k in (*SELECTORS,'edge')})
         masks=extra_masks(st);get=lambda name:masks[EXTRA_TOOLS.index(name)]
         self.assertTrue(get('place_Sniper').any());self.assertFalse(get('place_Battleship').any())
+        for name in ('place_click','place_paint'):self.assertEqual(np.flatnonzero(get(name)).tolist(),[0])
+        st['planning']=False
+        battle=extra_masks(st)
+        for name in ('place_click','place_paint'):self.assertFalse(battle[EXTRA_TOOLS.index(name)].any())
+        st['planning']=True
         self.assertEqual(np.flatnonzero(get('arm_slot')).tolist(),[0])
         self.assertFalse(get('perk_Hot_Fire').any());self.assertEqual(np.flatnonzero(get('perk_clear')).tolist(),[1])
         self.assertFalse(get('panel_medevac_leave').any());self.assertTrue(get('panel_target_toggle')[0])

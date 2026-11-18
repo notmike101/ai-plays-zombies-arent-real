@@ -31,6 +31,7 @@ def extra_masks(st):
         mask=masks[i];mask[:]=st.get('world_cells',np.repeat(YF<.70,len(XF)))
         enabled=True
         if name.startswith('dialog_'):enabled=False
+        elif name in ('place_click','place_paint'):enabled=planning
         elif name.startswith('place_'):
             enabled=planning and name[6:] in st['planning_roster']
             if name[6:] in ('Sniper','FireMortar','Railgun','Howitzer','MLRS'):
@@ -51,7 +52,6 @@ def extra_masks(st):
         elif name in ('zoom_in','zoom_out'):enabled=not st.get('corridor_armed',False)
         elif name=='arm_slot':
             enabled=planning;mask[:]=0;mask[:7]=[n!='-' for n in st['planning_roster']]
-        elif name in ('place_click','place_paint'):enabled=planning
         elif name in ('zone_begin','zone_corner','zone_finish','zone_back'):
             enabled=planning and (name=='zone_begin' or polygon>0)
             if name=='zone_finish':enabled=enabled and polygon>=3

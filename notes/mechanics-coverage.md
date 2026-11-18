@@ -314,3 +314,10 @@ inherited +alive availability bonus and zero-stock cast allowance. Regression
 tests now require spent live helicopters to stay masked. Labels/probes and the
 explicit schema3 migration recognize this documented semantic correction.
 130 script tests,37 visualizer tests,12-step observer parity and graph tests pass.
+
+Final mask audit corrected click/paint mode dispatch: their `place_` prefix had
+incorrectly subjected them to roster membership. Planning enables both at cell0;
+battle masks both. Regression reproduced failure before the fix. Owned launch
+was stopped before continuing deployment; diagnostic inst13 is closed. Final
+4889-input preview passed SSE/reconnect/pause/isolation and both WebGPU/Canvas2D
+mobile interaction suites; preview processes were cleaned.
