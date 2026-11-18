@@ -297,7 +297,8 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
   terminal success. Reject non-finite outcomes/bootstrap values before PPO.
 
 ## Expanded mechanics schema
-- Schema4 preserves the332-input/72-tool prefix and appends native mechanics.
+- Schema4 preserves332-input/72-tool ordering and appends native mechanics;
+  stock fractions explicitly correct the old false +alive-helicopter bonus.
   All feature/action changes must update mechanic_contract.py, labels, schema,
   tests and migration together. Coverage/proof gaps live in notes/mechanics-coverage.md.
 - Explicit migration: `.venv/Scripts/python.exe -B scripts/migrate_policy.py

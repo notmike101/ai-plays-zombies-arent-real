@@ -41,6 +41,12 @@ retried. Relevant uncommitted source blocks new export; push the capture commit
 before publishing so GitHub can create its tag. Schema4 snapshots are roughly37MB each;
 changed snapshots accumulate, with no automatic deletion policy.
 
+Compatible schema4 snapshot (2026-11-17):
+[checkpoint-f010f6ee77f6c5c3](https://github.com/notmike101/ai-plays-zombies-arent-real/releases/tag/checkpoint-f010f6ee77f6c5c3).
+It contains policy afb8af17d8401c82 and Adam after a completed update; its batch
+ended in planning timeouts, not wins. Schema3 releases are incompatible with
+current4. Prefer a newer verified schema4 snapshot when one is available.
+
 ## Restore in an idle checkout
 
 Choose an explicit release and download all three assets into one directory, e.g.

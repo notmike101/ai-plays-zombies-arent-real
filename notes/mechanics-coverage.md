@@ -31,7 +31,7 @@ Unavailable native controls stay explicitly conditional. Cosmetic overlays/3D ti
 external/social UI, admin/debug controls and changing difficulty are outside the
 policy scope. Native geometry/height/class information supplies gameplay facts.
 
-Final offline milestone:130 script tests,37 visualizer Python tests, exact policy/
+Final offline milestone:132 script tests,37 visualizer Python tests, exact policy/
 observer outputs and sampled actions over12 recurrent steps,Node graph checks.
 Final4889-input browser preview passed SSE/reconnect/pause/isolation,WebGPU and
 Canvas2D touch/desktop checks. Preview and diagnostic game processes were cleaned.
@@ -351,3 +351,14 @@ It also serves ordinary cancel/arm, preventing divergent cancellation behavior.
 The regression reproduces the exception before the fix and checks exact click
 order/modifier release for all three paths. Native-mode transitions are input
 plumbing; target choices and strategy remain policy-owned.
+
+Final-width real attachment: worker44888/game40284,4889 labels,3,096,810 parameters,
+no label warning, actual selected tools and normalized input0 matched browser
+values in10 samples. Evidence: analysis/coverage-browser-final.json. Capture-to-
+browser133-375ms (median274); capture-to-two-RAF display248-667ms (median378).
+Warm forward0.198ms/plain,0.453ms/observed. First two production60-decision
+planning rollouts14.46/14.24s; both timed out before battle, not successful play.
+
+Resume preflight now accepts every known seven-slot roster, including empty slots.
+A policy-selected Battleship/Oil/Mine/Garrison/ChemMine/Mortar/GasMortar roster
+reproduced the old fixed-kit refusal; actual preflight passed after correction.

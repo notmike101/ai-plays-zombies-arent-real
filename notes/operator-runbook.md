@@ -105,7 +105,7 @@ $view | Select-Object status,age
 $view.frame | Select-Object worker_pid,game_pid,phase,sequence,preview,model_revision
 ```
 
-A fresh real frame has `preview=false`, the actual worker/game PIDs,332 input
+A fresh real frame has `preview=false`, the actual worker/game PIDs,4889 input
 labels and no `label_warning`. The worker PID must belong to the trainer's child
 process tree (inspect with psutil if needed). Pausing the UI pauses only the view.
 Restarting the server clears sampled history, then reconnects to worker files;

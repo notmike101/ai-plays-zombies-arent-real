@@ -154,7 +154,7 @@ coordinated worker launch. Synthetic/fake-game checks do not prove live attachme
 
 ## Schema3 trainer (2026-11-17)
 
-Current model supplies332 inputs and72x48 conditional cell outputs. The cell head
+That historical model supplied332 inputs and72x48 conditional cell outputs. The cell head
 is still a direct linear head: raw outputs show all tool/cell logits, while
 probabilities are zero outside the sampled tool row; selected hc is tool*48+cell.
 Input and large output layers use compact grids. Select a node or use Inspector
@@ -164,5 +164,17 @@ synthetic data, plus the transport/mobile suites. See
 [training improvements](../notes/training-improvements.md).
 
 Schema4 expanded-mechanics validation and measured live browser timings are in
-[mechanics coverage](../notes/mechanics-coverage.md). It currently supplies2485
-inputs and181x48 cell logits. Older332-input records below are historical.
+[mechanics coverage](../notes/mechanics-coverage.md). It supplies4889
+inputs and185x48 cell logits. Older332-input records above are historical.
+Final-width preview checks passed transport/reconnect/pause/isolation and both
+WebGPU/Canvas2D mobile interactions. Actual worker44888/game40284 supplied4889
+correct labels and matching browser inputs/actions in a scoped live sample.
+
+The final CPU policy check measured0.198ms median forward,0.453ms with observer
+capture. Two live60-decision planning rollouts took14.46s and14.24s (about4.2
+decisions/sec; action mix matters). Ten sampled live frames reached the browser
+in133-375ms,median274ms; a two-animation-frame display check measured248-667ms,
+median378ms from capture. The first topology/render is slower. These measurements
+include local machine load and are not a controlled before/after benchmark.
+The viewer samples up to5Hz and cannot show every faster decision; sampled
+history is not a complete action log.
