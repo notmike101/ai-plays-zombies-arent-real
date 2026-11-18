@@ -282,3 +282,12 @@ Schema4 now4745 inputs/185 tools.128 script tests,37 visualizer tests,12-step
 observer parity and graph pass. Sparse-fire tests cover null tiles, partial masks
 and bounded reads. The new REA inquiry completed and its owned engine was cleaned;
 pre-existing external Ghidra/OMP sessions were left untouched.
+
+
+Targeted battle cells now snap Seek & Destroy to actual garrisons and Demolition's
+first point to an eligible tall/slender building, using the native configuration
+height/slenderness rules. The model still picks the cell and demolition direction.
+Cells without such targets are masked; the second drag point remains free world
+geometry. Live L5 refresh produced3 garrison cells and11 candidate demolition
+cells.129 script tests and37 visualizer tests pass, including target-vs-direction
+masking. Other casts keep model-selected world points and native legality checks.

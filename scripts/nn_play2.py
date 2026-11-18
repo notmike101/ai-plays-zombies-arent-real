@@ -196,6 +196,8 @@ def masks_for(st):
             u = ABILITY_U.get(s['name'])
             if u is not None and slot_castable(st, s):
                 mu[u] = 1
+    for u,targets in st.get('battle_targets',{}).items():
+        if not any(p is not None and st.get('world_cells',WORLD_CELLS)[i] for i,p in enumerate(targets)):mu[u]=0
     mu[72:] = extra_masks(st).any(axis=1)
     return mu, mc
 
@@ -210,9 +212,16 @@ def cell_mask(st, u, mc):
     if u in (0, 1) or u >= 34:
         mc[:] = 0
         mc[0] = 1
+    elif not st['planning'] and u in st.get('battle_targets',{}) and not st.get('anchor'):
+        mc *= [p is not None for p in st['battle_targets'][u]]
     elif st['planning'] and u in (2, 3, 5, 8, 9) and 'build_targets' in st:
         mc *= [p is not None for p in st['build_targets']]
     return mc
+
+
+def battle_point(st, tool, cell, width, height):
+    target=st.get('battle_targets',{}).get(tool,[None]*NC)[cell]
+    return target if target is not None else cell_of_px(cell,width,height)
 
 
 def cell_distribution(logits, tool, mask):
@@ -375,6 +384,7 @@ def run_episode(args):
         m0 = o['money']
         st = dict(t=0., planning=True, spend_frac=0., deck=[], sim=0., mult=8.)
         config = initial.get('config', {})
+        st['rules']={**config,**initial.get('params',{})}
         st.update(loadout=env.loadout_levels(), sp=session.get('sp_unspent', 0),
                   unlocked=env.unlocked_abilities(),
                   costs={name: _rule({k.removeprefix('loadout_'): v for k, v in config.items()}, name, '_cost')
@@ -497,7 +507,7 @@ def run_episode(args):
                         import ctypes
                         vk = ord(slot['key'].upper())
                         env._arm(vk, ctypes.windll.user32.MapVirtualKeyW(vk, 0))
-                        start_xy = cell_of_px(st.pop('anchor')[1], env.cw, env.ch)
+                        start_xy = battle_point(st,u,st.pop('anchor')[1],env.cw,env.ch)
                         end_xy = cell_of_px(c, env.cw, env.ch)
                         if u == 27:
                             env.vi.click(*start_xy)
@@ -506,7 +516,7 @@ def run_episode(args):
                         else:
                             env.vi.drag(*start_xy, *end_xy)
                     else:
-                        env.cast(slot['key'], *cell_of_px(c, env.cw, env.ch))
+                        env.cast(slot['key'], *battle_point(st,u,c,env.cw,env.ch))
                     slot['charges'] = env.battle_stock()[slot['name']]
                     # The stock receipt, not a sent keypress, proves a resource was spent.
                     if slot['charges'] < before_stock:

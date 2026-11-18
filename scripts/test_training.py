@@ -79,6 +79,14 @@ class LearningTests(unittest.TestCase):
         self.assertEqual(int(train.cell_distribution(logits, 2, np.ones(train.NC)).probs.argmax()), 3)
         self.assertEqual(int(train.cell_distribution(logits, 3, np.ones(train.NC)).probs.argmax()), 9)
 
+    def test_targeted_abilities_snap_only_the_target_not_drag_direction(self):
+        targets=[None]*48;targets[9]=(433,344)
+        st={'planning':False,'battle_targets':{19:targets,24:targets}}
+        self.assertEqual(np.flatnonzero(train.cell_mask(st,19,np.ones(48))).tolist(),[9])
+        self.assertEqual(train.battle_point(st,19,9,1920,1200),(433,344))
+        st['anchor']=(24,9)
+        self.assertGreater(train.cell_mask(st,24,np.ones(48)).sum(),1)
+
     def test_geometry_endpoint_cannot_wrap_or_repeat_anchor(self):
         st = dict(planning=True, anchor=(10, 47), deck=[])
         mu, mc = train.masks_for(st)

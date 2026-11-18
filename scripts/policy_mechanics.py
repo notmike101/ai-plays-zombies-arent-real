@@ -253,6 +253,14 @@ class Mechanics:
         st['targets']={key:nearest_per_cell(p(pts),e.cw,e.ch,bounds) for key,pts in targets.items()}
         b=s['buildings'];valid=(b['destroyed']==0)&self.building_in_playarea(b['center'],s['playarea'])
         st['build_targets']=nearest_per_cell(p(b['center'][valid]),e.cw,e.ch,bounds)
+        rules=st.get('rules',{})
+        height=(b['height_packed']&65535).astype(float)/10
+        height=np.where(height>0,height,float(rules.get('building_unknown_height',9)))
+        depth=np.minimum(b['rect'][:,2]-b['rect'][:,0],b['rect'][:,3]-b['rect'][:,1])
+        topple=valid & (height>=float(rules.get('demolition_min_height',60))) & (
+            height>=depth*float(rules.get('topple_slenderness',.6)))
+        st['battle_targets']={19:nearest_per_cell(p(s['units']['pos'][kinds==6]),e.cw,e.ch,bounds),
+                              24:nearest_per_cell(p(b['center'][topple]),e.cw,e.ch,bounds)}
         for slot in st.get('deck',[]):
             if slot['name']=='Heli':slot['alive']=bool(np.any(s['helicopters']['alive']))
 
