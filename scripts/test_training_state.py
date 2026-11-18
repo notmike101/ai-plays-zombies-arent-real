@@ -59,6 +59,11 @@ class StateTests(unittest.TestCase):
             self.assertIsNotNone(e.dump())
             self.assertTrue((dumps/'fresh.state').exists())
 
+    def test_planning_cap_allows_one_policy_dialog_decision(self):
+        self.assertTrue(train.planning_limit_reached(60, 60, False))
+        self.assertFalse(train.planning_limit_reached(60, 60, True))
+        self.assertTrue(train.planning_limit_reached(61, 60, True))
+
     def test_geometry_uses_native_land_cap_and_budget(self):
         e = self.env()
         values = {0x659258: 1, 0x65ce58: 0, 0x659308: 30, 0x659310: 100,

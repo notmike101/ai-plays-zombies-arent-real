@@ -54,6 +54,10 @@ class FakeGame:
         self.closed_log = True
         return {'phase': self.phase, 'stats': {'saved_pct': 100-self.infections}}
 
+    def scalar(self, rva, fmt):
+        assert rva == 0x667868
+        return 0
+
     def geometry_blockers(self):
         return []
 

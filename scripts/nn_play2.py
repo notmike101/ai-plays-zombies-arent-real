@@ -346,6 +346,11 @@ def transition_reward(before, after, civ0):
     return -max(after['infections'] - before['infections'], 0) / civ0
 
 
+def planning_limit_reached(steps, limit, modal_open):
+    # Give the policy one decision to handle a dialog raised by the last action.
+    return steps >= limit + int(bool(modal_open))
+
+
 def run_episode(args):
     pid, sd, eps_rand, tag, *extra = args
     options = extra[0] if extra else {}
@@ -401,6 +406,7 @@ def run_episode(args):
         battle_start = None
         end = None
         nbuy = 0
+        plan_limit = options.get('plan_steps', PLAN_STEPS)
         state = env.game_state()
         while end is None:
             if state['phase'] in ('won', 'lost'):
@@ -546,7 +552,8 @@ def run_episode(args):
                 end = 'aborted'
             elif battle_start is not None and time.monotonic()-battle_start >= options.get('battle_seconds', BATTLE_T):
                 end = 'timeout'
-            elif state['phase'] == 'planning' and len(rows['obs']) >= options.get('plan_steps', PLAN_STEPS):
+            elif (state['phase'] == 'planning' and len(rows['obs']) >= plan_limit
+                  and planning_limit_reached(len(rows['obs']), plan_limit, env.scalar(0x667868, '<B'))):
                 end = 'timeout'
         footer = env.stop_log()
         logging = False
