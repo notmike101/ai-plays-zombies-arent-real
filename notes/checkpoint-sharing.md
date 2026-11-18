@@ -18,11 +18,11 @@ missing permissions are errors, never personal-identity fallbacks.
 .\local.ps1 checkpoint-publish
 ```
 
-Export reads one revision of atomically replaced `nn_policy3.pt`, validates it,
+Export reads one revision of atomically replaced `nn_policy4.pt`, validates it,
 and writes an immutable bundle under ignored `sessions/exports/SHA256`. It never
 loads state into workers or changes training. Exactly three release assets:
 
-- `nn_policy3.pt`: policy and Adam optimizer state, schema/learning metadata.
+- `nn_policy4.pt`: policy and Adam optimizer state, schema/learning metadata.
 - `manifest.json`: full SHA256, policy/run IDs, exact feature/action schema,
   reward/GAE settings, supported game hash, source-at-capture commit/file hashes,
   and available last training-batch outcomes.
@@ -38,7 +38,7 @@ The checksum-derived tag is a prerelease, not the latest software release. The t
 creates a draft, uploads, downloads/verifies all assets, then publishes. Published
 releases are verified and reused, never overwritten. An interrupted draft can be
 retried. Relevant uncommitted source blocks new export; push the capture commit
-before publishing so GitHub can create its tag. Snapshots are roughly8MB each;
+before publishing so GitHub can create its tag. Schema4 snapshots are roughly37MB each;
 changed snapshots accumulate, with no automatic deletion policy.
 
 ## Restore in an idle checkout

@@ -100,11 +100,9 @@ class PolicyNet2(nn.Module):
 
 
 def slot_castable_frac(st, s):
-    """Deck-slot availability for obs: fraction of max charges still
-    castable; a flying heli counts as one free re-aim."""
-    add = 1.0 if (s['name'] == 'Heli' and s['alive']) else 0.0
-    return min(s['charges'] + add, s['max_charges']) / \
-        max(s['max_charges'], 1.0)
+    """Live stock fraction; an autonomous helicopter grants no extra cast."""
+    return min(s['charges'], s['max_charges']) / max(s['max_charges'], 1.0)
+
 
 
 def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
@@ -141,16 +139,14 @@ def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
 
 def slot_castable(st, s):
     """Battle mask rule: sim clock past unlock, not awaiting arrival, and
-    either charges left or (Heli) one already flying = free re-aim."""
+    a charge remaining (existing aircraft act autonomously)."""
     if not s.get('key'):return False
     t = st['sim']
     if t + 0.5 < s['unlock']:
         return False
     if s['pending'] and t < s['ready_t']:
         return False
-    if s['charges'] > 0:
-        return True
-    return s['name'] == 'Heli' and s['alive']
+    return s['charges'] > 0
 
 
 def masks_for(st):

@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 from torch import nn
 import nn_play2 as train
-from migrate_policy import migrate, migrate_file
+from migrate_policy import migrate, migrate_file, schema3_inputs
 
 
 class MigrationTests(unittest.TestCase):
@@ -16,7 +16,7 @@ class MigrationTests(unittest.TestCase):
         sum(p.sum() for p in old.parameters()).backward();opt.step()
         schema=train.checkpoint_schema()
         return old,dict(policy=old.state_dict(),optimizer=opt.state_dict(),learning=train.learning_config(),
-            schema=dict(version=3,inputs=schema['inputs'][:332],tools=schema['tools'][:72],cells=schema['cells'][:72*48]),run_id='test')
+            schema=dict(version=3,inputs=schema3_inputs(),tools=schema['tools'][:72],cells=schema['cells'][:72*48]),run_id='test')
 
     def test_preserves_recurrent_outputs_old_heads_and_adam_prefixes(self):
         old,data=self.source();before=copy.deepcopy(data);converted=migrate(data)

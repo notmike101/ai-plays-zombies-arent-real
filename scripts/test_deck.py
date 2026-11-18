@@ -1,6 +1,6 @@
 """Deck state-model regression tests (no game): build_deck dump parsing,
 _rule name variants, bind-key reading, slot_castable mask rules (locked /
-pending / spent / heli free re-aim / exhausted), obs normalization,
+pending / spent / live helicopter without stock / exhausted), obs normalization,
 masks_for consistency, periodic refresh. Run: python -m unittest test_deck
 from scripts/."""
 import os
@@ -131,24 +131,24 @@ class MaskTests(unittest.TestCase):
         # at ready_t the loop flips pending->alive together (advance block);
         # a cleared-but-dead heli with 0 charges stays masked:
         self.assertFalse(self.sc({'sim': 40}, dict(s, pending=False)))
-        self.assertTrue(self.sc({'sim': 40}, dict(s, pending=False,
+        self.assertFalse(self.sc({'sim': 40}, dict(s, pending=False,
                                                   alive=True)))
 
-    def test_spent_vs_heli_free_reaim(self):
+    def test_live_heli_does_not_grant_free_cast(self):
         self.assertFalse(self.sc({'sim': 100}, slot(name='Bomber',
                                                     charges=0, alive=True)))
         self.assertFalse(self.sc({'sim': 100}, slot(charges=0)))
-        self.assertTrue(self.sc({'sim': 100}, slot(charges=0, alive=True)))
+        self.assertFalse(self.sc({'sim': 100}, slot(charges=0, alive=True)))
 
     def test_frac_never_exceeds_one(self):
         st = {'sim': 100}
         self.assertAlmostEqual(self.frac(st, slot(charges=1)), 1.0)
         self.assertAlmostEqual(self.frac(st, slot(charges=0, alive=True)),
-                               1.0)
+                               0.0)
         p = slot(name='Police', charges=19, mx=20)
         self.assertAlmostEqual(self.frac(st, p), 0.95)
         self.assertAlmostEqual(
-            self.frac(st, slot(charges=1, alive=True)), 1.0)  # alive add
+            self.frac(st, slot(charges=1, alive=True)), 1.0)  # stock only
         #   caps at max, never >1
 
     def test_masks_for_battle_and_planning(self):

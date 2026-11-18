@@ -9,10 +9,16 @@ import torch
 import nn_play2 as train
 
 
+def schema3_inputs():
+    # The only semantic correction: live aircraft never granted another stock charge.
+    return [s.replace('charges / max', 'charges+alive heli / max')
+            for s in train.checkpoint_schema()['inputs'][:332]]
+
+
 def migrate(data):
     old=data.get('schema',{});new=train.checkpoint_schema()
-    if old.get('version')!=3 or any(old.get(k)!=new[k][:n] for k,n in
-            [('inputs',332),('tools',72),('cells',72*48)]):
+    if old.get('version')!=3 or old.get('inputs')!=schema3_inputs() or any(
+            old.get(k)!=new[k][:n] for k,n in [('tools',72),('cells',72*48)]):
         raise ValueError('Expected exact schema3 meanings; refusing reinterpretation')
     if data.get('learning')!=train.learning_config():
         raise ValueError('Learning contract differs; review before migration')

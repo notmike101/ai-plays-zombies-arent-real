@@ -190,7 +190,7 @@ def publish(bundle):
         return dict(status='already_published', tag=tag, url=existing['url'])
     if not existing:
         notes = bundle/'release-notes.md'
-        notes.write_text(f"Schema-3 policy and Adam state `{manifest['policy_id']}`.\n\n"
+        notes.write_text(f"Schema-{manifest['schema']['version']} policy and Adam state `{manifest['policy_id']}`.\n\n"
                          "Experimental training snapshot; the >=35% campaign objective is unmet. "
                          "Manifest metrics describe training, not an independent evaluation.\n\n"
                          "Verify SHA256SUMS and exact schema before import. Includes no game files, "

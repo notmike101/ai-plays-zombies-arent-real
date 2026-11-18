@@ -303,3 +303,14 @@ reader/finite observation path passed on those records. Test pins native-cell
 projection, negative damaged HP and invalid key rejection. Schema4 now4889 inputs/
 185 tools,3,096,810 parameters.130 script tests,37 visualizer tests,observer parity
 and graph pass. Warm medians0.246ms plain/0.620ms observed in this check.
+
+## Helicopter stock correction
+
+Quick Deploy live receipt: helicopter stock1->0 at sim20.37 (base unlock30,
+33% perk reduction). Repeating its slot after arrival with stock0 neither changed
+the target nor set an order. Native cast branch445a60 calls436ec0 before creating
+a new aircraft through0b9710; there is no free re-aim in that branch. Removed the
+inherited +alive availability bonus and zero-stock cast allowance. Regression
+tests now require spent live helicopters to stay masked. Labels/probes and the
+explicit schema3 migration recognize this documented semantic correction.
+130 script tests,37 visualizer tests,12-step observer parity and graph tests pass.

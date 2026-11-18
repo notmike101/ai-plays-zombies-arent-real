@@ -30,7 +30,8 @@ PROBE_ST = dict(t=450, planning=True, spend_frac=0.5, sim=100.0,
                 deck=[{'name': n, 'charges': c, 'max_charges': c,
                        'alive': False}
                       for n, c in (('Police', 20), ('Bomber', 1),
-                                   ('Heli', 1), ('Stungas', 1))])
+                                   ('Heli', 0), ('Stungas', 1))])
+PROBE_ST['deck'][2].update(alive=True, max_charges=1)
 # blob x/y arrive from run_episode already normalized to client fractions
 PROBE_BLOBS = [(0.5, 0.5, 3000), (1.0, 1.0, 6000)]
 # EXPECT[i] must equal make_obs(...)[i] AND describe INPUT_LABELS[i].
@@ -42,7 +43,7 @@ EXPECT = [
     0.75,  # civilian fraction
     2.5,   # trend 2500 k/s / 1000 (clip +-3)
     -0.25,  # slope clip +-1
-    1.0, 1.0, 1.0, 1.0,  # deck slots 1-4 full charges (charges / max)
+    1.0, 1.0, 0.0, 1.0,  # deck slots 1-4 full charges (charges / max)
     0.5, 0.5, 0.5,   # crowd 1: 960/1920, 600/1200, 3000/6000
     1.0, 1.0, 1.0,   # crowd 2: full-scale probe
     -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,  # crowd 3-4 missing sentinel
@@ -54,14 +55,14 @@ EXPECT = [
 # Keyword pins: position i of the probe must belong to a label whose meaning
 # matches — catches same-width reorders that element-wise tests can't see.
 LABEL_PINS = {0: 'civilians', 5: 'money', 6: 'elapsed', 8: 'trend',
-              9: 'slope', 10: 'deck slot 1', 13: 'deck slot 4',
+              9: 'slope', 10: 'deck slot 1', 13: 'deck slot 4', 12: 'charges / max', 279: 'charges / max',
               14: 'crowd 1 x', 16: 'crowd 1 weight',
               23: 'crowd 4 x', 26: 'extent', 27: 'previous tool',
               30: 'planning', 31: 'budget'}
 
 EXPECT += [0.0]*240
 for i in range(19):
-    EXPECT += [0., 1. if i < 4 else 0., 0.]
+    EXPECT += [0., 1. if i < 4 and i != 2 else 0., 0.]
 EXPECT += [0., -1., -1.]
 from scripts.mechanic_contract import EXTRA_LABELS
 EXPECT += [0.]*len(EXTRA_LABELS)

@@ -40,9 +40,10 @@ The DLL build requires Rustup and MSVC C++/Windows SDK tools; see
 games running. Copy preparation refuses existing destinations and unsupported
 executable hashes. It copies assets, creates normal/low-graphics settings, opts
 out of usage sharing, and enables the **full training unlock profile** by default:
-16 units,19 abilities,16 upgrades and Extra_Zones in this supported build. It does
+16 units,19 abilities,16 upgrades and all8 perks (59 entries) in this supported build. It does
 not copy campaign progress, buy levels, spend SP or pre-place defenses. The model
-still controls strategy; its action interface does not yet expose every mechanic.
+still controls strategy. See the [mechanics coverage ledger](notes/mechanics-coverage.md)
+for the native controls, observations, receipts and disabled-build exceptions.
 
 Download and import a compatible checkpoint using
 [checkpoint sharing/restore](notes/checkpoint-sharing.md). The active trainer now

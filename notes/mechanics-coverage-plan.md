@@ -14,8 +14,8 @@ must be observed accurately, not replaced. Admin/debug cheats, external social
 features, cosmetic settings and changing difficulty are outside gameplay policy.
 Boston L1-L5 is the existing mission; do not redefine success as merely surviving.
 
-Reuse the existing GRU/tool/conditional-cell interface. Preserve old feature and
-action meanings; append features/actions and explicitly migrate checkpoint and
+Reuse the existing GRU/tool/conditional-cell interface. Preserve old feature/action ordering; explicitly correct the disproven
+free-helicopter-stock feature in migration and labels; append features/actions and explicitly migrate checkpoint and
 Adam tensors into a new schema without overwriting the source checkpoint.
 Model owns all strategy. Multi-click geometry/selection are stateful policy
 actions, not scripted strategies. Temporary planning debt/land-cap excess needs

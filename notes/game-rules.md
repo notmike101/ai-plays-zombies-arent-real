@@ -8,7 +8,7 @@
    (hidden until it starts), lays `zombies_per_spawn` zombies each. New roll every READY (stored
    as seed file). Warning dialog if zones shelter < bronze share.
 3. **Battle**: zombies hunt (flock/scent/flow fields), bite civilians (they turn), chew walls
-   (per-cell HP), player deploys battle abilities bought with SP. Speeds 1/2x-8x.
+   (per-cell HP), player deploys battle abilities bought with SP. Normal policy speeds1/2x,1x,2x,4x; developer8x is excluded.
 4. **End**: horde wiped → badge by % civilians alive. Bronze (4% default) = win line; run lost
    outright only when EVERY civilian is dead. Stalled-horde cleanup timer (10s quiet + 30s
    countdown → remaining zombies die = win).
@@ -43,9 +43,9 @@
   their region holds; once breached, they panic and flee.
 - Gates ($50, 20m) let civilians cross; officers pass; zombies chew them like wall.
 
-## Units (planning placements, money) — unlocked so far for this save
+## Units (planning placements, money) — full training availability
 - Garrison (holds a building; reach/price scale with building width), Sniper, Mortar, Nest(Turret),
-  locked still: Mine, C4, Battleship, GasMortar, FireMortar, Railgun, Howitzer, MLRS, ChemMine,
+  Mine, C4, Battleship, GasMortar, FireMortar, Railgun, Howitzer, MLRS, ChemMine,
   Spikes, Oil, Napalm. Full order in unlocks.ini section of notes.
 - Cost increase: each copy on board +cost_increase to next price; refund returns dearest step.
 - Special buildings ([building_class]): fuel (gas stations explode — chain!), armory (reload
@@ -59,7 +59,7 @@
 Police (paratroopers, 19 SP-stock in user save), Bomber, Heli, Stungas, Firebomb, CallArms, APC,
 Rally, Bus, Missile, Medevac, Dozer, Tank, Cure, Nuke, Demolition, SeekDestroy, Cluster, AC130.
 Levels make recharges faster. Deploy = arm via slot key, then click/drag at position (mouse needed —
-or author deployment records into the plan + battle_replay).
+virtual DLL/PostMessage only in training; never author battle replay strategy).
 
 ## Zombies
 - hp 1→30 growth (3/min after 60s delay), speed 26±12 u/s, civilians flee at ~half zombie speed
@@ -87,7 +87,7 @@ or author deployment records into the plan + battle_replay).
 
 ## HUD/admin
 - Ctrl+Space admin console (in-game only, needs GetKeyState modifiers — unreachable via PostMessage;
-  use SendInput or RE'd protocol instead).
+  training must never use the console or physical input).
 - HUD: STATS panel (civilians left, zombies, kills), battle bar bottom, loadout TAB, retry R.
 
 ## Unlock progression (steam_cloud/unlocks.ini, global)

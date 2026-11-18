@@ -241,7 +241,7 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
 - The loadout UI is calibrated for 1920x1200 English UI scale 1 only; unsupported
   layouts fail explicitly. Battle geometry follows the shipped config comments.
 - Native stock and post-cast receipts govern resource masks. Helicopter liveness
-  refreshes from counts every five sim seconds; do not fabricate replenishment.
+  refreshes from the native snapshot every decision; do not fabricate replenishment.
 - Evaluation is read-only for model/optimizer; game actions still change its board.
 
 ## Evaluation and curriculum records

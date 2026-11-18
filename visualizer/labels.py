@@ -21,10 +21,10 @@ INPUT_LABELS = [
     'Civilian fraction alive',
     'Zombie trend (per sim s / 1000, clip +-3)',
     'Civilian slope (frac/sim s, clip +-1)',
-    'Deck slot 1 castable (charges+alive heli / max)',
-    'Deck slot 2 castable (charges+alive heli / max)',
-    'Deck slot 3 castable (charges+alive heli / max)',
-    'Deck slot 4 castable (charges+alive heli / max)',
+    'Deck slot 1 castable (charges / max)',
+    'Deck slot 2 castable (charges / max)',
+    'Deck slot 3 castable (charges / max)',
+    'Deck slot 4 castable (charges / max)',
     'Crowd 1 X (client width frac)',
     'Crowd 1 Y (client height frac)',
     'Crowd 1 weight (px / 6000)',
@@ -53,7 +53,7 @@ for name in ('Police', 'Bomber', 'Heli', 'Stungas', 'Firebomb', 'CallArms',
              'APC', 'Demolition', 'Rally', 'SeekDestroy', 'Bus', 'Missile',
              'Medevac', 'Dozer', 'Cluster', 'Tank', 'AC130', 'Cure', 'Nuke'):
     INPUT_LABELS += [f'{name} loadout level (/ 10)',
-                     f'{name} castable (charges+alive heli / max)',
+                     f'{name} castable (charges / max)',
                      f'{name} pending arrival (remaining sim s / 60)']
 INPUT_LABELS += ['Unspent skill points (/ 10)', 'Geometry anchor tool (/ 72; -1 absent)',
                  'Geometry anchor cell (/ 48; -1 absent)']

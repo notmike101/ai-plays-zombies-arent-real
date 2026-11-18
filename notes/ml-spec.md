@@ -7,59 +7,55 @@ normal difficulty. All strategy belongs to the policy.
 
 ## Observations
 
-The policy receives4261 floats per decision. The first332 retain schema3 meanings:
-- 32 scalar/legacy features: populations, money, elapsed time, population trends,
-  four deck availability slots, previous action, purchase receipt, phase and spend.
-  Thirteen legacy crowd features are currently constant because native-grid
-  rollouts supply no screenshot blobs. They are retained for checkpoint compatibility.
-- 240 spatial features: an8x6 grid of civilians, zombies, aggregated defender
-  people, building counts and safe-zone occupancy. The bottom8 action cells are
-  masked because their screen positions overlap the HUD.
-- 57 ability features: level, remaining availability and pending arrival for each
-  of19 abilities; plus3 features for unspent SP and a two-point geometry anchor.
+The policy receives4889 floats per decision. The first332 retain schema3 ordering:
+32 scalar/legacy features,240 grid features,57 ability features and3 skill/geometry
+features. The stock fractions correct the old false +alive-helicopter bonus; migration
+explicitly recognizes those old labels and transfers the learned weights/Adam.
+Thirteen legacy crowd features remain constant for checkpoint compatibility.
+Schema4 adds4557 labeled native features for every unit variant, selected units and
+buildings, roster/perks, geometry/land legality, ammunition/health/boosts, vehicles
+and evac passengers, terrain/bridges, fire spread, hazards, mutation sites, camera,
+normal timing, active tools, gestures and native HUD/modal affordances.
 
-Native memory is read only after matching the supported executable SHA256.
-Positions use the live camera and client size. Zone geometry comes from fresh
-the native read-only snapshot. Inputs, meanings and normalizations are pinned by visualizer
-labels/tests. Changes require matching schema metadata; never reuse weights with
-silently different feature meanings.
-
-Schema4 appends2153 features: per-unit variants, selected-unit state, roster/perks,
-camera/paint mode, native geometry, building classes, hazards, vehicles, HUD
-availability, playable boundary and gesture/tool state. Exact meanings and
-normalizations live in mechanic_contract.py and visualizer/labels.py. Remaining
-coverage/proof gaps are tracked explicitly in mechanics-coverage.md; this is not
-yet a claim of complete game coverage. Viewport/grid aiming still limits precision.
+All native memory reads require the supported executable SHA256. Positions use
+the current top-down camera and client size. Sparse terrain/fire sampling stays
+bounded to48 grid points; bridge damage records identify their native span anchor.
+Undamaged bridges have no damage record, explicitly distinguished from zero HP.
+Exact ordering/normalization is in mechanic_contract.py and visualizer/labels.py,
+with semantic regression probes. Native IDs are not interchangeable with toolbar IDs.
 
 ## Policy and actions
 
-One128-unit single-layer GRU feeds181 tool logits,181x48 conditional cell logits
-and a value head (2,148,390 parameters). Sampling uses the legal tool mask, then
-the selected tool's cell mask. Evaluation can use legal argmax (`greedy`).
+One128-unit single-layer GRU feeds185 tool logits,185x48 conditional cell logits
+and a value head (3,096,810 parameters). Sampling uses the legal tool mask followed
+by the selected tool's cell mask. Evaluation can use legal argmax (`greedy`).
+The original72 actions retain their meanings;113 additions expose roster/perks,
+all16 planning placements, selection/editing/refund/undo, native HUD choices,
+detonation, camera, modal recovery, corridor width and normal speed/pause.
 
-The original72 tools comprise34 wait/READY/planning/battle tools and38 buy/refund loadout
-choices (19 abilities each). Geometry uses two model-selected cells. Loadout
-controls use actual native ownership receipts; battle bindings use the saved
-roster including gaps. Native stock governs resource availability.
+All19 battle ability buy/refund/cast actions use the actual purchased roster and
+live stock. Quick Deploy reduces first-use unlock times using the native config
+and equipped perk. Seek & Destroy snaps to garrisons; Demolition starts on an
+eligible tall building, while the model chooses direction. Helicopters consume stock;
+an existing aircraft does not grant another cast. Medevac departure, C4/Napalm armed-click and selected-panel detonations are explicit.
+Native autonomous vehicle routing and combat are observed, never scripted.
 
-Fresh training copies have full native availability:16 unit types,19 abilities,
-16 upgrades and Extra_Zones, as explicitly requested. These are unlocks only;
-normal campaign money/SP still pay for purchases. The model's current planning
-roster exposes seven unit types plus the native Upgrade Unit action. Unlocking
-the other unit types does not create policy actions for switching that roster.
-All19 ability buy/refund actions already exist. Expanding unit selection needs
-an interface/action/schema change with matching labels and checkpoint migration;
-do not silently remap existing logits to newly unlocked units.
+Fresh copies enable59 catalog entries:16 units,19 abilities,16 SP upgrades and
+8 perks. This does not buy levels or change normal money/SP. The shipped build
+hides/disables SP tower upgrades; conditional HUD actions remain masked when absent.
+The native game rejects officer movement/behavior orders during outbreak; masks
+preserve that restriction. View overlays and3D tilt are presentation controls,
+not additional game strategy; native height/class observations replace those views.
 
-Tool selection cancels the previous tool through virtual right-click before
-pressing a hotkey: hotkeys toggle and undo can leave a tool selected. Geometry
-that violates native land/budget READY gates is undone once, with the prior board
-and money verified. Failure to confirm execution or rollback stops the worker.
+The model controls arbitrary polygon corners, endpoint geometry, edit handles,
+selection and recovery from debt/land excess. READY is masked until native legality
+passes; no automatic strategy rollback or forced READY. Corridor wheel adjusts width;
+camera zoom is masked in that context. Modal dialogs block world actions and expose
+confirm/cancel. See mechanics-coverage.md for scoped live and offline evidence.
 
-The action space is incomplete: no general unit/zone refund or reposition action,
-no camera pan/zoom policy, no C4 detonation action, and no general selection,
-repair or rebuilding interface. Masks do not yet predict every target's
-buildability or purchase price. Do not claim all game mechanics are exposed.
+The8x6 viewport grid and nearest-target snapping are still a spatial approximation;
+zoom/pan improve precision. Masks do not predict every native price/buildability
+condition. A sent key is never proof that a purchase or cast succeeded.
 
 ## Reward
 
@@ -111,9 +107,9 @@ A proper persistent rollout state and stronger outcome evaluation remain needed.
 ## Checkpoints, evaluation and operations
 
 Default model: sessions/nn_policy4.pt; history: analysis/nn_hist4.jsonl. Writes are
-atomic and retain a.previous backup. Schema3 observation/action metadata is
+atomic and retain a.previous backup. Exact schema4 observation/action metadata is
 validated. Learning revision1 records reward coefficients and phase-aware GAE;
-older schema4 weights/Adam remain loadable. Policy2 is preserved separately.
+only exactly matching schema4 weights/Adam are loadable. Policy2 is preserved separately.
 `play`/`greedy` never optimize or write model checkpoints; use separate history.
 
 Report actual >=35% saved with minimum/mean and unknown/incomplete/error counts,
@@ -139,7 +135,7 @@ estimator; [OpenAI PPO documentation](https://spinningup.openai.com/en/latest/al
 describes clipping limitations and a KL early-stop option. The phase-specific
 choice here is a project decision, not a claim that those sources validate it.
 
-Schema4 appends109 placement, roster/perk, selection/editing, native HUD, camera
+Schema4 appends113 placement, roster/perk, selection/editing, native HUD, camera
 and timing actions. Migration preserves source schema3 weights and Adam moments
 in a new file; appended GRU input columns and Adam moments start at zero.
 The battle decision floor is0.1s; native action completion can take longer.
