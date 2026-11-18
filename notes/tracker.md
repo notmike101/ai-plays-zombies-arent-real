@@ -1,6 +1,16 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — eight-copy training resumes after cleanup)
+- Architecture review: a tail sample of 175 revision-2 Boston L1 episodes had
+  163 early retries, one loss, 11 timeouts and zero wins. Active training saved
+  checkpoint 2c29005d6d100d63. The sample does not isolate a memory bottleneck.
+  Keep the current GRU as the control. First compare a shared spatial encoder
+  and tool-conditioned cell scoring with the same recurrent core. Measure
+  confirmed saves, battle-entry rate and survival at fixed game times across
+  comparable starts and experience budgets. Check delayed battle credit:
+  gamma=.99 per .1 simulated seconds gives a 10-second discount of .366
+  before trace decay. Test temporal attention separately if a memory diagnostic
+  shows useful history beyond the GRU's reach. No architecture trial run yet.
 - Trainer boot now applies its existing new-replay-companion retention guard
   (3cf5d59). Eight-copy start at 14:24:45 Central produced 24 retained .txt
   dumps and zero retained .state companions across boot and first episode setup.
