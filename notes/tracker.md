@@ -1,6 +1,30 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-18 — morning training and four-copy trial)
+## CURRENT STATE (2026-11-18 — morning supervision complete, eight copies live)
+- Supervised 08:24–11:31 Central. By the end of the final supervised batch,
+  61 updates saved from 187 aborted battles and 3 planning timeouts.
+  Best recorded survival 10%, no wins/advancement. Latest verified checkpoint
+  1921d29a9dd3b01a. Morning median to abort ~31.2 game seconds.
+- Two eight-copy batches finished, each with eight battles feeding one update.
+  First took ~6.5 minutes including boot. No matched throughput experiment.
+  Resource guards allow up to eight distinct preflighted copies, and preserve
+  the shared eight-CPU cap. One episode per copy per batch was used at scale.
+- User requested the games remain available to observe. Started an additional
+  finite three-batch run at 11:33 Central, seed 20262260, inst13–20. All booted
+  and were moved to a desktop-wide four-column/two-row overlapping grid,
+  with 1920x1200 client size verified and no live resize. Resource sample after
+  boot: 9.17 GiB RAM available, 8.01 GiB free disk, GPU 45%, 3860/10240 MiB VRAM.
+- Operator log analysis/nn3_operator_20261118-113306-07c3fc.log; trainer log
+  analysis/nn3_20261118-113311-774bb7.log. The local supervisor has exited; the
+  finite extra run will finish normally. Revalidate process identities before
+  interacting. Ignored analysis/coverage-tile-training.py can lay out the
+  current owned game windows again, preserving dimensions.
+- Native zoom evidence and decision-time discount hypothesis are below. Fresh
+  launch restores a wide planning view; model controls subsequent zoom. The
+  final three-batch run can carry close zoom after retry. No causal comparison
+  of fresh vs carried boards or proof of improvement in survivability.
+
+## Prior snapshot (2026-11-18 — morning training and four-copy trial)
 - User requested further supervision, about 08:24–11:24 Central. Training resumed
   from ce8f55232bad6291. Two-copy run with two episodes per copy produced 24
   aborted battles and 6 updates in about 22 minutes. First one-episode-per-copy
