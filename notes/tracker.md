@@ -1,6 +1,22 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-18 — two-copy training verified)
+## CURRENT STATE (2026-11-18 — three-hour training supervision complete)
+- Supervised about 22:15–01:15 Central. At cutoff, the history recorded 67 saved
+  PPO updates, 111 battles with aborted outcomes, 62 planning timeouts, and
+  one native-read error. Best observed score 10% saved; no level advancement.
+- Two-copy portion contributed 20 saved updates, 58 battles and 22 planning
+  timeouts. This verifies shared updates from distinct game copies, not a
+  controlled throughput comparison. Use local.ps1 train --copy inst14
+  --extra-copy inst13 --rounds 6 to reproduce when idle.
+- Latest verified checkpoint at cutoff 1013cc2dfe89e38f, run 53d3dd11419d,
+  round 1. The last finite six-batch two-copy run was still active and can
+  finish normally. Games 27232 and 34832, trainer identities via status.
+  Operator log analysis/nn3_operator_20261118-010446-1dd8b3.log.
+- The temporary local supervisor exited cleanly at 01:15 and will launch no
+  further runs. Last sample 11.46 GiB available RAM and 9.71 GiB free disk.
+  Both copies share the eight-CPU cap. Revalidate before intervening.
+
+## Prior snapshot (2026-11-18 — two-copy training verified)
 - Guarded parallel launch commit 8962417. Run 9b64abc585d8 booted inst13 PID 8908
   and inst14 PID 12620. Both produced battle episodes in the first batch and saved
   PPO checkpoint 7db4fd7372d5b1f2. In batch 1, inst13 supplied two battles while
