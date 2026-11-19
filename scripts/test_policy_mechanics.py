@@ -85,6 +85,11 @@ class MechanicsTests(unittest.TestCase):
         equip=EXTRA_TOOLS.index('equip_Sniper')
         st['picker_blocked']=[(72+equip,2)]
         self.assertEqual(np.flatnonzero(extra_masks(st)[equip]).tolist(),[0,1,3,4,5,6])
+        st.update(planning=False, paused=False, speed_ticks=1)
+        self.assertFalse(extra_masks(st)[EXTRA_TOOLS.index('speed_half')].any())
+        self.assertTrue(extra_masks(st)[EXTRA_TOOLS.index('speed_1'),0])
+        st['paused']=True
+        self.assertTrue(extra_masks(st)[EXTRA_TOOLS.index('speed_half'),0])
 
 
     def test_targets_are_visible_and_nearest_with_stable_ties(self):

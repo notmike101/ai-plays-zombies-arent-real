@@ -7,6 +7,13 @@ from game_mechanics import UNITS
 
 
 class ControlsTests(unittest.TestCase):
+    def test_slow_ui_can_confirm_two_frames_without_resending_input(self):
+        env = Mock()
+        env.scalar.side_effect = [10, 10, 10, 12]
+        with patch('game_controls.time.monotonic', side_effect=[0, .5, 1.1]), patch('game_controls.time.sleep'):
+            Controls(env).frames()
+        env.vi.assert_not_called()
+
     def test_endpoint_drag_releases_button_when_frame_receipt_fails(self):
         c=Controls(Mock());c.frames=Mock(side_effect=[None,RuntimeError('stalled UI')])
         with self.assertRaisesRegex(RuntimeError,'stalled UI'):

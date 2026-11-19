@@ -15,6 +15,7 @@ PLACEMENTS.update({72+EXTRA_TOOLS.index('place_'+name):name for name in UNITS
                    if 'place_'+name in EXTRA_TOOLS})
 DRAGS = {'select_box','drag_world','shift_drag_world','drag_corner','drag_edge'}
 SELECTORS = ('unit','building','wall','gate','evac','corner','helicopter','vehicle','medevac')
+SPEED_TICKS = {'speed_half':1, 'speed_1':2, 'speed_2':4, 'speed_4':8}
 NONSPATIAL = set(KEY_ACTIONS)-{'pan_up','pan_left','pan_down','pan_right'} | {
     'zone_finish','zone_back','cancel_tool','undo'} | {'panel_'+name for name in PANEL_ACTIONS}
 
@@ -70,7 +71,9 @@ def extra_masks(st):
             enabled=planning and selected
         elif name=='refund_selection':enabled=planning or len(sel['evac'])>0
         elif name=='arm_detonation':enabled=not planning and bool(np.any(st['native']['units']['kind']==9))
-        elif name.startswith('speed_') or name=='pause_toggle':enabled=not planning
+        elif name in SPEED_TICKS:
+            enabled=not planning and (st.get('paused') or st.get('speed_ticks')!=SPEED_TICKS[name])
+        elif name=='pause_toggle':enabled=not planning
         if name in NONSPATIAL or name.startswith('pan_'):
             mask[:]=0;mask[0]=1
         if not enabled:mask[:]=0
@@ -238,12 +241,14 @@ class Mechanics:
         camera=s['camera'];p=lambda pts:project(pts,camera,e.cw,e.ch)
         spatial=features(p(s['units']['pos']),s['units']['kind'],
             p(s['buildings']['rect'].reshape(-1,2)).reshape(-1,4),[p(z) for z in s['zones']],e.cw,e.ch)
+        paused=bool(e.scalar(0x665fa2,'<B'));speed=e.scalar(0x666868,'<q')
         st.update(grid=spatial['counts'],build_targets=spatial['build_targets'],native=s,hud=hud,
+            paused=paused,speed_ticks=speed,
             planning_roster=roster,perks=perks,ready_legal=legal,
             mechanics_features=observation(s,roster,perks,hud,e.scalar(0x665160,'<B'),legal,
                 covered/max(total,1),e.cw,e.ch,st.get('gesture_anchor'),
                 [e.scalar(rva,'<B') for rva in (0x667060,0x65d2e1,0x65d309)],
-                e.scalar(0x665fa2,'<B'),e.scalar(0x666868,'<q'),st['dialog'],
+                paused,speed,st['dialog'],
                 (active and not hold,active and hold,e.scalar(0x6651ec,'<f'))))
         st['playarea_cells']=inside_polygon(centers(e.cw,e.ch),p(s['playarea']))
         kinds=s['units']['kind'];defenders=(kinds>=2)&(kinds!=3)

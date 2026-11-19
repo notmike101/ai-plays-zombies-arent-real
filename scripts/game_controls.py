@@ -47,7 +47,7 @@ class Controls:
 
     def frames(self, count=2):
         frame = self.env.scalar(0x68e590, '<Q')
-        wait_until(lambda: self.env.scalar(0x68e590, '<Q') >= frame+count, 'UI frames')
+        wait_until(lambda: self.env.scalar(0x68e590, '<Q') >= frame+count, 'UI frames', timeout=2.)
 
     def tool_active(self):
         # Discriminator bytes (e.g. corridor vs hold) persist after cancellation.

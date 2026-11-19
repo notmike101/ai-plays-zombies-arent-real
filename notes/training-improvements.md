@@ -157,3 +157,15 @@ prints saved-score groups and unknown/incomplete counts.
 bounded smoke harness; its checkpoint stays under visualizer/runtime. It refuses
 busy copies and preserves both user policy2 and policy3. Long training and a
 multi-seed L1-L5 benchmark remain separate work; no quality claim is supported yet.
+### 2026-11-18 battle speed selection and UI confirmation
+
+Across 1,194 sampled live battle frames, 37 of 65 sampled speed selections
+requested the speed already running. The battle mask now reads the same native
+pause and speed values used in the observation and disables that redundant
+selection while unpaused. All four speed settings remain available when paused.
+No action meanings, weights or optimizer slots changed.
+
+Several eight-copy runs stopped on a two-frame UI receipt taking longer than
+0.8 seconds. The UI-frame observer now allows up to two seconds and returns as
+soon as it sees the required frames. It sends no extra inputs. Other picker
+and game-state confirmation deadlines retain their existing bounds.
