@@ -20,8 +20,8 @@ inspection. Its unsigned GRU edges summarize weights across gates.
 
 ### Game view
 
-Open **Game view** under the battlefield in the Monitor. It requests a recent
-thumbnail of the selected live worker's game window about every two seconds
+**Game view** starts expanded under the battlefield in the Monitor. It requests
+a recent thumbnail of the selected live worker's game window about every two seconds
 while the panel is open and the tab is visible. The thumbnail shows its own
 capture time. It does not belong to a particular decision or appear in replay.
 Freezing the view freezes the displayed image and pauses requests.

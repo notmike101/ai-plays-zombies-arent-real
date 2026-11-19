@@ -27,9 +27,9 @@ async page => {
   });
   await page.goto(new URL(page.url()).origin);
   await page.waitForFunction(() => typeof window.showFixture === 'function');
+  if (!await page.locator('#game-view').evaluate(details => details.open)) throw new Error('Game view must start expanded');
+  if (captureRequests.length) throw new Error('Game view must wait for a live game');
   await page.evaluate(() => window.showFixture('first'));
-  if (captureRequests.length) throw new Error('Game view must be opt-in');
-  await page.getByText('Game view', {exact: true}).click();
   await page.waitForFunction(() => document.querySelector('#game-screenshot').naturalWidth > 0);
   const first = await page.locator('#game-screenshot').getAttribute('src');
   await page.getByRole('button', {name: 'Freeze view'}).click();
@@ -44,5 +44,5 @@ async page => {
   if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Game view overflows mobile');
   await page.getByText('Game view', {exact: true}).click();
   await page.locator('#game-screenshot').waitFor({state: 'hidden'});
-  return {optIn: true, imageDecoded: true, freeze: true, targeted: true, mobile: true};
+  return {expandedByDefault: true, imageDecoded: true, freeze: true, targeted: true, mobile: true};
 }
