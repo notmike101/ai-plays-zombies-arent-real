@@ -1,6 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 22:46 Central. Timed production four-epoch CPU PPO updates
+  with synthetic observations at representative historical episode lengths.
+  Among 54 recent recorded battles with decision counts, median was 478.5
+  and maximum 1,319. One update took 0.536 s at 478 steps and 1.629 s at
+  1,319 steps (analysis/coverage-ppo-cpu-timing.log). Current campaign search
+  has no PPO update. Keep it on CPU so the GPU remains available for rendering.
+  The probe used the on-disk checkpoint as input and saved no weights.
 - 22:43 Central. Checked GPU feasibility during active seed 99851
   on six copies. RTX 3080: 10,240 MiB total, 3,731 MiB used at sampling.
   Repo torch reports 2.15.0+cpu and CUDA unavailable. Policy is 3,096,810
