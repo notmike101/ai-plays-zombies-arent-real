@@ -115,6 +115,9 @@ def offspring(parent, donor, rng, stage=1):
     child['camera_pause']=(np.asarray(child.get('camera_pause',np.zeros(6)))+rng.normal(0,2,6)).tolist()
     layout=child.get('layout')
     if layout:vary_layout(layout,rng)
+    if 'refuge' in child:
+        for key,lo,hi in [('scale',.65,1.5),('aspect',.4,2.5),('defense_weight',.01,.5)]:
+            child['refuge'][key]=float(np.clip(child['refuge'][key]*np.exp(rng.normal(0,.2)),lo,hi))
     return child
 
 
@@ -185,6 +188,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False):
         while stage <= 5:
             layout = (team or {}).get('layout',[]) if stage==1 else (team or {}).get('later_layouts',{}).get(str(stage),[])
             receipts=[]
+            refuge=None
             if layout or start_stage>1:
                 env.to_planning()
                 board=env.dump()
@@ -192,6 +196,15 @@ def rollout(job, retries=0, start_stage=1, *, training=False):
                     raise RuntimeError(f'Expected live Boston stage {stage}')
             if layout:
                 from layout_memory import apply_layout, remaining_layout, BUILDINGS
+                if stage==1 and team.get('refuge'):
+                    from layout_memory import fit_refuge
+                    from native_state import VEC
+                    points=env.array(0x650280,VEC)
+                    kinds=env.array(0x6502d0,'u1')
+                    if len(points)!=len(kinds):raise RuntimeError('Inconsistent planning population')
+                    origin=np.array([env.scalar(r,'<f') for r in (0x665358,0x66535c)])
+                    boundary=env.array(0x6652e0,VEC,limit=10000)+origin
+                    layout,refuge=fit_refuge(layout,points[kinds==0]+origin,boundary,team['refuge'])
                 occupied=[unit for kind,unit in BUILDINGS.items() if f'board {kind} = ' in board['_text']]
                 receipts=apply_layout(env,remaining_layout(layout,board),occupied)
                 if stage==1:layout_receipts=receipts
@@ -208,6 +221,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False):
             levels.append(dict(stage=row['scenario'],end=row['end'],saved=row['saved_frac'],
                                win=row['win'],advance=row['advance'],campaign=row['campaign'],
                                attempt=attempt,start_kind=start_kind,
+                               refuge=refuge,
                                outbreak=row.get('outbreak'),
                                timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
                                unmatched_layout=remaining_layout(layout,{'_text':row['layout_text']}) if layout else [],
@@ -309,6 +323,9 @@ def main():
                 for actions in vary:
                     if i==2:actions.sort(key=lambda item:item['kind']=='garrison')
                     if i>2:rng.shuffle(actions)
+            if prior and prior.get('layout'):
+                population[1]['refuge']=dict(scale=1.,aspect=float(rng.uniform(.7,1.5)),
+                                             defense_weight=float(rng.uniform(.08,.22)))
         if args.seed_from and not args.compare_forecast and (args.seed_from/'trials.jsonl').is_file():
             for line in (args.seed_from/'trials.jsonl').read_text().splitlines():
                 trial=json.loads(line)

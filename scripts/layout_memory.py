@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 import numpy as np
 from game_controls import Controls
-from spatial import project
+from spatial import inside_polygon, project
 
 BUILDINGS={'garrison':'Garrison','mortar':'Mortar','sniper':'Sniper','nest':'Nest'}
 
@@ -50,6 +50,39 @@ def remaining_layout(actions, dump):
                 break
         else:missing.append(action)
     return missing
+
+
+def fit_refuge(actions,civilians,boundary,params):
+    """Score equally sized refuge proposals against the observed planning population."""
+    index=next((i for i,a in enumerate(actions) if a['kind']=='zone'),None)
+    if index is None or not len(civilians):return actions,None
+    original=np.asarray(actions[index]['points'])
+    center=original.mean(axis=0)
+    relative=original-center
+    area=.5*abs(relative[:,0]@np.roll(relative[:,1],1)-relative[:,1]@np.roll(relative[:,0],1))
+    if area<=0:return actions,None
+    side=np.sqrt(area*params['aspect'])
+    box=np.array([[-1,-1],[1,-1],[1,1],[-1,1]])*[side/2,area/(2*side)]
+    sample=civilians[np.linspace(0,len(civilians)-1,min(2048,len(civilians)),dtype=int)]
+    defenders=np.asarray([a['points'][0] for a in actions if a['kind'] in BUILDINGS]).reshape(-1,2)
+    def assess(polygon):
+        sheltered=float(inside_polygon(sample,polygon).mean())
+        guarded=float(inside_polygon(defenders,polygon).mean()) if len(defenders) else 0.
+        return sheltered+params['defense_weight']*guarded,sheltered
+    best,initial=assess(original)
+    winner,coverage=original,initial
+    axes=np.quantile(sample,np.linspace(.1,.9,9),axis=0)
+    for x in axes[:,0]:
+        for y in axes[:,1]:
+            for shape in (relative,box):
+                polygon=shape*params['scale']+[x,y]
+                if not inside_polygon(polygon,boundary).all():continue
+                score,covered=assess(polygon)
+                if score>best:best,coverage,winner=score,covered,polygon
+    result=list(actions)
+    if winner is not original:result[index]=dict(kind='zone',points=winner.tolist())
+    return result,dict(sample=len(sample),original_covered=initial,proposed_covered=coverage,
+                       points=winner.tolist())
 
 
 def visible_points(env,ctrl,world):

@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from crowd_forecast import CrowdForecast, pairs
-from layout_memory import apply_layout, demonstrations, remaining_layout, visible_points
+from layout_memory import apply_layout, demonstrations, fit_refuge, remaining_layout, visible_points
 
 
 class CrowdModelTests(unittest.TestCase):
@@ -60,3 +60,13 @@ class CrowdModelTests(unittest.TestCase):
         self.assertEqual(result[0]['result'],'below_observed_cost')
         env.vi.click.assert_not_called()
         self.assertEqual(env.scalar.call_count,2)
+
+    def test_refuge_proposal_uses_live_people_and_respects_map_bounds(self):
+        actions=[dict(kind='zone',points=[[1,1],[3,1],[3,3],[1,3]])]
+        people=np.tile([[8.,8.]],(2100,1))
+        params=dict(aspect=1.,scale=1.,defense_weight=.1)
+        changed,report=fit_refuge(actions,people,[[0,0],[10,0],[10,10],[0,10]],params)
+        self.assertEqual((report['sample'],report['original_covered'],report['proposed_covered']),(2048,0.,1.))
+        self.assertNotEqual(changed,actions)
+        untouched,_=fit_refuge(actions,people,[[0,0],[5,0],[5,5],[0,5]],params)
+        self.assertEqual(untouched,actions)

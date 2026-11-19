@@ -279,6 +279,12 @@ reduce its count to free budget for other placements. Polygons can translate
 or change size around their center. The post-game `outbreak` receipt records
 the native outbreak seed, zone count and percentage sheltered at READY. This
 percentage is a diagnostic. Actual game outcomes drive selection.
+One fresh candidate also fits a refuge to the current planning board. It
+samples at most 2,048 visible-to-the-policy civilian positions across the
+map and compares translated polygons and rectangles against the population
+and planned defenses. Scale, aspect ratio and defense weight evolve. The
+stage record's `refuge` contains its predicted coverage and coordinates;
+compare those against the game-reported outbreak and saved percentages.
 Battle search can vary the four pan directions and can learn different pause
 preferences while running and while paused. Older champions retain their
 original camera and pause behavior.
