@@ -473,6 +473,7 @@ def main():
         directory.mkdir()
         torch.save(weights,directory/'base.pt')
         print(directory,'base',tr.policy_id(net),flush=True)
+        print('Campaign scope:', 'Boston L1 to L5' if args.allow_progression else 'Boston L1 only', flush=True)
         population=[random_team(rng) for _ in copies[1:]]
         if prior:
             population[0]=prior
