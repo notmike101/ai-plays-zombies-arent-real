@@ -12,6 +12,7 @@ def demonstrations(path):
         match=re.fullmatch(r'hist_carry (\d+) (\w+) = (.+)',line)
         if not match:continue
         stage,kind,record=match.groups()
+        if kind not in ('zone','garrison','gate','evac'):continue
         fields=list(map(float,record.split()))
         if kind=='zone':
             count=int(fields[0])

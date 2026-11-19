@@ -26,6 +26,7 @@ class CrowdModelTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p=Path(d)/'board'
             p.write_text('stage 1 = emerald 35.36 played\nhist_carry 1 zone = 3 0 0 2 0 1 1 1 1 1\nhist_carry 2 garrison = 10 12 1\n')
+            with p.open('a') as f:f.write('hist_carry 5 building = Radio_Tower 10 12\n')
             stages=demonstrations(p)
             self.assertEqual(stages[1][0]['kind'],'zone')
             self.assertEqual(stages[2][0]['points'],[[10.,12.]])
