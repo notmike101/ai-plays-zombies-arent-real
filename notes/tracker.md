@@ -1,6 +1,34 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 12:20 Central. Completed six-copy fixed-speed benchmark seed
+  125952: all 24 fresh Boston L1 trials returned official scores, zero
+  timeouts or errors. Frozen champion/base and copy assignments shared
+  within crossover pairs; policy seeds paired, native outbreaks differ.
+  1×: 64.6 scored trials per wave-hour, 1/12 qualifiers, 32.24% mean saved,
+  28.79% minimum, 2.91 decisions/sim-second. 2×: 83.5/hour (+29%),
+  5/12 qualifiers, 35.90% mean, 26.66% minimum, 1.73 decisions/sim-second.
+  Both arms confirmed 36 spends. Median board readiness was 87 s each;
+  median battle-to-return 172.5 vs 126.9 s. Wave barrier idle occupied
+  18.2% vs 12.5% of available copy time. 79 host samples recorded minimum
+  11.75 GiB available RAM and 14.3% median CPU load on reserved CPUs.
+  Keep 2× opt-in pending broader policy validation; stock speed changes
+  decision density. Resume supervisor restored the marker and launched
+  production seed 126851 with eight copies under its existing RAM rule.
+- Shadow capture retained 5,780 crowd frames and 72 native missile deployments
+  across the same 24 fresh battles. Every battle fired a three-shot salvo;
+  20 whole-salvo windows met the global-population timing filter and zero
+  met the isolated single-cast timing/alignment filter. The archived CNN
+  lost to persistence on both channels and hotspot ranking on all 24 new
+  battles across 2,140 aligned pairs. A private refit per speed on eight
+  distinct outbreaks each beat persistence on both channels on all eight
+  held-out battles, but improved hotspot ranking on only two (both at 1×).
+  This supports parallel offline crowd prediction, not action-effect labels
+  or synthetic PPO. Collect variation in model-proposed salvo timing,
+  targets and declines before fitting a decision surrogate.
+  Evidence: `analysis/coverage-team-23af6f44f1/speed-comparison.jsonl`,
+  `analysis/coverage-speed-shadow-report.jsonl` and
+  `analysis/coverage-speed-shadow-refit.jsonl`.
 - 2026-11-19 12:00 Central. Production seed 125851 drained normally.
   Deployed timing and shadow capture at `500da8e`; live six-copy fixed
   stock-speed comparison began with seed 125952, base 8a691469a829158d,
