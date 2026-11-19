@@ -9,6 +9,18 @@ import nn_report as report
 
 
 class ReportingTests(unittest.TestCase):
+    def test_search_report_preserves_incomplete_runs_and_crossover_assignment(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path=Path(temporary)
+            trial=dict(team_id='team',cnn=True,levels=[dict(stage=1,end='won',saved=.44)],
+                       error='missing later observation')
+            (path/'forecast-comparison.jsonl').write_text(json.dumps(trial)+'\n{"partial":')
+            groups=report.aggregate(report.search_rows(path))
+            self.assertEqual(groups[0]['mode'],'forecast-cnn')
+            self.assertEqual(groups[0]['qualifying_wins'],1)
+            self.assertEqual(groups[1]['errors'],1)
+            self.assertEqual(groups[1]['scenario'],'unknown')
+
     def test_saved_metric_and_start_kinds_stay_separate(self):
         rows = [dict(run_id='r', checkpoint_id='p', scenario=1, start_kind='fresh',
                      mode='play', end='won', saved_frac=.4, frac=.01),

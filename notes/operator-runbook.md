@@ -235,6 +235,9 @@ The command holds the operator lock and writes its base weights, tested
 genomes, action sequences, native log identifiers, champion and held-out
 results to an ignored `analysis/coverage-team-*` directory. Search runs
 disable the GRU-only visualizer for both candidates and controls.
+Run `.venv/Scripts/python.exe -B scripts/nn_report.py --search-dir analysis/<search-directory>`
+to count official game wins, qualifying wins, incomplete attempts and errors
+by team, stage, starting board and experiment. This also works during a run.
 Use `--seed-from analysis/<previous-search-directory>` with a new seed to
 retain the previous champion and verify its base weights. An optional
 `--demonstration <Boston progress file>` supplies locally recorded stage-one
