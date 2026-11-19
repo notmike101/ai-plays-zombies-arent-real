@@ -1,6 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 00:07 Central. Safe-zone reward now counts
+  a second exposure after the same civilian reaches another intact shelter
+  and that shelter is breached. Continued exposure and overlapping failures
+  count once. Logs report distinct exposed civilians and total exposures.
+  A regression moved a civilian across both shelters and verified two
+  penalties with one shelter credit. 200 trainer and 49 visualizer tests
+  passed. Seed 101851 remained active and predates the correction.
 - 23:56 Central. Game view now crops to the Windows client area and encodes
   higher-quality JPEGs up to 1280×960. The owned inst13 window measured
   1924×1247 in WGC with a 1920×1200 client area. Chrome on the named tunnel

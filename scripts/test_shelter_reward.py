@@ -47,6 +47,25 @@ class ShelterTests(unittest.TestCase):
         self.assertEqual(len(shelter.exposed),1)
         self.assertEqual(shelter.occupied_breaches,2)
 
+    def test_civilian_reaching_another_intact_shelter_can_be_exposed_again(self):
+        shelter=Shelter(10)
+        first=self.snapshot([])['zones'][0]
+        zones=[first,first+[120,0]]
+        start=[(1,(25,25))]
+        first_breach=[(20,20),(21,21),(22,22)]
+        shelter.observe(self.snapshot(start,zones=zones),0.)
+        self.assertAlmostEqual(shelter.observe(self.snapshot(start,zones=zones),.5),.005)
+        self.assertAlmostEqual(shelter.observe(self.snapshot(start,first_breach,zones),1.),-.01)
+        self.assertEqual(shelter.observe(self.snapshot([(1,(110,25))],first_breach,zones),1.5),0.)
+        second=[(1,(145,25))]
+        self.assertEqual(shelter.observe(self.snapshot(second,first_breach,zones),2.),0.)
+        self.assertEqual(shelter.observe(self.snapshot(second,first_breach,zones),2.5),0.)
+        second_breach=[(140,20),(141,21),(142,22)]
+        self.assertAlmostEqual(shelter.observe(self.snapshot(second,first_breach+second_breach,zones),3.),-.01)
+        self.assertEqual(shelter.breach_exposures,2)
+        self.assertEqual(len(shelter.credited),1)
+        self.assertEqual(len(shelter.exposed),1)
+
     def test_initial_contamination_and_no_zone_give_no_points(self):
         shelter=Shelter(10)
         initial=self.snapshot([(1,(25,25))],[(20,20),(21,21),(22,22)])

@@ -369,7 +369,7 @@ def checkpoint_schema():
 
 
 def learning_config(*, legacy=False):
-    config = dict(revision=1 if legacy else 5, infection_cost=1.,
+    config = dict(revision=1 if legacy else 6, infection_cost=1.,
                   terminal_saved_scale=SAVED_REWARD_SCALE,
                   planning_gamma=1., planning_lambda=1.,
                   battle_gamma=BATTLE_GAMMA, battle_lambda=BATTLE_LAMBDA)
@@ -733,6 +733,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     outbreak=footer.get('outbreak') if footer else None,
                     reward_components=rewards, outside_playarea_actions=outside_actions, battle_actions=battle_actions,
                     shelter=dict(credited_civilians=len(shelter.credited),exposed_civilians=len(shelter.exposed),
+                                 breach_exposures=shelter.breach_exposures,
                                  occupied_breaches=shelter.occupied_breaches),
                     frac=o['civ']/civ0, bootstrap=bootstrap,
                     civ0=civ0, t=time.monotonic()-start, sim=state['sim'],

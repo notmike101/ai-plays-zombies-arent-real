@@ -17,6 +17,8 @@ class Shelter:
         self.breached = set()
         self.credited = set()
         self.exposed = set()
+        self.active_exposure = set()
+        self.breach_exposures = 0
         self.presence_credit = 0.
         self.breach_penalty = 0.
         self.occupied_breaches = 0
@@ -34,16 +36,18 @@ class Shelter:
         previous = {}
         exposed = set()
         sheltered = set()
+        in_breached_zone = set()
         self.protected = []
         for polygon in native['zones']:
             if len(polygon)<3:
                 continue
             key = polygon.tobytes()
-            if key in self.breached:
-                continue
             lower,upper = polygon.min(axis=0),polygon.max(axis=0)
             in_box = ((positions>=lower)&(positions<=upper)).all(axis=1)
             occupants = set(ids[in_box][inside_polygon(positions[in_box],polygon)].tolist())
+            if key in self.breached:
+                in_breached_zone.update(occupants & self.active_exposure)
+                continue
             in_box = ((zombies>=lower)&(zombies<=upper)).all(axis=1)
             if np.count_nonzero(inside_polygon(zombies[in_box],polygon))>=3:
                 if key in self.previous:
@@ -60,8 +64,13 @@ class Shelter:
         new = sheltered-self.credited
         self.credited.update(new)
         credit = CREDIT*len(new)/self.population
-        newly_exposed = exposed-self.exposed
+        # Rearm only after reaching intact shelter away from a previous breach.
+        safe_again = sheltered-in_breached_zone-exposed
+        self.active_exposure.difference_update(safe_again)
+        newly_exposed = exposed-self.active_exposure
+        self.active_exposure.update(newly_exposed)
         self.exposed.update(newly_exposed)
+        self.breach_exposures += len(newly_exposed)
         penalty = -BREACH_COST*len(newly_exposed)/self.population
         self.presence_credit += credit
         self.breach_penalty += penalty
