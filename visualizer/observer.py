@@ -20,7 +20,7 @@ def vector(tensor):
 
 
 class Observer:
-    def __init__(self, net, game_pid, episode='', *, labels=None, directory=RUNTIME):
+    def __init__(self, net, game_pid, episode='', *, labels=None, directory=RUNTIME, interval=.2):
         self.directory = Path(directory)
         self.stream = f'{os.getpid()}-{uuid.uuid4().hex[:12]}'
         self.game_pid = int(game_pid)
@@ -38,7 +38,8 @@ class Observer:
         self._graph = None
         self._revision = None
         self._weight_bytes = ()
-        self._last_publish = 0
+        self.interval = max(.2, float(interval))
+        self._last_publish = float("-inf")
         self.sequence = 0
         self.decision = 0
         self._last_decision = None
@@ -71,6 +72,9 @@ class Observer:
 
     def _capture_gru(self, module, args, output):
         if torch.is_grad_enabled() or self._closed:
+            return
+        if self.interval > .2 and time.monotonic() - self._last_publish < self.interval:
+            self.values = {}
             return
         try:
             x = args[0]
@@ -201,7 +205,7 @@ class Observer:
         interval = (now-self._last_decision)*1000 if self._last_decision is not None else None
         self._last_decision = now
         self.decision += 1
-        if self._closed or now - self._last_publish < .2:
+        if self._closed or now - self._last_publish < self.interval:
             return False
         try:
             frame = self.snapshot(**kwargs)

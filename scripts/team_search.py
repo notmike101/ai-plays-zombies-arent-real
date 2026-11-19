@@ -295,7 +295,8 @@ def score(row):
             float(row['saved_frac'] or 0.) if row['win'] else 0.,area/120.]
 
 
-def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, practice_retry=False, allow_progression=False):
+def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, observer_interval=.2,
+            practice_retry=False, allow_progression=False):
     if start_stage>1 and not allow_progression:
         raise ValueError('Later-stage starts require explicit campaign progression')
     copy, weights, team, seed, *forecast_path = job
@@ -339,7 +340,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, pra
             start_kind='carry' if attempt else ('fresh' if stage==1 else
                                                 'continue' if stage==start_stage else 'next_level')
             options=dict(start_kind=start_kind,seed=seed,record_layout=bool(layout),greedy=True,
-                         allow_progression=allow_progression)
+                         allow_progression=allow_progression, observer_interval=observer_interval)
             if training:options['paused_seconds']=45
             row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}/a{attempt}',options),
                                  policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
@@ -468,9 +469,12 @@ def restore_team(net,directory):
 
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False):
     if starts is None:starts=[1]*len(jobs)
-    observed=next((j[0] for j in jobs if j[2]),None) if training else None
+    observed = sorted(jobs, key=lambda job: not bool(job[2]))[:2]
+    rates = {job[0]: (.2 if training and index == 0 else 1.)
+             for index, job in enumerate(observed)}
     practice_copy=next((j[0] for j,stage in zip(jobs,starts) if training and j[2] and stage==1),None)
-    futures={pool.submit(rollout,job,retries,stage,training=training,observe=job[0]==observed,
+    futures={pool.submit(rollout,job,retries,stage,training=training,observe=job[0] in rates,
+                         observer_interval=rates.get(job[0], .2),
                          practice_retry=job[0]==practice_copy,allow_progression=allow_progression):(job,stage)
              for job,stage in zip(jobs,starts,strict=True)}
     for future in as_completed(futures):
