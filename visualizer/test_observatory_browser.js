@@ -9,7 +9,7 @@ async page => {
   await page.goto(preview);
   await page.waitForFunction(() => document.querySelector('#status').textContent === 'Synthetic preview');
   assert(await page.locator('#mode, #pause').count() === 0, 'Live controls stay out of the toolbar');
-  await page.getByRole('button', {name: 'Neural activity'}).click();
+  await page.getByRole('link', {name: 'Neural activity'}).click();
   await page.waitForFunction(() => document.querySelector('#feature-page').textContent.includes('4889'));
   assert(await page.locator('#feature-list button').count() === 16, 'Keep feature DOM bounded');
   assert(await page.locator('option').count() < 100, 'No per-unit dropdowns');
@@ -21,7 +21,7 @@ async page => {
   await page.locator('#load-weights').click();
   await page.waitForFunction(() => !document.querySelector('#weight-heat').hidden);
   assert((await page.locator('#weight-detail').innerText()).includes('[0, 0]'), 'Read a captured coefficient');
-  await page.getByRole('button', {name: 'Timeline'}).click();
+  await page.getByRole('link', {name: 'Timeline'}).click();
   await page.waitForFunction(() => document.querySelector('#events').children.length >= 3);
   await page.locator('#events button').last().click();
   await page.waitForFunction(() => document.querySelector('#sample-context').textContent.includes('Replay'));
@@ -33,7 +33,7 @@ async page => {
   for (const width of [320, 390, 844, 1440]) {
     await page.setViewportSize({width, height: 700});
     for (const name of ['Neural activity', 'Timeline', 'Monitor']) {
-      await page.getByRole('button', {name, exact: true}).click();
+      await page.getByRole('link', {name, exact: true}).click();
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${name} must fit ${width}px`);
     }
   }
