@@ -119,6 +119,40 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(inside['battle_actions']['stock_decreased'], 1)
         self.assertEqual(inside['reward_components']['outside_playarea'], 0.)
 
+    def test_greedy_episode_tries_the_next_target_after_one_rejection(self):
+        game=FakeGame(-1)
+        casts=[]
+        game.cast=lambda key,x,y: casts.append((key,x,y))
+        game.battle_stock=lambda: {'Missile':1-int(bool(casts))}
+        source=self.globals
+
+        class BoundedMechanics(FakeMechanics):
+            def refresh(self, st):
+                super().refresh(st)
+                st['playarea_boundary']=[(0,0),(500,0),(500,1000),(0,1000)]
+
+        class GreedyPolicy(source['PolicyNet2']):
+            def forward(self, x, h=None):
+                tools,cells,value,h=super().forward(x,h)
+                tools.zero_()
+                tools[...,1 if x[0,0,source['PLANNING_INDEX']] else 26]=10.
+                cells.zero_()
+                cells[...,26*source['NC']+7]=10.
+                cells[...,26*source['NC']]=5.
+                return tools,cells,value,h
+
+        overrides=dict(Observer=None,PLAN_STEPS=1,BATTLE_T=.2,Mechanics=BoundedMechanics,
+                       load_bind_keys=lambda env: [],time=FakeClock(game),build_deck=lambda *args: [
+                           dict(name='Missile',key='1',charges=1,unlock=0,arrival=0,pending=False)])
+        with patch.dict(source,overrides), patch.dict(sys.modules, {
+                'env_zar':SimpleNamespace(ZAREnv=lambda pid:game,ZAREnvError=RuntimeError)}):
+            result=self.run_episode((-1,self.model.state_dict(),False,'repeat-reject',dict(greedy=True)),
+                                    policy_factory=GreedyPolicy)
+        self.assertNotIn('err',result)
+        self.assertEqual(result['outside_targets'],{'missile/8':1})
+        self.assertEqual(result['cs'][1:3],[7,0])
+        self.assertEqual(len(casts),1)
+
     def test_special_activation_receipts_credit_unique_buildings_and_cap_bonus(self):
         result=self.episode(None,special_receipts=[None,(0,5),(0,5),(1,5),(2,5),(3,5)])
         self.assertNotIn('err',result)
