@@ -1,6 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 Central. Staged campaign rollout timing on
+  `codex/rollout-timing` at `c899c77` in an isolated checkout and pushed
+  the branch. All 211 script tests passed offline. The new ledger fields
+  record monotonic worker start, board readiness, episode start, battle
+  start when reached, episode return and worker finish. Activate at a
+  coordinated launch boundary, then measure per-copy idle time and compare
+  1x with 2x at the same copy count. Live code and weights were untouched.
 - 2026-11-19 Central. Throughput audit during active six-copy search, with
   inst13 preflight passing. Search 123851 recorded 24 fresh L1 starts across
   four generations, nine qualifying wins, five timeouts and one early retry.
