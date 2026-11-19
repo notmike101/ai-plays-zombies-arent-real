@@ -45,8 +45,19 @@ def random_team(rng):
                 idle_bias=float(rng.uniform(-1, 3)))
 
 
-def offspring(parent, donor, rng):
+def offspring(parent, donor, rng, stage=1):
     child = deepcopy(parent)
+    if stage>1 and str(stage) in child.get('later_layouts',{}):
+        layout=child['later_layouts'][str(stage)]
+        if len(layout)>1:
+            a,b=rng.choice(len(layout),2,replace=False)
+            item=layout.pop(int(a))
+            layout.insert(int(b),item)
+        params=child.setdefault('stage_battle',{}).setdefault(str(stage),{})
+        for key in ('battle','cast_bias'):
+            base=np.asarray(params.get(key,child[key]))
+            params[key]=(base+rng.normal(0,.35,base.shape)).tolist()
+        return child
     i = int(rng.integers(max(1,len(child['plan']))))
     replacement = deepcopy(donor['plan'][int(rng.integers(len(donor['plan'])))]) if donor['plan'] and rng.random()<.5 else gene(rng)
     if child['plan']:child['plan'][i]=replacement
@@ -124,18 +135,28 @@ def rollout(job):
     try:
         levels = []
         layout_receipts=[]
-        if team and team.get('layout'):
-            from layout_memory import apply_layout
-            layout_receipts=apply_layout(env,team['layout'])
         for stage in range(1,6):
+            layout = (team or {}).get('layout',[]) if stage==1 else (team or {}).get('later_layouts',{}).get(str(stage),[])
+            receipts=[]
+            if layout:
+                from layout_memory import apply_layout, remaining_layout, BUILDINGS
+                env.to_planning()
+                board=env.dump()
+                if not board or not board['where']['stage'].startswith(f'{stage-1} '):
+                    raise RuntimeError('Unexpected stage before layout application')
+                occupied=[unit for kind,unit in BUILDINGS.items() if f'board {kind} = ' in board['_text']]
+                receipts=apply_layout(env,remaining_layout(layout,board),occupied)
+                if stage==1:layout_receipts=receipts
+            active={**team,**team.get('stage_battle',{}).get(str(stage),{})} if team else None
             row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}',
                                   dict(start_kind='fresh' if stage==1 else 'next_level',seed=seed,
-                                       greedy=True)),policy_factory=(lambda:TeamPolicy(team,forecast)) if team else None,
+                                       greedy=True)),policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
                                  telemetry=False)
             if not tr.valid_trajectory(row):
                 return dict(copy=copy,seed=seed,levels=levels,error=row.get('err','invalid trajectory'))
             levels.append(dict(stage=row['scenario'],end=row['end'],saved=row['saved_frac'],
                                win=row['win'],advance=row['advance'],campaign=row['campaign'],
+                               layout_receipts=receipts,
                                score=score(row),sim=row['sim'],board=row['board_id'],
                                actions=list(zip(row['us'],row['cs'])),log_started=row['log_started']))
             if not row['advance'] or row['scenario']==row['board'].get('scenario_count'):
@@ -192,15 +213,23 @@ def main():
             population[1]=offspring(prior,prior,rng)
         if args.demonstration:
             from layout_memory import demonstrations
-            layout=demonstrations(args.demonstration)[1]
+            stages=demonstrations(args.demonstration)
+            layout=stages[1]
             for i in range(1,len(population)):
                 # Explore execution order: progress files store the finished layout.
                 candidate=population[i]
+                if prior and prior.get('layout'):
+                    candidate=population[i]=deepcopy(prior)
                 candidate['plan']=[]
-                candidate['layout']=deepcopy(layout)
-                if i==2:candidate['layout'].sort(key=lambda item:item['kind']=='garrison')
-                if i>2:rng.shuffle(candidate['layout'])
+                if not (prior and prior.get('layout')):
+                    candidate['layout']=deepcopy(layout)
+                candidate['later_layouts']={str(k):deepcopy(v) for k,v in stages.items() if k>1}
+                vary = list(candidate['later_layouts'].values()) if prior and prior.get('layout') else [candidate['layout']]
+                for actions in vary:
+                    if i==2:actions.sort(key=lambda item:item['kind']=='garrison')
+                    if i>2:rng.shuffle(actions)
         archive={}
+        deepest={}
         scores=defaultdict(list)
         with ProcessPoolExecutor(len(copies)) as pool:
             if args.compare_forecast:
@@ -236,6 +265,7 @@ def main():
                     if team:
                         valid_candidates+=1
                         archive[key]=team
+                        deepest[key]=max(deepest.get(key,1),levels[-1]['stage'])
                         scores[key].append([sum(r['score'][0] for r in levels),
                                             sum(r['score'][1] for r in levels),
                                             sum(r['score'][2] for r in levels),levels[-1]['score'][3]])
@@ -247,8 +277,9 @@ def main():
                 if len(population)+1 < len(copies)-1:
                     population.append(random_team(rng))
                 while len(population)<len(copies)-1:
-                    population.append(offspring(elites[int(rng.integers(len(elites)))],
-                                                elites[int(rng.integers(len(elites)))],rng))
+                    parent=elites[int(rng.integers(len(elites)))]
+                    population.append(offspring(parent,elites[int(rng.integers(len(elites)))],
+                                                rng,stage=deepest[team_id(parent)]))
                 print('elite',ranked[0],len(scores[ranked[0]]),np.mean(scores[ranked[0]],axis=0),flush=True)
                 champion = dict(team_id=ranked[0], team=archive[ranked[0]], base=tr.policy_id(net),
                                 generation=generation, trials=len(scores[ranked[0]]))

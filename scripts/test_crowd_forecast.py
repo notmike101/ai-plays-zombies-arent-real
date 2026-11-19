@@ -1,10 +1,11 @@
 import tempfile
 import unittest
+from unittest.mock import Mock
 from pathlib import Path
 import numpy as np
 import torch
 from crowd_forecast import CrowdForecast, pairs
-from layout_memory import demonstrations
+from layout_memory import demonstrations, remaining_layout, visible_points
 
 
 class CrowdModelTests(unittest.TestCase):
@@ -30,3 +31,15 @@ class CrowdModelTests(unittest.TestCase):
             stages=demonstrations(p)
             self.assertEqual(stages[1][0]['kind'],'zone')
             self.assertEqual(stages[2][0]['points'],[[10.,12.]])
+
+    def test_carried_building_is_not_purchased_twice(self):
+        keep=dict(kind='mortar',points=[[100.,150.]])
+        existing=dict(kind='garrison',points=[[100.,150.]])
+        self.assertEqual(remaining_layout([keep,existing],{'_text':'board garrison = 100.001 150.0 2'}),[keep])
+
+    def test_offscreen_target_is_reprojected_after_pan(self):
+        env=Mock(cw=1920,ch=1200)
+        env.scalar.side_effect=[0,0,1,0,1000,0,1]
+        controls=Mock()
+        self.assertEqual(visible_points(env,controls,np.array([[1000.,0.]])),[(960,600)])
+        controls.key_action.assert_called_once_with('pan_right')

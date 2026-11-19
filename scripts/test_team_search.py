@@ -31,6 +31,15 @@ class SearchTests(unittest.TestCase):
         self.assertNotEqual(child,parent)
         self.assertEqual([parent,donor],before)
 
+    def test_later_stage_search_preserves_earlier_policy(self):
+        rng=np.random.default_rng(32)
+        parent=search.random_team(rng)
+        parent['later_layouts']={'2':[{'kind':'mortar'},{'kind':'garrison'}]}
+        child=search.offspring(parent,parent,rng,stage=2)
+        for key in ('plan','cast_bias','idle_bias','battle'):
+            self.assertEqual(child[key],parent[key])
+        self.assertIn('2',child['stage_battle'])
+
     def test_time_in_pause_adds_no_survival_credit(self):
         row=dict(advance=False,win=False,saved_frac=.1,civ0=100,
                  trail=[(0,100),(10,80),(10,80),(20,60)])
