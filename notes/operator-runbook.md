@@ -236,9 +236,12 @@ after collecting several games. It estimates civilian and zombie cell counts
 two simulation seconds ahead and compares against current counts on entire
 held-out games. Use the normal team search command with paired copies,
 `--seed-from <champion-directory> --compare-forecast <capture-directory>/forecast.pt`
-to compare the same champion on new games with current versus forecast counts.
-The CNN changes battle target scoring only. Report forecast error and actual
-civilian saves separately.
+to compare current versus forecast counts on fresh games. Both arms use the
+same champion with one shared, seeded loadout purchase proposal. The game
+still masks illegal purchases. The exact candidate is in comparison-team.json.
+Read each stage's battle_actions for cast availability, selections and stock
+decreases. A game with zero casts provides no test of targeting. Report
+forecast error and actual civilian saves separately.
 
 Later-stage candidates project the recorded layout through the current
 stage's camera and map origin, skip structures already carried, and issue

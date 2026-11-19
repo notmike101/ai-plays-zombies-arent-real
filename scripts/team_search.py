@@ -45,6 +45,14 @@ def random_team(rng):
                 idle_bias=float(rng.uniform(-1, 3)))
 
 
+def loadout_candidate(parent,rng):
+    candidate=deepcopy(parent)
+    pick=gene(rng)
+    pick.update(family=2,tool=int(rng.choice(FAMILIES[2])),duration=1)
+    candidate['plan'].insert(0,pick)
+    return candidate
+
+
 def offspring(parent, donor, rng, stage=1):
     child = deepcopy(parent)
     if stage>1 and str(stage) in child.get('later_layouts',{}):
@@ -159,7 +167,7 @@ def rollout(job, retries=0):
             levels.append(dict(stage=row['scenario'],end=row['end'],saved=row['saved_frac'],
                                win=row['win'],advance=row['advance'],campaign=row['campaign'],
                                attempt=attempt,start_kind=start_kind,
-                               layout_receipts=receipts,
+                               layout_receipts=receipts,battle_actions=row['battle_actions'],
                                score=score(row),sim=row['sim'],board=row['board_id'],
                                actions=list(zip(row['us'],row['cs'])),log_started=row['log_started']))
             if row['advance']:
@@ -231,6 +239,8 @@ def main():
                 if prior and prior.get('layout'):
                     candidate=population[i]=deepcopy(prior)
                 candidate['plan']=[]
+                if prior and prior.get('layout'):
+                    candidate=population[i]=loadout_candidate(candidate,rng)
                 if not (prior and prior.get('layout')):
                     candidate['layout']=deepcopy(layout)
                 candidate['later_layouts']={str(k):deepcopy(v) for k,v in stages.items() if k>1}
@@ -243,13 +253,15 @@ def main():
         scores=defaultdict(list)
         with ProcessPoolExecutor(len(copies)) as pool:
             if args.compare_forecast:
+                contender=loadout_candidate(prior,rng)
+                (directory/'comparison-team.json').write_text(json.dumps(contender))
                 for swap in range(2):
                     jobs=[]
                     for i,copy in enumerate(copies):
-                        job=(copy,weights,prior,args.seed+swap*len(copies)+i//2)
+                        job=(copy,weights,contender,args.seed+swap*len(copies)+i//2)
                         jobs.append(job+(args.compare_forecast,) if (i+swap)%2 else job)
                     for job,result in zip(jobs,pool.map(rollout,jobs)):
-                        result.update(cnn=len(job)==5,team_id=team_id(prior))
+                        result.update(cnn=len(job)==5,team_id=team_id(contender))
                         with (directory/'forecast-comparison.jsonl').open('a') as f:
                             f.write(json.dumps(result)+'\n')
                         print('cnn',result['cnn'],result.get('error'),[(r['end'],r['saved']) for r in result['levels']],flush=True)

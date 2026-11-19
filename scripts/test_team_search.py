@@ -14,7 +14,7 @@ class SearchTests(unittest.TestCase):
                 rows=[dict(scenario=stage,end=end,saved_frac=saved,bootstrap=0.,
                            advance=end=='won',win=end=='won',campaign='Boston',board_id='b',
                            board={'scenario_count':5},sim=10,trail=[],civ0=100,
-                           us=[],cs=[],log_started=True)
+                           us=[],cs=[],log_started=True,battle_actions={})
                       for stage,end,saved in [(1,'won',.4),(2,'aborted',.1),
                                                (2,'won',.36),(3,'timeout',None)]]
                 with patch.object(search.zar_boot,'boot'), patch.object(search.zar_boot,'stop'), \
@@ -22,6 +22,18 @@ class SearchTests(unittest.TestCase):
                     result=search.rollout(('inst14',{},None,10),retries)
                 expected=[(1,0,'fresh'),(2,0,'next_level'),(2,1,'carry'),(3,0,'next_level')]
                 self.assertEqual([(r['stage'],r['attempt'],r['start_kind']) for r in result['levels']],expected[:count])
+
+    def test_loadout_proposal_is_reproducible_and_preserves_champion(self):
+        rng=np.random.default_rng(23)
+        parent=search.random_team(rng)
+        before=copy.deepcopy(parent)
+        candidate=search.loadout_candidate(parent,np.random.default_rng(11))
+        self.assertEqual(candidate,search.loadout_candidate(parent,np.random.default_rng(11)))
+        self.assertEqual(before,parent)
+        self.assertEqual(candidate['plan'][1:],parent['plan'])
+        pick=candidate['plan'][0]
+        self.assertTrue(search.tr.TOOLS[pick['tool']].startswith('buy_'))
+        self.assertEqual(pick['duration'],1)
 
     def test_tool_and_cell_heads_keep_the_trainer_contract(self):
         candidate=search.random_team(np.random.default_rng(4))
