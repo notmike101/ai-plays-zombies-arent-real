@@ -128,6 +128,16 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(sizes,{1,2,3})
         self.assertTrue(moved)
 
+    def test_search_can_change_bulk_purchase_allocation(self):
+        original=[dict(kind=k,points=[[i,0]]) for i,k in enumerate(['wall','mortar']*10)]
+        outcomes=[]
+        for seed in range(64):
+            layout=copy.deepcopy(original)
+            search.vary_layout(layout,np.random.default_rng(seed))
+            outcomes.append([a['kind'] for a in layout])
+        self.assertTrue(any(len(o)<17 for o in outcomes))
+        self.assertTrue(any(len(set(o[:10]))==1 for o in outcomes))
+
     def test_time_in_pause_adds_no_survival_credit(self):
         row=dict(advance=False,win=False,saved_frac=.1,civ0=100,
                  trail=[(0,100),(10,80),(10,80),(20,60)])

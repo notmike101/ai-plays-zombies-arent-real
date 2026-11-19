@@ -274,7 +274,8 @@ normal retries after a later-stage loss or below-target win. Set
 `--later-retries 0` for a single-attempt search. Held-out games always use
 one attempt per stage. Inspect `attempt` and `start_kind` in the stage record.
 Search offspring can reorder, translate, omit or add a nearby copy of a
-placement. Translation uses world coordinates and moves a polygon's corners
+placement. It can also move one type to the front of the purchase order or
+reduce its count to free budget for other placements. Translation uses world coordinates and moves a polygon's corners
 together. Only actual in-game outcomes determine whether an offspring survives.
 Battle search can vary the four pan directions and can learn different pause
 preferences while running and while paused. Older champions retain their

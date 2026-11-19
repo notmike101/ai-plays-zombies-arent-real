@@ -60,9 +60,18 @@ def loadout_candidate(parent,rng):
 def vary_layout(layout,rng):
     if not layout:return
     index=int(rng.integers(len(layout)))
-    move=rng.choice(('reorder','translate','duplicate','remove'))
+    move=rng.choice(('reorder','translate','duplicate','remove','prioritize','thin'))
     if move=='reorder':
         layout.insert(int(rng.integers(len(layout))),layout.pop(index))
+    elif move=='prioritize':
+        kind=layout[index]['kind']
+        layout.sort(key=lambda item:item['kind']!=kind)
+    elif move=='thin':
+        kind=layout[index]['kind']
+        positions=[i for i,item in enumerate(layout) if item['kind']==kind]
+        if len(positions)>1:
+            count=int(rng.integers(1,len(positions)))
+            for i in sorted(rng.choice(positions,count,replace=False),reverse=True):layout.pop(i)
     elif move=='remove':
         if len(layout)>1:layout.pop(index)
     else:
