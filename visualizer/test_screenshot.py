@@ -8,7 +8,7 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from server import make_server
+from server import Feed as RuntimeFeed, make_server
 from screenshot import Screenshots
 
 
@@ -19,7 +19,36 @@ class Feed:
         return {'status': 'waiting', 'frame': None}
 
 
+class Inventory:
+    def snapshot(self):
+        return ({'id': 'game:456:1000', 'game_pid': 456, 'copy': 'inst17', 'observed_at': 45.},)
+
+    def run(self, stopped):
+        stopped.wait()
+
+
 class ScreenshotTests(unittest.TestCase):
+    def test_sse_advertises_fallback_only_for_automatic_live_source(self):
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            with make_server('127.0.0.1', 0, RuntimeFeed(directory), inventory=Inventory()) as server:
+                worker = threading.Thread(target=server.serve_forever, daemon=True)
+                worker.start()
+                address = f'http://127.0.0.1:{server.server_port}/api/events?view=observatory'
+                try:
+                    for suffix in ('', '&stream=manual', '&preview=1'):
+                        with urlopen(address + suffix, timeout=3) as response:
+                            state = next(json.loads(line[6:]) for line in response if line.startswith(b'data: '))
+                        self.assertEqual(state['status'], 'waiting')
+                        self.assertIsNone(state['sample'])
+                        self.assertEqual(state['game_view'], None if suffix else
+                                         {'id': 'game:456:1000', 'game_pid': 456, 'copy': 'inst17'})
+                finally:
+                    server.shutdown()
+                    worker.join(timeout=2)
+
     def test_crops_client_using_bounds_that_match_the_capture(self):
         from screenshot import client_crop
 
@@ -65,7 +94,7 @@ class ScreenshotTests(unittest.TestCase):
                     return time.time(), b'\xff\xd8jpeg\xff\xd9'
 
                 with make_server('127.0.0.1', 0, Feed(), learning_host='observatory.example',
-                                 share_screenshots=share, screenshot=screenshot) as server:
+                                 share_screenshots=share, screenshot=screenshot, inventory=Inventory()) as server:
                     worker = threading.Thread(target=server.serve_forever, daemon=True)
                     worker.start()
                     url = f'http://127.0.0.1:{server.server_port}/api/screenshot'
@@ -82,6 +111,9 @@ class ScreenshotTests(unittest.TestCase):
                                   ('?stream=live', {'Host': 'different.example'}, 403)]
                         if not share:
                             denied.append(('?stream=live', public, 403))
+                        with urlopen(url + '?stream=game:456:1000', timeout=3) as response:
+                            self.assertEqual(response.read(), b'\xff\xd8jpeg\xff\xd9')
+                        denied.append(('?stream=game:456:999', {}, 404))
                         for query, headers, code in denied:
                             with self.assertRaises(HTTPError) as error:
                                 urlopen(Request(url + query, headers=headers), timeout=3)
@@ -91,7 +123,8 @@ class ScreenshotTests(unittest.TestCase):
                                 urlopen(Request(url.replace('/screenshot', '/game-video') + query, headers=headers), timeout=3)
                             self.assertEqual(error.exception.code, code)
                             error.exception.close()
-                        self.assertEqual(requests, [('live', 123, 45.)] * (3 if share else 2))
+                        self.assertEqual(requests, [('live', 123, 45.)] * (3 if share else 2)
+                                         + [('game:456:1000', 456, 45.)])
                     finally:
                         server.shutdown()
                         worker.join(timeout=2)

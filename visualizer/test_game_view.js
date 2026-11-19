@@ -18,13 +18,14 @@ async page => {
   await page.addInitScript(() => {
     window.EventSource = class {
       addEventListener(_, receive) {
-        window.showFixture = stream => receive({data: JSON.stringify({
-          version: 1, status: 'live', age: 0, stream, history: [],
-          streams: [{id: stream, game_pid: 123, worker_pid: 456, age: 0}],
+        window.showFixture = (stream, game = null) => receive({data: JSON.stringify({
+          version: 1, status: stream ? 'live' : 'waiting', age: 0, stream, history: [],
+          streams: stream ? [{id: stream, game_pid: 123, worker_pid: 456, age: 0}] : [],
+          game_view: game,
           metadata: {input_labels: [], tools: ['wait']},
-          sample: {stream, sequence: 1, timestamp: Date.now() / 1000, phase: 'planning',
+          sample: stream ? {stream, sequence: 1, timestamp: Date.now() / 1000, phase: 'planning',
             model_revision: 'fixture', action: 'wait', tool: 0, game_pid: 123,
-            input: [], tool_probabilities: [1], tool_logits: [0], location_probabilities: []},
+            input: [], tool_probabilities: [1], tool_logits: [0], location_probabilities: []} : null,
         })});
       }
       close() {}
@@ -51,6 +52,10 @@ async page => {
   await page.evaluate(() => window.showFixture('second'));
   await page.waitForFunction(() => document.querySelector('#game-screenshot').naturalWidth > 0);
   if (!captureRequests.includes('second') || secondVideoRequests !== 2) throw new Error('Worker changes must retry and switch streams');
+  await page.evaluate(() => window.showFixture(null, {id: 'game:999:1000', game_pid: 999, copy: 'inst17'}));
+  await page.getByText(/Game image only · inst17/).waitFor();
+  if (!captureRequests.includes('game:999:1000')) throw new Error('Game view must use owned game fallback');
+  if (!await page.locator('#sample-context').isHidden()) throw new Error('A game-only view must not display a policy sample');
   if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Game view overflows mobile');
   await page.getByText('Game view', {exact: true}).click();
   await page.locator('#game-screenshot').waitFor({state: 'hidden'});

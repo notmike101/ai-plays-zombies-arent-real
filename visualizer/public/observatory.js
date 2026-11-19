@@ -73,6 +73,7 @@ function connect() {
     live = {
       sample: data.sample || (reset ? null : previous.sample),
       metadata: data.metadata || (reset ? null : previous.metadata),
+      game: data.game_view,
       history: [...(reset ? [] : previous.history || []).filter(row => data.oldest_sequence !== null && row.sequence >= data.oldest_sequence),
         ...data.history],
       error: data.error,
@@ -173,10 +174,11 @@ async function playGameVideo(active, label) {
   const {signal} = controller;
   const startup = setTimeout(() => controller.abort(), 7000);
   const player = $('game-video');
-  let started = false, idle;
+  let started = false, retryable = false, idle;
   label('Starting live game video.');
   try {
     const response = await fetch('/api/game-video?' + new URLSearchParams({stream: active.stream}), {signal});
+    retryable = response.status === 503 || response.status === 409;
     if (response.status === 403 && gameView === active) {
       active.denied = true;
       label('Game view sharing is disabled on this host.');
@@ -219,7 +221,8 @@ async function playGameVideo(active, label) {
         player.hidden = false;
         $('game-screenshot').hidden = true;
         player.play().then(() => clearTimeout(startup), () => controller.abort());
-        label(`Live video · game PID ${live.sample.game_pid}`);
+        label(active.copy ? `Game video only · ${active.copy} · waiting for policy telemetry` :
+          `Live video · game PID ${active.gamePid}`);
       }
       if (player.currentTime - start > 8) {
         await waitMedia(buffer, 'updateend', signal, () => buffer.remove(start, player.currentTime - 3));
@@ -234,6 +237,7 @@ async function playGameVideo(active, label) {
         label('Reconnecting to live game video.');
       } else {
         active.videoFailed = true;
+        if (retryable || started) active.recoverVideoAt = performance.now() + 10000;
       }
       refreshGameView();
     }
@@ -259,7 +263,10 @@ async function refreshGameView() {
       `Frozen · captured ${clock(gameView.captured)}` : 'Unfreeze the view to request an image.');
     return;
   }
-  const stream = $('status').dataset.state === 'live' && live.sample?.stream;
+  const state = $('status').dataset.state;
+  const sample = state === 'live' ? live.sample : null;
+  const game = !$('stream').value && state !== 'offline' ? live.game : null;
+  const stream = sample?.stream || game?.id;
   if (!stream) {
     clearGameView();
     label('Waiting for a worker to publish telemetry.');
@@ -267,11 +274,16 @@ async function refreshGameView() {
   }
   if (gameView?.stream !== stream) {
     clearGameView();
-    gameView = {stream, lastRequest: -Infinity, pending: false};
+    gameView = {stream, gamePid: sample?.game_pid ?? game.game_pid, copy: sample ? null : game.copy,
+      lastRequest: -Infinity, pending: false};
     label('Waiting for a game image.');
   }
   const active = gameView;
   if (active.denied) return;
+  if (active.recoverVideoAt && performance.now() >= active.recoverVideoAt && !active.pending) {
+    active.videoFailed = false;
+    active.recoverVideoAt = null;
+  }
   if (!active.videoFailed && typeof MediaSource !== 'undefined') {
     if (active.video?.controller.signal.aborted) stopGameVideo(active);
     if (!active.video && performance.now() >= (active.retryVideoAt || 0)) playGameVideo(active, label);
@@ -306,7 +318,8 @@ async function refreshGameView() {
       $('game-screenshot').src = active.url;
     }
     $('game-screenshot').hidden = false;
-    label(`Captured ${clock(captured)} · game PID ${live.sample.game_pid}`);
+    label(active.copy ? `Game image only · ${active.copy} · captured ${clock(captured)}` :
+      `Captured ${clock(captured)} · game PID ${active.gamePid}`);
   } catch {
     if (gameView === active && !frozen) label('Game image unavailable. Retrying while the Game view is open.');
   } finally {

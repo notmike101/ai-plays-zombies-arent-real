@@ -32,6 +32,11 @@ During a handoff it retries while the previous capture is releasing the
 encoder. A stalled established video connection can reconnect while telemetry
 stays live.
 
+With automatic attachment, Game view can show a running, repository-owned
+training window while no policy stream is fresh. The feed is labeled game-only
+until a policy observer appears. Screens and inputs are never synthesized from
+the video. Manual worker selection stays pinned to the requested stream.
+
 Live video requires FFmpeg with `h264_nvenc` on the host and an H.264 Media Source
 decoder in the browser. If streaming is unavailable, Game view falls back to
 the higher-resolution JPEG thumbnail every two seconds. Video and thumbnails

@@ -206,13 +206,24 @@ class Feed:
 
 
 def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysis', *,
-                learning_host='', share_screenshots=False, screenshot=None):
+                learning_host='', share_screenshots=False, screenshot=None, inventory=None):
     feed = feed or Feed()
     hostname = socket.gethostname().lower()
     learning_host = learning_host.strip().lower()
     screenshot = screenshot or Screenshots()
     video = GameVideo()
     class Handler(BaseHTTPRequestHandler):
+        def game_target(self, stream):
+            if stream.startswith('game:'):
+                games = inventory.snapshot() if inventory else ()
+                return next((game for game in games if game['id'] == stream), None)
+            state = feed.state(stream=stream)
+            frame = state['frame'] or {}
+            pid = frame.get('game_pid')
+            if state['status'] == 'live' and type(pid) is int and pid > 0:
+                return {'game_pid': pid, 'observed_at': frame['timestamp']}
+            return None
+
         def events(self, args):
             self.connection.settimeout(3)
             self.send_response(200)
@@ -228,6 +239,7 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
             stream = args.get('stream', [None])[0]
             sent_history = set()
             last_sample = None
+            parked_game = None
             try:
                 self.wfile.write(b'retry: 1000\n\n')
                 self.wfile.flush()
@@ -237,8 +249,17 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
                     result = (feed.observatory(preview=preview, stream=stream) if compact
                               else feed.state(preview=preview, stream=stream, revision=revision))
                     frame = (result.get('sample') if compact else result['frame']) or {}
+                    fallback = None
+                    if compact and not preview and not stream and result['status'] != 'live' and inventory:
+                        games = sorted(inventory.snapshot(), key=lambda game: game['copy'])
+                        fallback = next((game for game in games if game['id'] == parked_game), None)
+                        fallback = fallback or (games[0] if games else None)
+                    parked_game = fallback['id'] if fallback else None
+                    if compact:
+                        result['game_view'] = ({key: fallback[key] for key in ('id', 'game_pid', 'copy')}
+                                               if fallback else None)
                     current = (result['status'], frame.get('stream'), frame.get('sequence'),
-                               frame.get('timestamp'), frame.get('model_revision'),
+                               frame.get('timestamp'), frame.get('model_revision'), parked_game,
                                tuple((s['id'], s.get('age', 121) > FRESH_SECONDS)
                                      for s in result['streams']))
                     clock = time.monotonic()
@@ -308,16 +329,15 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
                 if len(streams) != 1 or len(streams[0]) > 128 or args.get('preview') == ['1']:
                     self.send_error(404)
                     return
-                state = feed.state(stream=streams[0])
-                frame = state['frame'] or {}
-                pid = frame.get('game_pid')
-                if state['status'] != 'live' or type(pid) is not int or pid <= 0:
+                target = self.game_target(streams[0])
+                if target is None:
                     self.send_error(404)
                     return
+                pid, observed_at = target['game_pid'], target['observed_at']
                 if url.path == '/api/game-video':
-                    self.game_video(streams[0], pid, frame['timestamp'])
+                    self.game_video(streams[0], pid, observed_at)
                     return
-                capture = screenshot(streams[0], pid, frame['timestamp'])
+                capture = screenshot(streams[0], pid, observed_at)
                 if capture is None:
                     response_status, body, mime = 202, b'', 'application/octet-stream'
                 else:
@@ -408,8 +428,8 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
                     self.wfile.write(data)
                     self.wfile.flush()
                     packet = session.next(sequence, 3)
-                    state = feed.state(stream=stream)
-                    if state['status'] != 'live' or state['frame'].get('game_pid') != pid:
+                    target = self.game_target(stream)
+                    if not target or target['game_pid'] != pid:
                         break
             except OSError:
                 pass
@@ -446,10 +466,14 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
     server.result_slots = threading.BoundedSemaphore(2)
     server.sampler = threading.Thread(target=server.sample, daemon=True, name='telemetry-sampler')
     server.sampler.start()
+    if inventory:
+        threading.Thread(target=inventory.run, args=(server.stopped,), daemon=True, name='game-inventory').start()
     return server
 
 
 if __name__ == '__main__':
+    from game_inventory import GameInventory
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--host', default='0.0.0.0')
     parser.add_argument('--port', type=int, default=8765)
@@ -459,7 +483,8 @@ if __name__ == '__main__':
     config = tomllib.loads(config_path.read_text(encoding='utf-8')) if config_path.is_file() else {}
     options = config.get('visualizer', {})
     server = make_server(args.host, args.port, learning_host=options.get('learning_host', ''),
-                         share_screenshots=options.get('share_screenshots') is True)
+                         share_screenshots=options.get('share_screenshots') is True,
+                         inventory=GameInventory(ROOT.parent))
     print(f'Policy visualizer listening on {args.host}:{server.server_port}', flush=True)
     print(f'Open http://localhost:{server.server_port}', flush=True)
     preview_process = None
