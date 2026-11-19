@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 23:37 Central. Expanded seed 100851 from four to six concurrent
+  L1 copies. Existing training still owns inst13–16 on CPUs 0–7, and supplemental
+  trials inst17–18 (PIDs 45424 and 52500) are ready on CPUs 8–11. CPUs 12–23
+  remain outside training. Five-second sample at six: 7.23 GiB available RAM,
+  71.3% overall CPU, 99.7% on the training group and 42.9% on the reserved group.
+  Do not expand to eight at this load. The auxiliary batch ends after the two
+  results, recorded in coverage-team-05e4498c6c/extra-trials.jsonl for the next
+  block. Original supervisor continues automatically. 194 trainer tests passed.
 - 23:33 Central. Parallel capacity check. Four active L1
   copies under seed 100851, with 9.19 GiB available RAM and 9.95 GiB free
   disk at sampling. RTX 3080 reported 3,572/10,240 MiB VRAM in use, 41% GPU
