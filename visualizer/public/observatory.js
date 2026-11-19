@@ -33,6 +33,7 @@ const preview = () => $('mode').value === 'preview';
 
 function switchView(next) {
   view = next;
+  $('worker-diagram').hidden = view === 'learning';
   for (const button of document.querySelectorAll('nav button')) {
     const active = button.dataset.view === view;
     button.setAttribute('aria-pressed', active);

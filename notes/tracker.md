@@ -1,6 +1,10 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 01:28 Central. Hid the worker diagram on Learning.
+  Public Chrome loaded existing Learning results, and the browser fixture
+  verified that returning to Monitor retains the pinned worker at mobile width.
+  Served the frontend update through the existing listener.
 - 2026-11-19 01:16 Central. Deployed standby telemetry between campaign
   searches after 103851 ended. Supervisor launched 104851 naturally with
   operators 53672/59616. Public Chrome switched from game-only to live and

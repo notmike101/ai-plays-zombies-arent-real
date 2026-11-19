@@ -28,6 +28,13 @@ async page => {
   await page.waitForFunction(id => window.workerQuery === id, b.id);
   await page.evaluate(([a, b]) => window.publishWorkers([a, b], b), [a, b]);
   if (await nodeB.getAttribute('aria-pressed') !== 'true') throw new Error('Worker selection was lost');
+  await page.route('**/api/learning', route => route.fulfill({json: {runs: [], campaigns: [], ppo: [], updates: []}}));
+  await page.getByRole('button', {name: 'Learning', exact: true}).click();
+  const diagram = page.locator('.worker-diagram');
+  if (await diagram.isVisible()) throw new Error('Learning must hide the worker diagram');
+  await page.getByRole('button', {name: 'Monitor', exact: true}).click();
+  if (!await diagram.isVisible()) throw new Error('Monitor must show the worker diagram');
+  if (await nodeB.getAttribute('aria-pressed') !== 'true') throw new Error('Learning must preserve worker selection');
   await page.getByRole('button', {name: 'Follow live policy'}).click();
   await page.waitForFunction(() => window.workerQuery === null);
   await page.evaluate(a => window.publishWorkers([a], a), a);
