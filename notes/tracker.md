@@ -6,6 +6,18 @@
   (create time 1795064932.9065344). Localhost and the Ethernet address both
   returned 400 PPO outcomes and 60 update rows. Weight inspection still
   requires localhost. Campaign training was active after the listener restart.
+- 23:11 Central. Fresh L1 cast-timing pilot on inst19/20 completed and both
+  test copies exited. Incumbent 79deb3a2929af18a saved 28.15% (outbreak
+  31240610); contextual candidate 1bf19fcc39377b18 saved 23.41% (outbreak
+  1909286211). Both finished below 35%, spent three confirmed missiles and had
+  one rejected outside action. Candidate spent missiles at 30.8/31.5/31.97
+  sim seconds; incumbent at 141.33/143.60/145.00. Keep incumbent. Broaden
+  search toward smaller gains and higher activation thresholds. Pilot log:
+  analysis/coverage-cast-timing-pilot/holdout.jsonl. CPU training seed 99851
+  remained active and reached an L2 battle on inst13 through a carry retry.
+  Next search block includes the timing experiments, bounded targets and
+  persistent stage-scoped prices. 192 trainer and 44 visualizer Python tests
+  passed, along with model verification and the committed graph suite.
 - 23:01 Central. Audit of completed candidate-only fresh L1
   records in seed 98851 (training 1/15 qualifying, holdout 0/4) and the
   first three generations of 99851 (0/17) found no L2 battle among those

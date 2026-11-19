@@ -78,7 +78,7 @@ def cast_candidate(trial,rng):
     actions=first.get('battle_actions',{})
     if actions.get('cast_available',0)<10 or actions.get('cast_sampled')!=0:return None
     child=deepcopy(trial['team'])
-    child['cast_timing']=[float(rng.uniform(2,7)),float(rng.uniform(.5,3.))]
+    child['cast_timing']=[float(rng.uniform(.5,7.)),float(rng.uniform(.5,6.))]
     return child
 
 
