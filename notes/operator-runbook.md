@@ -286,6 +286,10 @@ observed price of that exact placement. When funds fall below that estimate,
 the child ends its recorded layout at the preceding action. The original
 candidate remains eligible for comparison. Fresh campaign play determines
 whether the revised plan works.
+Preparation candidates can learn which legal recovery action to prefer when
+READY is blocked. The game receives only the action chosen by the current
+policy. A verified later-stage planning timeout also allows CONTINUE practice
+on that copy, with its existing board and balance.
 Search can take up to two additional normal retries after a below-target
 L1 win, or a later-stage loss or below-target win. Reusing a successful
 preparation gives later-stage policies more training opportunities. Rankings

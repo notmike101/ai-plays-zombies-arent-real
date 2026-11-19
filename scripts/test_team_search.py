@@ -139,6 +139,21 @@ class SearchTests(unittest.TestCase):
                 torch.testing.assert_close(diff[search.PAN],torch.arange(1.,5.))
                 self.assertAlmostEqual(diff[search.PAUSE].item(),5.+paused,places=5)
 
+    def test_candidate_repair_preference_applies_only_to_blocked_planning(self):
+        team=search.random_team(np.random.default_rng(13))
+        team['plan']=[]
+        tool=team.pop('blocked_tool')
+        base=search.TeamPolicy(team)
+        repair=search.TeamPolicy(dict(team,blocked_tool=tool))
+        repair.load_state_dict(base.state_dict())
+        with torch.no_grad():
+            x=torch.zeros(1,1,search.tr.NOBS)
+            for planning,legal,expected in [(1,0,12.),(1,1,0.),(0,0,0.)]:
+                x[...,search.tr.PLANNING_INDEX]=planning
+                x[...,search.READY_LEGAL]=legal
+                diff=(repair(x)[0]-base(x)[0]).flatten()
+                self.assertAlmostEqual(diff[tool].item(),expected,places=4)
+
     def test_later_stage_search_preserves_earlier_policy(self):
         rng=np.random.default_rng(32)
         parent=search.random_team(rng)

@@ -31,6 +31,8 @@ GRID_START = tr.INPUT_LABELS.index('Grid civilians cell 1 (log1p count)')
 PAN = [tr.TOOLS.index('pan_'+name) for name in ('up','left','down','right')]
 PAUSE = tr.TOOLS.index('pause_toggle')
 PAUSED = tr.INPUT_LABELS.index('Simulation paused (0/1)')
+READY_LEGAL = tr.INPUT_LABELS.index('READY land and budget legal (0/1)')
+REPAIRS=[tr.TOOLS.index(name) for name in ('undo','refund_selection','cancel_tool','zone_back')]
 
 
 def gene(rng):
@@ -46,7 +48,7 @@ def random_team(rng):
                 battle=rng.normal(0, 1, (len(CASTS), 5)).tolist(),
                 cast_bias=rng.uniform(-1, 7, len(CASTS)).tolist(),
                 idle_bias=float(rng.uniform(-1, 3)),
-                camera_pause=rng.normal(0,2,6).tolist())
+                camera_pause=rng.normal(0,2,6).tolist(),blocked_tool=int(rng.choice(REPAIRS)))
 
 
 def loadout_candidate(parent,rng):
@@ -54,6 +56,7 @@ def loadout_candidate(parent,rng):
     pick=gene(rng)
     pick.update(family=2,tool=int(rng.choice(FAMILIES[2])),duration=1)
     candidate['plan'].insert(0,pick)
+    if 'blocked_tool' not in candidate:candidate['blocked_tool']=int(rng.choice(REPAIRS))
     return candidate
 
 
@@ -97,6 +100,7 @@ def offspring(parent, donor, rng, stage=1):
         layout=child['later_layouts'][str(stage)]
         vary_layout(layout,rng)
         params=child.setdefault('stage_battle',{}).setdefault(str(stage),{})
+        params['blocked_tool']=int(rng.choice(REPAIRS))
         for key in ('battle','cast_bias','camera_pause'):
             base=np.asarray(params.get(key,child.get(key,np.zeros(6))))
             params[key]=(base+rng.normal(0,.35,base.shape)).tolist()
@@ -113,6 +117,7 @@ def offspring(parent, donor, rng, stage=1):
         base = np.asarray((donor if rng.random()<.5 else parent)[key])
         child[key] = (base + rng.normal(0,.35,base.shape)).tolist()
     child['camera_pause']=(np.asarray(child.get('camera_pause',np.zeros(6)))+rng.normal(0,2,6)).tolist()
+    child['blocked_tool']=int(rng.choice(REPAIRS))
     layout=child.get('layout')
     if layout:vary_layout(layout,rng)
     if 'refuge' in child:
@@ -157,6 +162,8 @@ class TeamPolicy(tr.PolicyNet2):
                 self.index += 1
             else:
                 tools[...,tr.TOOLS.index('ready')] += 15
+                if 'blocked_tool' in self.team and not x[0,0,READY_LEGAL]:
+                    tools[...,self.team['blocked_tool']]+=12
         else:
             tools[...,PAN]+=self.camera_pause[:4]
             tools[...,PAUSE]+=self.camera_pause[4+int(x[0,0,PAUSED].item()!=0)]
@@ -416,7 +423,8 @@ def main():
                     candidate=budget_candidate(team,levels)
                     if candidate:affordable.append((max(r['stage'] for r in levels),candidate))
                     last=levels[-1]
-                    if last['stage']>1 and last['end'] in ('aborted','lost','won') and not last['advance']:
+                    stopped_in_planning=last.get('timeout_reason')=='planning_decisions'
+                    if last['stage']>1 and (last['end'] in ('aborted','lost','won') or stopped_in_planning) and not last['advance']:
                         continued[job[0]]=last['stage']
                     if start_stage>1:
                         practice.append((start_stage,max(r['score'] for r in levels if r['stage']==start_stage),team))
