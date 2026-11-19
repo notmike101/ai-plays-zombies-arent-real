@@ -38,8 +38,11 @@ inspection. Its unsigned GRU edges summarize weights across gates.
   Retention is in memory and resets with the server. Observed decisions tell
   what the policy chose. Existing observer frames lack per-decision attempts
   and native confirmations. Learning shows recorded episode-level aggregates.
-- The LAN listener serves live telemetry, retained replay and Learning. Open
-  the observatory directly using its LAN address or computer name. Weight
+- Learning is available through the LAN address or computer name. To share it
+  over HTTPS, set `[visualizer]` → `learning_host` in the ignored
+  `zar.local.toml` to the exact public hostname and restart the visualizer.
+  Anyone with access through that hostname can read the Learning results.
+  Update the setting if a Cloudflare Quick Tunnel rotates. Weight
   tiles require **localhost** access on the host. These endpoints serve only
   retained matrix slices and fixed result projections. Checkpoints and
   arbitrary paths are outside the HTTP allowlist. Weights are available during

@@ -1,6 +1,11 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 23:12 Central. Learning also works through the configured public Cloudflare
+  hostname. Chrome loaded campaign results, 400 PPO outcomes and 60 updates
+  over HTTPS. Public weight access returned 403. The new observatory listener
+  is PID 36960 (create time 1795065157.2558768), and training remained active.
+  The tunnel hostname is configured in ignored zar.local.toml.
 - 23:12 Central. inst13 PID 56400 (seed 99851) reached L3 through earned
   advancement. Native footers show fresh L1 win 25.87%, same-board L1
   retry win 47.53%, then L2 win 36.68%. The first L3 attempt ended at

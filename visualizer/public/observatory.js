@@ -417,7 +417,7 @@ function renderWeights(sample, meta) {
 async function getJSON(path, params) {
   const response = await fetch(path + (params ? '?' + new URLSearchParams(params) : ''));
   if (response.status === 403) throw new Error(path === '/api/learning' ?
-    'Open the observatory directly using its LAN address or computer name to load learning results.' :
+    'Learning is unavailable at this hostname. The observatory can allow a specific public hostname.' :
     'Available through localhost on the observatory host.');
   if (response.status === 404) throw new Error('This capture is no longer available.');
   if (!response.ok) throw new Error(`Request failed (${response.status}).`);

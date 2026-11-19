@@ -7,3 +7,8 @@ install_dir = ''
 repository = 'notmike101/ai-plays-zombies-arent-real'
 # Required for Git/GitHub operations; configure the contribution identity helper.
 identity_helper = ''
+
+[visualizer]
+# Optional public HTTPS hostname allowed to read Learning through a reverse proxy.
+# Enter the hostname only. Update it when a Cloudflare Quick Tunnel changes.
+learning_host = ''

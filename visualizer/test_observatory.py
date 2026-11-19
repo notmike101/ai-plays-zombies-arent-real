@@ -29,7 +29,8 @@ class ObservatoryTests(unittest.TestCase):
             publish('one', 1)
             publish('two', 1)
             publish('preview', 1, True)
-            with make_server('127.0.0.1', 0, feed, learning_directory=root) as server:
+            with make_server('127.0.0.1', 0, feed, learning_directory=root,
+                             learning_host='observatory.example') as server:
                 thread = threading.Thread(target=server.serve_forever, daemon=True)
                 thread.start()
                 address = f'http://127.0.0.1:{server.server_port}'
@@ -61,13 +62,18 @@ class ObservatoryTests(unittest.TestCase):
                                    'Sec-Fetch-Site': 'same-origin'}
                     with urlopen(Request(learning, headers=lan_headers), timeout=4) as response:
                         self.assertEqual(json.load(response)['version'], 1)
+                    public_headers = {'Host': 'observatory.example', 'Sec-Fetch-Site': 'same-origin'}
+                    with urlopen(Request(learning, headers=public_headers), timeout=4) as response:
+                        self.assertEqual(json.load(response)['version'], 1)
                     with self.assertRaises(HTTPError) as denied:
                         urlopen(Request(learning, headers={'Host': 'remote.test'}), timeout=4)
                     self.assertEqual(denied.exception.code, 403)
                     denied.exception.close()
                     for path, headers in [
                         ('/api/learning', {**lan_headers, 'Sec-Fetch-Site': 'cross-site'}),
+                        ('/api/learning', {**public_headers, 'Sec-Fetch-Site': 'cross-site'}),
                         ('/api/weights?stream=one&sequence=1', lan_headers),
+                        ('/api/weights?stream=one&sequence=1', public_headers),
                     ]:
                         with self.assertRaises(HTTPError) as denied:
                             urlopen(Request(address + path, headers=headers), timeout=4)

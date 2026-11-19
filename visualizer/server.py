@@ -10,6 +10,7 @@ import subprocess
 import sys
 import threading
 import time
+import tomllib
 from urllib.parse import parse_qs, urlsplit
 import observatory
 from learning import read_results
@@ -202,9 +203,10 @@ class Feed:
         return None
 
 
-def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysis'):
+def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysis', *, learning_host=''):
     feed = feed or Feed()
     hostname = socket.gethostname().lower()
+    learning_host = learning_host.strip().lower()
     class Handler(BaseHTTPRequestHandler):
         def events(self, args):
             self.connection.settimeout(3)
@@ -274,6 +276,8 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
                 if not weights:
                     hosts += (hostname, self.connection.getsockname()[0])
                 allowed = {*hosts, *(f'{name}:{self.server.server_port}' for name in hosts)}
+                if not weights and learning_host:
+                    allowed.update((learning_host, f'{learning_host}:443'))
                 if ((weights and self.client_address[0] != '127.0.0.1') or
                         self.headers.get('Host', '').lower() not in allowed or
                         self.headers.get('Sec-Fetch-Site') in ('cross-site', 'same-site')):
@@ -382,7 +386,10 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--preview', action='store_true', help='Run a separate synthetic PyTorch preview process')
     args = parser.parse_args()
-    server = make_server(args.host, args.port)
+    config_path = ROOT.parent / 'zar.local.toml'
+    config = tomllib.loads(config_path.read_text(encoding='utf-8')) if config_path.is_file() else {}
+    server = make_server(args.host, args.port,
+                         learning_host=config.get('visualizer', {}).get('learning_host', ''))
     print(f'Policy visualizer listening on {args.host}:{server.server_port}', flush=True)
     print(f'Open http://localhost:{server.server_port}', flush=True)
     preview_process = None
