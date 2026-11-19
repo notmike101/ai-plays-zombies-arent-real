@@ -798,7 +798,7 @@ const dimensions = [
 ];
 const usageKeys = ['decisions', 'cast_available', 'cast_sampled', 'stock_decreased'];
 const usageColumns = ['Battle decisions', 'Cast available', 'Cast selected', 'Stock decreased'];
-const overviewPercent = new Intl.NumberFormat(undefined, {style: 'percent', maximumSignificantDigits: 17});
+const overviewPercent = new Intl.NumberFormat(undefined, {style: 'percent', maximumSignificantDigits: 4 });
 const overviewTime = new Intl.DateTimeFormat(undefined, {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'});
 
 function learningOverview(runs, matches, ppo) {
@@ -877,7 +877,7 @@ function learningOverview(runs, matches, ppo) {
     if (event.pointerType === 'touch') return;
     inspectPointer(event);
     const point = points[selected];
-    tooltip.textContent = point.cohort + ' · ' + overviewPercent.format(Math.round(point.mean));
+    tooltip.textContent = point.cohort + ' - ' + overviewPercent.format(point.mean);
     tooltip.hidden = false;
     const position = x(selected) * canvas.clientWidth / canvas.width;
     tooltip.style.left = Math.max(0, Math.min(position - tooltip.offsetWidth / 2, chart.clientWidth - tooltip.offsetWidth)) + 'px';
