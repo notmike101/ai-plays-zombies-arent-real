@@ -161,6 +161,8 @@ class TeamPolicy(tr.PolicyNet2):
         self.battle = torch.tensor(team['battle'])
         self.bias = torch.tensor(team['cast_bias'])
         self.cast_timing = team.get('cast_timing')
+        self.shelter_defense = team.get('shelter_defense',0.)
+        self.shelter_perimeter = torch.zeros(tr.NC)
         self.cast_targets = torch.zeros((len(CASTS),tr.NC),dtype=torch.bool)
         self.camera_pause=torch.tensor(team.get('camera_pause',[0.]*6))
         self.predict = None if forecast is None else forecast.forward
@@ -176,6 +178,7 @@ class TeamPolicy(tr.PolicyNet2):
 
     def set_cast_targets(self, st, tools, cells, width, height):
         self.cast_targets.zero_()
+        self.shelter_perimeter.zero_()
         if st['planning'] or st.get('anchor') or st.get('dialog'):
             return
         boundary = st.get('playarea_boundary')
@@ -183,6 +186,10 @@ class TeamPolicy(tr.PolicyNet2):
             return
         centers = [tr.cell_of_px(cell,width,height) for cell in range(tr.NC)]
         inside = tr.inside_polygon(centers,boundary)
+        if self.shelter_defense and st.get('shelter') and st.get('native'):
+            camera = st['native']['camera']
+            world = (np.asarray(centers)-[width/2,height/2])/[camera[2],-camera[2]]+camera[:2]
+            self.shelter_perimeter = torch.from_numpy(st['shelter'].perimeter(world))
         for row,tool in enumerate(CASTS):
             if not tools[tool]:
                 continue
@@ -221,6 +228,10 @@ class TeamPolicy(tr.PolicyNet2):
             if self.cast_timing is not None:
                 gain, threshold = self.cast_timing
                 demand = grid[1] - .75*grid[0] - threshold
+                defense = self.shelter_defense*self.shelter_perimeter*(grid[1]/3).tanh()
+                demand = demand+defense
+                if self.shelter_defense:
+                    cells[CASTS] += defense*self.cast_targets
                 best = demand.expand_as(self.cast_targets).masked_fill(~self.cast_targets,-torch.inf).amax(dim=-1)
                 tools[...,CASTS] += gain*torch.where(self.cast_targets.any(dim=-1), best.tanh(), 0.)
             tools[...,tr.TOOLS.index('wait')] += self.team['idle_bias']
@@ -304,6 +315,9 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, pra
                                    sum(r.get('result')=='outside_playarea' for r in receipts),
                                playarea_cost=tr.OUTSIDE_PLAYAREA_COST/tr.SAVED_REWARD_SCALE,
                                reward_components=row.get('reward_components',{}),
+                               shelter=row.get('shelter',{}),
+                               shelter_objective=sum(row.get('reward_components',{}).get(k,0.)
+                                   for k in ('shelter','occupied_breach'))/tr.SAVED_REWARD_SCALE,
                                score=score(row),sim=row['sim'],board=row['board_id'],
                                actions=list(zip(row['us'],row['cs'])),log_started=row['log_started']))
             if row['advance']:
@@ -349,9 +363,13 @@ def checkpoint_team(record,base):
             gain,threshold=obj['cast_timing']
             if not (0<=gain<=8 and 0<=threshold<=8):
                 raise ValueError('Invalid campaign cast timing')
+        if 'shelter_defense' in obj:
+            numeric(obj['shelter_defense'],())
+            if not 0<=obj['shelter_defense']<=8:
+                raise ValueError('Invalid shelter defense weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense'))
     battle(team)
     numeric(team['idle_bias'],())
     if not isinstance(team['plan'],list) or len(team['plan'])>64:raise ValueError('Invalid campaign plan')
@@ -363,7 +381,7 @@ def checkpoint_team(record,base):
         numeric(g['weights'],(5,))
     for k in ('later_layouts','stage_battle'):fields(team.get(k,{}),optional=('2','3','4','5'))
     for override in team.get('stage_battle',{}).values():
-        fields(override,optional=('battle','cast_bias','camera_pause','blocked_tool','cast_timing'))
+        fields(override,optional=('battle','cast_bias','camera_pause','blocked_tool','cast_timing','shelter_defense'))
         battle(override)
     if 'refuge' in team:
         fields(team['refuge'],('scale','aspect','defense_weight'))
@@ -504,7 +522,7 @@ def main():
                 population[1]['refuge']=dict(scale=1.,aspect=float(rng.uniform(.7,1.5)),
                                              defense_weight=float(rng.uniform(.08,.22)))
         base=tr.policy_id(net)
-        view_revision='playable-overview-v2-bounded-targets'
+        view_revision='playable-overview-v2-bounded-targets-shelter-v1'
         evidence={}
         prices={}
         if args.seed_from and (args.seed_from/'fitness.json').exists():
@@ -625,7 +643,12 @@ def main():
                 require_fresh.update(team_id(t) for t in population)
                 population.append(l1_candidate(leader,rng) if generation%2==0 else offspring(leader,leader,rng,stage=1))
                 probe=next((cast_probes[k] for k in l1_ranked if k in cast_probes),None)
-                if probe and (generation%2==0 or not practice):population.append(probe)
+                if generation%2==0:
+                    defender=deepcopy(probe or leader)
+                    defender.setdefault('cast_timing',[2.,3.])
+                    defender['shelter_defense']=float(rng.uniform(.5,4.))
+                    population.append(defender)
+                elif probe and not practice:population.append(probe)
                 elif practice:
                     specialist=max(practice,key=lambda entry:(entry[0],entry[1],team_id(entry[2])))[2]
                     population.append(specialist)

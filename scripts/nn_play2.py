@@ -74,6 +74,7 @@ CELL_LABELS += [extra_cell_label(tool,c) for tool in EXTRA_TOOLS for c in range(
 PLANNING_U = list(range(11)) + [15, 16, 17, 18]
 BATTLE_GEOMETRY = {12, 20, 22, 24, 27, 28, 30, 33}
 from spatial import XF, YF, inside_polygon
+from shelter_reward import Shelter, CREDIT as SHELTER_CREDIT, BREACH_COST
 WORLD_CELLS = np.repeat(YF < .70, len(XF))  # The last grid row overlaps the 1920x1200 HUD.
 # resizes itself after tiling (probe: client 1920x1200 despite SetWindowPos),
 # so cell coords are always computed from the LIVE client size.
@@ -368,7 +369,7 @@ def checkpoint_schema():
 
 
 def learning_config(*, legacy=False):
-    config = dict(revision=1 if legacy else 4, infection_cost=1.,
+    config = dict(revision=1 if legacy else 5, infection_cost=1.,
                   terminal_saved_scale=SAVED_REWARD_SCALE,
                   planning_gamma=1., planning_lambda=1.,
                   battle_gamma=BATTLE_GAMMA, battle_lambda=BATTLE_LAMBDA)
@@ -376,6 +377,8 @@ def learning_config(*, legacy=False):
         config['battle_discount_reference_sim_seconds'] = STEP_S
         config['planning_target'] = 'undiscounted_episode_return'
         config['outside_playarea_cost'] = OUTSIDE_PLAYAREA_COST
+        config['shelter_credit'] = SHELTER_CREDIT
+        config['occupied_breach_cost'] = BREACH_COST
     return config
 
 
@@ -461,7 +464,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         o = env.obs()
         civ0 = max(o['civ'], 1)
         m0 = o['money']
-        st = dict(t=0., planning=True, spend_frac=0., deck=[], sim=0., mult=8.)
+        st = dict(t=0., planning=True, spend_frac=0., deck=[], sim=0., mult=8., shelter=Shelter(civ0))
         config = initial.get('config', {})
         st['rules']={**config,**initial.get('params',{})}
         st.update(loadout=env.loadout_levels(), sp=session.get('sp_unspent', 0),
@@ -526,6 +529,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     o=env.obs()
                     continue
             mechanics.refresh(st)
+            if not st['planning'] and rows['rews']:
+                rows['rews'][-1] += st['shelter'].observe(st.get('native'),st['sim'])
             blobs = []
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
             mu, mc = masks_for(st)
@@ -708,7 +713,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             if st.get('anchor') or st.get('gesture_anchor'):
                 planning_blockers.append('unfinished_gesture')
         outside_reward = -OUTSIDE_PLAYAREA_COST * outside_actions
-        rewards = dict(infections=sum(rows['rews'])-outside_reward, outside_playarea=outside_reward,
+        shelter = st['shelter']
+        rewards = dict(infections=sum(rows['rews'])-outside_reward-shelter.presence_credit-shelter.breach_penalty,
+                       outside_playarea=outside_reward, shelter=shelter.presence_credit,
+                       occupied_breach=shelter.breach_penalty,
                        terminal=outcome_reward(saved, end))
         if rows['rews']:
             rows['rews'][-1] += rewards['terminal']
@@ -724,6 +732,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     planning_blockers=planning_blockers, picker_rejections=picker_rejections,
                     outbreak=footer.get('outbreak') if footer else None,
                     reward_components=rewards, outside_playarea_actions=outside_actions, battle_actions=battle_actions,
+                    shelter=dict(credited_civilians=len(shelter.credited),exposed_civilians=len(shelter.exposed),
+                                 occupied_breaches=shelter.occupied_breaches),
                     frac=o['civ']/civ0, bootstrap=bootstrap,
                     civ0=civ0, t=time.monotonic()-start, sim=state['sim'],
                     R=sum(rows['rews']), nbuy=nbuy, ndeck=len(st['deck']),

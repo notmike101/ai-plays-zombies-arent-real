@@ -21,7 +21,7 @@ def record(evidence,trial):
         won=row['end']=='won' and row['saved'] is not None and row['saved']>=.35
         samples=evidence.setdefault(prefix_id(team,stage),{})
         cost=row.get('outside_playarea_actions',0)*row.get('playarea_cost',0.)
-        value=[won,row['saved'] or 0.,cost]
+        value=[won,row['saved'] or 0.,cost-row.get('shelter_objective',0.)]
         samples[sample]=min(samples.get(sample,value),value)
         if not won:break
 

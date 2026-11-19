@@ -373,3 +373,6 @@ Pool fresh uninterrupted trials by frozen GRU and stage-policy prefix. Deduplica
 Keep L1 parent selection and mutations independent of later-stage scores. Later-stage search overrides and PPO optimizers are stage-specific. Native playable-boundary camera framing applies to all episode modes. Preserve deliberate pan/zoom excursions, open dialogs and incomplete gestures. Re-evaluate policies under the same camera revision before comparing results.
 
 Keep cast-timing proposals separate from target preferences in campaign comparisons. The timing feature uses legal, playable targets and the current civilian/zombie counts. Retain observed layout costs scoped to the matching stage, tool and points across search blocks.
+
+## Safe-zone defense credit
+Track unique sheltered civilians from native positions. Preserve credit after departure and charge only civilians still present at the first observed penetration of a previously intact zone. Do not count wall-cell breaches as separate lost shelters. Preserve official saved fractions and qualification as the comparison criteria.

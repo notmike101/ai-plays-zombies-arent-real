@@ -69,6 +69,17 @@ For a known completed/aborted outcome, add:
 
     terminal_reward = 5 * actual_saved_fraction
     episode_reward = sum(infection_reward) + terminal_reward - 0.02 * outside_playarea_actions
+                     + 0.05 * unique_sheltered_civilians / initial_civilians
+                     - 0.10 * unique_occupants_exposed_at_breaches / initial_civilians
+
+A civilian earns shelter credit once after appearing in an intact zone at two
+consecutive samples, at least 0.5 simulated seconds apart. Departing later
+does not revoke the credit. A previously intact polygon is charged once if
+three or more zombies are observed inside it. The cost uses civilians still
+inside at that sample, at most once per civilian. Initial contamination and empty breaches earn no
+penalty. This is an observed penetration check along the polygon, not an
+interpretation of the native wall-cell event count. The original terminal
+survival score remains the main objective.
 
 The trainer checks issued target coordinates against the native playable boundary.
 It rejects an out-of-bounds target before sending input and records the attempt
