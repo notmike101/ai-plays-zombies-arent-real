@@ -87,6 +87,10 @@ class ScreenshotTests(unittest.TestCase):
                                 urlopen(Request(url + query, headers=headers), timeout=3)
                             self.assertEqual(error.exception.code, code)
                             error.exception.close()
+                            with self.assertRaises(HTTPError) as error:
+                                urlopen(Request(url.replace('/screenshot', '/game-video') + query, headers=headers), timeout=3)
+                            self.assertEqual(error.exception.code, code)
+                            error.exception.close()
                         self.assertEqual(requests, [('live', 123, 45.)] * (3 if share else 2))
                     finally:
                         server.shutdown()

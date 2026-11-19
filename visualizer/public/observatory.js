@@ -128,11 +128,101 @@ function render() {
 
 function clearGameView() {
   if (!gameView) return;
+  stopGameVideo(gameView);
   if (gameView?.url) URL.revokeObjectURL(gameView.url);
   gameView = null;
   const image = $('game-screenshot');
   image.hidden = true;
   image.removeAttribute('src');
+}
+
+function stopGameVideo(active, preserve = false) {
+  if (!active.video) return;
+  active.video.controller.abort();
+  const player = $('game-video');
+  player.pause();
+  if (preserve) return;
+  if (active.video.url) URL.revokeObjectURL(active.video.url);
+  player.removeAttribute('src');
+  player.load();
+  player.hidden = true;
+  active.video = null;
+}
+
+function waitMedia(target, name, signal, run = () => {}) {
+  return new Promise((resolve, reject) => {
+    const listeners = new AbortController();
+    const finish = (callback, value) => {
+      listeners.abort();
+      signal.removeEventListener('abort', cancel);
+      callback(value);
+    };
+    const cancel = () => finish(reject, signal.reason);
+    if (signal.aborted) { cancel(); return; }
+    signal.addEventListener('abort', cancel, {once: true});
+    target.addEventListener(name, () => finish(resolve), {signal: listeners.signal});
+    target.addEventListener('error', () => finish(reject, new Error('Game video decoding failed.')),
+      {signal: listeners.signal});
+    try { run(); } catch (error) { finish(reject, error); }
+  });
+}
+
+async function playGameVideo(active, label) {
+  const controller = new AbortController();
+  const session = active.video = {controller, url: null};
+  const {signal} = controller;
+  const startup = setTimeout(() => controller.abort(), 7000);
+  const player = $('game-video');
+  label('Starting live game video.');
+  try {
+    const response = await fetch('/api/game-video?' + new URLSearchParams({stream: active.stream}), {signal});
+    if (response.status === 403 && gameView === active) {
+      active.denied = true;
+      label('Game view sharing is disabled on this host.');
+      stopGameVideo(active);
+      return;
+    }
+    const codec = response.headers.get('X-Video-Codec') || '';
+    const mime = `video/mp4; codecs="${codec}"`;
+    if (!response.ok || !response.body || !MediaSource.isTypeSupported(mime)) throw new Error('Live video unavailable');
+    signal.throwIfAborted();
+    const source = new MediaSource();
+    session.url = URL.createObjectURL(source);
+    await waitMedia(source, 'sourceopen', signal, () => { player.src = session.url; });
+    const buffer = source.addSourceBuffer(mime);
+    buffer.mode = 'sequence';
+    const reader = response.body.getReader();
+    let started = false;
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) throw new Error('Live game video ended');
+      await waitMedia(buffer, 'updateend', signal, () => buffer.appendBuffer(value));
+      if (!buffer.buffered.length) continue;
+      const start = buffer.buffered.start(0);
+      const end = buffer.buffered.end(buffer.buffered.length - 1);
+      if (player.currentTime < start || end - player.currentTime > .7) {
+        player.currentTime = Math.max(start, end - .25);
+      }
+      if (!started) {
+        started = true;
+        player.hidden = false;
+        $('game-screenshot').hidden = true;
+        player.play().then(() => clearTimeout(startup), () => controller.abort());
+        label(`Live video · game PID ${live.sample.game_pid}`);
+      }
+      if (player.currentTime - start > 8) {
+        await waitMedia(buffer, 'updateend', signal, () => buffer.remove(start, player.currentTime - 3));
+      }
+    }
+  } catch {
+    if (gameView === active && active.video === session && !frozen) {
+      stopGameVideo(active);
+      active.videoFailed = true;
+      refreshGameView();
+    }
+  } finally {
+    clearTimeout(startup);
+  }
 }
 
 async function refreshGameView() {
@@ -146,7 +236,9 @@ async function refreshGameView() {
     return;
   }
   if (frozen) {
-    label(gameView?.captured ? `Frozen · captured ${clock(gameView.captured)}` : 'Unfreeze the view to request an image.');
+    if (gameView) stopGameVideo(gameView, true);
+    label(!$('game-video').hidden ? 'Frozen · live game video' : gameView?.captured ?
+      `Frozen · captured ${clock(gameView.captured)}` : 'Unfreeze the view to request an image.');
     return;
   }
   const stream = $('status').dataset.state === 'live' && live.sample?.stream;
@@ -161,6 +253,12 @@ async function refreshGameView() {
     label('Waiting for a game image.');
   }
   const active = gameView;
+  if (active.denied) return;
+  if (!active.videoFailed && typeof MediaSource !== 'undefined') {
+    if (active.video?.controller.signal.aborted) stopGameVideo(active);
+    if (!active.video) playGameVideo(active, label);
+    return;
+  }
   const now = performance.now();
   if (active.pending || active.denied || now - active.lastRequest < 1950) return;
   active.pending = true;

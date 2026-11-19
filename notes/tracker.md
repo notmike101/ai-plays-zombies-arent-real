@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 00:09 Central. Game view now delivers shared hardware H.264
+  video on observatory PID 18652 (create time 1795068261.3722775). Chrome
+  through the named tunnel displayed 960×600 video from inst13 PID 56912:
+  87 frames in six seconds with zero drops, 1.20 Mbit/s, ~0.20 s buffered
+  lead, and 264 ms from request to playback in one warm check. A parallel
+  three-second process sample measured ~17% of one CPU core for capture
+  and encoding combined. Freeze and JPEG fallback passed. Closed test inst20
+  after confirmation. Campaign training stayed active. Visualizer suite: 50.
 - 2026-11-19 00:07 Central. Safe-zone reward now counts
   a second exposure after the same civilian reaches another intact shelter
   and that shelter is breached. Continued exposure and overlapping failures

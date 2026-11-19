@@ -40,7 +40,8 @@
           <div id="slot-distribution"></div>
           <details id="game-view" class="game-view" open>
             <summary>Game view</summary>
-            <p class="note">Periodic captures of the selected game window. The capture time is independent of the policy decision time.</p>
+            <p class="note">Live video of the selected game window. It runs independently of the policy timeline.</p>
+            <video id="game-video" autoplay muted playsinline aria-label="Live ZAR game window" hidden></video>
             <img id="game-screenshot" alt="Latest capture of the selected ZAR game window" hidden>
             <p id="game-capture-status" class="readout" role="status"></p>
           </details>

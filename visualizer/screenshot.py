@@ -12,6 +12,7 @@ import time
 ROOT = Path(__file__).resolve().parent
 INTERVAL = 2
 MAX_BYTES = 512 * 1024
+VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_FPS = 960, 600, 15
 
 
 def client_crop(frame_size, client, bounds):
@@ -26,7 +27,36 @@ def client_crop(frame_size, client, bounds):
     return None
 
 
-def capture_window(pid, observed_at):
+def encode_live(capture, frames, available):
+    encoder = subprocess.Popen([
+        'ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error',
+        '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-video_size', f'{VIDEO_WIDTH}x{VIDEO_HEIGHT}',
+        '-framerate', str(VIDEO_FPS), '-i', 'pipe:0', '-an', '-threads', '1',
+        '-c:v', 'h264_nvenc', '-preset', 'p2', '-tune', 'ull', '-zerolatency', '1',
+        '-profile:v', 'baseline', '-level:v', '3.1', '-pix_fmt', 'yuv420p',
+        '-bf', '0', '-g', '5', '-forced-idr', '1', '-rc', 'cbr', '-b:v', '1200k',
+        '-maxrate', '1200k', '-bufsize', '400k', '-f', 'mp4', '-flush_packets', '1',
+        '-movflags', '+frag_keyframe+empty_moov+default_base_moof', 'pipe:1',
+    ], stdin=subprocess.PIPE, stderr=subprocess.DEVNULL,
+       creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    try:
+        controller = capture.start_free_threaded()
+        try:
+            next_frame = time.monotonic()
+            while not controller.is_finished() and encoder.poll() is None and available():
+                if frames[0] is not None:
+                    encoder.stdin.write(frames[0])
+                    encoder.stdin.flush()
+                next_frame = max(next_frame + 1 / VIDEO_FPS, time.monotonic())
+                time.sleep(max(0, next_frame - time.monotonic()))
+        finally:
+            controller.stop()
+    finally:
+        encoder.terminate()
+        encoder.wait(timeout=2)
+
+
+def capture_window(pid, observed_at, video=False):
     """Run only in the disposable capture process."""
     import ctypes
     from ctypes import wintypes
@@ -61,7 +91,9 @@ def capture_window(pid, observed_at):
     if not available():
         return
     cv2.setNumThreads(1)
-    capture = WindowsCapture(window_hwnd=hwnd, cursor_capture=False, secondary_window=False)
+    capture = WindowsCapture(window_hwnd=hwnd, cursor_capture=False, secondary_window=False,
+                             minimum_update_interval=66 if video else None)
+    frames = [None]
 
     def crop(frame):
         rect, origin = wintypes.RECT(), wintypes.POINT()
@@ -89,10 +121,18 @@ def capture_window(pid, observed_at):
             left, top, right, bottom = rect
             pixels = frame.frame_buffer[top:bottom, left:right, :3]
             height, width = pixels.shape[:2]
-            scale = min(1, 1280 / width, 960 / height)
+            limits = (VIDEO_WIDTH, VIDEO_HEIGHT) if video else (1280, 960)
+            scale = min(1, limits[0] / width, limits[1] / height)
             size = (max(1, round(width * scale)), max(1, round(height * scale)))
             if scale < 1:
                 pixels = cv2.resize(pixels, size, interpolation=cv2.INTER_AREA)
+            if video:
+                pad_x, pad_y = VIDEO_WIDTH - size[0], VIDEO_HEIGHT - size[1]
+                if pad_x or pad_y:
+                    pixels = cv2.copyMakeBorder(pixels, pad_y // 2, pad_y - pad_y // 2,
+                                                 pad_x // 2, pad_x - pad_x // 2, cv2.BORDER_CONSTANT)
+                frames[0] = pixels.tobytes()
+                return
             ok, image = cv2.imencode('.jpg', pixels, [
                 cv2.IMWRITE_JPEG_QUALITY, 88,
                 cv2.IMWRITE_JPEG_SAMPLING_FACTOR, cv2.IMWRITE_JPEG_SAMPLING_FACTOR_444,
@@ -103,13 +143,17 @@ def capture_window(pid, observed_at):
                 sys.stdout.buffer.write(struct.pack('!d', captured_at) + image.tobytes())
                 sys.stdout.buffer.flush()
         finally:
-            control.stop()
+            if not video:
+                control.stop()
 
     @capture.event
     def on_closed():
         pass
 
-    capture.start()
+    if video:
+        encode_live(capture, frames, available)
+    else:
+        capture.start()
 
 
 class Screenshots:
@@ -153,11 +197,9 @@ class Screenshots:
 
 
 if __name__ == '__main__':
-    # The helper also exits on its own if the observatory stops mid-capture.
-    deadline = threading.Timer(3.5, os._exit, args=(1,))
-    deadline.daemon = True
-    deadline.start()
-    try:
-        capture_window(int(sys.argv[1]), float(sys.argv[2]))
-    finally:
-        deadline.cancel()
+    video_mode = '--video' in sys.argv[3:]
+    if not video_mode:
+        deadline = threading.Timer(3.5, os._exit, args=(1,))
+        deadline.daemon = True
+        deadline.start()
+    capture_window(int(sys.argv[1]), float(sys.argv[2]), video=video_mode)

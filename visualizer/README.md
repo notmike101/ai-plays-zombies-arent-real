@@ -20,11 +20,20 @@ inspection. Its unsigned GRU edges summarize weights across gates.
 
 ### Game view
 
-**Game view** starts expanded under the battlefield in the Monitor. It requests
-a recent thumbnail of the selected live worker's game window about every two seconds
-while the panel is open and the tab is visible. The thumbnail shows its own
-capture time. It does not belong to a particular decision or appear in replay.
-Freezing the view freezes the displayed image and pauses requests.
+**Game view** starts expanded under the battlefield in the Monitor. While the
+panel is open and the tab is visible, it plays a live, muted 960×600 H.264
+stream targeting 15 fps and 1.2 Mbit/s per viewer. The observatory starts one
+Windows Graphics Capture session and one FFmpeg NVIDIA encoder for the selected
+game, shared by up to four viewers. The encoder sends independent fragments
+every third of a second. The server retains only the most recent fragment and
+sends it as binary fragmented MP4 over a single streaming HTTP response. The
+player keeps close to the buffered edge and evicts older video.
+
+Live video requires FFmpeg with `h264_nvenc` on the host and an H.264 Media Source
+decoder in the browser. If streaming is unavailable, Game view falls back to
+the higher-resolution JPEG thumbnail every two seconds. Video and thumbnails
+run independently of decisions and do not appear in replay. Freezing the view
+holds the displayed frame and stops media requests.
 Game view follows the Monitor's **Process** picker. Automatic attachment
 keeps the current worker while its telemetry is fresh and switches when
 another fresh stream is available. Campaign search normally publishes one
@@ -47,10 +56,10 @@ helper cannot delay the policy worker. Minimized or unavailable windows show a
 waiting message. There is no desktop or PrintWindow fallback.
 
 Game view is available through localhost and the direct LAN listener. To
-share thumbnails publicly, explicitly set `share_screenshots = true` under
+share game video and thumbnails publicly, explicitly set `share_screenshots = true` under
 `[visualizer]` alongside `learning_host` in `zar.local.toml`, then restart
 the observatory. Viewers who can reach that hostname can see the game
-thumbnail whenever they open Game view.
+video whenever Game view is open.
 
 ## Data and access
 

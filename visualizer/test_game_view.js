@@ -2,6 +2,7 @@
 async page => {
   const captureRequests = [];
   await page.setViewportSize({width: 390, height: 844});
+  await page.route('**/api/game-video?**', route => route.fulfill({status: 503}));
   await page.route('**/api/screenshot?**', async route => {
     captureRequests.push(new URL(route.request().url()).searchParams.get('stream'));
     await route.fulfill({

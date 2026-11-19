@@ -14,6 +14,7 @@ import tomllib
 from urllib.parse import parse_qs, urlsplit
 import observatory
 from learning import read_results
+from game_video import GameVideo
 from screenshot import Screenshots
 
 ROOT = Path(__file__).resolve().parent
@@ -210,6 +211,7 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
     hostname = socket.gethostname().lower()
     learning_host = learning_host.strip().lower()
     screenshot = screenshot or Screenshots()
+    video = GameVideo()
     class Handler(BaseHTTPRequestHandler):
         def events(self, args):
             self.connection.settimeout(3)
@@ -275,14 +277,14 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
             url = urlsplit(self.path)
             response_status = 200
             captured_at = None
-            if url.path in ('/api/weights', '/api/learning', '/api/screenshot'):
+            if url.path in ('/api/weights', '/api/learning', '/api/screenshot', '/api/game-video'):
                 hosts = ('localhost', '127.0.0.1')
                 weights = url.path == '/api/weights'
                 if not weights:
                     hosts += (hostname, self.connection.getsockname()[0])
                 allowed = {*hosts, *(f'{name}:{self.server.server_port}' for name in hosts)}
                 if learning_host and (url.path == '/api/learning' or
-                                      (url.path == '/api/screenshot' and share_screenshots)):
+                                      (url.path in ('/api/screenshot', '/api/game-video') and share_screenshots)):
                     allowed.update((learning_host, f'{learning_host}:443'))
                 if ((weights and self.client_address[0] != '127.0.0.1') or
                         self.headers.get('Host', '').lower() not in allowed or
@@ -300,7 +302,7 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
                 finally:
                     self.server.stream_slots.release()
                 return
-            if url.path == '/api/screenshot':
+            if url.path in ('/api/screenshot', '/api/game-video'):
                 args = parse_qs(url.query)
                 streams = args.get('stream', [])
                 if len(streams) != 1 or len(streams[0]) > 128 or args.get('preview') == ['1']:
@@ -311,6 +313,9 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
                 pid = frame.get('game_pid')
                 if state['status'] != 'live' or type(pid) is not int or pid <= 0:
                     self.send_error(404)
+                    return
+                if url.path == '/api/game-video':
+                    self.game_video(streams[0], pid, frame['timestamp'])
                     return
                 capture = screenshot(streams[0], pid, frame['timestamp'])
                 if capture is None:
@@ -367,12 +372,48 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
                 self.send_header('X-Captured-At', str(captured_at))
             self.send_header('Cache-Control', 'no-store')
             self.send_header('X-Content-Type-Options', 'nosniff')
-            self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data: blob:; frame-ancestors 'none'")
+            self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; frame-ancestors 'none'")
             self.end_headers()
             try:
                 self.wfile.write(body)
             except OSError:
                 pass
+
+        def game_video(self, stream, pid, timestamp):
+            try:
+                session = video.open(stream, pid, timestamp)
+            except OSError:
+                session = None
+            if session is None:
+                self.send_error(503, 'Live game video is busy or unavailable')
+                return
+            try:
+                packet = session.next(0, 5)
+                marker = session.init.find(b'avcC')
+                if packet is None or marker < 0 or len(session.init) < marker + 8:
+                    self.send_error(503, 'Live game video is unavailable')
+                    return
+                self.connection.settimeout(2)
+                self.send_response(200)
+                self.send_header('Content-Type', 'video/mp4')
+                self.send_header('X-Video-Codec', 'avc1.' + session.init[marker + 5:marker + 8].hex())
+                self.send_header('Cache-Control', 'no-store, no-transform')
+                self.send_header('X-Accel-Buffering', 'no')
+                self.send_header('X-Content-Type-Options', 'nosniff')
+                self.end_headers()
+                self.wfile.write(session.init)
+                while packet is not None and not self.server.stopped.is_set():
+                    sequence, data = packet
+                    self.wfile.write(data)
+                    self.wfile.flush()
+                    packet = session.next(sequence, 3)
+                    state = feed.state(stream=stream)
+                    if state['status'] != 'live' or state['frame'].get('game_pid') != pid:
+                        break
+            except OSError:
+                pass
+            finally:
+                video.release(session)
 
         def log_message(self, fmt, *args):
             if args and str(args[1]) not in ('200', '202'):
@@ -390,6 +431,7 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
 
         def server_close(self):
             self.stopped.set()
+            video.close()
             with self.sample_ready:
                 self.sample_ready.notify_all()
             self.sampler.join(timeout=4)
