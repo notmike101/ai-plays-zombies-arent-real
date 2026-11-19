@@ -54,6 +54,13 @@ class NativeTests(unittest.TestCase):
         for index,key in enumerate(('pos','dir','kind','timer','converting','hp','ztype','contact','id'),1):
             self.assertEqual(units[key].tobytes(),bytes([index])*units[key].nbytes)
 
+    def test_persistent_count_mismatch_reports_reason_and_never_uses_torn_units(self):
+        state,_,_=self.snapshot_reader()
+        state.units=Mock(return_value={'pos':np.zeros((1,2)),'kind':np.zeros(2)})
+        with patch('native_state.time.sleep'),self.assertRaisesRegex(RuntimeError,'count mismatches=20'):
+            state.snapshot()
+        self.assertEqual(state.units.call_count,20)
+
     def test_terrain_requires_matching_storage_and_known_codes(self):
         e=Mock(base=0);e.scalar.side_effect=lambda r,f:{0x656a48:2,0x656a50:2,0x656a40:2.}[r]
         state=NativeState(e)

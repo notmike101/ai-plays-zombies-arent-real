@@ -49,7 +49,9 @@ def stop(env):
         process = psutil.Process(env.pid)
         copy_path(Path(process.exe()).parent)
         process.kill()
-        process.wait(15)
+        try:process.wait(15)
+        except psutil.TimeoutExpired:
+            if process.is_running():process.wait(15)
     except psutil.NoSuchProcess:
         pass
     finally:

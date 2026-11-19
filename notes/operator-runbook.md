@@ -246,6 +246,9 @@ delay reporting completed trials from the others.
 If a later board fails to initialize or loses observation, previously confirmed
 stage outcomes remain in its trial. The failed attempt gets an error and no
 saved percentage. Older records may lack the attempted stage.
+An unconfirmed game exit appears as `cleanup_error` and preserves completed
+scores. Verify the process with `local.ps1 status`; a busy copy refuses a
+new boot. Native snapshot errors report tick races or mismatched array lengths.
 Use `--seed-from analysis/<previous-search-directory>` with a new seed to
 retain the previous champion and verify its base weights. An optional
 `--demonstration <Boston progress file>` supplies locally recorded stage-one

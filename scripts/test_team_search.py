@@ -79,6 +79,16 @@ class SearchTests(unittest.TestCase):
             self.assertEqual(result['error'],'lost planning receipt')
             stop.assert_called_once_with(boot.return_value)
 
+    def test_slow_process_exit_does_not_erase_a_confirmed_score(self):
+        row=dict(scenario=1,end='won',saved_frac=.22,advance=False,win=True,
+                 campaign='Boston',board_id='b',board={'scenario_count':5},sim=100,
+                 trail=[],civ0=100,us=[],cs=[],log_started=True,battle_actions={})
+        with patch.object(search.zar_boot,'boot'),patch.object(search.zar_boot,'stop',side_effect=search.psutil.TimeoutExpired(30)), \
+             patch.object(search.operator,'owned_copy'),patch.object(search.tr,'run_episode',return_value=row):
+            result=search.rollout(('inst13',{},None,10))
+            self.assertIn('cleanup_error',result)
+            self.assertEqual(result['levels'][0]['saved'],.22)
+
     def test_training_reuses_an_actual_below_target_l1_win_to_reach_l2(self):
         row=dict(scenario=1,end='won',saved_frac=.24,advance=False,win=True,
                  campaign='Boston',board_id='b',board={'scenario_count':5},sim=100,

@@ -191,6 +191,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False):
     destination=('campaign','continue' if start_stage>1 else 'stage1')
     env=None
     levels=[]
+    result=dict(copy=copy,seed=seed,levels=levels)
     stage,attempt=start_stage,0
     try:
         env=zar_boot.boot(operator.owned_copy(copy),destination,discard_dump_states=True)
@@ -227,8 +228,8 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False):
                                  policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
                                  telemetry=observe)
             if not tr.valid_trajectory(row):
-                return dict(copy=copy,seed=seed,levels=levels,failed_stage=stage,
-                            failed_attempt=attempt,error=row.get('err','invalid trajectory'))
+                result.update(failed_stage=stage,failed_attempt=attempt,error=row.get('err','invalid trajectory'))
+                break
             levels.append(dict(stage=row['scenario'],end=row['end'],saved=row['saved_frac'],
                                win=row['win'],advance=row['advance'],campaign=row['campaign'],
                                attempt=attempt,start_kind=start_kind,
@@ -247,11 +248,16 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False):
                 attempt+=1
             else:
                 break
-        return dict(copy=copy,seed=seed,levels=levels,layout_receipts=layout_receipts)
+        result['layout_receipts']=layout_receipts
     except (RuntimeError,OSError,ValueError) as exc:
-        return dict(copy=copy,seed=seed,levels=levels,failed_stage=stage,failed_attempt=attempt,error=str(exc))
+        result.update(failed_stage=stage,failed_attempt=attempt,error=str(exc))
     finally:
-        if env is not None:zar_boot.stop(env)
+        if env is not None:
+            try:zar_boot.stop(env)
+            except psutil.TimeoutExpired as exc:
+                result['cleanup_error']=str(exc)
+                print('game exit unconfirmed',copy,env.pid,exc,flush=True)
+    return result
 
 
 def team_id(team):

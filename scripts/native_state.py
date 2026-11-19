@@ -208,16 +208,21 @@ class NativeState:
 
     def snapshot(self):
         e = self.env
-        attempts = 12
+        attempts = 20
+        tick_races=count_races=0
+        counts=()
         for attempt in range(attempts):
-            if attempt>=2:time.sleep(.005)
+            if attempt>=2:time.sleep(min(.015,.002*(attempt-1)))
             try:
                 tick = e.scalar(0x6514e8, '<q')
                 units = self.units()
                 # Align parallel unit arrays; independent systems may advance during the rest.
                 if tick != e.scalar(0x6514e8,'<q'):
+                    tick_races+=1
                     continue
-                if len({len(a) for a in units.values()}) != 1:
+                counts=tuple(len(a) for a in units.values())
+                if len(set(counts)) != 1:
+                    count_races+=1
                     continue
                 if any(not np.isfinite(units[k]).all() for k in ('pos','dir','timer','hp','contact')):
                     raise ZAREnvError('Nonfinite native entity state')
@@ -260,4 +265,5 @@ class NativeState:
             except ZAREnvError:
                 if attempt == attempts - 1:
                     raise
-        raise ZAREnvError('Native snapshot changed during read')
+        raise ZAREnvError(f'Native snapshot changed during read: tick changes={tick_races}, '
+                          f'count mismatches={count_races}, last counts={counts}')
