@@ -1,6 +1,12 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 12:00 Central. Production seed 125851 drained normally.
+  Deployed timing and shadow capture at `500da8e`; live six-copy fixed
+  stock-speed comparison began with seed 125952, base 8a691469a829158d,
+  inst13–18 and output `analysis/coverage-team-23af6f44f1`. The supervisor
+  marker is held during the experiment. The handoff restores it and resumes
+  regular search at seed 126851 when the comparison exits.
 - 2026-11-19 Central. Staged campaign rollout timing on
   `codex/rollout-timing` at `c899c77` in an isolated checkout and pushed
   the branch. All 211 script tests passed offline. The new ledger fields
