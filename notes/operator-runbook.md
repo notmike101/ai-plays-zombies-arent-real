@@ -240,7 +240,9 @@ to compare current versus forecast counts on fresh games. Both arms use the
 same champion with one shared, seeded loadout purchase proposal. The game
 still masks illegal purchases. The exact candidate is in comparison-team.json.
 Read each stage's battle_actions for cast availability, selections and stock
-decreases. A game with zero casts provides no test of targeting. Report
+decreases. New runs also retain the game's `logged_deployments` from this
+episode. A missing footer makes this field unknown. A game with zero casts
+provides no test of targeting. Report
 forecast error and actual civilian saves separately.
 
 Later-stage candidates project the recorded layout through the current

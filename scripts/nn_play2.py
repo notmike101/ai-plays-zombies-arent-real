@@ -551,6 +551,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                             env.vi.click(*end_xy)
                         else:
                             env.vi.drag(*start_xy, *end_xy)
+                        mechanics.controls.frames()
                     else:
                         env.cast(slot['key'], *battle_point(st,u,c,env.cw,env.ch))
                     slot['charges'] = env.battle_stock()[slot['name']]
@@ -595,6 +596,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 end = 'timeout'
         footer = env.stop_log()
         logging = False
+        battle_actions['logged_deployments']=footer.get('deployments') if footer else None
         saved = None
         if footer and footer.get('phase') == state['phase']:
             pct = footer.get('stats', {}).get('saved_pct')

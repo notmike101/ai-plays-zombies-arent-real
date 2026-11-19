@@ -214,6 +214,9 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   Aborted results are scores at retry; timeouts are incomplete, never successes.
 - Reward transitions read AFTER actions. Do not reward purchases or emitted
   casts; track receipts separately. Keep evacuation distinct from infection.
+- After battle geometry input, wait for UI frames before checking native
+  stock. Keep session-bound game deploy events alongside stock receipts:
+  a gesture start, an armed tool and individual bomb effects are separate.
 
 ## Visualizer label maintenance contract (2026-11-16, enforceable)
 Any change to `make_obs()` in `scripts/nn_play2.py` — feature add, removal,
