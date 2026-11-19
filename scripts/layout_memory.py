@@ -2,7 +2,7 @@
 import re
 from pathlib import Path
 import numpy as np
-from game_controls import Controls
+from game_controls import Controls, PickerNavigationError
 from spatial import inside_polygon, project
 
 BUILDINGS={'garrison':'Garrison','mortar':'Mortar','sniper':'Sniper','nest':'Nest'}
@@ -114,6 +114,7 @@ def apply_layout(env,actions,occupied=()):
     ctrl=Controls(env)
     origin=np.array([env.scalar(r,'<f') for r in (0x665358,0x66535c)])
     records=[]
+    rejected=set()
     protected=set(occupied)|{BUILDINGS[a['kind']] for a in actions if a['kind'] in BUILDINGS}
     for action in actions:
         if env.game_state()['phase']!='planning':raise RuntimeError('Layout lost planning phase')
@@ -133,11 +134,20 @@ def apply_layout(env,actions,occupied=()):
             unit=BUILDINGS[kind]
             roster=ctrl.planning_roster()
             if unit not in roster:
-                free=next((i for i,name in enumerate(roster) if name not in protected),None)
-                if free is None:
+                slots=sorted((i for i,name in enumerate(roster) if name not in protected),
+                             key=lambda i:roster[i]!='-')
+                for slot in slots:
+                    if (unit,slot) in rejected:continue
+                    try:
+                        ctrl.equip_unit(unit,slot)
+                        break
+                    except PickerNavigationError:
+                        if ctrl.planning_roster()!=roster:raise
+                        rejected.add((unit,slot))
+                        records.append(dict(kind=kind,result='picker_rejected',slot=slot))
+                else:
                     records.append(dict(kind=kind,result='no_free_roster_slot'))
                     continue
-                ctrl.equip_unit(unit,free)
             ctrl.place(unit,points[0])
         elif kind=='zone':
             for i,point in enumerate(points):ctrl.polygon_corner(point,begin=(i==0))

@@ -1,6 +1,6 @@
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from pathlib import Path
 import numpy as np
 import torch
@@ -60,6 +60,22 @@ class CrowdModelTests(unittest.TestCase):
         self.assertEqual(result[0]['result'],'below_observed_cost')
         env.vi.click.assert_not_called()
         self.assertEqual(env.scalar.call_count,2)
+
+    def test_unchanged_picker_rejection_uses_another_free_slot(self):
+        from game_controls import PickerNavigationError
+        env=Mock()
+        env.scalar.return_value=0.
+        env.game_state.return_value={'phase':'planning'}
+        env.money.side_effect=[100.,25.]
+        with patch('layout_memory.Controls') as controls,patch('layout_memory.visible_points',return_value=[(5,6)]):
+            ctrl=controls.return_value
+            ctrl.planning_roster.return_value=['Garrison','-','Nest']
+            ctrl.equip_unit.side_effect=[PickerNavigationError('picker open'),['Garrison','-','Mortar']]
+            records=apply_layout(env,[dict(kind='mortar',points=[[5,6]])],occupied=['Garrison'])
+            self.assertEqual([c.args for c in ctrl.equip_unit.call_args_list],[('Mortar',1),('Mortar',2)])
+            self.assertEqual(records[0]['result'],'picker_rejected')
+            self.assertEqual(records[1]['after'],25.)
+            ctrl.place.assert_called_once_with('Mortar',(5,6))
 
     def test_refuge_proposal_uses_live_people_and_respects_map_bounds(self):
         actions=[dict(kind='zone',points=[[1,1],[3,1],[3,3],[1,3]])]
