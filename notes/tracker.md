@@ -6,6 +6,12 @@
   SSE feed delivered waiting updates immediately, and public Learning returned
   HTTP 200. Seed 99851 was in its held-out batch, which does not enable the
   training observer. No game, trainer, visualizer or tunnel restart was needed.
+- 23:21 Central. Continuous supervisor began seed 100851 on inst13–16.
+  Startup log analysis/coverage-stage-search-100851.log confirmed Boston L1
+  only. A qualifying L1 win completes the copy's current assignment. The
+  operator, campaign search and PPO use explicit --allow-progression for
+  L2–L5. The previous block finished before the automatic handoff. Verified
+  193 trainer tests and 44 visualizer Python tests.
 - 23:12 Central. Learning also works through the configured public Cloudflare
   hostname. Chrome loaded campaign results, 400 PPO outcomes and 60 updates
   over HTTPS. Public weight access returned 403. The new observatory listener
