@@ -1,6 +1,19 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- At 20:20 Central, four copies (inst13–16) were training stage-specific
+  layouts in analysis/coverage-team-674d66ed24. Check the operator for live
+  PIDs. The ongoing supervisor is analysis/coverage-campaign-supervisor.ps1
+  (hold marker analysis/coverage-supervise-hold); it carries forward the last
+  champion and checks available RAM/disk before starting another block.
+- Frozen CNN crossover finished: analysis/coverage-team-cda1c7a4b1.
+  Current-count L1 wins saved 13.76%, 22.23%, 45.50%, 45.09%. The last two
+  respectively early-retried L2 at 4.80% and 9.95%. CNN L1 won at 20.72%
+  and 13.08%, early-retried at 9.51%, and lost one observation to a native
+  snapshot race. Current counts remain the campaign-search default. The game
+  logged Firebomb deployments even where immediate stock comparisons missed
+  them. New builds retain session deploy events and synchronize geometry
+  input before reading stock. Do not treat ongoing-alive percentages as wins.
 - At 20:06 Central, the first layout search was finishing its held-out games
   on inst13–16. Both qualifying L1 victories recorded zero battle casts.
   Follow analysis/coverage-cnn-live.log for the paired targeting comparison
