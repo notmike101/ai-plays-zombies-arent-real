@@ -1,6 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 00:15 Central. Special-building audit: native
+  building class grid, selected building ability and HUD-gated special actions
+  exist. The refuge placement scorer considers civilians and nearby
+  defenders; it has no term for special-building activation. The first 15
+  fresh candidate trials in search 05a311ab70 recorded no building selection,
+  next-special or building-special panel action. Previous controlled native
+  tests verified all 11 selectable special ability IDs. Training remained active.
 - 2026-11-19 00:13 Central. Automatic observatory attachment skips observer
   errors if another fresh stream exists. Verified error and removal
   handoffs with fixtures and preserved manual selection. Listener PID
