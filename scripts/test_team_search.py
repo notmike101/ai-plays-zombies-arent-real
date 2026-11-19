@@ -138,6 +138,19 @@ class SearchTests(unittest.TestCase):
         self.assertTrue(any(len(o)<17 for o in outcomes))
         self.assertTrue(any(len(set(o[:10]))==1 for o in outcomes))
 
+    def test_zone_scaling_explores_both_sizes_about_the_same_center(self):
+        zone={'kind':'zone','observed_cost':100,'points':[[0,0],[10,0],[10,10],[0,10]]}
+        widths=[]
+        for seed in range(128):
+            layout=[copy.deepcopy(zone)]
+            search.vary_layout(layout,np.random.default_rng(seed))
+            if 'observed_cost' not in layout[0]:
+                points=np.asarray(layout[0]['points'])
+                np.testing.assert_allclose(points.mean(axis=0),[5,5])
+                widths.append(np.ptp(points[:,0]))
+        self.assertLess(min(widths),10)
+        self.assertGreater(max(widths),10)
+
     def test_time_in_pause_adds_no_survival_credit(self):
         row=dict(advance=False,win=False,saved_frac=.1,civ0=100,
                  trail=[(0,100),(10,80),(10,80),(20,60)])

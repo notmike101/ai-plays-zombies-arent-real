@@ -223,6 +223,7 @@ class StateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'episode.jsonl'
             rows = [{'ev': 'header', 'wall': 100, 'session': {'sp_total': 2}},
+                    {'ev':'outbreak','seed':37,'safe_zones':2,'civilians_inside_pct':11.8},
                     {'ev':'arm','what':'fire_bomb'}, {'ev':'deploy','what':'fire_bomb'},
                     {'ev':'bomb','what':'fire_bomb'},
                     {'ev': 'footer', 'phase': 'lost', 'stats': {'saved_pct': 12.5}}]
@@ -231,6 +232,7 @@ class StateTests(unittest.TestCase):
             data = env_zar.read_session(path, 100)
             self.assertEqual(data['footer']['stats']['saved_pct'], 12.5)
             self.assertEqual(data['deployments'],['fire_bomb'])
+            self.assertEqual(data['outbreak'],{'seed':37,'safe_zones':2,'civilians_inside_pct':11.8})
             path.write_text(json.dumps(rows[0]) + '\n{"ev":')
             self.assertIsNone(env_zar.read_session(path, 100)['footer'])
 

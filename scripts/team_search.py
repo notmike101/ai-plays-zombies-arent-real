@@ -60,8 +60,16 @@ def loadout_candidate(parent,rng):
 def vary_layout(layout,rng):
     if not layout:return
     index=int(rng.integers(len(layout)))
-    move=rng.choice(('reorder','translate','duplicate','remove','prioritize','thin'))
-    if move=='reorder':
+    move=rng.choice(('reorder','translate','duplicate','remove','prioritize','thin','scale_zone'))
+    if move=='scale_zone':
+        zones=[item for item in layout if item['kind']=='zone']
+        if zones:
+            item=zones[int(rng.integers(len(zones)))]
+            points=np.asarray(item['points'])
+            center=points.mean(axis=0)
+            item['points']=(center+(points-center)*rng.uniform(.75,1.4)).tolist()
+            item.pop('observed_cost',None)
+    elif move=='reorder':
         layout.insert(int(rng.integers(len(layout))),layout.pop(index))
     elif move=='prioritize':
         kind=layout[index]['kind']
@@ -200,6 +208,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False):
             levels.append(dict(stage=row['scenario'],end=row['end'],saved=row['saved_frac'],
                                win=row['win'],advance=row['advance'],campaign=row['campaign'],
                                attempt=attempt,start_kind=start_kind,
+                               outbreak=row.get('outbreak'),
                                timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
                                unmatched_layout=remaining_layout(layout,{'_text':row['layout_text']}) if layout else [],
                                layout_receipts=receipts,battle_actions=row['battle_actions'],

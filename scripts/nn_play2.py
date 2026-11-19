@@ -651,6 +651,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     observed_saved_frac=saved, timeout_phase=state['phase'] if end == 'timeout' else None,
                     timeout_reason=timeout_reason if end=='timeout' else None,
                     planning_blockers=planning_blockers, picker_rejections=picker_rejections,
+                    outbreak=footer.get('outbreak') if footer else None,
                     reward_components=rewards, battle_actions=battle_actions,
                     frac=o['civ']/civ0, bootstrap=bootstrap,
                     civ0=civ0, t=time.monotonic()-start, sim=state['sim'],

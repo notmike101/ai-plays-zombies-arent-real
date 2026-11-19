@@ -275,8 +275,10 @@ normal retries after a later-stage loss or below-target win. Set
 one attempt per stage. Inspect `attempt` and `start_kind` in the stage record.
 Search offspring can reorder, translate, omit or add a nearby copy of a
 placement. It can also move one type to the front of the purchase order or
-reduce its count to free budget for other placements. Translation uses world coordinates and moves a polygon's corners
-together. Only actual in-game outcomes determine whether an offspring survives.
+reduce its count to free budget for other placements. Polygons can translate
+or change size around their center. The post-game `outbreak` receipt records
+the native outbreak seed, zone count and percentage sheltered at READY. This
+percentage is a diagnostic. Actual game outcomes drive selection.
 Battle search can vary the four pan directions and can learn different pause
 preferences while running and while paused. Older champions retain their
 original camera and pause behavior.

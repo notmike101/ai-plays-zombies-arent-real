@@ -52,7 +52,9 @@ def read_session(path, started_ms):
                     break
         if not rows or rows[0].get('ev') != 'header' or rows[0].get('wall', 0) < started_ms:
             return None
+        outbreak=next((r for r in rows if r.get('ev')=='outbreak'),None)
         return {'header': rows[0],
+                'outbreak': {k:outbreak.get(k) for k in ('seed','safe_zones','civilians_inside_pct')} if outbreak else None,
                 'deployments': [r.get('what') for r in rows if r.get('ev')=='deploy'],
                 'footer': next((r for r in reversed(rows) if r.get('ev') == 'footer'), None),
                 'latest': next((r for r in reversed(rows) if 'stats' in r), None)}
@@ -190,7 +192,7 @@ class ZAREnv:
         for _ in range(20):
             data = read_session(self.log_path, self.log_started)
             if data and data['footer']:
-                return dict(data['footer'],deployments=data['deployments'])
+                return dict(data['footer'],deployments=data['deployments'],outbreak=data['outbreak'])
             time.sleep(.05)
         return None
 
