@@ -1,6 +1,11 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 01:52 Central. Deployed shareable Observatory tab links.
+  Public Chrome verified a direct Learning link, Back/Forward, and
+  one live SSE connection throughout. Learning reload remains manual
+  after the first visit, unless the selected campaign run changes.
+  All 57 visualizer tests and isolated UI regression checks passed.
 - 2026-11-19 01:47 Central. Removed the source dropdown and Freeze view
   control from the Observatory. Default navigation opens live; explicit
   /?preview=1 retains isolated diagnostics. Public Chrome verified the
