@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 23:01 Central. Audit of completed candidate-only fresh L1
+  records in seed 98851 (training 1/15 qualifying, holdout 0/4) and the
+  first three generations of 99851 (0/17) found no L2 battle among those
+  trials. Among 34 fresh L1 games with legal cast decisions, 16 had no
+  recorded stock decrease. Two L2 native map read errors in seed 98851
+  included one after a qualifying fresh L1. Live training was active,
+  and the current processes predate the playable-target guard. The new
+  boundary behavior needs fresh results before judging its effect.
 - 22:50 Central. The ZAR Observatory is deployed at localhost:8765
   (visualizer PID 13632, create time 1795063696.7385316). The original graph
   is at /legacy. Only the visualizer listener was restarted. Training was
