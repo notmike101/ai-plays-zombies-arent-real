@@ -44,6 +44,21 @@ neither by itself establishes impact geometry, kills or civilian survival.
 
 ## Bounded collection
 
+At the next idle boundary, use `--compare-shadow --generations 3` with a
+saved champion and six idle owned copies. Each wave runs two copies per arm,
+and rotating the arms gives every copy one run in each arm. The control
+keeps the champion, the timing arm reduces only its missile cast preference,
+and the targeting arm perturbs only its missile target-scoring weights.
+The model still selects every action through the native masks. Seeds are
+paired within a wave but native outbreaks are independently sampled.
+The command enables capture, writes `shadow-comparison.jsonl`, and exits
+without promoting a champion. Confirm target and wait coverage before fitting.
+
+Captured episodes now retain native launch and impact records from their
+exact session header, bounded to 1,024 events. The truncation flag indicates
+overflow. Missing footer evidence leaves these fields unknown. Events still
+require a validated join before use as action labels.
+
 At an idle launch boundary, run a bounded ordinary campaign search with
 `--capture-shadow`. Keep the frozen base, normal game and reward receipts, and
 use the existing model-controlled candidate search for timing, targeting and

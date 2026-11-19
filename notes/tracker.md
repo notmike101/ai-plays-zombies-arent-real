@@ -1,6 +1,11 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 Central. Staged exact-session native launch/impact capture
+  and a six-copy, fixed-plan shadow comparison on `codex/shadow-native-events`.
+  The three arms rotate across copies and vary only missile cast or target
+  preferences; the experiment cannot promote its results. Live training
+  was active. First live use and coverage checks remain pending.
 - 2026-11-19 14:50 Central. Completed seed 129952: 24 jobs, 22 fresh
   outbreaks, 18 official scores, nine qualifiers, four timeouts and two
   failed input attachments. Validated 11,780 transitions with no truncation.

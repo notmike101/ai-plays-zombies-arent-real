@@ -784,7 +784,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                   and planning_limit_reached(len(rows['obs']), plan_limit, env.scalar(0x667868, '<B'))):
                 end = 'timeout'
                 timeout_reason='planning_decisions'
-        footer = env.stop_log()
+        footer = env.stop_log(capture_events=True) if shadow is not None else env.stop_log()
         logging = False
         battle_actions['logged_deployments']=footer.get('deployments') if footer else None
         battle_actions['deploy_sim_seconds']=footer.get('deploy_sim_seconds') if footer else None
@@ -833,6 +833,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         if shadow is not None:
             rows['shadow'] = dict(shadow, session=header['wall'], native_footer=footer is not None,
                                   outbreak=footer.get('outbreak') if footer else None,
+                                  native_combat_events=footer['combat_events'] if footer else None,
+                                  native_combat_events_truncated=footer['combat_events_truncated'] if footer else None,
                                   states=capture.states, transitions=capture.transitions,
                                   tail=capture.pending,
                                   truncated=capture.truncated or len(shadow['casts']) >= 512)
