@@ -1,6 +1,10 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 23:25 Central. Restarted the observatory at user request. New listener
+  PID 56924 (create time 1795065909.9419098). Local SSE reported one live
+  stream, and Chrome over the configured named Cloudflare hostname showed
+  a live Monitor and loaded Learning. Campaign training remained active.
 - 23:17 Central. Diagnosed blank public Monitor. The Cloudflare Quick Tunnel
   returned SSE headers and zero event bytes in a 12-second check. The local
   SSE feed delivered waiting updates immediately, and public Learning returned
