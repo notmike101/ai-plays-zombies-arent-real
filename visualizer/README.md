@@ -49,6 +49,10 @@ inspection. Its unsigned GRU edges summarize weights across gates.
   the episode and removed on normal observer close. Older workers can still
   provide activation replay. Campaign stage comes from the existing campaign
   episode tag. Older standalone PPO frames lack a live stage field.
+- Cloudflare Quick Tunnels support the Learning requests. The live Monitor
+  requires Server-Sent Events, which Quick Tunnels do not support. Public live
+  viewing requires an SSE-capable tunnel, such as a named Cloudflare Tunnel.
+  [Quick Tunnel limitations](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)
 - Learning reads up to the last 4 MiB per recognized result file, 400 PPO
   outcomes, 60 PPO updates, the 16 most recently written campaign runs, and 400
   outcomes per selected run. Champion statistics use the search's fresh-board

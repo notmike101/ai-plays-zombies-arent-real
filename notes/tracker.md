@@ -1,6 +1,11 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 23:17 Central. Diagnosed blank public Monitor. The Cloudflare Quick Tunnel
+  returned SSE headers and zero event bytes in a 12-second check. The local
+  SSE feed delivered waiting updates immediately, and public Learning returned
+  HTTP 200. Seed 99851 was in its held-out batch, which does not enable the
+  training observer. No game, trainer, visualizer or tunnel restart was needed.
 - 23:12 Central. Learning also works through the configured public Cloudflare
   hostname. Chrome loaded campaign results, 400 PPO outcomes and 60 updates
   over HTTPS. Public weight access returned 403. The new observatory listener
