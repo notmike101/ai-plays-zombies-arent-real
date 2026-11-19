@@ -333,12 +333,13 @@ def checkpoint_schema():
 
 
 def learning_config(*, legacy=False):
-    config = dict(revision=1 if legacy else 2, infection_cost=1.,
+    config = dict(revision=1 if legacy else 3, infection_cost=1.,
                   terminal_saved_scale=SAVED_REWARD_SCALE,
                   planning_gamma=1., planning_lambda=1.,
                   battle_gamma=BATTLE_GAMMA, battle_lambda=BATTLE_LAMBDA)
     if not legacy:
         config['battle_discount_reference_sim_seconds'] = STEP_S
+        config['planning_target'] = 'undiscounted_episode_return'
     return config
 
 
@@ -428,6 +429,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         battle_start = None
         end = None
         nbuy = 0
+        battle_actions = dict(decisions=0, cast_available=0, cast_sampled=0, stock_decreased=0)
         picker_rejections = {}
         picker_retry_at = {}
         plan_limit = options.get('plan_steps', PLAN_STEPS)
@@ -477,6 +479,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                                          phase='planning' if st['planning'] else 'battle')
             for k, v in dict(obs=f, us=u, cs=c, ulps=ulp, clps=clp, masks=(mu, mc)).items():
                 rows[k].append(v)
+            if not st['planning']:
+                battle_actions['decisions'] += 1
+                battle_actions['cast_available'] += int(any(mu[tool] for tool in U2ABILITY))
+                battle_actions['cast_sampled'] += int(u in U2ABILITY)
             before = o
             previous_state = state
             action_started = time.monotonic()
@@ -550,6 +556,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     slot['charges'] = env.battle_stock()[slot['name']]
                     # The stock receipt, not a sent keypress, proves a resource was spent.
                     if slot['charges'] < before_stock:
+                        battle_actions['stock_decreased'] += 1
                         slot['ready_t'] = env.game_state()['sim'] + slot['arrival']
                         slot['pending'] = slot['arrival'] > 0
                     if slot['name'] == 'Heli':
@@ -625,7 +632,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     saved_frac=saved if end != 'timeout' else None,
                     observed_saved_frac=saved, timeout_phase=state['phase'] if end == 'timeout' else None,
                     planning_blockers=planning_blockers, picker_rejections=picker_rejections,
-                    reward_components=rewards, frac=o['civ']/civ0, bootstrap=bootstrap,
+                    reward_components=rewards, battle_actions=battle_actions,
+                    frac=o['civ']/civ0, bootstrap=bootstrap,
                     civ0=civ0, t=time.monotonic()-start, sim=state['sim'],
                     R=sum(rows['rews']), nbuy=nbuy, ndeck=len(st['deck']),
                     spend=m0-o['money'], board=session, board_id=board_id,
@@ -659,12 +667,17 @@ def gae(rews, vals, lam=BATTLE_LAMBDA, gamma=BATTLE_GAMMA, bootstrap=0.0,
         raise ValueError('Invalid elapsed simulation time')
     adv, last = [], 0.0
     next_value = bootstrap
+    episode_return = bootstrap
     for r, v, is_planning, dt in zip(rews[::-1], vals[::-1], planning[::-1], elapsed[::-1]):
-        # Frame count and camera actions while paused must not shorten the credit horizon.
-        time_steps = 0. if is_planning else dt / STEP_S
-        discount, trace = gamma**time_steps, lam**time_steps
-        delta = r + discount * next_value - v
-        last = delta + discount * trace * last
+        episode_return += r
+        if is_planning:
+            last = episode_return - v
+        else:
+            # Paused battle actions consume no simulated time.
+            time_steps = dt / STEP_S
+            discount, trace = gamma**time_steps, lam**time_steps
+            delta = r + discount * next_value - v
+            last = delta + discount * trace * last
         adv.append(last)
         next_value = v
     adv = list(reversed(adv))

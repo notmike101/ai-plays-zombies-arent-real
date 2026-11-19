@@ -286,10 +286,9 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
   logs and all pre-existing replay evidence; diagnostic attachments retain states.
 
 ## Learning credit by phase
-- Planning consumes policy decisions without advancing the simulation. Keep
-  planning GAE discount/trace at1 so battle credit reaches early placements;
-  battle retains its separately recorded gamma/lambda. This is credit assignment,
-  not a reward for buying units, choosing READY, or spending resources.
+- Planning targets use the full remaining episode reward, plus the critic
+  bootstrap on truncations. Battle GAE follows elapsed simulation time.
+  Preserve phase-specific targets, reward receipts and learning metadata.
 
 ## Idempotent tool selection
 - Tool hotkeys toggle. Undo may leave the old tool armed. Before selecting a

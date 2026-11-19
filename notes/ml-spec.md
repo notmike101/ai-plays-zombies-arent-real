@@ -87,14 +87,14 @@ configuration; invalid/non-finite outcomes never enter PPO.
 
 ## Credit assignment and PPO
 
-Planning GAE uses gamma=lambda=1 so longer planning does not attenuate battle
-credit. Learning revision 2 scales battle gamma=.99 and lambda=.95 by elapsed
-simulation seconds divided by the 0.1-second reference interval. Paused actions
-and other transitions with zero simulation progress have unit discount and trace.
-This removes a dependence on the number of decisions that pass while the
-simulation is paused. Infection and terminal rewards stay the same. Existing
-schema-4 weights and Adam state remain resumable; new saves record revision 2.
-The previous decision-count discount was learning revision 1.
+Learning revision 3 trains each planning decision against the undiscounted
+sum of subsequent observed rewards. Truncations also include the final critic
+bootstrap. Battle GAE retains revision 2's gamma=.99 and lambda=.95 per 0.1
+simulated seconds. With a 30-second delay the old direct planning trace
+weight was about 1e-8, leaving the early target dependent on critic estimates.
+Schema-4 weights and Adam moments resume across this estimator change.
+History distinguishes battle decisions, decisions with an available cast,
+sampled cast actions (including gesture starts), and confirmed stock decreases.
 
 PPO uses a joint tool/cell likelihood ratio, clipping at0.2, value weight0.5,
 entropy coefficient0.015, gradient-norm cap0.5 and4 epochs. Adam (lr3e-4) persists

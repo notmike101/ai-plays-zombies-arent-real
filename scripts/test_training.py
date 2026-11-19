@@ -23,9 +23,20 @@ class LearningTests(unittest.TestCase):
     def test_phase_aware_gae_preserves_battle_discount_and_bootstrap(self):
         _, ret = train.gae([0., 0.], [0., 0.], planning=[True, False],
                            gamma=.5, lam=1., bootstrap=4.)
-        np.testing.assert_allclose(ret, [2., 2.])
+        np.testing.assert_allclose(ret, [4., 2.])
         with self.assertRaises(ValueError):
             train.gae([1.], [0.], planning=[])
+
+    def test_planning_receives_measured_outcome_after_long_battle(self):
+        rewards = [0., 0., -.2, -.3, 1.75]
+        vals = [.7, -.1, .4, -.8, .3]
+        phases = [True, True, False, False, False]
+        elapsed = [0., 0., 10., 20., .1]
+        adv, ret = train.gae(rewards, vals, planning=phases, sim_elapsed=elapsed)
+        np.testing.assert_allclose(ret[:2], [1.25, 1.25])
+        np.testing.assert_allclose(adv[:2], [.55, 1.35])
+        _, battle = train.gae(rewards[2:], vals[2:], sim_elapsed=elapsed[2:])
+        np.testing.assert_allclose(ret[2:], battle)
 
     def test_paused_decisions_do_not_attenuate_battle_credit(self):
         _, normal = train.gae([0., -1.], [.2, .3], sim_elapsed=[.1, .1])
