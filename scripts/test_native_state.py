@@ -18,6 +18,10 @@ class NativeTests(unittest.TestCase):
             return np.zeros(0,dtype=dtype)
         e.array.side_effect=array
         state=NativeState(e)
+        def read(address,size):
+            reads.append(address)
+            return bytes(size)
+        state.read=Mock(side_effect=read)
         for name in ('mapping','zones','terrain','fire','bridge_health','paint','selection'):
             setattr(state,name,Mock(return_value={}))
         return state,clock,reads
@@ -29,14 +33,26 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(reads.count(0x650280),1)
 
     def test_unit_arrays_retry_if_tick_changes_during_aligned_read(self):
-        state,clock,reads=self.snapshot_reader();original=state.env.array.side_effect
-        def array(r,dtype,**kwargs):
-            result=original(r,dtype,**kwargs)
-            if r==0x650410 and reads.count(r)<=5:clock[0]+=1
+        state,clock,reads=self.snapshot_reader();original=state.read.side_effect
+        def read(r,size):
+            result=original(r,size)
+            if r==0x650280 and reads.count(r)<=5:clock[0]+=1
             return result
-        state.env.array.side_effect=array
+        state.read.side_effect=read
         result=state.snapshot()
         self.assertEqual(result['tick'],5);self.assertEqual(reads.count(0x650280),6)
+
+    def test_batched_unit_headers_preserve_offsets_and_shapes(self):
+        state=NativeState(Mock(base=0))
+        headers=bytearray(0x1a0)
+        offsets=[0,0x28,0x50,0xa0,0xc8,0xf0,0x118,0x140,0x190]
+        for index,offset in enumerate(offsets,1):
+            struct.pack_into('<Qq',headers,offset,index*65536,1)
+        state.read=Mock(side_effect=lambda addr,size:headers if addr==0x650280 else bytes([addr//65536])*size)
+        units=state.units()
+        self.assertEqual(units['pos'].shape,(1,2))
+        for index,key in enumerate(('pos','dir','kind','timer','converting','hp','ztype','contact','id'),1):
+            self.assertEqual(units[key].tobytes(),bytes([index])*units[key].nbytes)
 
     def test_terrain_requires_matching_storage_and_known_codes(self):
         e=Mock(base=0);e.scalar.side_effect=lambda r,f:{0x656a48:2,0x656a50:2,0x656a40:2.}[r]

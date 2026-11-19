@@ -6,6 +6,7 @@ Entity kinds are simulation kinds, not toolbar IDs: mortar payloads distinguish
 Gas/Fire/Howitzer/MLRS and turret payloads distinguish Railgun.
 """
 import struct
+import time
 
 import numpy as np
 
@@ -64,10 +65,21 @@ class NativeState:
 
     def array_at(self, address, dtype, limit=500000):
         pointer, count = struct.unpack('<Qq', self.read(address, 16))
+        return self.array_data(pointer,count,dtype,limit)
+
+    def array_data(self,pointer,count,dtype,limit=500000):
         if not 0 <= count <= limit:
             raise ZAREnvError('Invalid native array count')
         dtype = np.dtype(dtype)
         return np.frombuffer(self.read(pointer, count*dtype.itemsize), dtype).copy()
+
+    def units(self):
+        headers=self.read(self.env.base+0x650280,0x1a0)
+        return {name:self.array_data(*struct.unpack_from('<Qq',headers,offset),dtype)
+                for name,offset,dtype in (
+                    ('pos',0,VEC),('dir',0x28,VEC),('kind',0x50,'u1'),
+                    ('timer',0xa0,'<f4'),('converting',0xc8,'u1'),('hp',0xf0,'<f4'),
+                    ('ztype',0x118,'u1'),('contact',0x140,'<f4'),('id',0x190,'<u8'))}
 
     def mapping(self, rva, dtype):
         """Native integer-key map; value groups never straddle64-byte cache lines."""
@@ -198,13 +210,10 @@ class NativeState:
         e = self.env
         attempts = 12
         for attempt in range(attempts):
+            if attempt>=2:time.sleep(.005)
             try:
                 tick = e.scalar(0x6514e8, '<q')
-                units = {name: e.array(rva, dtype) for name, rva, dtype in (
-                    ('pos',0x650280,VEC), ('dir',0x6502a8,VEC), ('kind',0x6502d0,'u1'),
-                    ('timer',0x650320,'<f4'), ('converting',0x650348,'u1'),
-                    ('hp',0x650370,'<f4'), ('ztype',0x650398,'u1'),
-                    ('contact',0x6503c0,'<f4'), ('id',0x650410,'<u8'))}
+                units = self.units()
                 # Align parallel unit arrays; independent systems may advance during the rest.
                 if tick != e.scalar(0x6514e8,'<q'):
                     continue

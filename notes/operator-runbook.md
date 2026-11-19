@@ -257,3 +257,9 @@ together. Only actual in-game outcomes determine whether an offspring survives.
 Battle search can vary the four pan directions and can learn different pause
 preferences while running and while paused. Older champions retain their
 original camera and pause behavior.
+
+Parallel entity observations read the nine native array headers together,
+then the payloads, and require equal lengths and a matching simulation tick.
+Repeated consistency failures briefly yield to the next game update; a
+persistent failure is an incomplete trial. The other world systems are
+sampled independently.
