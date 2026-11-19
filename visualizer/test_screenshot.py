@@ -20,6 +20,17 @@ class Feed:
 
 
 class ScreenshotTests(unittest.TestCase):
+    def test_crops_client_using_bounds_that_match_the_capture(self):
+        from screenshot import client_crop
+
+        client = (-960, 32, 960, 1232)
+        dwm = (-968, 0, 968, 1256)
+        window = (-975, -7, 975, 1263)
+        self.assertEqual(client_crop((1936, 1256), client, (dwm, window)), (8, 32, 1928, 1232))
+        self.assertEqual(client_crop((1950, 1270), client, (dwm, window)), (15, 39, 1935, 1239))
+        self.assertEqual(client_crop((1920, 1200), client, (client,)), (0, 0, 1920, 1200))
+        self.assertIsNone(client_crop((1600, 1000), client, (dwm, window)))
+
     def test_capture_is_bounded_and_cached_by_stream_and_game(self):
         cache = Screenshots()
         started, release = threading.Event(), threading.Event()

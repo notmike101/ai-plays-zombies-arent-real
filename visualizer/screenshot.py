@@ -14,6 +14,18 @@ INTERVAL = 2
 MAX_BYTES = 512 * 1024
 
 
+def client_crop(frame_size, client, bounds):
+    """Find the capture origin from the bounds that match its pixel dimensions."""
+    width, height = frame_size
+    for x, y, right, bottom in bounds:
+        if (right - x, bottom - y) != frame_size:
+            continue
+        left, top, edge, base = client
+        if x <= left < edge <= x + width and y <= top < base <= y + height:
+            return left - x, top - y, edge - x, base - y
+    return None
+
+
 def capture_window(pid, observed_at):
     """Run only in the disposable capture process."""
     import ctypes
@@ -51,20 +63,47 @@ def capture_window(pid, observed_at):
     cv2.setNumThreads(1)
     capture = WindowsCapture(window_hwnd=hwnd, cursor_capture=False, secondary_window=False)
 
+    def crop(frame):
+        rect, origin = wintypes.RECT(), wintypes.POINT()
+        if not (user32.GetClientRect(handle, ctypes.byref(rect))
+                and user32.ClientToScreen(handle, ctypes.byref(origin))):
+            return None
+        client = (origin.x, origin.y, origin.x + rect.right, origin.y + rect.bottom)
+        bounds = []
+        visible = wintypes.RECT()
+        if ctypes.windll.dwmapi.DwmGetWindowAttribute(
+                handle, 9, ctypes.byref(visible), ctypes.sizeof(visible)) == 0:  # DWMWA_EXTENDED_FRAME_BOUNDS
+            bounds.append((visible.left, visible.top, visible.right, visible.bottom))
+        window = wintypes.RECT()
+        if user32.GetWindowRect(handle, ctypes.byref(window)):
+            bounds.append((window.left, window.top, window.right, window.bottom))
+        return client_crop((frame.width, frame.height), client, bounds)
+
     @capture.event
     def on_frame_arrived(frame, control):
         captured_at = time.time()
-        if available():
-            pixels = frame.frame_buffer[:, :, :3]
-            scale = min(1, 800 / frame.width, 600 / frame.height)
-            size = (max(1, round(frame.width * scale)), max(1, round(frame.height * scale)))
+        try:
+            rect = crop(frame) if available() else None
+            if rect is None:
+                return
+            left, top, right, bottom = rect
+            pixels = frame.frame_buffer[top:bottom, left:right, :3]
+            height, width = pixels.shape[:2]
+            scale = min(1, 1280 / width, 960 / height)
+            size = (max(1, round(width * scale)), max(1, round(height * scale)))
             if scale < 1:
                 pixels = cv2.resize(pixels, size, interpolation=cv2.INTER_AREA)
-            ok, image = cv2.imencode('.jpg', pixels, [cv2.IMWRITE_JPEG_QUALITY, 72])
+            ok, image = cv2.imencode('.jpg', pixels, [
+                cv2.IMWRITE_JPEG_QUALITY, 88,
+                cv2.IMWRITE_JPEG_SAMPLING_FACTOR, cv2.IMWRITE_JPEG_SAMPLING_FACTOR_444,
+            ])
+            if ok and image.nbytes > MAX_BYTES:
+                ok, image = cv2.imencode('.jpg', pixels, [cv2.IMWRITE_JPEG_QUALITY, 80])
             if ok and image.nbytes <= MAX_BYTES and available():
                 sys.stdout.buffer.write(struct.pack('!d', captured_at) + image.tobytes())
                 sys.stdout.buffer.flush()
-        control.stop()
+        finally:
+            control.stop()
 
     @capture.event
     def on_closed():

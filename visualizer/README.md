@@ -25,6 +25,10 @@ a recent thumbnail of the selected live worker's game window about every two sec
 while the panel is open and the tab is visible. The thumbnail shows its own
 capture time. It does not belong to a particular decision or appear in replay.
 Freezing the view freezes the displayed image and pauses requests.
+Game view follows the Monitor's **Process** picker. Automatic attachment
+keeps the current worker while its telemetry is fresh and switches when
+another fresh stream is available. Campaign search normally publishes one
+candidate stream per training generation.
 
 On Windows, install the optional Graphics Capture dependencies into the
 ignored runtime directory. The repository's Python environment supplies
@@ -35,8 +39,9 @@ NumPy and psutil. This command leaves the trainer's environment alone.
 ```
 
 The helper verifies the process and its window handle against a live stream and
-a repository-owned game copy. A disposable subprocess collects a Windows
-Graphics Capture frame and returns a JPEG limited to 800×600. The observatory
+a repository-owned game copy. A disposable subprocess crops a Windows Graphics
+Capture frame to the game client area and returns a JPEG up to 1280×960,
+subject to a 512 KiB cap. The observatory
 keeps one image in memory and limits capture to one subprocess globally. The
 helper cannot delay the policy worker. Minimized or unavailable windows show a
 waiting message. There is no desktop or PrintWindow fallback.

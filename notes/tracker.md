@@ -1,6 +1,11 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 23:56 Central. Game view now crops to the Windows client area and encodes
+  higher-quality JPEGs up to 1280×960. The owned inst13 window measured
+  1924×1247 in WGC with a 1920×1200 client area. Chrome on the named tunnel
+  displayed the resulting 1280×800 thumbnail for game 55004, worker 33124.
+  The crop helper took 0.49 s for a 250 KiB JPEG. All 47 visualizer tests passed.
 - 23:51 Central. Enabled screenshot sharing on the named observatory hostname
   and made Game view expanded by default. Listener PID 27652 (create time
   1795067420.3287635). Chrome displayed a real 800×519 public thumbnail for
