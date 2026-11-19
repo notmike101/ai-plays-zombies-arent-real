@@ -1,6 +1,21 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — sustained comparison complete, production GRU resumed)
+- Campaign search on four owned copies now uses a frozen GRU plus searched
+  preparation sequences and battle target scores (base 8a691469a829158d).
+  Normal fresh L1: archive-coordinate candidate 0a661f77aa805b14 won with
+  43.07% saved and subsequently retried L2 at 9.93%. Candidate 14ca31b65bffd96e
+  independently won L1 at 42.51% and also retried L2 at 9.93%. Other fresh
+  trials won L1 below 35%; consistency remains open. These results preceded
+  CNN deployment and later-stage layout adaptation. Native L2 dump confirms
+  carried precise garrison locations. Results, purchased placements and seeds:
+  analysis/coverage-team-ad8a484156/trials.jsonl. The archived L1 best badge is
+  separate from the archived layout; only count scores from new live runs.
+- CNN predicts two-sim-second future civilian/zombie grids from three count
+  channels. Trained on 312 pairs from eight games, beat per-cell persistence
+  for both channels on all three held-out games. Native collector and weights:
+  analysis/coverage-crowds-20261118-192909. Paired gameplay comparison uses
+  the same archived-layout champion and GRU with and without this forecast.
 - 18:50 Central: production launch seed 20264050, eight games, four rounds,
   analysis/coverage-supervise-credit.ps1 and operator log
   analysis/nn3_operator_20261118-184409-875eb8.log. Supervisor recognizes
