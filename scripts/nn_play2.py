@@ -630,6 +630,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         advance = end == 'won' and saved is not None and saved >= .35
         if end in ('aborted', 'lost') or end == 'won' and not advance:
             env.retry()
+        if options.get('record_layout'):
+            rows['layout_text']='\n'.join(line for line in initial['_text'].splitlines() if line.startswith('board '))
         return dict(rows, level=tag, pid=pid, win=end == 'won', advance=advance, end=end,
                     saved_frac=saved if end != 'timeout' else None,
                     observed_saved_frac=saved, timeout_phase=state['phase'] if end == 'timeout' else None,

@@ -39,10 +39,17 @@ def demonstrations(path):
 def remaining_layout(actions, dump):
     existing=parse_records(line.replace('board ','hist_carry 1 ',1)
                            for line in dump['_text'].splitlines() if line.startswith('board ')).get(1,[])
-    return [action for action in actions if not any(
-        item['kind']==action['kind'] and len(item['points'])==len(action['points'])
-        and np.allclose(item['points'],action['points'],atol=2.,rtol=0)
-        for item in existing)]
+    missing=[]
+    for action in actions:
+        for i,item in enumerate(existing):
+            if item['kind']!=action['kind'] or len(item['points'])!=len(action['points']):continue
+            points=item['points']
+            if np.allclose(points,action['points'],atol=2.,rtol=0) or (
+                    item['kind']=='wall' and np.allclose(points[::-1],action['points'],atol=2.,rtol=0)):
+                existing.pop(i)
+                break
+        else:missing.append(action)
+    return missing
 
 
 def visible_points(env,ctrl,world):

@@ -180,13 +180,14 @@ def rollout(job, retries=0):
             start_kind='carry' if attempt else ('fresh' if stage==1 else 'next_level')
             row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}/a{attempt}',
                                   dict(start_kind=start_kind,seed=seed,
-                                       greedy=True)),policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
+                                       record_layout=bool(layout),greedy=True)),policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
                                  telemetry=False)
             if not tr.valid_trajectory(row):
                 return dict(copy=copy,seed=seed,levels=levels,error=row.get('err','invalid trajectory'))
             levels.append(dict(stage=row['scenario'],end=row['end'],saved=row['saved_frac'],
                                win=row['win'],advance=row['advance'],campaign=row['campaign'],
                                attempt=attempt,start_kind=start_kind,
+                               unmatched_layout=remaining_layout(layout,{'_text':row['layout_text']}) if layout else [],
                                layout_receipts=receipts,battle_actions=row['battle_actions'],
                                score=score(row),sim=row['sim'],board=row['board_id'],
                                actions=list(zip(row['us'],row['cs'])),log_started=row['log_started']))

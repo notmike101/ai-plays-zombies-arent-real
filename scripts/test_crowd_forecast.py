@@ -43,3 +43,9 @@ class CrowdModelTests(unittest.TestCase):
         controls=Mock()
         self.assertEqual(visible_points(env,controls,np.array([[1000.,0.]])),[(960,600)])
         controls.key_action.assert_called_once_with('pan_right')
+
+    def test_carried_objects_match_once_and_walls_can_reverse(self):
+        wall=dict(kind='wall',points=[[30,40],[10,20]])
+        tower=dict(kind='garrison',points=[[5,6]])
+        dump={'_text':'board zone = 2 10 20 30 40 1 1\nboard garrison = 5 6 1'}
+        self.assertEqual(remaining_layout([tower,wall,tower],dump),[tower])
