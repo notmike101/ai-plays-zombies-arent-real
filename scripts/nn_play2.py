@@ -792,6 +792,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                                  first_occupied_breach=shelter.first_occupied_breach),
                     frac=o['civ']/civ0, bootstrap=bootstrap,
                     civ0=civ0, t=time.monotonic()-start, sim=state['sim'],
+                    battle_started=battle_start,
                     R=sum(rows['rews']), nbuy=nbuy, ndeck=len(st['deck']),
                     spend=m0-o['money'], board=session, board_id=board_id,
                     scenario=session.get('scenario'), campaign=session.get('campaign'),

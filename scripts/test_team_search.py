@@ -9,6 +9,16 @@ import team_search as search
 
 
 class SearchTests(unittest.TestCase):
+    def test_failed_boot_still_records_worker_lifetime(self):
+        with patch.object(search.operator, 'owned_copy'), patch.object(
+            search.zar_boot, 'boot', side_effect=RuntimeError('no board')
+        ):
+            result = search.rollout(('inst13', {}, None, 10))
+        self.assertEqual(result['error'], 'no board')
+        timing = result['timing']
+        self.assertLessEqual(timing['started'], timing['finished'])
+        self.assertNotIn('board_ready', timing)
+
     def test_ppo_later_stage_update_preserves_l1_weights_and_optimizer(self):
         import json
         from pathlib import Path
@@ -228,6 +238,12 @@ class SearchTests(unittest.TestCase):
         with patch.object(search.zar_boot,'boot'),patch.object(search.zar_boot,'stop'),              patch.object(search.operator,'owned_copy'),patch.object(search.tr,'run_episode',return_value=row) as run:
             result=search.rollout(('inst13',{},None,10))
             self.assertEqual([level['stage'] for level in result['levels']],[1])
+            worker = result['timing']
+            episode = result['levels'][0]['timing']
+            stamps = [worker['started'], worker['board_ready'], episode['started'],
+                      episode['finished'], worker['finished']]
+            self.assertEqual(stamps, sorted(stamps))
+            self.assertIsNone(episode['battle_started'])
             run.assert_called_once()
             run.reset_mock()
             jobs=[(123,{},False,'test',{})]*2
