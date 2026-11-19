@@ -152,32 +152,35 @@ def score(row):
             float(row['saved_frac'] or 0.) if row['win'] else 0.,area/120.]
 
 
-def rollout(job, retries=0):
+def rollout(job, retries=0, start_stage=1):
     copy, weights, team, seed, *forecast_path = job
     forecast=None
     if forecast_path:
         from crowd_forecast import CrowdForecast
         forecast=CrowdForecast().eval()
         forecast.load_state_dict(torch.load(forecast_path[0],weights_only=True))
-    env = zar_boot.boot(operator.owned_copy(copy), discard_dump_states=True)
+    destination=('campaign','continue' if start_stage>1 else 'stage1')
+    env = zar_boot.boot(operator.owned_copy(copy),destination,discard_dump_states=True)
     try:
         levels = []
         layout_receipts=[]
-        stage, attempt = 1, 0
+        stage, attempt = start_stage, 0
         while stage <= 5:
             layout = (team or {}).get('layout',[]) if stage==1 else (team or {}).get('later_layouts',{}).get(str(stage),[])
             receipts=[]
-            if layout:
-                from layout_memory import apply_layout, remaining_layout, BUILDINGS
+            if layout or start_stage>1:
                 env.to_planning()
                 board=env.dump()
                 if not board or not board['where']['stage'].startswith(f'{stage-1} '):
-                    raise RuntimeError('Unexpected stage before layout application')
+                    raise RuntimeError(f'Expected live Boston stage {stage}')
+            if layout:
+                from layout_memory import apply_layout, remaining_layout, BUILDINGS
                 occupied=[unit for kind,unit in BUILDINGS.items() if f'board {kind} = ' in board['_text']]
                 receipts=apply_layout(env,remaining_layout(layout,board),occupied)
                 if stage==1:layout_receipts=receipts
             active={**team,**team.get('stage_battle',{}).get(str(stage),{})} if team else None
-            start_kind='carry' if attempt else ('fresh' if stage==1 else 'next_level')
+            start_kind='carry' if attempt else ('fresh' if stage==1 else
+                                                'continue' if stage==start_stage else 'next_level')
             row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}/a{attempt}',
                                   dict(start_kind=start_kind,seed=seed,
                                        record_layout=bool(layout),greedy=True)),policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
@@ -273,6 +276,8 @@ def main():
         archive={}
         deepest={}
         scores=defaultdict(list)
+        continued={}
+        require_fresh=set()
         with ProcessPoolExecutor(len(copies)) as pool:
             if args.compare_forecast:
                 contender=loadout_candidate(prior,rng)
@@ -289,23 +294,39 @@ def main():
                         print('cnn',result['cnn'],result.get('error'),[(r['end'],r['saved']) for r in result['levels']],flush=True)
                 return
             for generation in range(args.generations):
-                population.append(None)  # Fixed GRU control on a fresh board.
+                if generation==0:population.append(None)  # Repeat the control in the held-out block.
                 rng.shuffle(population)
                 jobs=[(copy,weights,team,args.seed+generation*len(copies)+i)
                       for i,(copy,team) in enumerate(zip(copies,population))]
-                futures=[pool.submit(rollout,job,args.later_retries) for job in jobs]
+                starts=[1]*len(jobs)
+                for i,(copy,_,team,_) in enumerate(jobs):
+                    stage=continued.get(copy)
+                    if (stage and team and team_id(team) not in require_fresh and str(stage) in team.get('later_layouts',{})
+                            and starts.count(1)>len(jobs)//2+1):
+                        starts[i]=stage
+                continued={}
+                require_fresh.clear()
+                practice=[]
+                futures=[pool.submit(rollout,job,args.later_retries,stage) for job,stage in zip(jobs,starts)]
                 valid_candidates=0
-                for team, future, job in zip(population,futures,jobs):
+                for team, future, job,start_stage in zip(population,futures,jobs,starts):
                     try: result=future.result()
                     except Exception as exc: result=dict(error=str(exc),copy=job[0],seed=job[3])
                     key=team_id(team) if team else 'control'
-                    result.update(generation=generation,team_id=key,team=team)
+                    result.update(generation=generation,team_id=key,team=team,start_stage=start_stage)
                     with (directory/'trials.jsonl').open('a') as f:
                         f.write(json.dumps(result)+'\n')
                     if 'error' in result:
                         print('failed',job[0],result['error'],flush=True)
                         continue
                     levels=result['levels']
+                    last=levels[-1]
+                    if last['stage']>1 and last['end'] in ('aborted','lost','won') and not last['advance']:
+                        continued[job[0]]=last['stage']
+                    if start_stage>1:
+                        practice.append((start_stage,max(r['score'] for r in levels if r['stage']==start_stage),team))
+                        print('practice',key,[(r['stage'],r['end'],r['saved']) for r in levels],flush=True)
+                        continue
                     if team:
                         valid_candidates+=1
                         archive[key]=team
@@ -319,9 +340,13 @@ def main():
                 ranked=sorted(scores,key=lambda k:tuple(np.mean(scores[k],axis=0)),reverse=True)
                 elites=[archive[k] for k in ranked[:2]]
                 population=list(elites)
-                if len(population)+1 < len(copies)-1:
+                if practice:
+                    specialist=max(practice,key=lambda entry:(entry[0],entry[1]))[2]
+                    if specialist not in population:population.append(specialist)
+                    require_fresh.add(team_id(specialist))
+                if len(copies)>=6:
                     population.append(random_team(rng))
-                while len(population)<len(copies)-1:
+                while len(population)<len(copies):
                     parent=elites[int(rng.integers(len(elites)))]
                     population.append(offspring(parent,elites[int(rng.integers(len(elites)))],
                                                 rng,stage=deepest[team_id(parent)]))

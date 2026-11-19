@@ -210,13 +210,21 @@ With idle full-availability copies, run
 `.venv/Scripts/python.exe -B scripts/team_search.py --copies inst13 inst14 inst15 inst16 inst17 inst18 inst19 inst20 --generations 5`.
 The search trains planning sequences and battle target scores by selection on
 live outcomes. The frozen GRU supplies action preferences to both phases. One
-unmodified greedy GRU runs per generation as a control. The policy still uses
+unmodified greedy GRU runs in the first generation and in held-out games as
+a control. Intervening generations use every copy for candidates. The policy still uses
 the native action masks, normal difficulty, early retry and 35% curriculum gate.
 Candidates earn priority for qualifying clears, then game wins and actual
 winning score. For failed candidates, the tie-breaker integrates surviving
 civilians over the first 120 simulated seconds, assigning zero after early
 retry. It is a search heuristic. The final evaluation uses new boards with
 paired policy seeds. The game controls its own randomness.
+
+When a copy actually reached a later stage during the preceding generation,
+some candidates can practice there via the game's CONTINUE menu. The trainer
+verifies the live stage before acting and records `start_stage` and
+`start_kind=continue`. More than half of each generation starts fresh.
+Practice scores can nominate a specialist for a fresh campaign trial. They
+never enter campaign rankings or held-out results.
 
 The command holds the operator lock and writes its base weights, tested
 genomes, action sequences, native log identifiers, champion and held-out

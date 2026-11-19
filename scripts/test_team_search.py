@@ -35,6 +35,22 @@ class SearchTests(unittest.TestCase):
         self.assertTrue(search.tr.TOOLS[pick['tool']].startswith('buy_'))
         self.assertEqual(pick['duration'],1)
 
+    def test_practice_continues_only_the_requested_stage_and_labels_it(self):
+        row=dict(scenario=2,end='aborted',saved_frac=.09,advance=False,win=False,
+                 campaign='Boston',board_id='b',board={'scenario_count':5},sim=80,
+                 trail=[],civ0=100,us=[],cs=[],log_started=True,battle_actions={})
+        with patch.object(search.zar_boot,'boot') as boot, patch.object(search.zar_boot,'stop'), \
+             patch.object(search.operator,'owned_copy',return_value='copy'), patch.object(search.tr,'run_episode',return_value=row) as run:
+            env=boot.return_value
+            env.dump.return_value={'where':{'stage':'1 (stage 2 of 5)'}}
+            result=search.rollout(('inst14',{},None,10),start_stage=2)
+            self.assertEqual(result['levels'][0]['start_kind'],'continue')
+            boot.assert_called_once_with('copy',('campaign','continue'),discard_dump_states=True)
+            env.dump.return_value={'where':{'stage':'0 (stage 1 of 5)'}}
+            with self.assertRaisesRegex(RuntimeError,'Expected live Boston stage 2'):
+                search.rollout(('inst14',{},None,10),start_stage=2)
+            run.assert_called_once()
+
     def test_tool_and_cell_heads_keep_the_trainer_contract(self):
         candidate=search.random_team(np.random.default_rng(4))
         net=search.TeamPolicy(candidate)
