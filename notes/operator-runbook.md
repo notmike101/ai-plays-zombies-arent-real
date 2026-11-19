@@ -203,3 +203,22 @@ both Adam states in `paired.pt`. Repeat the original command with
 `--resume analysis/<trial-directory>/paired.pt` and identical trial arguments.
 The new directory starts at the next training round. A resume during evaluation
 starts the frozen evaluation block again. Use one complete evaluation block.
+
+### Searching for complementary planning and battle policies
+
+With idle full-availability copies, run
+`.venv/Scripts/python.exe -B scripts/team_search.py --copies inst13 inst14 inst15 inst16 inst17 inst18 inst19 inst20 --generations 5`.
+The search trains planning sequences and battle target scores by selection on
+live outcomes. The frozen GRU supplies action preferences to both phases. One
+unmodified greedy GRU runs per generation as a control. The policy still uses
+the native action masks, normal difficulty, early retry and 35% curriculum gate.
+Candidates earn priority for qualifying clears, then game wins and actual
+winning score. For failed candidates, the tie-breaker integrates surviving
+civilians over the first 120 simulated seconds, assigning zero after early
+retry. It is a search heuristic. The final evaluation uses new boards with
+paired policy seeds. The game controls its own randomness.
+
+The command holds the operator lock and writes its base weights, tested
+genomes, action sequences, native log identifiers, champion and held-out
+results to an ignored `analysis/coverage-team-*` directory. Search runs
+disable the GRU-only visualizer for both candidates and controls.

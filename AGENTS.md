@@ -194,6 +194,10 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 3. Kill test instances (enumerate via psutil dirname).
 
 ## Training ownership and persistence
+- scripts/team_search.py searches model-selected preparation sequences and
+  battle targeting parameters on fresh boards. Keep the base checkpoint
+  read-only, preserve legal masks and log true wins separately from survival
+  fitness. Validate finalists on new boards before promoting them.
 - For a live spatial-head comparison, use scripts/compare_spatial.py with idle,
   preflighted copies. Both arms use the training lock, fresh boards and private
   weights. Telemetry is off for both arms in this experiment. See the runbook.
