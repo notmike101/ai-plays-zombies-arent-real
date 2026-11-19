@@ -128,6 +128,47 @@ class ObserverTests(unittest.TestCase):
         self.assertFalse(self.net.gru._forward_hooks)
         self.assertFalse(list(directory.glob('*.weights')))
 
+    def test_feed_attaches_to_published_standby_after_primary_closes(self):
+        from server import Feed
+
+        net = Policy().eval()
+        standby = Observer(net, 77, directory=self.tmp.name, interval=1.)
+        feed = Feed(self.tmp.name)
+
+        def wait_for_stream(pid):
+            for _ in range(125):
+                state = feed.state()
+                if state['frame'] and state['frame']['game_pid'] == pid:
+                    self.assertEqual(state['status'], 'live')
+                    return
+                time.sleep(.025)
+            self.fail(f'Feed did not attach to game {pid}')
+
+        try:
+            with torch.no_grad():
+                self.net(torch.ones(1, 1, 3))
+                self.assertTrue(self.observer.publish())
+                wait_for_stream(123)
+                net(torch.ones(1, 1, 3) * 2)
+                self.assertTrue(standby.publish())
+                self.observer.close()
+            wait_for_stream(77)
+        finally:
+            standby.close()
+
+    def test_standby_observer_only_copies_vectors_when_due(self):
+        net = Policy().eval()
+        standby = Observer(net, 77, directory=self.tmp.name, interval=1.)
+        try:
+            for tick, value, due in [(10., 1., True), (10.25, 2., False), (11., 3., True)]:
+                with torch.no_grad(), patch('observer.time.monotonic', return_value=tick):
+                    net(torch.full((1, 1, 3), value))
+                    self.assertEqual(standby.values.get('input'), [value] * 3 if due else None)
+                    self.assertEqual(standby.publish(), due)
+            self.assertEqual(standby.decision, 3)
+        finally:
+            standby.close()
+
     def test_decision_counter_includes_throttled_decisions(self):
         with torch.no_grad():
             self.net(torch.ones(1, 1, 3))

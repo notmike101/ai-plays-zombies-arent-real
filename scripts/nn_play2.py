@@ -483,7 +483,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 path=stage_model_path(options['stage_model'],session.get('scenario'))
                 if session['scenario']>1 and os.path.isfile(path):load_pretrained(net,path)
             if Observer is not None and telemetry:
-                observer = Observer(net, pid, tag, labels={
+                observer = Observer(net, pid, tag, interval=options.get('observer_interval', .2), labels={
                     'input': INPUT_LABELS, 'hu': TOOLS, 'hc': CELL_LABELS})
         rows = {k: [] for k in ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'sim_elapsed')}
         h = None
