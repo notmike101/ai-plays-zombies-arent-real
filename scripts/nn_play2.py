@@ -153,7 +153,7 @@ def slot_castable(st, s):
     return s['charges'] > 0
 
 
-def masks_for(st):
+def base_masks(st):
     mu = np.zeros(NU, dtype=np.float32)
     mc = np.ones(NC, dtype=np.float32)
     if st.get('dialog'):
@@ -206,7 +206,22 @@ def masks_for(st):
     return mu, mc
 
 
+def masks_for(st):
+    tools, cells = base_masks(st)
+    for tool in st.get('outside_retries',{}):
+        if tools[tool] and not cell_mask(st,tool,cells).any():
+            tools[tool]=0
+    return tools,cells
+
+
 def cell_mask(st, u, mc):
+    result = base_cell_mask(st,u,mc)
+    for cell in st.get('outside_retries',{}).get(u,()):
+        result[cell]=0
+    return result
+
+
+def base_cell_mask(st, u, mc):
     if u >= 72:
         if TOOLS[u]=='cancel_tool' and st.get('anchor'):
             return np.eye(1,NC,dtype=np.float32)[0]
@@ -259,7 +274,17 @@ def outside_playarea(st, tool, cell, width, height):
         if name in ('drag_world', 'shift_drag_world') and st.get('gesture_anchor'):
             start = st['gesture_anchor'][1]
             points.append((round(XF[start%8]*width), round(YF[start//8]*height)))
-    return bool(points) and not inside_polygon(points, boundary).all()
+    return bool(points) and (any(point is None for point in points) or
+                             not inside_polygon(points,boundary).all())
+
+
+def update_outside_retries(st, width, height):
+    retries = {}
+    for tool,cells in st.get('outside_retries',{}).items():
+        invalid = {cell for cell in cells if outside_playarea(st,tool,cell,width,height)}
+        if invalid:
+            retries[tool] = invalid
+    st['outside_retries'] = retries
 
 
 def cell_distribution(logits, tool, mask):
@@ -371,7 +396,7 @@ def checkpoint_schema():
 
 
 def learning_config(*, legacy=False):
-    config = dict(revision=1 if legacy else 7, infection_cost=1.,
+    config = dict(revision=1 if legacy else 8, infection_cost=1.,
                   terminal_saved_scale=SAVED_REWARD_SCALE,
                   planning_gamma=1., planning_lambda=1.,
                   battle_gamma=BATTLE_GAMMA, battle_lambda=BATTLE_LAMBDA)
@@ -379,6 +404,7 @@ def learning_config(*, legacy=False):
         config['battle_discount_reference_sim_seconds'] = STEP_S
         config['planning_target'] = 'undiscounted_episode_return'
         config['outside_playarea_cost'] = OUTSIDE_PLAYAREA_COST
+        config['block_rejected_targets_until_legal'] = True
         config['shelter_credit'] = SHELTER_CREDIT
         config['occupied_breach_cost'] = BREACH_COST
         config['special_activation_credit'] = SPECIAL_ACTIVATION_CREDIT
@@ -495,6 +521,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         nbuy = 0
         battle_actions = dict(decisions=0, cast_available=0, cast_sampled=0, stock_decreased=0)
         outside_actions = 0
+        outside_targets = {}
         special_activations = {}
         picker_rejections = {}
         picker_retry_at = {}
@@ -538,6 +565,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 rows['rews'][-1] += st['shelter'].observe(st.get('native'),st['sim'])
             blobs = []
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
+            update_outside_retries(st,env.cw,env.ch)
             mu, mc = masks_for(st)
             x = torch.tensor([[f]], dtype=torch.float32)
             with torch.no_grad():
@@ -578,6 +606,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             outside = outside_playarea(st, u, c, env.cw, env.ch)
             if outside:
                 outside_actions += 1
+                st['outside_retries'].setdefault(u,set()).add(c)
+                target = f'{TOOLS[u]}/{c+1}'
+                outside_targets[target] = outside_targets.get(target,0)+1
             elif u in PLACEMENTS:
                 cx,cy=cell_of_px(c,env.cw,env.ch)
                 if PLACEMENTS[u] in ('Garrison','Sniper','Mortar','Nest','GasMortar','FireMortar','Railgun','Howitzer','MLRS'):
@@ -749,7 +780,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     planning_blockers=planning_blockers, picker_rejections=picker_rejections,
                     outbreak=footer.get('outbreak') if footer else None,
                     special_activations=special_activations,
-                    reward_components=rewards, outside_playarea_actions=outside_actions, battle_actions=battle_actions,
+                    reward_components=rewards, outside_playarea_actions=outside_actions,
+                    outside_targets=outside_targets, battle_actions=battle_actions,
                     shelter=dict(credited_civilians=len(shelter.credited),exposed_civilians=len(shelter.exposed),
                                  breach_exposures=shelter.breach_exposures,
                                  occupied_breaches=shelter.occupied_breaches),

@@ -91,7 +91,9 @@ Count a building once per episode and cap rewarded buildings at three.
 
 The trainer checks issued target coordinates against the native playable boundary.
 It rejects an out-of-bounds target before sending input and records the attempt
-as a separate negative reward. For authored geometry, the check uses the action
+as a separate negative reward. After a rejection, suppress that tool and cell
+while its actual target remains outside. A valid camera or geometry change
+restores it. Episode logs count rejected tool/cell pairs. For authored geometry, the check uses the action
 points, including secondary endpoints and rectangle corners.
 
 The outcome comes from this episode's native session-log footer, never a best

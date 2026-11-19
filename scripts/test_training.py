@@ -113,6 +113,25 @@ class LearningTests(unittest.TestCase):
         self.assertEqual(int(train.cell_distribution(logits, 2, np.ones(train.NC)).probs.argmax()), 3)
         self.assertEqual(int(train.cell_distribution(logits, 3, np.ones(train.NC)).probs.argmax()), 9)
 
+    def test_rejected_cells_stay_masked_until_the_target_becomes_legal(self):
+        st=dict(planning=False,
+                deck=[dict(name='Missile',key='1',charges=1,unlock=0,pending=False)],
+                sim=0.,playarea_boundary=[(0,0),(500,0),(500,900),(0,900)],
+                outside_retries={26:{7}})
+        train.update_outside_retries(st,1920,1200)
+        tools,cells=train.masks_for(st)
+        self.assertTrue(tools[26])
+        self.assertFalse(train.cell_mask(st,26,cells)[7])
+        st['world_cells']=np.eye(1,train.NC,k=7,dtype=bool)[0]
+        tools,_=train.masks_for(st)
+        self.assertFalse(tools[26])
+        self.assertTrue(tools[0])
+        st['playarea_boundary']=[(0,0),(1920,0),(1920,1200),(0,1200)]
+        train.update_outside_retries(st,1920,1200)
+        tools,cells=train.masks_for(st)
+        self.assertTrue(tools[26])
+        self.assertTrue(train.cell_mask(st,26,cells)[7])
+
     def test_boundary_checks_actual_building_and_both_battle_endpoints(self):
         boundary=[(0,0),(500,0),(500,900),(0,900)]
         targets=[None]*48

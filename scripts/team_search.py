@@ -359,6 +359,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                outside_playarea_actions=row.get('outside_playarea_actions',0)+
                                    sum(r.get('result')=='outside_playarea' for r in receipts),
                                playarea_cost=tr.OUTSIDE_PLAYAREA_COST/tr.SAVED_REWARD_SCALE,
+                               outside_targets=row.get('outside_targets',{}),
                                reward_components=row.get('reward_components',{}),
                                shelter=row.get('shelter',{}),
                                special_activations=row.get('special_activations',{}),
@@ -574,7 +575,7 @@ def main():
                 population[1]['refuge']=dict(scale=1.,aspect=float(rng.uniform(.7,1.5)),
                                              defense_weight=float(rng.uniform(.08,.22)))
         base=tr.policy_id(net)
-        view_revision='playable-overview-v2-bounded-targets-shelter-v2-specials-v1'
+        view_revision='playable-overview-v2-bounded-targets-shelter-v2-specials-v1-retries-v1'
         evidence={}
         prices={}
         if args.seed_from and (args.seed_from/'fitness.json').exists():
