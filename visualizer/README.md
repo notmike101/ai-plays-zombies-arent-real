@@ -38,9 +38,10 @@ inspection. Its unsigned GRU edges summarize weights across gates.
   Retention is in memory and resets with the server. Observed decisions tell
   what the policy chose. Existing observer frames lack per-decision attempts
   and native confirmations. Learning shows recorded episode-level aggregates.
-- The LAN listener serves live telemetry and retained replay. Weight tiles and
-  learning records require **localhost** access on the host. Their inputs
-  select retained matrix slices and fixed result projections. Checkpoints and
+- The LAN listener serves live telemetry, retained replay and Learning. Open
+  the observatory directly using its LAN address or computer name. Weight
+  tiles require **localhost** access on the host. These endpoints serve only
+  retained matrix slices and fixed result projections. Checkpoints and
   arbitrary paths are outside the HTTP allowlist. Weights are available during
   the episode and removed on normal observer close. Older workers can still
   provide activation replay. Campaign stage comes from the existing campaign

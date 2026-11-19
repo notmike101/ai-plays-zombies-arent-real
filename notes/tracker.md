@@ -1,6 +1,11 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 23:09 Central. Learning now works through the observatory's direct LAN
+  address or host computer name. The restarted listener is PID 51628
+  (create time 1795064932.9065344). Localhost and the Ethernet address both
+  returned 400 PPO outcomes and 60 update rows. Weight inspection still
+  requires localhost. Campaign training was active after the listener restart.
 - 23:01 Central. Audit of completed candidate-only fresh L1
   records in seed 98851 (training 1/15 qualifying, holdout 0/4) and the
   first three generations of 99851 (0/17) found no L2 battle among those

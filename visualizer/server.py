@@ -5,6 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import math
 from pathlib import Path
+import socket
 import subprocess
 import sys
 import threading
@@ -203,6 +204,7 @@ class Feed:
 
 def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysis'):
     feed = feed or Feed()
+    hostname = socket.gethostname().lower()
     class Handler(BaseHTTPRequestHandler):
         def events(self, args):
             self.connection.settimeout(3)
@@ -267,10 +269,13 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
         def do_GET(self):
             url = urlsplit(self.path)
             if url.path in ('/api/weights', '/api/learning'):
-                host = self.headers.get('Host', '')
-                if (self.client_address[0] != '127.0.0.1' or
-                        host not in ('localhost', '127.0.0.1', f'localhost:{self.server.server_port}',
-                                     f'127.0.0.1:{self.server.server_port}') or
+                hosts = ('localhost', '127.0.0.1')
+                weights = url.path == '/api/weights'
+                if not weights:
+                    hosts += (hostname, self.connection.getsockname()[0])
+                allowed = {*hosts, *(f'{name}:{self.server.server_port}' for name in hosts)}
+                if ((weights and self.client_address[0] != '127.0.0.1') or
+                        self.headers.get('Host', '').lower() not in allowed or
                         self.headers.get('Sec-Fetch-Site') in ('cross-site', 'same-site')):
                     self.send_error(403)
                     return

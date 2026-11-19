@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import socket
 import struct
 import tempfile
 import threading
@@ -55,10 +56,23 @@ class ObservatoryTests(unittest.TestCase):
                     with urlopen(url, timeout=4) as source:
                         reconnected = read_event(source)
                         self.assertEqual([row['sequence'] for row in reconnected['history']], [1, 4])
+                    learning = address + '/api/learning'
+                    lan_headers = {'Host': f'{socket.gethostname()}:{server.server_port}',
+                                   'Sec-Fetch-Site': 'same-origin'}
+                    with urlopen(Request(learning, headers=lan_headers), timeout=4) as response:
+                        self.assertEqual(json.load(response)['version'], 1)
                     with self.assertRaises(HTTPError) as denied:
-                        urlopen(Request(address + '/api/learning', headers={'Host': 'remote.test'}), timeout=4)
+                        urlopen(Request(learning, headers={'Host': 'remote.test'}), timeout=4)
                     self.assertEqual(denied.exception.code, 403)
                     denied.exception.close()
+                    for path, headers in [
+                        ('/api/learning', {**lan_headers, 'Sec-Fetch-Site': 'cross-site'}),
+                        ('/api/weights?stream=one&sequence=1', lan_headers),
+                    ]:
+                        with self.assertRaises(HTTPError) as denied:
+                            urlopen(Request(address + path, headers=headers), timeout=4)
+                        self.assertEqual(denied.exception.code, 403)
+                        denied.exception.close()
                     with self.assertRaises(HTTPError) as missing:
                         urlopen(address + '/api/decision?stream=one&sequence=2', timeout=4)
                     self.assertEqual(missing.exception.code, 404)
