@@ -78,6 +78,37 @@ class SearchTests(unittest.TestCase):
             model.set_cast_targets(dict(st,anchor=(tool,0)),tools,np.ones(search.tr.NC),1920,1200)
             self.assertEqual(adjustment()[tool],0.)
 
+    def test_occupied_perimeter_increases_pressure_at_legal_cast_target(self):
+        from shelter_reward import Shelter
+        team=search.random_team(np.random.default_rng(7))
+        base=search.TeamPolicy(dict(team,cast_timing=[2.,3.]))
+        defended=search.TeamPolicy(dict(team,cast_timing=[2.,3.],shelter_defense=2.))
+        defended.load_state_dict(base.state_dict())
+        tool=search.tr.ABILITY_U['Missile']
+        tools=np.zeros(search.tr.NU)
+        tools[tool]=1
+        width,height=1920,1200
+        camera=[width/2,-height/2,1.]
+        x,y=search.tr.cell_of_px(0,width,height)
+        zone=np.asarray([[x,-y],[x+40,-y],[x+40,-y+40],[x,-y+40]],dtype=np.float32)
+        shelter=Shelter(10)
+        shelter.observe(dict(zones=[zone],units=dict(kind=np.array([0]),id=np.array([1]),
+                                      pos=np.array([[x+20,-y+20]]))),0.)
+        st=dict(planning=False,playarea_boundary=[(0,0),(500,0),(500,1000),(0,1000)],
+                shelter=shelter,native={'camera':camera})
+        for policy in (base,defended):
+            policy.set_cast_targets(st,tools,np.ones(search.tr.NC),width,height)
+        obs=torch.zeros(1,1,search.tr.NOBS)
+        obs[...,search.GRID_START+search.tr.NC:search.GRID_START+2*search.tr.NC]=3.
+        with torch.no_grad():
+            old_tools,old_cells,*_=base(obs)
+            new_tools,new_cells,*_=defended(obs)
+        self.assertGreater(new_tools.flatten()[tool],old_tools.flatten()[tool])
+        boost=(new_cells-old_cells).reshape(search.tr.NU,search.tr.NC)
+        self.assertGreater(boost[tool,0],0.)
+        self.assertEqual(boost[tool,7],0.)
+        self.assertEqual(boost[search.tr.ABILITY_U['Nuke'],0],0.)
+
     def test_refuge_size_trial_keeps_other_decisions_fixed(self):
         parent=dict(refuge=dict(scale=1.,aspect=.8,defense_weight=.16),plan=[1])
         candidate=search.l1_candidate(parent,np.random.default_rng(7))

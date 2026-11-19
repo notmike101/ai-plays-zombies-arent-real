@@ -34,6 +34,19 @@ class ShelterTests(unittest.TestCase):
         self.assertEqual(shelter.occupied_breaches,1)
         self.assertEqual(shelter.perimeter(np.array([[100.,10.]])).tolist(),[0.])
 
+    def test_overlapping_shelters_do_not_double_charge_the_same_person(self):
+        shelter=Shelter(10)
+        zone=self.snapshot([])['zones'][0]
+        zones=[zone,zone+5.]
+        civilians=[(1,(25,25))]
+        shelter.observe(self.snapshot(civilians,zones=zones),0.)
+        near_first_only=[(2,2),(3,3),(4,4)]
+        self.assertAlmostEqual(shelter.observe(self.snapshot(civilians,near_first_only,zones),.5),-.005)
+        near_second_only=[(101,101),(102,102),(103,103)]
+        self.assertEqual(shelter.observe(self.snapshot(civilians,near_second_only,zones),1.),0.)
+        self.assertEqual(len(shelter.exposed),1)
+        self.assertEqual(shelter.occupied_breaches,2)
+
     def test_initial_contamination_and_no_zone_give_no_points(self):
         shelter=Shelter(10)
         initial=self.snapshot([(1,(25,25))],[(20,20),(21,21),(22,22)])
