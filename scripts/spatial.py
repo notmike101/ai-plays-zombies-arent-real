@@ -4,6 +4,14 @@ import numpy as np
 XF = np.linspace(.11, .88, 8)
 YF = np.linspace(.16, .76, 6)
 NC = 48
+OVERVIEW_MAX_FILL = 1.09
+OVERVIEW_CENTER_TOLERANCE = .028
+
+
+def overview_geometry(points):
+    """Measure the playable bounds in normalized viewport coordinates."""
+    lo, hi = points.min(axis=0), points.max(axis=0)
+    return max((hi-lo)/[.76, .595]), (hi+lo)/2-[.50, .35]
 
 
 def project(points, camera, width, height):

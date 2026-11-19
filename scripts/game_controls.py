@@ -52,7 +52,7 @@ class Controls:
     def rest_view(self):
         """Return the playable boundary to the world viewport using ordinary camera inputs."""
         import numpy as np
-        from spatial import project
+        from spatial import project, overview_geometry, OVERVIEW_MAX_FILL, OVERVIEW_CENTER_TOLERANCE
         e=self.env
         # These bounds belong to the stage and this Controls is owned by one episode.
         if not hasattr(self,'play_bounds'):
@@ -66,12 +66,11 @@ class Controls:
                 return False
             camera=[e.scalar(r,'<f') for r in (0x6553ac,0x6553b0,0x6553b4)]
             points=project(self.play_bounds,camera,*size)/size
-            fill=max(np.ptp(points,axis=0)/[.76,.595])
-            offset=points.mean(axis=0)-[.50,.35]
-            if fill>1.09 or fill<.83:
-                self.zoom(-1 if fill>1.09 else 1,(e.cw//2,e.ch//2))
+            fill,offset=overview_geometry(points)
+            if fill>OVERVIEW_MAX_FILL or fill<.83:
+                self.zoom(-1 if fill>OVERVIEW_MAX_FILL else 1,(e.cw//2,e.ch//2))
                 self.frames(5)
-            elif max(abs(offset))>.028:
+            elif max(abs(offset))>OVERVIEW_CENTER_TOLERANCE:
                 axis=int(np.argmax(abs(offset)))
                 name=(('pan_left','pan_right'),('pan_up','pan_down'))[axis][int(offset[axis]>0)]
                 self.key_action(name,pan_hold=float(np.clip(abs(offset[axis])*.7,.01,.15)))

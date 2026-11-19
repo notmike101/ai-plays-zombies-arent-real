@@ -1,6 +1,16 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 Central. Audited unnecessary camera movement. Speed trial
+  125952 selected pan_down 936 times and no other camera action.
+  Its down-pan search bias was negative; the overview mask still allowed
+  the move in viewport slack. Read-only replay of 780 captured down-pan
+  frames used the validated inst13 Boston L1 boundary and 1920×1200
+  viewport. The centered-overview mask blocked all 780. Focused zoom and
+  panning retain their normal bounds and timed overview reset. Staged in
+  `codex/centered-overview` with a new camera revision. 213 script tests,
+  58 visualizer tests, model parity and graph checks passed offline.
+  Production remained active. Verify a fresh live run at launch boundary.
 - 2026-11-19 12:20 Central. Completed six-copy fixed-speed benchmark seed
   125952: all 24 fresh Boston L1 trials returned official scores, zero
   timeouts or errors. Frozen champion/base and copy assignments shared

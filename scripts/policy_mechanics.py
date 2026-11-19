@@ -8,6 +8,7 @@ from game_mechanics import UNITS, UNIT_IDS, PERKS
 from native_hud import read_panel
 from native_state import NativeState
 from spatial import project, centers, features, inside_polygon, grid_bins, closest_indices, XF, YF
+from spatial import overview_geometry, OVERVIEW_MAX_FILL, OVERVIEW_CENTER_TOLERANCE
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, GRID_CHANNELS, PANEL_ACTIONS, STATE_CHANNELS
 
 PLACEMENTS = {2:'Garrison',3:'Mortar',4:'Napalm',5:'Nest',6:'Mine',7:'C4',8:'GasMortar'}
@@ -23,6 +24,10 @@ NONSPATIAL = set(KEY_ACTIONS)-{'pan_up','pan_left','pan_down','pan_right'} | {
 def pan_room(projected,width,height):
     if len(projected)<3:return {}
     points=projected/np.array([width,height])
+    fill, offset = overview_geometry(points)
+    if fill <= OVERVIEW_MAX_FILL:
+        x, y = np.where(np.abs(offset) > OVERVIEW_CENTER_TOLERANCE, offset, 0.)
+        return dict(pan_left=-x, pan_right=x, pan_up=-y, pan_down=y)
     lo,hi=points.min(axis=0),points.max(axis=0)
     # Allow close inspection when zoomed in, while keeping the playable area in frame.
     top_left=np.array([.03,.025]);bottom_right=np.array([.97,.69])

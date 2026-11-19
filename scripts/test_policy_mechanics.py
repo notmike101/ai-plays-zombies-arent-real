@@ -30,12 +30,19 @@ def fixture():
 
 
 class MechanicsTests(unittest.TestCase):
+    def test_overview_only_allows_panning_back_toward_center(self):
+        overview = np.array([[15, 10], [85, 10], [85, 60], [15, 60]])
+        self.assertTrue(all(room <= .018 for room in pan_room(overview, 100, 100).values()))
+        shifted = pan_room(overview + [0, -8], 100, 100)
+        self.assertGreater(shifted['pan_up'], .018)
+        self.assertLessEqual(shifted['pan_down'], .018)
+
     def test_panning_toward_empty_space_stops_before_losing_the_playable_map(self):
         shape=np.array([[30,-38],[70,-38],[70,25],[30,25]])
         room=pan_room(shape,100,100)
         self.assertLess(room['pan_down'],0)
         self.assertGreater(room['pan_up'],0)
-        self.assertGreater(pan_room(shape+[0,42],100,100)['pan_down'],0)
+        self.assertGreater(pan_room(shape+[0,48],100,100)['pan_down'],0)
         zoomed=pan_room(shape*10-[450,0],100,100)
         self.assertGreater(zoomed['pan_left'],0)
         self.assertGreater(zoomed['pan_right'],0)
