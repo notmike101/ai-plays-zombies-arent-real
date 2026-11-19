@@ -1,6 +1,10 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 02:12 Central. Learning now refreshes every 30 seconds while visible.
+  Public Chrome observed an automatic results request and all four workers of
+  search 106851 publishing decisions together. Deployed between searches.
+  Regression checks passed (57 visualizer, 203 trainer, model parity and graph).
 - 2026-11-19 02:10 Central. Published [checkpoint-82e4a4d891d2cb2e](https://github.com/notmike101/ai-plays-zombies-arent-real/releases/tag/checkpoint-82e4a4d891d2cb2e), policy 8a691469a829158d.
   The publisher downloaded all three release assets and verified checksums and schema before publication.
   GitHub initially rejected the target because capture commit 2351514 was local only. A fast-forward push made the exact SHA resolvable. The six-hour job now preflights the manifest's capture SHA.
