@@ -21,22 +21,27 @@ async page => {
   await page.locator('#load-weights').click();
   await page.waitForFunction(() => !document.querySelector('#weight-heat').hidden);
   assert((await page.locator('#weight-detail').innerText()).includes('[0, 0]'), 'Read a captured coefficient');
-  await page.getByRole('link', {name: 'Timeline'}).click();
+  await page.goto(preview + '#/timeline');
+  assert(await page.locator('#monitor').isVisible(), 'Old Timeline links open Monitor');
+  assert(await page.getByRole('link', {name: 'Timeline'}).count() === 0, 'No separate Timeline tab');
   await page.waitForFunction(() => document.querySelector('#events').children.length >= 3);
   await page.locator('#events button').last().click();
   await page.waitForFunction(() => document.querySelector('#sample-context').textContent.includes('Replay'));
   const initial = await page.locator('#sample-context').innerText();
   await page.locator('#compare').selectOption({index: 1});
   await page.getByRole('heading', {name: 'Largest observation changes'}).waitFor();
-  await page.getByRole('button', {name: 'Inspect in monitor'}).click();
+  await page.getByText('Decision history', {exact: true}).click();
   assert(await page.locator('#sample-context').innerText() === initial, 'Replay selection remains fixed');
   for (const width of [320, 390, 844, 1440]) {
     await page.setViewportSize({width, height: 700});
-    for (const name of ['Neural activity', 'Timeline', 'Monitor']) {
+    for (const name of ['Neural activity', 'Monitor']) {
       await page.getByRole('link', {name, exact: true}).click();
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${name} must fit ${width}px`);
     }
   }
+  await page.getByText('Decision history', {exact: true}).click();
+  await page.getByRole('button', {name: 'Follow latest'}).click();
+  assert((await page.locator('#sample-context').innerText()).includes('Latest capture'), 'Follow latest exits replay');
   await page.locator('.worker-node').first().click();
   await page.waitForFunction(() => !document.querySelector('#follow-policy').disabled);
   await page.context().setOffline(true);

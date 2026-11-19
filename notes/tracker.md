@@ -1,6 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 02:20 Central. Compacted the Observatory layout, moved Timeline
+  into Monitor's Decision history, and made Game View permanently visible
+  in Monitor. Isolated Chromium checks passed for responsive layout, replay,
+  comparison, SSE, graph touch controls and fixture-based capture fallback.
+  All 57 visualizer tests and graph assertions passed. Active campaign
+  search stayed running. Default inst1 preflight still reports incomplete
+  availability; inst13 preflight passed.
 - 2026-11-19 02:16 Central. Merged PR #1 as 1cd20fa and pulled by fast-forward.
   Only requirements.txt changed. The active environment still imports Pillow
   12.3.0, and campaign search operators 50880 and 59348 were still running.

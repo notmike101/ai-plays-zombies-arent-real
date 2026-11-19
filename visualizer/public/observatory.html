@@ -15,7 +15,6 @@
     <nav aria-label="Observatory views">
       <a href="#/monitor" data-view="monitor" aria-current="page">Monitor</a>
       <a href="#/activity" data-view="activity">Neural activity</a>
-      <a href="#/timeline" data-view="timeline">Timeline</a>
       <a href="#/learning" data-view="learning">Learning</a>
     </nav>
     <a href="/legacy">Network graph ↗</a>
@@ -33,7 +32,20 @@
     <p id="sample-context" class="context" hidden></p>
     <p id="empty" class="note">Waiting for an instrumented worker.</p>
     <div id="monitor" class="view">
-      <h1>Decision monitor</h1>
+      <details id="history" class="panel">
+        <summary>Decision history</summary>
+        <div class="dashboard balanced">
+          <section>
+            <div class="panel-head"><h2>Sampled decisions</h2><button id="follow">Follow latest</button></div>
+            <div id="events" class="events"></div>
+          </section>
+          <section>
+            <p id="replay-status" role="status"></p>
+            <label>Compare with <select id="compare"></select></label>
+            <div id="comparison"></div>
+          </section>
+        </div>
+      </details>
       <div class="dashboard">
         <section class="panel">
           <div class="panel-head"><h2>Battlefield</h2><label>Layer <select id="map-layer"></select></label></div>
@@ -41,26 +53,24 @@
           <div id="battlefield" class="battlefield" role="group" aria-label="Policy viewport cells"></div>
           <p id="cell-detail" class="readout" aria-live="polite"></p>
           <div id="slot-distribution"></div>
-          <details id="game-view" class="game-view" open>
-            <summary>Game view</summary>
-            <p class="note">Live video of the selected game window. It runs independently of the policy timeline.</p>
+          <section id="game-view" class="game-view" aria-labelledby="game-view-heading">
+            <h2 id="game-view-heading">Game view</h2>
             <video id="game-video" autoplay muted playsinline aria-label="Live ZAR game window" hidden></video>
             <img id="game-screenshot" alt="Latest capture of the selected ZAR game window" hidden>
             <p id="game-capture-status" class="readout" role="status"></p>
-          </details>
+          </section>
         </section>
         <div class="stack">
           <section class="panel"><h2>Policy decision</h2><div id="choice"></div><dl id="identity" class="facts"></dl></section>
-          <section class="panel"><h2>Tool probabilities</h2><p class="note">This distribution accounts for the action mask. Greedy policies choose the highest legal probability.</p><div id="tools"></div></section>
+          <section class="panel"><h2>Legal tool probabilities</h2><div id="tools"></div></section>
         </div>
       </div>
     </div>
     <div id="activity" class="view" hidden>
-      <h1>Neural activity</h1>
       <div class="dashboard balanced">
         <section class="panel">
           <div class="panel-head"><h2>Captured activations</h2><label>Layer <select id="activation-layer"><option value="input">Inputs</option><option value="hidden">GRU output</option><option value="memory">Previous memory</option><option value="tool_logits">Tool logits</option><option value="location_logits">Selected tool cell logits</option><option value="value">Expected return</option></select></label></div>
-          <p class="note">Activations are numerical values from this decision. Tool logits are scores before masking and converting to probabilities. Cyan is positive, violet is negative.</p>
+          <p class="note">Cyan + · violet − · logits before masking</p>
           <label id="group-control">Input group <select id="feature-group"></select></label>
           <label>Find feature or index <input id="feature-search" type="search" placeholder="e.g. damaged buildings"></label>
           <canvas id="activation-heat" class="heat" tabindex="0" aria-label="Activation heatmap. Use arrow keys to inspect a unit."></canvas>
@@ -71,13 +81,12 @@
         <div class="stack">
           <section class="panel">
             <h2>GRU state over time</h2>
-            <p class="note">A GRU carries numerical memory between decisions. Columns are observed samples, rows are hidden units. The scale is fixed at −1 to +1. Sequence gaps appear in the timeline.</p>
+            <p class="note">Rows: units · columns: samples · scale: −1 to +1</p>
             <canvas id="memory-heat" class="heat memory" tabindex="0" aria-label="Recurrent state history. Use arrow keys to inspect and Enter to replay."></canvas>
             <p id="memory-detail" class="readout"></p>
           </section>
           <section class="panel">
             <h2>Learned weights</h2>
-            <p class="note">Weights are learned coefficients. GRU reset, update, and candidate matrices use separate input and recurrent coefficients. Campaign specialists can also change the final action logits.</p>
             <div class="weight-controls">
               <label>Matrix <select id="matrix"></select></label>
               <label>First row <input id="weight-row" type="number" min="0" value="0" required></label>
@@ -91,27 +100,10 @@
         </div>
       </div>
     </div>
-    <div id="timeline" class="view" hidden>
-      <h1>Decision timeline</h1>
-      <div class="dashboard balanced">
-        <section class="panel">
-          <div class="panel-head"><h2>Observed samples</h2><button id="follow">Follow latest</button></div>
-          <p class="note">Up to 50 samples for this stream. The observer samples inference and the server retains what it sees. Sequence gaps count missed publications.</p>
-          <div id="events" class="events"></div>
-        </section>
-        <section class="panel">
-          <h2>Replay and compare</h2>
-          <p id="replay-status" role="status"></p>
-          <div class="toolbar inline"><button id="open-replay">Inspect in monitor</button><label>Compare against <select id="compare"></select></label></div>
-          <div id="comparison"></div>
-        </section>
-      </div>
-    </div>
     <div id="learning" class="view" hidden>
-      <h1>Learning and campaign</h1>
       <section class="panel">
         <div class="panel-head"><h2>Recorded results</h2><button id="refresh-learning">Refresh results</button></div>
-        <p class="note">Civilian save rates come from the episode result. A qualifying win requires a game win and at least 35% saved. PPO reward measures the training objective and includes infection costs.</p>
+        <p class="note">Qualifying win: game win with ≥35% saved.</p>
         <div class="toolbar inline">
           <label>Dataset <select id="learning-dataset"><option value="campaign">Campaign search</option><option value="ppo">PPO history</option></select></label>
           <label id="learning-run-control">Search run <select id="learning-run"></select></label>

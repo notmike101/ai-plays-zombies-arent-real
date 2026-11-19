@@ -3,7 +3,7 @@
 A read-only interface for a running PyTorch GRU policy and its recorded training
 results. Open **http://localhost:8765** for the observatory or **/legacy** for the
 original network graph and its focused node inspector. The Observatory tabs
-have shareable links such as **/#/learning** and **/#/timeline**.
+have shareable links such as **/#/learning** and **/#/activity**. Decision history, replay and comparison are in Monitor. Older **/#/timeline** links open that section.
 
 ## What each view answers
 

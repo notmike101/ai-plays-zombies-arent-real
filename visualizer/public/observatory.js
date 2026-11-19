@@ -34,6 +34,7 @@ const viewLinks = [...document.querySelectorAll('nav a[data-view]')];
 
 function showLinkedView() {
   view = (viewLinks.find(link => link.hash === location.hash) || viewLinks[0]).dataset.view;
+  if (location.hash === '#/timeline') $('history').open = true;
   $('worker-diagram').hidden = view === 'learning';
   for (const link of viewLinks) {
     const active = link.dataset.view === view;
@@ -151,7 +152,7 @@ function render() {
   }
   if (view === 'monitor') renderMonitor(sample, metadata);
   if (view === 'activity') renderActivity(sample, metadata);
-  if (view === 'timeline') renderTimeline(sample, metadata);
+  if (view === 'monitor' && $('history').open) renderTimeline(sample, metadata);
   refreshGameView();
 }
 
@@ -280,7 +281,7 @@ async function playGameVideo(active, label) {
 }
 
 async function refreshGameView() {
-  if (view !== 'monitor' || !$('game-view').open || document.hidden) { clearGameView(); return; }
+  if (view !== 'monitor' || document.hidden) { clearGameView(); return; }
   const label = message => {
     if ($('game-capture-status').textContent !== message) text('game-capture-status', message);
   };
@@ -695,7 +696,6 @@ function renderTimeline(sample, meta) {
     }));
     $('events').dataset.stamp = stamp;
   }
-  $('open-replay').disabled = !sample;
   options($('compare'), [['', 'Select observed sample'], ...samples.filter(row => row.sequence !== sample?.sequence)
     .map(row => [row.sequence, `#${row.sequence} · ${title(row.action)}`])]);
   text('replay-status', sample ? `#${sample.sequence} · ${sample.phase} · ${title(sample.action)} · ${percent(sample.tool_probabilities[sample.tool])}` : 'No sample selected.');
@@ -736,7 +736,10 @@ function comparison(sample, meta) {
 async function inspectReplay(sequence) {
   const stream = live.sample?.stream;
   if (!stream || sequence === undefined) return;
-  if (view === 'activity') location.hash = '/timeline';
+  if (view === 'activity') {
+    $('history').open = true;
+    location.hash = '/monitor';
+  }
   const request = ++pendingReplay;
   ++pendingCompare;
   text('replay-status', 'Loading recorded sample…');
@@ -1081,7 +1084,9 @@ setInterval(refreshVisibleLearning, 30000);
 document.addEventListener('visibilitychange', refreshVisibleLearning);
 $('follow-policy').onclick = () => { manualWorker = null; connect(); };
 $('map-layer').onchange = render;
-$('game-view').ontoggle = refreshGameView;
+$('history').ontoggle = () => {
+  if ($('history').open) render();
+};
 document.addEventListener('visibilitychange', refreshGameView);
 for (const id of ['activation-layer', 'feature-group', 'feature-search']) $(id).oninput = () => { page = unit = 0; render(); };
 $('feature-prev').onclick = () => { page--; render(); };
@@ -1105,7 +1110,6 @@ $('follow').onclick = () => {
   $('compare').value = '';
   render();
 };
-$('open-replay').onclick = () => { location.hash = '/monitor'; };
 $('compare').onchange = async () => {
   const value = $('compare').value;
   const {sample, metadata} = shown();

@@ -33,7 +33,7 @@ async page => {
   });
   await page.goto(new URL(page.url()).origin);
   await page.waitForFunction(() => typeof window.showFixture === 'function');
-  if (!await page.locator('#game-view').evaluate(details => details.open)) throw new Error('Game view must start expanded');
+  await page.getByRole('heading', {name: 'Game view'}).waitFor();
   if (captureRequests.length) throw new Error('Game view must wait for a live game');
   await page.evaluate(() => window.showFixture('first'));
   await page.waitForFunction(() => document.querySelector('#game-screenshot').naturalWidth > 0);
@@ -50,7 +50,8 @@ async page => {
   if (!captureRequests.includes('game:999:1000')) throw new Error('Game view must use owned game fallback');
   if (!await page.locator('#sample-context').isHidden()) throw new Error('A game-only view must not display a policy sample');
   if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Game view overflows mobile');
-  await page.getByText('Game view', {exact: true}).click();
+  if (await page.locator('#game-view summary').count()) throw new Error('Game view must stay visible in Monitor');
+  await page.getByRole('link', {name: 'Neural activity'}).click();
   await page.locator('#game-screenshot').waitFor({state: 'hidden'});
-  return {expandedByDefault: true, imageDecoded: true, targeted: true, mobile: true};
+  return {alwaysVisibleInMonitor: true, imageDecoded: true, targeted: true, mobile: true};
 }
