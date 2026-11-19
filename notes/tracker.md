@@ -1,6 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 23:33 Central. Parallel capacity check. Four active L1
+  copies under seed 100851, with 9.19 GiB available RAM and 9.95 GiB free
+  disk at sampling. RTX 3080 reported 3,572/10,240 MiB VRAM in use, 41% GPU
+  utilization. The supervisor allows 4/6/8 copies at 8/13/16 GiB available
+  startup RAM, respectively. Historical batches have completed at eight,
+  with UI receipt timeouts also documented at that count. No throughput
+  comparison or change to the active count in this check.
 - 23:25 Central. Restarted the observatory at user request. New listener
   PID 56924 (create time 1795065909.9419098). Local SSE reported one live
   stream, and Chrome over the configured named Cloudflare hostname showed
