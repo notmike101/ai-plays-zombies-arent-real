@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 01:37 Central. Deployed Learning run-average overview on
+  listener PID 12628 (create time 1795073834.2616203). Public Chrome
+  loaded 10 dated campaign runs and 11 dated PPO runs and inspected
+  plotted values by touch. Kept the existing outcomes chart and tables.
+  Added projection tests; all 57 visualizer tests and isolated browser
+  chart, stream, diagram and mobile checks passed. Results projection on
+  local history took 220-235 ms across three reads and added about 4.8 KB.
+  Campaign training stayed active through the observatory restart.
 - 2026-11-19 01:28 Central. Hid the worker diagram on Learning.
   Public Chrome loaded existing Learning results, and the browser fixture
   verified that returning to Monitor retains the pinned worker at mobile width.
