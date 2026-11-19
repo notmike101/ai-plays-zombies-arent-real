@@ -28,6 +28,9 @@ game, shared by up to four viewers. The encoder sends independent fragments
 every third of a second. The server retains only the most recent fragment and
 sends it as binary fragmented MP4 over a single streaming HTTP response. The
 player keeps close to the buffered edge and evicts older video.
+During a handoff it retries while the previous capture is releasing the
+encoder. A stalled established video connection can reconnect while telemetry
+stays live.
 
 Live video requires FFmpeg with `h264_nvenc` on the host and an H.264 Media Source
 decoder in the browser. If streaming is unavailable, Game view falls back to

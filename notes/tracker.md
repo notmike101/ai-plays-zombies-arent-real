@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 00:27 Central. Public and local traces agreed: live game 57260
+  published through its episode, then the server had zero live streams
+  while the public browser kept receiving waiting heartbeats. Deployed
+  video busy-handoff and stalled-transfer retries on listener 56664
+  (create time 1795069586.4640768), with training still active. Chrome
+  verified a busy handoff retries instead of dropping straight to JPEG.
+  Tested standby publishing in codex/zar-observatory-standby. The active
+  campaign search still uses the single-observer implementation.
 - 2026-11-19 00:15 Central. Special-building audit: native
   building class grid, selected building ability and HUD-gated special actions
   exist. The refuge placement scorer considers civilians and nearby

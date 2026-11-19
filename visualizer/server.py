@@ -383,9 +383,10 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
             try:
                 session = video.open(stream, pid, timestamp)
             except OSError:
-                session = None
+                self.send_error(503, 'Live game video is unavailable')
+                return
             if session is None:
-                self.send_error(503, 'Live game video is busy or unavailable')
+                self.send_error(409, 'Live game video is busy')
                 return
             try:
                 packet = session.next(0, 5)

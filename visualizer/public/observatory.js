@@ -173,6 +173,7 @@ async function playGameVideo(active, label) {
   const {signal} = controller;
   const startup = setTimeout(() => controller.abort(), 7000);
   const player = $('game-video');
+  let started = false, idle;
   label('Starting live game video.');
   try {
     const response = await fetch('/api/game-video?' + new URLSearchParams({stream: active.stream}), {signal});
@@ -181,6 +182,15 @@ async function playGameVideo(active, label) {
       label('Game view sharing is disabled on this host.');
       stopGameVideo(active);
       return;
+    }
+    if (response.status === 409 && gameView === active && !frozen) {
+      active.busyRetries = (active.busyRetries || 0) + 1;
+      if (active.busyRetries <= 4) {
+        stopGameVideo(active);
+        active.retryVideoAt = performance.now() + 750;
+        label('Waiting for the previous video to close.');
+        return;
+      }
     }
     const codec = response.headers.get('X-Video-Codec') || '';
     const mime = `video/mp4; codecs="${codec}"`;
@@ -192,8 +202,9 @@ async function playGameVideo(active, label) {
     const buffer = source.addSourceBuffer(mime);
     buffer.mode = 'sequence';
     const reader = response.body.getReader();
-    let started = false;
     while (true) {
+      clearTimeout(idle);
+      idle = setTimeout(() => controller.abort(), 4500);
       const {done, value} = await reader.read();
       if (done) throw new Error('Live game video ended');
       await waitMedia(buffer, 'updateend', signal, () => buffer.appendBuffer(value));
@@ -217,11 +228,18 @@ async function playGameVideo(active, label) {
   } catch {
     if (gameView === active && active.video === session && !frozen) {
       stopGameVideo(active);
-      active.videoFailed = true;
+      active.videoRestarts = (active.videoRestarts || 0) + 1;
+      if (started && active.videoRestarts <= 2) {
+        active.retryVideoAt = performance.now() + 750;
+        label('Reconnecting to live game video.');
+      } else {
+        active.videoFailed = true;
+      }
       refreshGameView();
     }
   } finally {
     clearTimeout(startup);
+    clearTimeout(idle);
   }
 }
 
@@ -244,7 +262,7 @@ async function refreshGameView() {
   const stream = $('status').dataset.state === 'live' && live.sample?.stream;
   if (!stream) {
     clearGameView();
-    label('Waiting for a live game.');
+    label('Waiting for a worker to publish telemetry.');
     return;
   }
   if (gameView?.stream !== stream) {
@@ -256,7 +274,7 @@ async function refreshGameView() {
   if (active.denied) return;
   if (!active.videoFailed && typeof MediaSource !== 'undefined') {
     if (active.video?.controller.signal.aborted) stopGameVideo(active);
-    if (!active.video) playGameVideo(active, label);
+    if (!active.video && performance.now() >= (active.retryVideoAt || 0)) playGameVideo(active, label);
     return;
   }
   const now = performance.now();

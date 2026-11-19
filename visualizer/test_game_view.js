@@ -1,8 +1,12 @@
 // Playwright run-code against a local observatory. Uses synthetic UI fixtures only.
 async page => {
   const captureRequests = [];
+  let secondVideoRequests = 0;
   await page.setViewportSize({width: 390, height: 844});
-  await page.route('**/api/game-video?**', route => route.fulfill({status: 503}));
+  await page.route('**/api/game-video?**', route => {
+    const stream = new URL(route.request().url()).searchParams.get('stream');
+    return route.fulfill({status: stream === 'second' && ++secondVideoRequests === 1 ? 409 : 503});
+  });
   await page.route('**/api/screenshot?**', async route => {
     captureRequests.push(new URL(route.request().url()).searchParams.get('stream'));
     await route.fulfill({
@@ -40,8 +44,13 @@ async page => {
   if (await page.locator('#game-screenshot').getAttribute('src') !== first) throw new Error('Freeze must preserve the image');
   await page.getByRole('button', {name: 'Unfreeze view'}).click();
   await page.evaluate(() => window.showFixture('second'));
+  await page.waitForFunction(() => window.document.querySelector('#game-capture-status').textContent === 'Waiting for the previous video to close.',
+    null, {timeout: 3000});
+  if (captureRequests.includes('second')) throw new Error('A busy handoff must retry live video before falling back');
+  await page.waitForTimeout(900);
+  await page.evaluate(() => window.showFixture('second'));
   await page.waitForFunction(() => document.querySelector('#game-screenshot').naturalWidth > 0);
-  if (!captureRequests.includes('second')) throw new Error('Worker changes must switch screenshot streams');
+  if (!captureRequests.includes('second') || secondVideoRequests !== 2) throw new Error('Worker changes must retry and switch streams');
   if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Game view overflows mobile');
   await page.getByText('Game view', {exact: true}).click();
   await page.locator('#game-screenshot').waitFor({state: 'hidden'});
