@@ -21,6 +21,15 @@ class ReportingTests(unittest.TestCase):
             self.assertEqual(groups[1]['errors'],1)
             self.assertEqual(groups[1]['scenario'],'unknown')
 
+    def test_supplemental_games_remain_search_evidence(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path=Path(temporary)
+            trial=dict(team_id='team',levels=[dict(stage=1,end='won',saved=.42,start_kind='fresh')])
+            (path/'extra-trials.jsonl').write_text(json.dumps(trial)+'\n{"partial":')
+            group,=report.aggregate(report.search_rows(path))
+            self.assertEqual(group['mode'],'search-extra')
+            self.assertEqual(group['qualifying_wins'],1)
+
     def test_saved_metric_and_start_kinds_stay_separate(self):
         rows = [dict(run_id='r', checkpoint_id='p', scenario=1, start_kind='fresh',
                      mode='play', end='won', saved_frac=.4, frac=.01),

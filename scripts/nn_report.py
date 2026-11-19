@@ -55,7 +55,7 @@ def records(path):
 
 
 def search_rows(directory):
-    for filename,mode in [('trials.jsonl','search'),('holdout.jsonl','holdout'),
+    for filename,mode in [('trials.jsonl','search'),('extra-trials.jsonl','search-extra'),('holdout.jsonl','holdout'),
                           ('forecast-comparison.jsonl','forecast')]:
         path=directory/filename
         if not path.is_file():continue

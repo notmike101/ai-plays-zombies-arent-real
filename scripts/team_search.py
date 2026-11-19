@@ -4,6 +4,7 @@ import campaign_fitness as fitness
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from copy import deepcopy
 import hashlib
+from itertools import chain
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,7 @@ import torch
 
 import local_agent as operator
 import nn_play2 as tr
+from nn_report import records
 import zar_boot
 
 
@@ -511,10 +513,10 @@ def main():
             if ledger.get('view_revision')==view_revision:evidence=ledger['evidence']
             prices=ledger.get('layout_prices',{})
         cast_probe=None
-        if args.seed_from and not args.compare_forecast and (args.seed_from/'trials.jsonl').is_file():
+        if args.seed_from and not args.compare_forecast:
             best_budget=None
-            for line in (args.seed_from/'trials.jsonl').read_text().splitlines():
-                trial=json.loads(line)
+            paths=[args.seed_from/name for name in ('trials.jsonl','extra-trials.jsonl')]
+            for trial in chain.from_iterable(records(path) for path in paths if path.is_file()):
                 if trial.get('view_revision')==view_revision:fitness.record(evidence,trial)
                 if not trial.get('levels'):continue
                 if prior and trial.get('team')==prior:cast_probe=cast_candidate(trial,rng) or cast_probe

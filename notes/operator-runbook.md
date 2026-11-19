@@ -257,6 +257,12 @@ worker per training generation publishes its decisions to the normal live
 visualizer. Look for `search/<seed>/L<stage>/a<attempt>`. Layout construction
 precedes the first sampled decision. The held-out and CNN comparisons run
 without the observer.
+A scoped auxiliary L1 test can save fresh search trials under
+`extra-trials.jsonl` in the parent search directory. Use the same frozen base
+and view revision, distinct idle owned copies and reserved CPUs. The next
+search block imports completed supplemental trials alongside ordinary trials.
+Keep formal holdout results in the separate holdout file.
+
 Run `.venv/Scripts/python.exe -B scripts/nn_report.py --search-dir analysis/<search-directory>`
 to count official game wins, qualifying wins, incomplete attempts and errors
 by team, stage, starting board and experiment. This also works during a run.
