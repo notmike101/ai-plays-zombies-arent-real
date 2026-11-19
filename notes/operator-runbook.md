@@ -252,3 +252,6 @@ one attempt per stage. Inspect `attempt` and `start_kind` in the stage record.
 Search offspring can reorder, translate, omit or add a nearby copy of a
 placement. Translation uses world coordinates and moves a polygon's corners
 together. Only actual in-game outcomes determine whether an offspring survives.
+Battle search can vary the four pan directions and can learn different pause
+preferences while running and while paused. Older champions retain their
+original camera and pause behavior.

@@ -28,6 +28,9 @@ FAMILIES = [sorted(tr.PLACEMENTS), [10, 15, 16, 17, 18, 9],
             matching('buy_'), matching('equip_'), matching('perk_'), list(range(tr.NU))]
 CASTS = sorted(tr.U2ABILITY)
 GRID_START = tr.INPUT_LABELS.index('Grid civilians cell 1 (log1p count)')
+PAN = [tr.TOOLS.index('pan_'+name) for name in ('up','left','down','right')]
+PAUSE = tr.TOOLS.index('pause_toggle')
+PAUSED = tr.INPUT_LABELS.index('Simulation paused (0/1)')
 
 
 def gene(rng):
@@ -42,7 +45,8 @@ def random_team(rng):
     return dict(plan=[gene(rng) for _ in range(int(rng.integers(2, 7)))],
                 battle=rng.normal(0, 1, (len(CASTS), 5)).tolist(),
                 cast_bias=rng.uniform(-1, 7, len(CASTS)).tolist(),
-                idle_bias=float(rng.uniform(-1, 3)))
+                idle_bias=float(rng.uniform(-1, 3)),
+                camera_pause=rng.normal(0,2,6).tolist())
 
 
 def loadout_candidate(parent,rng):
@@ -76,8 +80,8 @@ def offspring(parent, donor, rng, stage=1):
         layout=child['later_layouts'][str(stage)]
         vary_layout(layout,rng)
         params=child.setdefault('stage_battle',{}).setdefault(str(stage),{})
-        for key in ('battle','cast_bias'):
-            base=np.asarray(params.get(key,child[key]))
+        for key in ('battle','cast_bias','camera_pause'):
+            base=np.asarray(params.get(key,child.get(key,np.zeros(6))))
             params[key]=(base+rng.normal(0,.35,base.shape)).tolist()
         return child
     i = int(rng.integers(max(1,len(child['plan']))))
@@ -91,6 +95,7 @@ def offspring(parent, donor, rng, stage=1):
     for key in ('battle','cast_bias'):
         base = np.asarray((donor if rng.random()<.5 else parent)[key])
         child[key] = (base + rng.normal(0,.35,base.shape)).tolist()
+    child['camera_pause']=(np.asarray(child.get('camera_pause',np.zeros(6)))+rng.normal(0,2,6)).tolist()
     layout=child.get('layout')
     if layout:vary_layout(layout,rng)
     return child
@@ -105,6 +110,7 @@ class TeamPolicy(tr.PolicyNet2):
         self.coords = torch.arange(tr.NC)
         self.battle = torch.tensor(team['battle'])
         self.bias = torch.tensor(team['cast_bias'])
+        self.camera_pause=torch.tensor(team.get('camera_pause',[0.]*6))
         self.predict = None if forecast is None else forecast.forward
 
     def forward(self, x, h=None):
@@ -123,6 +129,8 @@ class TeamPolicy(tr.PolicyNet2):
             else:
                 tools[...,tr.TOOLS.index('ready')] += 15
         else:
+            tools[...,PAN]+=self.camera_pause[:4]
+            tools[...,PAUSE]+=self.camera_pause[4+int(x[0,0,PAUSED].item()!=0)]
             if self.predict is not None:
                 future=self.predict(grid[:3].reshape(1,3,6,8)).clamp_min(0).reshape(2,tr.NC)
                 grid=torch.cat((future,grid[2:]))
@@ -253,6 +261,7 @@ def main():
                 candidate['plan']=[]
                 if prior and prior.get('layout'):
                     candidate=population[i]=loadout_candidate(candidate,rng)
+                    candidate['camera_pause']=(np.asarray(candidate.get('camera_pause',np.zeros(6)))+rng.normal(0,2,6)).tolist()
                 if not (prior and prior.get('layout')):
                     candidate['layout']=deepcopy(layout)
                 candidate['later_layouts']={str(k):deepcopy(v) for k,v in stages.items() if k>1}

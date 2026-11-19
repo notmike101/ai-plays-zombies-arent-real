@@ -59,6 +59,20 @@ class SearchTests(unittest.TestCase):
         self.assertNotEqual(child,parent)
         self.assertEqual([parent,donor],before)
 
+    def test_legacy_battle_controls_and_pause_state(self):
+        team=search.random_team(np.random.default_rng(7))
+        del team['camera_pause']
+        old=search.TeamPolicy(team)
+        changed=search.TeamPolicy(dict(team,camera_pause=[1.,2.,3.,4.,5.,6.]))
+        changed.load_state_dict(old.state_dict())
+        with torch.no_grad():
+            obs=torch.zeros(1,1,search.tr.NOBS)
+            for paused in (0,1):
+                obs[...,search.PAUSED]=paused
+                diff=(changed(obs)[0]-old(obs)[0]).flatten()
+                torch.testing.assert_close(diff[search.PAN],torch.arange(1.,5.))
+                self.assertAlmostEqual(diff[search.PAUSE].item(),5.+paused,places=5)
+
     def test_later_stage_search_preserves_earlier_policy(self):
         rng=np.random.default_rng(32)
         parent=search.random_team(rng)
