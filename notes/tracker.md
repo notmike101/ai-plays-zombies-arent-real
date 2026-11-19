@@ -12,7 +12,9 @@
 - Published [checkpoint-ce43be030aab16a5](https://github.com/notmike101/ai-plays-zombies-arent-real/releases/tag/checkpoint-ce43be030aab16a5).
   Verified remote bytes and local restore of GRU 8a691469a829158d plus team
   2f70a627a7be4d51. The local six-hour sharing heartbeat was paused when
-  checked. This publication was run manually under the existing authorization.
+  checked. The user confirmed that it should stay paused. A second manual
+  publication check downloaded and verified the existing release and returned
+  `already_published` for the same bundle. Training remained active.
   New campaign processes also observe one candidate per generation. Synthetic
   SSE/reconnect, WebGPU/Canvas and mobile tests passed; verify the live
   composite stream at the next supervisor launch.

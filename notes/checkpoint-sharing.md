@@ -6,9 +6,9 @@ The local Codex heartbeat is **Share ZAR checkpoints**, ID
 environment is available; GitHub does not reach into this computer. A clone does
 not install that schedule. Other operators can run the same command manually or
 arrange their own explicitly authorized schedule.
-At the November 18 evening check, the local heartbeat was paused. A manual
-publication succeeded. Check the automation's actual state before relying
-on unattended publication.
+On November 18 the user explicitly chose to keep the heartbeat paused and
+share the current checkpoint manually. Leave the schedule paused until the
+user asks to resume it.
 
 Configure `[sharing]` in ignored `zar.local.toml` using `zar.example.toml`:
 repository=`OWNER/REPO`, identity_helper=the installed GitHub App identity helper.
