@@ -8,6 +8,7 @@ from itertools import chain
 import json
 import os
 from pathlib import Path
+from time import monotonic
 import uuid
 
 import numpy as np
@@ -321,6 +322,7 @@ def score(row):
 
 def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, observer_interval=.2,
             practice_retry=False, allow_progression=False):
+    timing = {'started': monotonic()}
     if start_stage>1 and not allow_progression:
         raise ValueError('Later-stage starts require explicit campaign progression')
     copy, weights, team, seed, *forecast_path = job
@@ -332,10 +334,11 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
     destination=('campaign','continue' if start_stage>1 else 'stage1')
     env=None
     levels=[]
-    result=dict(copy=copy,seed=seed,levels=levels)
+    result=dict(copy=copy,seed=seed,levels=levels,timing=timing)
     stage,attempt=start_stage,0
     try:
         env=zar_boot.boot(operator.owned_copy(copy),destination,discard_dump_states=True)
+        timing['board_ready'] = monotonic()
         layout_receipts=[]
         while stage <= 5:
             layout = (team or {}).get('layout',[]) if stage==1 else (team or {}).get('later_layouts',{}).get(str(stage),[])
@@ -371,15 +374,19 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
             options=dict(start_kind=start_kind,seed=seed,record_layout=bool(layout),greedy=True,
                          allow_progression=allow_progression, observer_interval=observer_interval)
             if training:options['paused_seconds']=45
+            episode_started = monotonic()
             row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}/a{attempt}',options),
                                  policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
                                  telemetry=observe)
+            episode_finished = monotonic()
             if not tr.valid_trajectory(row):
                 result.update(failed_stage=stage,failed_attempt=attempt,error=row.get('err','invalid trajectory'))
                 break
             levels.append(dict(stage=row['scenario'],end=row['end'],saved=row['saved_frac'],
                                win=row['win'],advance=row['advance'],campaign=row['campaign'],
                                attempt=attempt,start_kind=start_kind,
+                               timing=dict(started=episode_started, battle_started=row.get('battle_started'),
+                                           finished=episode_finished),
                                refuge=refuge,garrison_relocation=relocation,
                                outbreak=row.get('outbreak'),
                                timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
@@ -414,6 +421,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
             except psutil.TimeoutExpired as exc:
                 result['cleanup_error']=str(exc)
                 print('game exit unconfirmed',copy,env.pid,exc,flush=True)
+        timing['finished'] = monotonic()
     return result
 
 
