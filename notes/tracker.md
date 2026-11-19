@@ -1,6 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 22:43 Central. Checked GPU feasibility during active seed 99851
+  on six copies. RTX 3080: 10,240 MiB total, 3,731 MiB used at sampling.
+  Repo torch reports 2.15.0+cpu and CUDA unavailable. Policy is 3,096,810
+  FP32 parameters (11.81 MiB). Single-observation CPU forward in a separate
+  short probe was 0.169 ms median / 0.256 ms p95, compared with the 100 ms
+  episode step floor. Campaign search uses a frozen GRU. Standalone PPO
+  updates are the likely candidate for a separate GPU benchmark.
 - 22:40 Central. Training seed 99851 advanced to generation 2 on inst13–18.
   Its workers predate the playable-target guard and the supervisor will load
   it on the next block. The guard rejects outside cast, placement and world
