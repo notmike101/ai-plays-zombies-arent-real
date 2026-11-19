@@ -24,6 +24,7 @@ const options = (select, entries) => {
 let view = 'monitor', source, generation = 0, live = {}, frozen = null, replay = null, baseline = null;
 let mapChoice = 0, page = 0, unit = 0, inspectedMemory = null, tile = null, weightCursor = 0;
 let pendingReplay = 0, pendingCompare = 0, pendingWeights = 0;
+let learning, learningRequest = 0;
 const shown = () => replay || frozen || live;
 const list = () => (frozen || live).history || [];
 const preview = () => $('mode').value === 'preview';
@@ -61,7 +62,7 @@ function connect() {
     if (data.version !== 1) return;
     status(data.status, data.age);
     const streams = [['', 'Automatic attachment'], ...data.streams.map(stream => [
-      stream.id, `Game ${stream.game_pid} · worker ${stream.worker_pid}${stream.archived ? ' · ended' : stream.age > 15 ? ' · stale' : ''}`
+      stream.id, `Game ${stream.game_pid} · worker ${stream.worker_pid}${stream.archived ? ' · retained history' : stream.age > 15 ? ' · stale' : ''}`
     ])];
     const selected = $('stream').value;
     if (selected && !streams.some(([id]) => id === selected)) streams.push([selected, 'Selected process unavailable']);
@@ -76,6 +77,9 @@ function connect() {
       error: data.error,
     };
     if (reset && !frozen && !replay) {
+      ++pendingReplay;
+      ++pendingCompare;
+      ++pendingWeights;
       baseline = tile = inspectedMemory = null;
       mapChoice = page = unit = 0;
     }
@@ -124,7 +128,7 @@ const mapChannels = [
   ['legal', 'Legal target cells', ''],
   ['probability', 'Target probabilities', ''],
 ];
-let labelCache = new WeakMap();
+const labelCache = new WeakMap();
 function channels(meta) {
   if (!labelCache.has(meta)) {
     const labels = meta.input_labels;
@@ -143,7 +147,7 @@ function probabilityRow(label, probability, selected, logit) {
   const bar = el('progress');
   bar.max = 1;
   bar.value = probability;
-  bar.setAttribute('aria-label', label + ' probability');
+  bar.setAttribute('aria-label', `${label} probability ${number(probability)}`);
   row.title = `Probability ${number(probability)} · raw logit ${number(logit)}`;
   row.append(el('span', label), bar, el('strong', percent(probability)));
   return row;
@@ -200,8 +204,11 @@ function renderMap(sample, meta) {
   const describe = id => {
     const feature = layer?.indices[id];
     const probability = location[id];
+    const encoded = sample.input[feature];
+    const count = feature !== undefined && meta.input_labels[feature].endsWith('(log1p count)') && Number.isFinite(encoded) ?
+      ` (≈ ${Math.round(Math.expm1(encoded))} entities)` : '';
     return `Cell ${id + 1}${spatial && !synthetic ? ` · grid center ${(11 + id % 8 * 11).toFixed(0)}% x, ${16 + Math.floor(id / 8) * 12}% y` : ''}` +
-      (feature === undefined ? '' : ` · ${meta.input_labels[feature]} = ${number(sample.input[feature])}`) +
+      (feature === undefined ? '' : ` · ${meta.input_labels[feature]} = ${number(encoded)}${count}`) +
       (probability === undefined ? '' : ` · P = ${number(probability)}`) +
       (spatial && id === sample.position ? ' · selected' : '');
   };
@@ -237,7 +244,7 @@ function renderMap(sample, meta) {
     };
   }
   text('map-description', synthetic ? 'Synthetic positions. Live battlefield data is unavailable in this mode.' :
-    count ? 'Viewport grid from this decision. Brighter cells have larger displayed values. Dots show positive conditional probability, and gold marks the selected cell. The game can snap targets to nearby entities.' :
+    count ? 'Viewport grid from this decision. Count layers use log1p, the natural log of one plus the count. Dots show positive conditional probability, and gold marks the selected cell. The game can snap targets to nearby entities.' :
       'Spatial observation layers are unavailable for this sample.');
   if (count) select(mapChoice);
   else text('cell-detail', '');
@@ -294,8 +301,11 @@ function renderActivity(sample, meta) {
   if (!sample || !meta) {
     for (const id of ['activation-heat', 'weight-heat']) $(id).hidden = true;
     $('feature-list').replaceChildren();
+    delete $('feature-list').dataset.rows;
     text('activation-detail', 'Waiting for activations.');
     text('matrix-note', 'Waiting for weight metadata.');
+    options($('matrix'), []);
+    $('load-weights').disabled = true;
     return;
   }
   const key = $('activation-layer').value;
@@ -357,7 +367,7 @@ function renderMemory() {
     const sample = samples[offset];
     if (!sample) return;
     inspectedMemory = {sequence: sample.sequence, hidden};
-    text('memory-detail', `#${sample.sequence} · unit ${hidden} = ${number(values[index])} · revision ${sample.model_revision}`);
+    text('memory-detail', `#${sample.sequence} · ${clock(sample.timestamp)} · unit ${hidden} = ${number(values[index])} · revision ${sample.model_revision}`);
   };
   const column = samples.findIndex(sample => sample.sequence === inspectedMemory?.sequence);
   const index = column < 0 ? columns - 1 : (inspectedMemory.hidden * columns + column);
@@ -416,7 +426,7 @@ const identity = (stream, sequence) => ({stream, sequence, preview: preview() ? 
 
 async function loadWeights() {
   const {sample, metadata} = shown();
-  if (!sample) return;
+  if (!sample || !$('weight-row').reportValidity() || !$('weight-column').reportValidity()) return;
   const request = ++pendingWeights;
   text('weight-detail', 'Loading weights…');
   try {
@@ -434,7 +444,7 @@ async function loadWeights() {
 function renderTimeline(sample, meta) {
   const samples = list();
   const selected = replay?.sample.sequence;
-  const stamp = samples.map(row => row.sequence).join(',') + '/' + selected;
+  const stamp = (frozen || live).sample?.stream + '/' + samples.map(row => row.sequence).join(',') + '/' + selected;
   if ($('events').dataset.stamp !== stamp) {
     $('events').replaceChildren(...samples.slice().reverse().map(row => {
       const position = row.position_kind ? ` · ${row.position_kind} ${row.position + 1}` : '';
@@ -473,7 +483,15 @@ function comparison(sample, meta) {
     el('h3', 'Largest tool probability changes'),
     table(['Tool', ...headers.slice(1)], deltas(sample.tool_probabilities,
       meta.tools.map(label => other.tool_probabilities[baseline.metadata.tools.indexOf(label)]))
-      .map(([i, delta, before, after]) => [meta.tools[i], percent(before), percent(after), number(delta)]))];
+      .map(([i, delta, before, after]) => [meta.tools[i], percent(before), percent(after), number(delta)])),
+    ...(sample.action === other.action && sample.position_kind && sample.position_kind === other.position_kind ?
+      [el('h3', 'Largest position probability changes'),
+        table(['Position', ...headers.slice(1)], deltas(sample.location_probabilities, other.location_probabilities)
+          .map(([i, delta, before, after]) => [i + 1, percent(before), percent(after), number(delta)]))] : []),
+    ...(sample.model_revision === other.model_revision ?
+      [el('h3', 'Largest recurrent state changes'),
+        table(['Hidden unit', ...headers.slice(1)], deltas(sample.hidden, other.hidden)
+          .map(row => [row[0], number(row[2]), number(row[3]), number(row[1])]))] : [])];
 }
 
 async function inspectReplay(sequence) {
@@ -516,13 +534,195 @@ function table(headers, rows) {
 
 async function loadLearning() {
   const target = $('learning-results');
+  const request = ++learningRequest;
   target.replaceChildren(el('p', 'Loading written results…'));
   try {
-    const data = await getJSON('/api/learning');
-    renderLearning(target, data);
+    const run = $('learning-run').value;
+    const data = await getJSON('/api/learning', run ? {run} : undefined);
+    if (request !== learningRequest) return;
+    learning = data;
+    options($('learning-run'), [['', 'Most recently written'], ...data.runs.map(id => [id, id.replace('coverage-team-', '')])]);
+    renderLearning();
   } catch (error) {
-    target.replaceChildren(el('p', error.message));
+    if (request === learningRequest) target.replaceChildren(el('p', error.message));
   }
+}
+
+const boardStart = value => ({
+  fresh: 'Fresh board', carry: 'Carry retry', continue: 'CONTINUE practice',
+  next_level: 'Uninterrupted advance', unknown: 'Unknown start',
+}[value] || title(value));
+const dimensions = [
+  ['learning-cohort', 'cohort', title, 'All cohorts'],
+  ['learning-start', 'start_kind', boardStart, 'All starts'],
+  ['learning-stage', 'stage', stage => stage === 'unknown' ? 'Unknown stage' : `L${stage}`, 'All stages'],
+];
+const usageKeys = ['decisions', 'cast_available', 'cast_sampled', 'stock_decreased'];
+const usageColumns = ['Battle decisions', 'Cast available', 'Cast selected', 'Stock decreased'];
+function savedTrend(rows) {
+  const figure = el('section'), canvas = el('canvas', undefined, 'trend'), detail = el('p', '', 'readout');
+  figure.append(el('h3', 'Civilian saves across recorded outcomes'),
+    el('p', 'Rows appear in file order within each cohort. Teal marks training and gold marks held-out trials or PPO evaluation. The reference line is 35% saved.', 'note'),
+    canvas, detail);
+  canvas.tabIndex = 0;
+  canvas.setAttribute('aria-label', 'Civilian save rates. Use arrow keys to read an outcome.');
+  canvas.width = Math.max(260, $('learning-results').clientWidth);
+  canvas.height = 155;
+  const ctx = canvas.getContext('2d');
+  const span = canvas.width - 50;
+  const x = i => 40 + span * i / Math.max(1, rows.length - 1);
+  const y = value => 143 - 130 * value;
+  ctx.font = '12px system-ui';
+  ctx.fillStyle = '#a2b6c3';
+  ctx.strokeStyle = '#375160';
+  for (const tick of [0, .35, 1]) {
+    ctx.fillText(`${tick * 100}%`, 3, y(tick) + 4);
+    ctx.beginPath();
+    ctx.moveTo(39, y(tick));
+    ctx.lineTo(canvas.width - 10, y(tick));
+    ctx.stroke();
+  }
+  rows.forEach((row, i) => {
+    if (!Number.isFinite(row.saved)) return;
+    ctx.fillStyle = ['Training trial', 'PPO train'].includes(row.cohort) ? '#75e4d7' : '#ffcc76';
+    ctx.beginPath();
+    ctx.arc(x(i), y(row.saved), row.qualifies ? 4 : 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  let selected = rows.length - 1;
+  const inspect = index => {
+    selected = Math.max(0, Math.min(rows.length - 1, index));
+    const row = rows[selected];
+    detail.textContent = row ? `${row.cohort} · ${boardStart(row.start_kind)} · L${row.stage ?? '?'} · ${row.end} · ${percent(row.saved)} saved` :
+      'No results match the filters.';
+  };
+  canvas.onclick = event => {
+    const bounds = canvas.getBoundingClientRect();
+    const coordinate = (event.clientX - bounds.left) * canvas.width / bounds.width;
+    inspect(Math.round((coordinate - 40) / span * (rows.length - 1)));
+  };
+  canvas.onkeydown = event => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    inspect(selected + (event.key === 'ArrowLeft' ? -1 : 1));
+  };
+  inspect(selected);
+  return figure;
+}
+
+function renderLearning() {
+  if (!learning) return;
+  const ppo = $('learning-dataset').value === 'ppo';
+  const run = learning.campaigns[0];
+  $('learning-run-control').hidden = ppo;
+  const rows = ppo ? learning.ppo : run?.outcomes || [];
+  for (const [id, key, label, all] of dimensions) {
+    const available = [...new Set(rows.map(row => row[key] ?? 'unknown'))].sort();
+    options($(id), [['', all], ...available.map(value => [value, label(value)])]);
+  }
+  const filtered = rows.filter(row => dimensions.every(([id, key]) =>
+    !$(id).value || String(row[key] ?? 'unknown') === $(id).value));
+  const groups = new Map();
+  for (const row of filtered) {
+    const key = JSON.stringify([row.cohort, row.start_kind, row.stage, row.view_revision]);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  }
+  const summaries = [...groups.values()].map(group => {
+    const first = group[0];
+    const scores = group.flatMap(row => Number.isFinite(row.saved) ? [row.saved] : []);
+    return [first.cohort, boardStart(first.start_kind), first.stage ?? 'Unknown', first.view_revision,
+      `${group.filter(row => row.qualifies).length} / ${group.length}`,
+      scores.length ? percent(scores.reduce((a, b) => a + b, 0) / scores.length) : '—',
+      scores.length ? percent(Math.min(...scores)) : '—', scores.length,
+      group.filter(row => row.end === 'aborted').length, group.filter(row => row.end === 'timeout').length,
+      group.filter(row => row.end === 'error').length,
+      group.filter(row => !Number.isFinite(row.saved) && !['aborted', 'timeout', 'error'].includes(row.end)).length,
+      ...usageKeys.map(key => {
+        const counts = group.map(row => row.usage[key]).filter(Number.isFinite);
+        return counts.length ? counts.reduce((a, b) => a + b, 0) : '—';
+      })];
+  });
+  const target = $('learning-results');
+  target.replaceChildren(
+    el('p', 'Recent recorded rows. Mean and minimum use available won/lost scores. Retry readings, timeouts, and errors have separate counts. Trial counts may include repeated outbreaks.', 'note'),
+    savedTrend(filtered),
+    el('h3', 'Performance by cohort and level'),
+    summaries.length ? table(['Cohort', 'Start', 'Level', 'Camera revision', 'Qualifying / trials', 'Mean saved',
+      'Min saved', 'Saved scores', 'Aborted', 'Timeouts', 'Errors', 'Unknown scores', ...usageColumns], summaries) : el('p', 'No recorded results match the filters.'),
+    el('h3', 'Recent outcomes'),
+    table(['Cohort', 'Start', 'Level', 'Outcome', 'Official saved', 'At retry', 'Qualification', 'Policy / team',
+      'Arm', 'Seed / outbreak', 'PPO reward', ...usageColumns], filtered.slice(-100).reverse().map(row => [
+      row.cohort, boardStart(row.start_kind), row.stage, row.end, Number.isFinite(row.saved) ? percent(row.saved) : '—',
+      Number.isFinite(row.at_retry) ? percent(row.at_retry) : '—', row.qualifies ? 'Qualified' : '—',
+      row.checkpoint_id || row.team_id, row.arm, `${row.seed ?? '—'} / ${row.outbreak?.seed ?? '—'}`,
+      Number.isFinite(row.R) ? row.R.toFixed(4) : '—', ...usageKeys.map(key => row.usage[key]),
+    ])));
+  if (ppo) {
+    const updates = learning.updates.filter(row => !$('learning-stage').value ||
+      String(row.scenario ?? 'unknown') === $('learning-stage').value);
+    target.append(el('h3', 'PPO updates'), el('p', 'Entropy measures how spread the policy is. KL tracks policy change. Explained variance measures value-prediction fit.', 'note'),
+      table(['Run', 'Round', 'Level', 'Updated policy', 'Loss', 'Approx. KL', 'Clipped fraction', 'Entropy', 'Explained variance'],
+        updates.slice().reverse().map(row => [row.run_id, row.round, row.scenario, row.checkpoint_id,
+          ...['loss', 'approx_kl', 'clip_fraction', 'entropy', 'explained_variance'].map(key => Number.isFinite(row[key]) ? row[key].toPrecision(5) : '—')])));
+  } else if (run) renderTeams(target, run);
+}
+
+function renderTeams(target, run) {
+  const incumbent = run.incumbent;
+  target.append(el('h3', 'Campaign selection'),
+    el('p', `Incumbent ${incumbent.team_id ?? 'unavailable'} · provisional leader ${run.leader.team_id ?? 'unavailable'} · base policy ${incumbent.base ?? run.leader.base ?? 'unavailable'}`, 'numeric'),
+    el('p', incumbent.holdout_stage ? `Recorded promotion at L${incumbent.holdout_stage} against ${incumbent.holdout_opponent ?? 'unavailable'}.` :
+      'This incumbent snapshot has no explicit promotion record. Individual high scores do not establish repeatability.', 'note'));
+  if (incumbent.fresh_stages?.length) target.append(table(
+    ['Incumbent level', 'Fresh starts', 'Qualifying wins', 'Search mean', 'Lower win-rate bound'],
+    incumbent.fresh_stages.map((row, i) => [i + 1, row.starts, row.wins, row.starts ? percent(row.mean) : '—', row.starts ? percent(row.lower) : '—'])));
+  const held = run.outcomes.filter(row => row.cohort === 'Held-out');
+  if (held.length) target.append(el('h3', 'Held-out evidence for this search'),
+    table(['Arm', 'Team', 'Level', 'Start', 'Outcome', 'Saved', 'Qualification'], held.map(row =>
+      [row.arm, row.team_id, row.stage, boardStart(row.start_kind), row.end, percent(row.saved), row.qualifies ? 'Qualified' : '—'])));
+  if (!run.teams.length) return;
+  const controls = el('div', undefined, 'toolbar inline'), result = el('div');
+  const pickTeam = (label, value) => {
+    const field = el('label', label);
+    const select = el('select');
+    options(select, run.teams.map(team => [team.team_id, team.team_id]));
+    if (run.teams.some(team => team.team_id === value)) select.value = value;
+    field.append(select);
+    controls.append(field);
+    return select;
+  };
+  const a = pickTeam('Candidate', run.leader.team_id), b = pickTeam('Compare with', incumbent.team_id);
+  const compare = () => {
+    const candidate = run.teams.find(team => team.team_id === a.value);
+    const base = run.teams.find(team => team.team_id === b.value);
+    const ancestry = candidate.parent_ids || candidate.parents || candidate.parent_id;
+    const keys = [...new Set([...Object.keys(base.parameters), ...Object.keys(candidate.parameters)])];
+    const differences = [], sections = [];
+    const compact = value => value === undefined ? '—' : (typeof value === 'object' && value !== null ?
+      JSON.stringify(value).slice(0, 120) : String(value));
+    const walk = (path, before, after) => {
+      if (differences.length >= 48 || before === after) return;
+      if (before && after && typeof before === 'object' && typeof after === 'object') {
+        for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+          if (differences.length >= 48) break;
+          walk(`${path}.${key}`, before[key], after[key]);
+        }
+      } else differences.push([path, compact(before), compact(after)]);
+    };
+    for (const key of keys) {
+      if (JSON.stringify(base.parameters[key]) === JSON.stringify(candidate.parameters[key])) continue;
+      sections.push(key);
+      walk(key, base.parameters[key], candidate.parameters[key]);
+    }
+    result.replaceChildren(
+      el('p', `Candidate generation ${candidate.generation ?? 'unavailable'} · recorded parents ${ancestry ? JSON.stringify(ancestry) : 'unavailable'}`),
+      el('p', sections.length ? `Different parameter groups: ${sections.join(', ')}` : 'No differences in the available parameters.'),
+      table(['Parameter path (first 48 differences)', 'Comparison', 'Candidate'], differences));
+  };
+  a.onchange = b.onchange = compare;
+  compare();
+  target.append(el('h3', 'Team parameters'), el('p', 'Differences compare two saved configurations. They do not establish parentage or what caused a score.', 'note'), controls, result);
 }
 
 for (const button of document.querySelectorAll('nav button')) button.onclick = () => switchView(button.dataset.view);
@@ -533,7 +733,17 @@ $('map-layer').onchange = render;
 for (const id of ['activation-layer', 'feature-group', 'feature-search']) $(id).oninput = () => { page = unit = 0; render(); };
 $('feature-prev').onclick = () => { page--; render(); };
 $('feature-next').onclick = () => { page++; render(); };
-$('matrix').onchange = () => { ++pendingWeights; $('weight-row').value = $('weight-column').value = 0; render(); };
+$('matrix').onchange = () => {
+  ++pendingWeights;
+  const matrix = $('matrix').value;
+  const {sample} = shown();
+  const output = matrix.startsWith('hu.') ? sample?.tool :
+    matrix.startsWith('hc.') && sample?.position != null ?
+      (sample.position_kind === 'synthetic grid' ? sample.position : 48 * sample.tool + sample.position) : 0;
+  $('weight-row').value = output ?? 0;
+  $('weight-column').value = 0;
+  render();
+};
 $('load-weights').onclick = loadWeights;
 $('follow').onclick = () => {
   ++pendingReplay;
@@ -546,13 +756,13 @@ $('follow').onclick = () => {
 $('open-replay').onclick = () => switchView('monitor');
 $('compare').onchange = async () => {
   const value = $('compare').value;
-  const sample = shown().sample;
+  const {sample, metadata} = shown();
   const request = ++pendingCompare;
   if (value === '' || !sample) { baseline = null; render(); return; }
   try {
     const result = await getJSON('/api/decision', identity(sample.stream, value));
     if (request !== pendingCompare) return;
-    replay ||= {sample, metadata: shown().metadata};
+    replay ||= {sample, metadata};
     baseline = result;
     render();
   } catch (error) {
@@ -560,4 +770,6 @@ $('compare').onchange = async () => {
   }
 };
 $('refresh-learning').onclick = loadLearning;
+$('learning-run').onchange = loadLearning;
+for (const id of ['learning-dataset', ...dimensions.map(([id]) => id)]) $(id).onchange = renderLearning;
 connect();

@@ -11,6 +11,7 @@ import threading
 import time
 from urllib.parse import parse_qs, urlsplit
 import observatory
+from learning import read_results
 
 ROOT = Path(__file__).resolve().parent
 FRESH_SECONDS = 15
@@ -19,6 +20,26 @@ PUBLIC = {'/': ('observatory.html', 'text/html'), '/legacy': ('index.html', 'tex
           '/style.css': ('style.css', 'text/css'), '/app.js': ('app.js', 'text/javascript'),
           '/graph.js': ('graph.js', 'text/javascript'), '/observatory.css': ('observatory.css', 'text/css'),
           '/observatory.js': ('observatory.js', 'text/javascript')}
+
+
+def decode_frame(raw, cached=None):
+    def decode(data):
+        return json.loads(data, parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
+    if cached:
+        previous, data = cached
+        if previous == raw:
+            return data
+        # The observer appends its cached graph as the final field of compact JSON.
+        # Verify the entire suffix before reusing the decoded labels and edges.
+        old = previous.find(b',"graph":')
+        new = raw.find(b',"graph":')
+        if (old >= 0 and new >= 0 and 'graph' in data
+                and memoryview(previous)[old:] == memoryview(raw)[new:]):
+            try:
+                return {**decode(raw[:new] + b'}'), 'graph': data['graph']}
+            except (TypeError, ValueError):
+                pass
+    return decode(raw)
 
 
 class Feed:
@@ -76,6 +97,7 @@ class Feed:
             except (KeyError, TypeError, IndexError, AttributeError, ValueError):
                 # A malformed optional summary must not stop other workers' telemetry.
                 continue
+        present.update(entry['stream'] for entry in self.history)
         self.seen = {key: value for key, value in self.seen.items() if key in present}
         kept = {(sample['stream'], sample['model_revision']) for sample, _ in self.samples}
         self.metadata = {key: value for key, value in self.metadata.items() if key in kept}
@@ -98,11 +120,7 @@ class Feed:
                     continue
                 raw = path.read_bytes()
                 cached = self.decoded.get(path)
-                if cached is not None and cached[0] == raw:
-                    data = cached[1]
-                else:
-                    data = json.loads(raw,
-                                      parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
+                data = decode_frame(raw, cached)
                 if (not isinstance(data, dict) or data.get('schema') != 1 or
                         not isinstance(data.get('stream'), str) or len(data['stream']) > 128 or
                         not isinstance(data.get('timestamp'), (int, float)) or
@@ -183,7 +201,7 @@ class Feed:
         return None
 
 
-def make_server(host, port, feed=None):
+def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysis'):
     feed = feed or Feed()
     class Handler(BaseHTTPRequestHandler):
         def events(self, args):
@@ -248,6 +266,14 @@ def make_server(host, port, feed=None):
 
         def do_GET(self):
             url = urlsplit(self.path)
+            if url.path in ('/api/weights', '/api/learning'):
+                host = self.headers.get('Host', '')
+                if (self.client_address[0] != '127.0.0.1' or
+                        host not in ('localhost', '127.0.0.1', f'localhost:{self.server.server_port}',
+                                     f'127.0.0.1:{self.server.server_port}') or
+                        self.headers.get('Sec-Fetch-Site') in ('cross-site', 'same-site')):
+                    self.send_error(403)
+                    return
             if url.path == '/api/events':
                 if not self.server.stream_slots.acquire(blocking=False):
                     self.send_error(503, 'Too many telemetry viewers; retry shortly')
@@ -259,7 +285,17 @@ def make_server(host, port, feed=None):
                 finally:
                     self.server.stream_slots.release()
                 return
-            if url.path in ('/api/decision', '/api/weights'):
+            if url.path == '/api/learning':
+                run = parse_qs(url.query).get('run', [None])[0]
+                if not self.server.result_slots.acquire(blocking=False):
+                    self.send_error(503, 'Results are busy; retry shortly')
+                    return
+                try:
+                    result = read_results(learning_directory, run)
+                    body, mime = json.dumps(result, allow_nan=False, separators=(',', ':')).encode(), 'application/json'
+                finally:
+                    self.server.result_slots.release()
+            elif url.path in ('/api/decision', '/api/weights'):
                 args = parse_qs(url.query)
                 def get(name, default=''):
                     return args.get(name, [default])[0]
@@ -329,6 +365,7 @@ def make_server(host, port, feed=None):
     server.sample_ready = threading.Condition()
     server.generation = 0
     server.stream_slots = threading.BoundedSemaphore(16)
+    server.result_slots = threading.BoundedSemaphore(2)
     server.sampler = threading.Thread(target=server.sample, daemon=True, name='telemetry-sampler')
     server.sampler.start()
     return server

@@ -1,6 +1,15 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 22:50 Central. The ZAR Observatory is deployed at localhost:8765
+  (visualizer PID 13632, create time 1795063696.7385316). The original graph
+  is at /legacy. Only the visualizer listener was restarted. Training was
+  active with campaign operators 45832 and 53896 after deployment.
+  Live L1 game 54656 / worker 53524 matched the browser replay and runtime
+  frame for revision d9e6f3c6341a6d3c. The worker predated the new matrix
+  capture, which passed synthetic inspection. Schema-4 steady SSE dropped
+  from about 244 KB to 34 KB on the fixture. See visualizer/README.md for
+  browser timings, verification steps and the remaining telemetry limits.
 - 22:46 Central. Timed production four-epoch CPU PPO updates
   with synthetic observations at representative historical episode lengths.
   Among 54 recent recorded battles with decision counts, median was 478.5

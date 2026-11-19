@@ -1,6 +1,104 @@
-# Signal — ZAR policy observatory
+# ZAR Observatory
 
-A read-only visualizer for a running PyTorch GRU policy. The browser shows actual captured activations, recurrent memory, learned connections, output probabilities and the action sampled by one worker. It does not play the game, load a second gameplay policy, change checkpoints, or control training.
+A read-only interface for a running PyTorch GRU policy and its recorded training
+results. Open **http://localhost:8765** for the observatory or **/legacy** for the
+original network graph and its focused node inspector.
+
+## What each view answers
+
+| View | What to look for | Data |
+| --- | --- | --- |
+| **Monitor** | Which tool did the policy choose, where could it target, and what was in view? | Actual masked tool and selected-tool position probabilities, reported model and worker identities, and the policy's 8×6 viewport observations. Grid positions can snap to native entities during execution. Roster and perk slots have separate distributions. |
+| **Neural activity** | Which inputs and hidden units were active, and which learned coefficients should I inspect? | Captured float32 inputs, previous memory, GRU output, raw logits and value. Input groups, search and 16-row pages retain the trainer's label and normalization strings. Exact signed GRU gate and head coefficients are available as 16×32 tiles when captured. |
+| **Timeline** | What did the model see at an earlier decision? | Up to 50 replayable samples for the selected stream from a shared 200-sample retention window. Replay restores captured observations, distributions and recurrent state. Comparison lists changes in inputs, probabilities and hidden state where their definitions match. |
+| **Learning** | How often does a policy qualify on independent boards, and what evidence supports a team change? | Recent validated schema-4 PPO history and campaign trial/holdout outputs. Filter by source, start kind and level. Inspect the incumbent and provisional team, held-out arms, PPO updates, available cast counts, selected casts, stock decreases and changed saved team parameters. |
+
+The view freeze affects the browser. Use the process picker to inspect retained
+history after a worker disappears. A stale inference can coexist with an open
+connection. The legacy graph remains available for focused connectivity
+inspection. Its unsigned GRU edges summarize weights across gates.
+
+## Data and access
+
+- The Python observer stays attached to the actual forward pass and publishes
+  after mask application and action selection. The no-gradient hooks copy
+  values before in-place modification. A single background writer records the
+  latest frame and writes a revision-scoped float32 weight file once per
+  revision using detached parameter bytes already copied for identity hashing.
+  The writer records the exact weight ID, campaign team and forecast identity.
+  Existing workers pick up those fields on their next normal launch.
+- The server samples the runtime directory every 200 ms. When the inline
+  legacy topology bytes match, the server reuses the decoded topology and
+  parses the changed prefix. The observatory uses one versioned SSE stream,
+  sends labels once per stream revision, sends the selected tool's conditional
+  row, and streams incremental history summaries. The legacy feed and
+  diagnostic `/api/state` remain available.
+- Replay is keyed by observer stream, sequence and mode. Sequence gaps identify
+  missed publications. Observer throttling and queue drops also limit coverage.
+  Retention is in memory and resets with the server. Observed decisions tell
+  what the policy chose. Existing observer frames lack per-decision attempts
+  and native confirmations. Learning shows recorded episode-level aggregates.
+- The LAN listener serves live telemetry and retained replay. Weight tiles and
+  learning records require **localhost** access on the host. Their inputs
+  select retained matrix slices and fixed result projections. Checkpoints and
+  arbitrary paths are outside the HTTP allowlist. Weights are available during
+  the episode and removed on normal observer close. Older workers can still
+  provide activation replay. Campaign stage comes from the existing campaign
+  episode tag. Older standalone PPO frames lack a live stage field.
+- Learning reads up to the last 4 MiB per recognized result file, 400 PPO
+  outcomes, 60 PPO updates, the 16 most recently written campaign runs, and 400
+  outcomes per selected run. Champion statistics use the search's fresh-board
+  evidence. Raw trial counts can include repeats. Timeout snapshots are
+  omitted from official save scores. Aborted readings appear as retry scores.
+  Older outputs omit explicit lineage. Team comparison lists saved parameter
+  differences. Promotion evidence appears when the champion and held-out
+  results record it.
+- Offline sensitivity was evaluated and deferred. An isolated replay would
+  need the hidden state, exact revision, target masks and the campaign
+  specialist's mutable planning and forecast state. Existing telemetry lacks
+  a reproducible snapshot of that composite state. Weight inspection and
+  decision comparison use captured data only.
+
+## Acceptance and benchmark
+
+The Playwright suite is `test_observatory_browser.js`. The connected worker
+check is `verify_live_observatory.js`. Run the former with synthetic preview
+and the latter against the deployed server during a coordinated normal worker
+launch. The legacy transport and mobile suites target `/legacy`.
+
+Measured on this host in Chromium at 1440×900 with a recorded schema-4 fixture
+of 4,889 inputs, 8,880 conditional logits and 55,932 legacy edges. The graph used
+Canvas 2D. Render timings measure synchronous SSE handler work minus JSON
+parsing. Browser paint and GPU execution are outside these timings. Heap is
+JavaScript heap after garbage collection.
+
+| Metric | Original graph | Monitor | Neural activity |
+| --- | ---: | ---: | ---: |
+| First browser SSE payload | 5.13 MB | 0.37 MB | 0.39 MB |
+| Steady SSE payload | 244 KB | 34 KB | 34 KB |
+| Typical steady JSON parse | 0.4 ms | 0.1 ms | below 0.1 ms |
+| Typical steady render handler | 48.2 ms | 0.4 ms | 1.2 ms |
+| JavaScript heap | 7.23 MB | 2.09 MB | 3.04 MB |
+| Select options | 14,217 | 18 | 27 |
+
+The server measured 3.52 ms for steady legacy serialization and 0.42 ms for
+compact serialization. Parsing the 5.12 MB observer file took 44.57 ms with
+a full decode and 10.88 ms with byte-verified graph reuse. Peak traced decode
+allocations fell from 27.1 MB to 1.24 MB. These are fixture measurements during
+active training. First attach size varies with retained history. Reproduce
+with `python -B visualizer/benchmark_observatory.py <recorded-frame> --serve`
+and run `visualizer/benchmark_observatory.js` in Playwright on the isolated
+loopback fixture server. In a second local SSE run, request-to-first-payload
+time was 133 ms for the legacy feed and 3.1 ms for the compact feed. This
+comparison includes server encoding and loopback delivery and uses warm
+server caches with different retained history lengths.
+
+The browser replay matched a live Boston L1 worker's `buy Rally` decision
+(game 54656, worker 53524, revision `d9e6f3c6341a6d3c`, sequence 0). The running
+worker predated matrix capture. A subsequent `pan_left` sample from that worker
+matched the original runtime JSON for the full input, previous memory, hidden
+output, tool logits, tool probabilities and actual selection. Raw matrix
+inspection and interactive comparison were exercised in preview.
 
 ## Run
 
@@ -36,7 +134,9 @@ To include a clearly labeled, separate PyTorch preview with synthetic inputs:
 .\visualizer\start.ps1 -Preview
 ```
 
-Then choose **Preview** in the app. Preview never sends input to a game. The default **Live network** view only accepts real, non-preview observer streams. Closing the server with Ctrl+C also stops its preview process. Do not start a second server on the same port.
+Then choose **Synthetic preview** in the source selector. The default **Live**
+source accepts real observer streams. Closing the server with Ctrl+C also stops
+its preview process.
 
 The launcher defaults to the repository's `.venv\Scripts\python.exe`; follow
 the root README to create it from `requirements.txt`. Override it with
@@ -45,7 +145,9 @@ The server/frontend use the Python standard library; the observer and optional
 preview use PyTorch from the selected environment. Existing processes keep their
 original interpreter until restarted normally.
 
-WebGPU is preferred. It works on a supported browser at localhost or over trusted HTTPS. Ordinary HTTP over a LAN address uses Canvas 2D when the browser withholds WebGPU. No insecure browser flags or certificate changes are needed. `/?canvas2d=1` explicitly exercises the fallback.
+The observatory uses Canvas 2D for heatmaps and standard DOM controls. The
+legacy graph prefers WebGPU on localhost or trusted HTTPS and supports Canvas
+2D over ordinary HTTP. `/legacy?canvas2d=1` explicitly exercises the fallback.
 
 ## Connect real training
 
@@ -62,7 +164,7 @@ The integration in `scripts/nn_play2.py`:
 
 The old standalone patch has been removed now that it is applied; do not apply it a second time. Launch training normally after integration. No alternate trainer launcher is required. Existing training behavior, checkpoints, sampling, optimization and game controls are retained. See the maintenance contract in root `AGENTS.md` before changing the model or feature meanings.
 
-## How to read the view
+## How to read the legacy graph
 
 - **Observations:** the actual feature vector passed to the policy. Labels identify transformed values such as log counts and normalized money; these are not raw HUD numbers.
 - **Previous memory:** the hidden state passed into this decision. It is zero at the start of an episode.

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>ZAR Observatory</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/observatory.css">
   <script src="/observatory.js" type="module"></script>
 </head>
@@ -69,8 +70,8 @@
             <p class="note">Weights are learned coefficients. GRU reset, update, and candidate matrices use separate input and recurrent coefficients. Campaign specialists can also change the final action logits.</p>
             <div class="weight-controls">
               <label>Matrix <select id="matrix"></select></label>
-              <label>First row <input id="weight-row" type="number" min="0" value="0"></label>
-              <label>First column <input id="weight-column" type="number" min="0" value="0"></label>
+              <label>First row <input id="weight-row" type="number" min="0" value="0" required></label>
+              <label>First column <input id="weight-column" type="number" min="0" value="0" required></label>
               <button id="load-weights">Inspect tile</button>
             </div>
             <p id="matrix-note" class="note"></p>
@@ -101,6 +102,13 @@
       <section class="panel">
         <div class="panel-head"><h2>Recorded results</h2><button id="refresh-learning">Refresh results</button></div>
         <p class="note">Civilian save rates come from the episode result. A qualifying win requires a game win and at least 35% saved. PPO reward measures the training objective and includes infection costs.</p>
+        <div class="toolbar inline">
+          <label>Dataset <select id="learning-dataset"><option value="campaign">Campaign search</option><option value="ppo">PPO history</option></select></label>
+          <label id="learning-run-control">Search run <select id="learning-run"></select></label>
+          <label>Cohort <select id="learning-cohort"></select></label>
+          <label>Board start <select id="learning-start"></select></label>
+          <label>Stage <select id="learning-stage"></select></label>
+        </div>
         <div id="learning-results"></div>
       </section>
     </div>

@@ -71,6 +71,7 @@ details { margin-top: .7rem; }
 summary { cursor: pointer; color: var(--cyan); }
 .heat { display: block; width: 100%; height: 132px; background: #091219; border: 1px solid var(--line); margin: .8rem 0 .3rem; image-rendering: pixelated; cursor: crosshair; }
 .heat.memory { height: 180px; }
+.trend { display: block; width: 100%; height: 155px; margin-top: .7rem; background: #091219; border: 1px solid var(--line); }
 #activation-layer, #feature-group, #matrix { max-width: 15rem; }
 .weight-controls input { width: 6rem; }
 #feature-search { width: min(100%, 14rem); }

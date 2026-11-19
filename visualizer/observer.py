@@ -241,9 +241,9 @@ class Observer:
                             with weights_temp.open('wb') as output:
                                 output.writelines(chunks)
                             os.replace(weights_temp, next_weights)
-                            if weights is not None:
-                                weights.unlink(missing_ok=True)
-                            weights = next_weights
+                            prior, weights = weights, next_weights
+                            if prior is not None:
+                                prior.unlink(missing_ok=True)
                         except OSError:
                             pass  # Optional weight inspection can fail independently of live capture.
                     if current is not graph:
