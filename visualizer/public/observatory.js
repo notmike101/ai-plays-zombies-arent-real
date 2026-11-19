@@ -26,6 +26,7 @@ let mapChoice = 0, page = 0, unit = 0, inspectedMemory = null, tile = null, weig
 let pendingReplay = 0, pendingCompare = 0, pendingWeights = 0;
 let learning, learningRequest = 0;
 let gameView = null;
+let selectedWorker = null;
 const shown = () => replay || frozen || live;
 const list = () => (frozen || live).history || [];
 const preview = () => $('mode').value === 'preview';
@@ -41,6 +42,35 @@ function switchView(next) {
   render();
 }
 
+function renderWorkers(workers) {
+  const group = $('worker-nodes');
+  const signature = JSON.stringify([selectedWorker, workers]);
+  if (group.dataset.signature === signature) return;
+  group.dataset.signature = signature;
+  const focused = group.contains(document.activeElement) ? document.activeElement.dataset.worker : null;
+  const buttons = workers.map(worker => {
+    const button = el('button', undefined, 'worker-node');
+    button.type = 'button';
+    button.dataset.worker = worker.id;
+    button.setAttribute('aria-pressed', worker.id === selectedWorker);
+    button.append(el('strong', worker.copy || (preview() ? 'Synthetic preview' : `Game ${worker.game_pid}`)),
+      el('small', preview() ? `Worker ${worker.worker_pid}` :
+        `Game ${worker.game_pid}${worker.worker_pid == null ? '' : ` · worker ${worker.worker_pid}`}`),
+      el('span', preview() ? 'Synthetic' : worker.stream ? 'Policy live' : 'Game only', 'worker-state'));
+    button.onclick = () => {
+      if (selectedWorker === worker.id) return;
+      selectedWorker = worker.id;
+      renderWorkers(workers);
+      connect();
+    };
+    return button;
+  });
+  group.replaceChildren(...buttons);
+  if (focused) (buttons.find(button => button.dataset.worker === focused) ||
+                buttons.find(button => button.dataset.worker === selectedWorker))?.focus();
+  $('worker-empty').hidden = workers.length > 0;
+}
+
 function connect() {
   source?.close();
   const nonce = ++generation;
@@ -54,20 +84,16 @@ function connect() {
   syncPause();
   status('connecting');
   render();
-  const query = new URLSearchParams({view: 'observatory', preview: preview() ? '1' : '0'});
-  if ($('stream').value) query.set('stream', $('stream').value);
+  const query = new URLSearchParams({view: 'observatory', workers: '1', preview: preview() ? '1' : '0'});
+  if (selectedWorker) query.set('game', selectedWorker);
   source = new EventSource('/api/events?' + query);
   source.addEventListener('state', event => {
     if (nonce !== generation) return;
     const data = JSON.parse(event.data);
     if (data.version !== 1) return;
     status(data.status, data.age);
-    const streams = [['', 'Automatic attachment'], ...data.streams.map(stream => [
-      stream.id, `Game ${stream.game_pid} · worker ${stream.worker_pid}${stream.archived ? ' · retained history' : stream.age > 15 ? ' · stale' : ''}`
-    ])];
-    const selected = $('stream').value;
-    if (selected && !streams.some(([id]) => id === selected)) streams.push([selected, 'Selected process unavailable']);
-    options($('stream'), streams);
+    selectedWorker = data.selected_worker ?? null;
+    renderWorkers(data.workers || []);
     const previous = live;
     const reset = data.history_reset || previous.sample?.stream !== data.stream;
     live = {
@@ -168,6 +194,11 @@ function waitMedia(target, name, signal, run = () => {}) {
   });
 }
 
+function gameVideoLabel(active) {
+  return active.copy ? `Game video only · ${active.copy} · waiting for policy telemetry` :
+    `Live video · game PID ${active.gamePid}`;
+}
+
 async function playGameVideo(active, label) {
   const controller = new AbortController();
   const session = active.video = {controller, url: null};
@@ -218,11 +249,11 @@ async function playGameVideo(active, label) {
       }
       if (!started) {
         started = true;
+        session.playing = true;
         player.hidden = false;
         $('game-screenshot').hidden = true;
         player.play().then(() => clearTimeout(startup), () => controller.abort());
-        label(active.copy ? `Game video only · ${active.copy} · waiting for policy telemetry` :
-          `Live video · game PID ${active.gamePid}`);
+        label(gameVideoLabel(active));
       }
       if (player.currentTime - start > 8) {
         await waitMedia(buffer, 'updateend', signal, () => buffer.remove(start, player.currentTime - 3));
@@ -265,8 +296,8 @@ async function refreshGameView() {
   }
   const state = $('status').dataset.state;
   const sample = state === 'live' ? live.sample : null;
-  const game = !$('stream').value && state !== 'offline' ? live.game : null;
-  const stream = sample?.stream || game?.id;
+  const game = state !== 'offline' ? live.game : null;
+  const stream = game?.id || sample?.stream;
   if (!stream) {
     clearGameView();
     label('Waiting for a worker to publish telemetry.');
@@ -279,6 +310,8 @@ async function refreshGameView() {
     label('Waiting for a game image.');
   }
   const active = gameView;
+  active.copy = sample ? null : game.copy;
+  if (active.video?.playing) label(gameVideoLabel(active));
   if (active.denied) return;
   if (active.recoverVideoAt && performance.now() >= active.recoverVideoAt && !active.pending) {
     active.videoFailed = false;
@@ -937,8 +970,7 @@ function renderTeams(target, run) {
 }
 
 for (const button of document.querySelectorAll('nav button')) button.onclick = () => switchView(button.dataset.view);
-$('stream').onchange = connect;
-$('mode').onchange = () => { options($('stream'), [['', 'Automatic attachment']]); connect(); };
+$('mode').onchange = () => { selectedWorker = null; renderWorkers([]); connect(); };
 $('pause').onclick = () => { frozen = frozen ? null : live; syncPause(); render(); };
 $('map-layer').onchange = render;
 $('game-view').ontoggle = refreshGameView;

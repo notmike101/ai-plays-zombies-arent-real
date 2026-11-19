@@ -1,4 +1,4 @@
-"""Share one bounded hardware-encoded game stream across its viewers."""
+"""Share bounded hardware-encoded streams across viewers of each game."""
 from pathlib import Path
 import struct
 import subprocess
@@ -6,6 +6,7 @@ import sys
 import threading
 
 MAX_BOX = 512 * 1024
+MAX_GAMES = 2
 
 
 def chunks(source):
@@ -89,25 +90,32 @@ class VideoSession:
 class GameVideo:
     def __init__(self):
         self.lock = threading.Lock()
-        self.session = None
+        self.sessions = {}
 
     def open(self, stream, pid, timestamp):
         key = stream, pid
         with self.lock:
-            if self.session is None or self.session.finished:
-                self.session = VideoSession(key, timestamp)
-            if self.session.key != key or self.session.clients >= 4:
+            self.sessions = {k: session for k, session in self.sessions.items() if not session.finished}
+            session = self.sessions.get(key)
+            if session is None:
+                if len(self.sessions) >= MAX_GAMES:
+                    return None
+                session = self.sessions[key] = VideoSession(key, timestamp)
+            if session.clients >= 4:
                 return None
-            self.session.clients += 1
-            return self.session
+            session.clients += 1
+            return session
 
     def release(self, session):
         with self.lock:
             session.clients -= 1
             if not session.clients:
                 session.stop()
+                if self.sessions.get(session.key) is session:
+                    del self.sessions[session.key]
 
     def close(self):
         with self.lock:
-            if self.session:
-                self.session.stop()
+            for session in self.sessions.values():
+                session.stop()
+            self.sessions.clear()

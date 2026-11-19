@@ -24,8 +24,12 @@
     <section class="toolbar" aria-label="Stream controls">
       <div class="stream-status"><span id="status" role="status">Connecting</span><span id="age"></span></div>
       <label>Source <select id="mode"><option value="live">Live</option><option value="preview">Synthetic preview</option></select></label>
-      <label>Process <select id="stream"><option value="">Automatic attachment</option></select></label>
       <button id="pause" aria-pressed="false">Freeze view</button>
+    </section>
+    <section class="worker-diagram" aria-labelledby="workers-heading">
+      <h2 id="workers-heading">Active workers</h2>
+      <div id="worker-nodes" class="worker-nodes" role="group" aria-label="Choose a worker"></div>
+      <p id="worker-empty" class="note">Waiting for an available worker.</p>
     </section>
     <p id="sample-context" class="context" hidden></p>
     <p id="empty" class="note">Waiting for an instrumented worker.</p>

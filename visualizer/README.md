@@ -24,28 +24,27 @@ inspection. Its unsigned GRU edges summarize weights across gates.
 panel is open and the tab is visible, it plays a live, muted 960×600 H.264
 stream targeting 15 fps and 1.2 Mbit/s per viewer. The observatory starts one
 Windows Graphics Capture session and one FFmpeg NVIDIA encoder for the selected
-game, shared by up to four viewers. The encoder sends independent fragments
-every third of a second. The server retains only the most recent fragment and
+game, shared by up to four viewers. Two games can stream simultaneously, with
+JPEG fallback when both video slots are in use. The encoder sends independent
+fragments every third of a second. The server retains only the most recent fragment and
 sends it as binary fragmented MP4 over a single streaming HTTP response. The
 player keeps close to the buffered edge and evicts older video.
 During a handoff it retries while the previous capture is releasing the
 encoder. A stalled established video connection can reconnect while telemetry
 stays live.
 
-With automatic attachment, Game view can show a running, repository-owned
-training window while no policy stream is fresh. The feed is labeled game-only
-until a policy observer appears. Screens and inputs are never synthesized from
-the video. Manual worker selection stays pinned to the requested stream.
+The **Active workers** diagram lists running games and marks which have policy
+telemetry. Choosing a node selects its Game view and policy details. The view
+stays with that game through policy gaps. If it exits, the first available game
+is selected. When no games are present, the next available one is selected
+automatically. The video is labeled game-only while policy data is unavailable.
 
 Live video requires FFmpeg with `h264_nvenc` on the host and an H.264 Media Source
 decoder in the browser. If streaming is unavailable, Game view falls back to
 the higher-resolution JPEG thumbnail every two seconds. Video and thumbnails
 run independently of decisions and do not appear in replay. Freezing the view
 holds the displayed frame and stops media requests.
-Game view follows the Monitor's **Process** picker. Automatic attachment
-keeps the current worker while its telemetry is fresh and switches when
-another fresh stream is available. Campaign search normally publishes one
-candidate stream per training generation.
+Campaign search currently publishes one candidate per training generation.
 
 On Windows, install the optional Graphics Capture dependencies into the
 ignored runtime directory. The repository's Python environment supplies

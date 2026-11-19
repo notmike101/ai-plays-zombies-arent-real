@@ -27,17 +27,20 @@ class GameVideoTests(unittest.TestCase):
             for _ in range(3):
                 self.assertIs(video.open('first', 1, 42), session)
             self.assertIsNone(video.open('first', 1, 42))
-            self.assertIsNone(video.open('second', 2, 42))
             create.assert_called_once()
+            second = video.open('second', 2, 42)
+            self.assertIsNot(second, session)
+            self.assertIsNone(video.open('third', 3, 42))
             for _ in range(3):
                 video.release(session)
                 self.assertFalse(session.finished)
             video.release(session)
             self.assertTrue(session.finished)
-            later = video.open('second', 2, 42)
+            later = video.open('third', 3, 42)
             self.assertNotEqual(later.key, session.key)
             video.close()
             self.assertTrue(later.finished)
+            self.assertTrue(second.finished)
 
     def test_splits_mp4_into_initialization_and_complete_fragments(self):
         from game_video import chunks

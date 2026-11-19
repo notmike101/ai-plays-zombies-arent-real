@@ -154,7 +154,8 @@ class Feed:
                 chosen = fresh[0] if fresh else chosen or (frames[-1] if frames else None)
                 self.active[preview] = chosen['stream'] if chosen else None
             streams = [{'id': f['stream'], 'game_pid': f.get('game_pid'),
-                        'worker_pid': f.get('worker_pid'), 'age': max(0, now - f['timestamp'])} for f in frames]
+                        'worker_pid': f.get('worker_pid'), 'age': max(0, now - f['timestamp']),
+                        'error': 'error' in f} for f in frames]
             history_stream = stream or (chosen['stream'] if chosen else self.active[preview])
             history = [entry for entry in self.history
                        if entry['stream'] == history_stream and entry['preview'] == preview][-50:]
@@ -205,6 +206,35 @@ class Feed:
         return None
 
 
+def worker_diagram(feed, result, games, owned_pids, selected, preview):
+    observed = {}
+    for item in sorted(result['streams'], key=lambda stream: stream.get('age', 121)):
+        if (not item.get('error') and item.get('age', 121) <= FRESH_SECONDS
+                and (owned_pids is None or item['game_pid'] in owned_pids)):
+            observed.setdefault(item['game_pid'], item)
+
+    workers = []
+    for game in sorted(games, key=lambda item: int(item['copy'][4:])):
+        policy = observed.pop(game['game_pid'], {})
+        workers.append({key: game[key] for key in ('id', 'game_pid', 'copy')} |
+                       {'stream': policy.get('id'), 'worker_pid': policy.get('worker_pid')})
+    for policy in observed.values():
+        workers.append({'id': policy['id'], 'game_pid': policy['game_pid'], 'copy': None,
+                        'stream': policy['id'], 'worker_pid': policy['worker_pid']})
+
+    chosen = next((worker for worker in workers if selected in (worker['id'], worker['stream']) and selected),
+                  workers[0] if workers else None)
+    policy = chosen['stream'] if chosen else None
+    if not policy:
+        result.pop('age', None)
+        result.update(status='waiting', stream=None, sample=None, metadata=None, history=[], error=None)
+    elif result['stream'] != policy:
+        result = feed.observatory(preview=preview, stream=policy)
+    result.update(workers=workers, selected_worker=chosen['id'] if chosen else None,
+                  game_view=chosen if not preview else None)
+    return result
+
+
 def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysis', *,
                 learning_host='', share_screenshots=False, screenshot=None, inventory=None):
     feed = feed or Feed()
@@ -237,6 +267,8 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
             compact = args.get('view') == ['observatory']
             preview = args.get('preview') == ['1']
             stream = args.get('stream', [None])[0]
+            diagram = compact and args.get('workers') == ['1']
+            selected_worker = args.get('game', [None])[0]
             sent_history = set()
             last_sample = None
             parked_game = None
@@ -248,18 +280,25 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
                         generation = self.server.generation
                     result = (feed.observatory(preview=preview, stream=stream) if compact
                               else feed.state(preview=preview, stream=stream, revision=revision))
-                    frame = (result.get('sample') if compact else result['frame']) or {}
                     fallback = None
-                    if compact and not preview and not stream and result['status'] != 'live' and inventory:
+                    if diagram:
+                        games = inventory.snapshot() if inventory and not preview else ()
+                        owned = inventory.observed_pids() if inventory and not preview else None
+                        result = worker_diagram(feed, result, games, owned, selected_worker, preview)
+                        selected_worker = result['selected_worker']
+                    elif compact and not preview and not stream and result['status'] != 'live' and inventory:
                         games = sorted(inventory.snapshot(), key=lambda game: game['copy'])
                         fallback = next((game for game in games if game['id'] == parked_game), None)
                         fallback = fallback or (games[0] if games else None)
                     parked_game = fallback['id'] if fallback else None
-                    if compact:
+                    if compact and not diagram:
                         result['game_view'] = ({key: fallback[key] for key in ('id', 'game_pid', 'copy')}
                                                if fallback else None)
+                    frame = (result.get('sample') if compact else result['frame']) or {}
                     current = (result['status'], frame.get('stream'), frame.get('sequence'),
                                frame.get('timestamp'), frame.get('model_revision'), parked_game,
+                               selected_worker if diagram else None,
+                               tuple((node['id'], node['stream']) for node in result.get('workers', ())),
                                tuple((s['id'], s.get('age', 121) > FRESH_SECONDS)
                                      for s in result['streams']))
                     clock = time.monotonic()

@@ -26,8 +26,70 @@ class Inventory:
     def run(self, stopped):
         stopped.wait()
 
+    def observed_pids(self):
+        return {game['game_pid'] for game in self.snapshot()}
+
 
 class ScreenshotTests(unittest.TestCase):
+    def test_worker_diagram_tracks_selection_timeline_and_exit(self):
+        import json
+        from pathlib import Path
+        import tempfile
+
+        from test_server import frame
+
+        class Games(Inventory):
+            records = ()
+
+            def snapshot(self):
+                return self.records
+
+        inventory = Games()
+        a = {'id': 'game:111:1000', 'game_pid': 111, 'copy': 'inst1'}
+        b = {'id': 'game:222:1000', 'game_pid': 222, 'copy': 'inst2'}
+        inventory.records = (a, b)
+
+        with tempfile.TemporaryDirectory() as directory:
+            with make_server('127.0.0.1', 0, RuntimeFeed(directory), inventory=inventory) as server:
+                worker = threading.Thread(target=server.serve_forever, daemon=True)
+                worker.start()
+                address = f'http://127.0.0.1:{server.server_port}/api/events?view=observatory&workers=1'
+
+                def wait_state(response, check):
+                    for raw in response:
+                        if raw.startswith(b'data: '):
+                            state = json.loads(raw[6:])
+                            if check(state):
+                                return state
+                    self.fail('No matching worker diagram state')
+
+                try:
+                    with urlopen(address, timeout=3) as response:
+                        initial = wait_state(response, lambda state: 'selected_worker' in state)
+                    self.assertEqual(initial['selected_worker'], a['id'])
+                    self.assertEqual([node['id'] for node in initial['workers']], [a['id'], b['id']])
+                    with urlopen(address + '&game=' + b['id'], timeout=3) as response:
+                        selected = wait_state(response, lambda state: 'selected_worker' in state)
+                        self.assertEqual(selected['selected_worker'], b['id'])
+                        self.assertIsNone(selected['sample'])
+                        live = dict(frame('worker-b', time.time()), game_pid=222, sequence=1)
+                        path = Path(directory) / 'worker-b.json'
+                        path.write_text(json.dumps(live), encoding='utf-8')
+                        observed = wait_state(response, lambda state: state['status'] == 'live')
+                        self.assertEqual(observed['game_view']['id'], b['id'])
+                        self.assertEqual(observed['sample']['game_pid'], 222)
+                        inventory.records = (a,)
+                        removed = wait_state(response, lambda state: state.get('selected_worker') == a['id'])
+                        self.assertEqual([node['id'] for node in removed['workers']], [a['id']])
+                        path.unlink()
+                        inventory.records = ()
+                        wait_state(response, lambda state: state.get('selected_worker') is None)
+                        inventory.records = (b,)
+                        wait_state(response, lambda state: state.get('selected_worker') == b['id'])
+                finally:
+                    server.shutdown()
+                    worker.join(timeout=2)
+
     def test_sse_advertises_fallback_only_for_automatic_live_source(self):
         import json
         import tempfile

@@ -37,7 +37,8 @@ async page => {
     }
   }
   await page.context().setOffline(true);
-  await page.locator('#stream').selectOption({index: 1});
+  await page.locator('#mode').selectOption('live');
+  await page.locator('#mode').selectOption('preview');
   await page.waitForFunction(() => document.querySelector('#status').textContent.includes('Disconnected'));
   await page.context().setOffline(false);
   await page.waitForFunction(() => document.querySelector('#status').textContent === 'Synthetic preview');
