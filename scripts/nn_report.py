@@ -68,7 +68,7 @@ def search_rows(directory):
                 yield dict(common,scenario=level['stage'],end=level['end'],saved_frac=level['saved'],
                            start_kind=level.get('start_kind','fresh' if level['stage']==1 else 'next_level'))
             if 'error' in trial:
-                yield dict(common,scenario='unknown',start_kind='unknown',err=trial['error'])
+                yield dict(common,scenario=trial.get('failed_stage','unknown'),start_kind='unknown',err=trial['error'])
 
 
 def main():

@@ -180,11 +180,12 @@ def rollout(job, retries=0, start_stage=1, *, training=False):
         forecast=CrowdForecast().eval()
         forecast.load_state_dict(torch.load(forecast_path[0],weights_only=True))
     destination=('campaign','continue' if start_stage>1 else 'stage1')
-    env = zar_boot.boot(operator.owned_copy(copy),destination,discard_dump_states=True)
+    env=None
+    levels=[]
+    stage,attempt=start_stage,0
     try:
-        levels = []
+        env=zar_boot.boot(operator.owned_copy(copy),destination,discard_dump_states=True)
         layout_receipts=[]
-        stage, attempt = start_stage, 0
         while stage <= 5:
             layout = (team or {}).get('layout',[]) if stage==1 else (team or {}).get('later_layouts',{}).get(str(stage),[])
             receipts=[]
@@ -217,7 +218,8 @@ def rollout(job, retries=0, start_stage=1, *, training=False):
                                  policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
                                  telemetry=False)
             if not tr.valid_trajectory(row):
-                return dict(copy=copy,seed=seed,levels=levels,error=row.get('err','invalid trajectory'))
+                return dict(copy=copy,seed=seed,levels=levels,failed_stage=stage,
+                            failed_attempt=attempt,error=row.get('err','invalid trajectory'))
             levels.append(dict(stage=row['scenario'],end=row['end'],saved=row['saved_frac'],
                                win=row['win'],advance=row['advance'],campaign=row['campaign'],
                                attempt=attempt,start_kind=start_kind,
@@ -237,8 +239,10 @@ def rollout(job, retries=0, start_stage=1, *, training=False):
             else:
                 break
         return dict(copy=copy,seed=seed,levels=levels,layout_receipts=layout_receipts)
+    except (RuntimeError,OSError,ValueError) as exc:
+        return dict(copy=copy,seed=seed,levels=levels,failed_stage=stage,failed_attempt=attempt,error=str(exc))
     finally:
-        zar_boot.stop(env)
+        if env is not None:zar_boot.stop(env)
 
 
 def team_id(team):
@@ -378,7 +382,7 @@ def main():
                         f.write(json.dumps(result)+'\n')
                     if 'error' in result:
                         print('failed',job[0],result['error'],flush=True)
-                        continue
+                        if not result.get('levels'):continue
                     levels=result['levels']
                     candidate=budget_candidate(team,levels)
                     if candidate:affordable.append((max(r['stage'] for r in levels),candidate))
@@ -392,7 +396,7 @@ def main():
                     if team:
                         valid_candidates+=1
                         archive[key]=team
-                        deepest[key]=max(deepest.get(key,1),levels[-1]['stage'])
+                        deepest[key]=max(deepest.get(key,1),levels[-1]['stage'],result.get('failed_stage',1))
                         best=[max(r['score'] for r in levels if r['stage']==stage)
                               for stage in sorted({r['stage'] for r in levels})]
                         first=[r['score'] for r in levels if r['attempt']==0]

@@ -47,9 +47,24 @@ class SearchTests(unittest.TestCase):
             self.assertEqual(result['levels'][0]['start_kind'],'continue')
             boot.assert_called_once_with('copy',('campaign','continue'),discard_dump_states=True)
             env.dump.return_value={'where':{'stage':'0 (stage 1 of 5)'}}
-            with self.assertRaisesRegex(RuntimeError,'Expected live Boston stage 2'):
-                search.rollout(('inst14',{},None,10),start_stage=2)
+            mismatch=search.rollout(('inst14',{},None,10),start_stage=2)
+            self.assertIn('Expected live Boston stage 2',mismatch['error'])
+            self.assertEqual(mismatch['failed_stage'],2)
             run.assert_called_once()
+
+    def test_preparation_failure_retains_the_preceding_qualifying_win(self):
+        row=dict(scenario=1,end='won',saved_frac=.43,advance=True,win=True,
+                 campaign='Boston',board_id='b',board={'scenario_count':5},sim=100,
+                 trail=[],civ0=100,us=[],cs=[],log_started=True,battle_actions={})
+        with patch.object(search.zar_boot,'boot') as boot,patch.object(search.zar_boot,'stop') as stop, \
+             patch.object(search.operator,'owned_copy'),patch.object(search.tr,'run_episode',return_value=row):
+            boot.return_value.dump.side_effect=RuntimeError('lost planning receipt')
+            team={'later_layouts':{'2':[{'kind':'mortar','points':[[10,20]]}]}}
+            result=search.rollout(('inst13',{},team,10))
+            self.assertEqual(result['levels'][0]['saved'],.43)
+            self.assertEqual(result['failed_stage'],2)
+            self.assertEqual(result['error'],'lost planning receipt')
+            stop.assert_called_once_with(boot.return_value)
 
     def test_training_reuses_an_actual_below_target_l1_win_to_reach_l2(self):
         row=dict(scenario=1,end='won',saved_frac=.24,advance=False,win=True,
