@@ -222,4 +222,20 @@ The command holds the operator lock and writes its base weights, tested
 genomes, action sequences, native log identifiers, champion and held-out
 results to an ignored `analysis/coverage-team-*` directory. Search runs
 disable the GRU-only visualizer for both candidates and controls.
-Use --seed-from analysis/<previous-search-directory> with a new --seed to retain the previous champion, verify its base weights, and train another population.
+Use `--seed-from analysis/<previous-search-directory>` with a new seed to
+retain the previous champion and verify its base weights. An optional
+`--demonstration <Boston progress file>` supplies locally recorded stage-one
+layout coordinates as candidate examples. The planner projects them through
+the current camera and issues normal player actions. It records budget receipts.
+Game progress files list best badges separately from layouts.
+
+To test crowd prediction, run `scripts/collect_crowds.py --minutes 35` with
+the repository Python while owned games are in battle. This observer uses
+query/read handles only. Train `scripts/crowd_forecast.py <capture-directory>`
+after collecting several games. It estimates civilian and zombie cell counts
+two simulation seconds ahead and compares against current counts on entire
+held-out games. Use the normal team search command with paired copies,
+`--seed-from <champion-directory> --compare-forecast <capture-directory>/forecast.pt`
+to compare the same champion on new games with current versus forecast counts.
+The CNN changes battle target scoring only. Report forecast error and actual
+civilian saves separately.

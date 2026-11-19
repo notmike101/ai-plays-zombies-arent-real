@@ -47,8 +47,10 @@ def random_team(rng):
 
 def offspring(parent, donor, rng):
     child = deepcopy(parent)
-    i = int(rng.integers(len(child['plan'])))
-    child['plan'][i] = deepcopy(donor['plan'][int(rng.integers(len(donor['plan'])))]) if rng.random()<.5 else gene(rng)
+    i = int(rng.integers(max(1,len(child['plan']))))
+    replacement = deepcopy(donor['plan'][int(rng.integers(len(donor['plan'])))]) if donor['plan'] and rng.random()<.5 else gene(rng)
+    if child['plan']:child['plan'][i]=replacement
+    elif rng.random()<.5:child['plan'].append(replacement)
     if len(child['plan']) < 7 and rng.random()<.35:
         child['plan'].insert(i, gene(rng))
     if len(child['plan']) > 1 and rng.random()<.25:
@@ -56,11 +58,15 @@ def offspring(parent, donor, rng):
     for key in ('battle','cast_bias'):
         base = np.asarray((donor if rng.random()<.5 else parent)[key])
         child[key] = (base + rng.normal(0,.35,base.shape)).tolist()
+    layout=child.get('layout')
+    if layout and len(layout)>1:
+        a,b=rng.choice(len(layout),2,replace=False)
+        layout[a],layout[b]=layout[b],layout[a]
     return child
 
 
 class TeamPolicy(tr.PolicyNet2):
-    def __init__(self, team):
+    def __init__(self, team, forecast=None):
         super().__init__()
         self.team = team
         self.steps = [(g, t) for g in team['plan'] for t in range(g['duration'])]
@@ -68,6 +74,7 @@ class TeamPolicy(tr.PolicyNet2):
         self.coords = torch.arange(tr.NC)
         self.battle = torch.tensor(team['battle'])
         self.bias = torch.tensor(team['cast_bias'])
+        self.predict = None if forecast is None else forecast.forward
 
     def forward(self, x, h=None):
         tools, cells, value, h = super().forward(x, h)
@@ -85,6 +92,9 @@ class TeamPolicy(tr.PolicyNet2):
             else:
                 tools[...,tr.TOOLS.index('ready')] += 15
         else:
+            if self.predict is not None:
+                future=self.predict(grid[:3].reshape(1,3,6,8)).clamp_min(0).reshape(2,tr.NC)
+                grid=torch.cat((future,grid[2:]))
             tools[..., CASTS] += self.bias
             tools[...,tr.TOOLS.index('wait')] += self.team['idle_bias']
             cells[CASTS] += self.battle @ grid
@@ -104,14 +114,23 @@ def score(row):
 
 
 def rollout(job):
-    copy, weights, team, seed = job
+    copy, weights, team, seed, *forecast_path = job
+    forecast=None
+    if forecast_path:
+        from crowd_forecast import CrowdForecast
+        forecast=CrowdForecast().eval()
+        forecast.load_state_dict(torch.load(forecast_path[0],weights_only=True))
     env = zar_boot.boot(operator.owned_copy(copy), discard_dump_states=True)
     try:
         levels = []
+        layout_receipts=[]
+        if team and team.get('layout'):
+            from layout_memory import apply_layout
+            layout_receipts=apply_layout(env,team['layout'])
         for stage in range(1,6):
             row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}',
                                   dict(start_kind='fresh' if stage==1 else 'next_level',seed=seed,
-                                       greedy=True)),policy_factory=(lambda:TeamPolicy(team)) if team else None,
+                                       greedy=True)),policy_factory=(lambda:TeamPolicy(team,forecast)) if team else None,
                                  telemetry=False)
             if not tr.valid_trajectory(row):
                 return dict(copy=copy,seed=seed,levels=levels,error=row.get('err','invalid trajectory'))
@@ -121,7 +140,7 @@ def rollout(job):
                                actions=list(zip(row['us'],row['cs'])),log_started=row['log_started']))
             if not row['advance'] or row['scenario']==row['board'].get('scenario_count'):
                 break
-        return dict(copy=copy,seed=seed,levels=levels)
+        return dict(copy=copy,seed=seed,levels=levels,layout_receipts=layout_receipts)
     finally:
         zar_boot.stop(env)
 
@@ -136,10 +155,14 @@ def main():
     parser.add_argument('--generations',type=int,default=10)
     parser.add_argument('--seed',type=int,default=92851)
     parser.add_argument('--seed-from',type=Path,help='Start with a previous search champion and its frozen GRU')
+    parser.add_argument('--demonstration',type=Path,help='Seed candidates from a local Boston progress file')
+    parser.add_argument('--compare-forecast',type=Path,help='Evaluate the same saved champion with and without its CNN forecast')
     args=parser.parse_args()
     copies=args.copies
     if not 4<=len(copies)<=8 or len(set(copies))!=len(copies) or args.generations<1:
         parser.error('Use 4–8 distinct owned copies and positive generations')
+    if args.compare_forecast and (not args.seed_from or len(copies)%2 or args.demonstration):
+        parser.error('Forecast comparison requires a saved champion and paired copies')
     with operator.training_lock(operator.LOCK):
         ancestors=[p.pid for p in psutil.Process().parents()]
         for copy in copies:
@@ -167,9 +190,31 @@ def main():
         if prior:
             population[0]=prior
             population[1]=offspring(prior,prior,rng)
+        if args.demonstration:
+            from layout_memory import demonstrations
+            layout=demonstrations(args.demonstration)[1]
+            for i in range(1,len(population)):
+                # Explore execution order: progress files store the finished layout.
+                candidate=population[i]
+                candidate['plan']=[]
+                candidate['layout']=deepcopy(layout)
+                if i==2:candidate['layout'].sort(key=lambda item:item['kind']=='garrison')
+                if i>2:rng.shuffle(candidate['layout'])
         archive={}
         scores=defaultdict(list)
         with ProcessPoolExecutor(len(copies)) as pool:
+            if args.compare_forecast:
+                for swap in range(2):
+                    jobs=[]
+                    for i,copy in enumerate(copies):
+                        job=(copy,weights,prior,args.seed+swap*len(copies)+i//2)
+                        jobs.append(job+(args.compare_forecast,) if (i+swap)%2 else job)
+                    for job,result in zip(jobs,pool.map(rollout,jobs)):
+                        result.update(cnn=len(job)==5,team_id=team_id(prior))
+                        with (directory/'forecast-comparison.jsonl').open('a') as f:
+                            f.write(json.dumps(result)+'\n')
+                        print('cnn',result['cnn'],result.get('error'),[(r['end'],r['saved']) for r in result['levels']],flush=True)
+                return
             for generation in range(args.generations):
                 population.append(None)  # Fixed GRU control on a fresh board.
                 rng.shuffle(population)
