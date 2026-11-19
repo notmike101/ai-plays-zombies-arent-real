@@ -654,7 +654,8 @@ def main():
             if previous.is_file():
                 saved=checkpoint_team(json.loads(previous.read_text()),base)['team']
                 if saved!=prior:population[-1]=saved
-            population[1]=dict(deepcopy(prior),missile_reserve=float(rng.uniform(2,6)))
+            weight = 10. if prior.get('missile_followup')!=10. else float(rng.uniform(6,14))
+            population[1]=dict(deepcopy(prior),missile_followup=weight)
         archive={}
         deepest={}
         incumbent=prior

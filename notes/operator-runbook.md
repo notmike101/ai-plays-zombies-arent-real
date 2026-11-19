@@ -67,8 +67,9 @@ five through eight copies.
 The shared affinity budget starts at eight logical CPUs, grows by two per
 copy above four, and uses at most half the host's logical CPUs. On this
 machine six copies share twelve logical CPUs at below-normal priority.
-The continuous local L1 supervisor's six-copy minimum waits for 12.5 GiB
-available RAM and 3 GiB free disk. It attempts eight at 16 GiB available RAM.
+The continuous local L1 supervisor prefers six copies at 12.5 GiB available RAM
+and attempts eight at 16 GiB. Below the six-copy floor it falls back to four
+at 10.5 GiB available RAM. All three modes require 3 GiB free disk.
 With --episodes-per-copy 1, each copy supplies one episode per update. Updates
 still wait for the slowest copy. The defaults are one copy and two sequential
 episodes per copy.
