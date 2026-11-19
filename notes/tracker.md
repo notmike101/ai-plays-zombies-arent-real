@@ -1,6 +1,15 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 14:50 Central. Completed seed 129952: 24 jobs, 22 fresh
+  outbreaks, 18 official scores, nine qualifiers, four timeouts and two
+  failed input attachments. Validated 11,780 transitions with no truncation.
+  48 confirmed missile launches across two cells, 120 legal waits, six
+  isolated aligned outcomes. Retained 48 native impact pairs; 30 met the
+  stock-receipt join for an offline direct-kill predictor. Held-out
+  context zombie MAE 26.83 vs training median 24.33. Keep simulation shadow
+  only. See notes/shadow-simulator.md and local
+  `analysis/coverage-shadow-context-report.json`.
 - 2026-11-19 14:32 Central. Production seed 129851 completed normally.
   Staged capture code deployed at the idle boundary; six-copy shadow
   capture seed 129952 started on inst13–18 with frozen base 8a691469a829158d.

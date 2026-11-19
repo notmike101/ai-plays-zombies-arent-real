@@ -102,3 +102,42 @@ It excludes parsing, window selection and live capture. The live six-copy
 comparison delivered 83.5 scored battles/hour at 2×. These are different units;
 the shadow throughput does not imply that valid simulated battles or PPO
 trajectories are available at that rate.
+
+## 2026-11-19 live combat-context capture
+
+Seed 129952 ran three candidate waves and one held-out wave on inst13–18.
+24 jobs yielded 22 distinct fresh outbreaks, 18 official scores, nine
+qualifying wins, four timeouts and two pre-battle input attachment errors.
+All 22 captured episodes passed the schema, identity and adjacent-clock
+checks. The ledger contains 11,780 transitions with no truncation. Host
+sampling bottomed out at 11.30 GiB available RAM, with 22.2% median CPU use
+on the reserved half. There was no matched capture-off overhead arm.
+
+The model spent stock on 48 missiles in 16 outbreaks, across just two
+selected grid cells and sim seconds 20.43–37.93. Seven outbreaks contained
+120 wait decisions with a legal missile. Six native-corroborated launches
+had an isolated, camera-aligned population follow-up window. These are
+observations of model behavior, with no controlled cast-versus-wait pairing.
+
+A passive collector retained 48 native launches and 48 impacts. Launches
+were paired by session, ordering and world-position proximity, using the
+independently observed 2.50-sim-second delay to disambiguate 20 same-target
+impacts. Thirty labels also met the ordered stock-receipt join tolerance.
+The matched impact events reported direct kills, which are not official
+survival scores. Fit on 18 impacts from inst13–16 and test on 12 impacts
+from inst17–18. Mean absolute errors in direct kills were:
+
+| Predictor | Civilian error | Zombie error |
+| --- | ---: | ---: |
+| Training median | 6.83 | 24.33 |
+| Local crowd ridge regression | 6.40 | 28.23 |
+| Crowd plus combat context ridge regression | 6.67 | 26.83 |
+
+The richer fit did not beat the median zombie baseline, and the modest
+civilian differences do not establish meaningful accuracy. The two-cell
+support and clustered salvos limit what can be learned. Keep capture and
+native receipts, and use frozen planning plus separately varied model
+timing and targeting preferences for a future collection block. Require
+comparable legal waits, multiple target regions and held-out improvement
+before a predictor ranks live candidates. No synthetic updates or checkpoint
+changes were made. Raw evidence remains local under analysis.
