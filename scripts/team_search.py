@@ -30,6 +30,8 @@ def matching(prefix):
 FAMILIES = [sorted(tr.PLACEMENTS), [10, 15, 16, 17, 18, 9],
             matching('buy_'), matching('equip_'), matching('perk_'), list(range(tr.NU))]
 CASTS = sorted(tr.U2ABILITY)
+MISSILE = tr.ABILITY_U['Missile']
+MISSILE_ROW = CASTS.index(MISSILE)
 SELECT_BUILDING = tr.TOOLS.index('select_building')
 BUILDING_SPECIALS = {name.removeprefix('panel_'):i for i,name in enumerate(tr.TOOLS)
                      if name.startswith('panel_building_') and name.rsplit('_',1)[1].isdigit()}
@@ -166,6 +168,9 @@ class TeamPolicy(tr.PolicyNet2):
         self.bias = torch.tensor(team['cast_bias'])
         self.cast_timing = team.get('cast_timing')
         self.shelter_defense = team.get('shelter_defense',0.)
+        self.missile_reserve = team.get('missile_reserve',0.)
+        self.missile_charges = 0.
+        self.occupied_shelter = False
         self.special_probe = team.get('special_probe',0.)
         self.special_steps = 0
         self.inspected_buildings = set()
@@ -188,6 +193,8 @@ class TeamPolicy(tr.PolicyNet2):
     def set_cast_targets(self, st, tools, cells, width, height):
         self.cast_targets.zero_()
         self.shelter_perimeter.zero_()
+        self.occupied_shelter = False
+        self.missile_charges = 0.
         if st['planning'] or st.get('anchor') or st.get('dialog'):
             return
         boundary = st.get('playarea_boundary')
@@ -195,7 +202,8 @@ class TeamPolicy(tr.PolicyNet2):
             return
         centers = [tr.cell_of_px(cell,width,height) for cell in range(tr.NC)]
         inside = tr.inside_polygon(centers,boundary)
-        if self.shelter_defense and st.get('shelter') and st.get('native'):
+        if (self.shelter_defense or self.missile_reserve) and st.get('shelter') and st.get('native'):
+            self.occupied_shelter = bool(st['shelter'].protected)
             camera = st['native']['camera']
             world = (np.asarray(centers)-[width/2,height/2])/[camera[2],-camera[2]]+camera[:2]
             self.shelter_perimeter = torch.from_numpy(st['shelter'].perimeter(world))
@@ -209,6 +217,9 @@ class TeamPolicy(tr.PolicyNet2):
             else:
                 eligible &= inside
             self.cast_targets[row] = torch.from_numpy(eligible)
+        if self.missile_reserve and self.occupied_shelter and self.cast_targets[MISSILE_ROW].any():
+            self.missile_charges = next((slot['charges'] for slot in st.get('deck',[])
+                                         if slot['name']=='Missile'),0.)
 
     def set_special_probe(self, st, width, height):
         self.special_tools = []
@@ -278,6 +289,11 @@ class TeamPolicy(tr.PolicyNet2):
                     cells[CASTS] += defense*self.cast_targets
                 best = demand.expand_as(self.cast_targets).masked_fill(~self.cast_targets,-torch.inf).amax(dim=-1)
                 tools[...,CASTS] += gain*torch.where(self.cast_targets.any(dim=-1), best.tanh(), 0.)
+            if self.missile_charges>0:
+                pressure = self.shelter_perimeter*(grid[1]/3).tanh()
+                legal_pressure = pressure*self.cast_targets[MISSILE_ROW]
+                tools[...,MISSILE] -= self.missile_reserve*(1.-legal_pressure.max())/self.missile_charges
+                cells[MISSILE] += self.missile_reserve*legal_pressure
             tools[...,tr.TOOLS.index('wait')] += self.team['idle_bias']
             cells[CASTS] += self.battle @ grid
         return tools, cells.reshape(1,1,-1), value, h
@@ -317,6 +333,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
             layout = (team or {}).get('layout',[]) if stage==1 else (team or {}).get('later_layouts',{}).get(str(stage),[])
             receipts=[]
             refuge=None
+            relocation=None
             if layout or start_stage>1:
                 env.to_planning()
                 board=env.dump()
@@ -333,6 +350,10 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                     kinds=env.array(0x6502d0,'u1')
                     if len(points)!=len(kinds):raise RuntimeError('Inconsistent planning population')
                     layout,refuge=fit_refuge(layout,points[kinds==0]+origin,boundary,team['refuge'])
+                if stage==1 and attempt==0 and team.get('garrison_relocation') is not None:
+                    from layout_memory import relocate_garrison
+                    points=env.array(0x658d98,VEC)+origin
+                    layout,relocation=relocate_garrison(layout,points,team['garrison_relocation'])
                 occupied=[unit for kind,unit in BUILDINGS.items() if f'board {kind} = ' in board['_text']]
                 receipts=apply_layout(env,remaining_layout(layout,board),occupied,boundary=boundary)
                 if stage==1 and attempt==0:layout_receipts=receipts
@@ -351,7 +372,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
             levels.append(dict(stage=row['scenario'],end=row['end'],saved=row['saved_frac'],
                                win=row['win'],advance=row['advance'],campaign=row['campaign'],
                                attempt=attempt,start_kind=start_kind,
-                               refuge=refuge,
+                               refuge=refuge,garrison_relocation=relocation,
                                outbreak=row.get('outbreak'),
                                timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
                                unmatched_layout=remaining_layout(layout,{'_text':row['layout_text']}) if layout else [],
@@ -411,6 +432,10 @@ def checkpoint_team(record,base):
             gain,threshold=obj['cast_timing']
             if not (0<=gain<=8 and 0<=threshold<=8):
                 raise ValueError('Invalid campaign cast timing')
+        if 'missile_reserve' in obj:
+            numeric(obj['missile_reserve'],())
+            if not 0<=obj['missile_reserve']<=8:
+                raise ValueError('Invalid missile reserve weight')
         if 'shelter_defense' in obj:
             numeric(obj['shelter_defense'],())
             if not 0<=obj['shelter_defense']<=8:
@@ -421,7 +446,7 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation'))
     battle(team)
     numeric(team['idle_bias'],())
     if not isinstance(team['plan'],list) or len(team['plan'])>64:raise ValueError('Invalid campaign plan')
@@ -433,8 +458,12 @@ def checkpoint_team(record,base):
         numeric(g['weights'],(5,))
     for k in ('later_layouts','stage_battle'):fields(team.get(k,{}),optional=('2','3','4','5'))
     for override in team.get('stage_battle',{}).values():
-        fields(override,optional=('battle','cast_bias','camera_pause','blocked_tool','cast_timing','shelter_defense'))
+        fields(override,optional=('battle','cast_bias','camera_pause','blocked_tool','cast_timing','shelter_defense','missile_reserve'))
         battle(override)
+    if 'garrison_relocation' in team:
+        numeric(team['garrison_relocation'],(2,))
+        if any(type(value) is not int or not 0<=value<128 for value in team['garrison_relocation']):
+            raise ValueError('Invalid garrison relocation')
     if 'refuge' in team:
         fields(team['refuge'],('scale','aspect','defense_weight'))
         for value in team['refuge'].values():numeric(value,())
@@ -466,6 +495,18 @@ def restore_team(net,directory):
         if not record:raise ValueError('This checkpoint bundle has no campaign team')
         tr.load_pretrained(net,directory/'nn_policy4.pt')
     return checkpoint_team(record,tr.policy_id(net))['team']
+
+
+def holdout_assignments(copies, weights, challenger, incumbent, seed, wave):
+    jobs = []
+    arms = {}
+    for index,copy in enumerate(copies):
+        candidate = (index+wave)%2==0
+        team = challenger if candidate else incumbent
+        jobs.append((copy,weights,team,seed+wave*len(copies)+index//2))
+        arms[copy] = ('extra' if index>=2*(len(copies)//2) else
+                      'candidate' if candidate else 'incumbent' if incumbent else 'gru')
+    return jobs,arms
 
 
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False):
@@ -601,7 +642,7 @@ def main():
             if previous.is_file():
                 saved=checkpoint_team(json.loads(previous.read_text()),base)['team']
                 if saved!=prior:population[-1]=saved
-            population[1]=dict(deepcopy(prior),special_probe=float(rng.uniform(16,24)))
+            population[1]=dict(deepcopy(prior),missile_reserve=float(rng.uniform(2,6)))
         archive={}
         deepest={}
         incumbent=prior
@@ -692,13 +733,18 @@ def main():
                 population=[leader,incumbent or leader]
                 require_fresh.update(team_id(t) for t in population)
                 population.append(l1_candidate(leader,rng) if generation%2==0 else offspring(leader,leader,rng,stage=1))
+                repeat = fitness.replication_candidate(evidence, (archive[k] for k in l1_ranked), population)
+                if repeat and len(copies)>=6:
+                    population.append(repeat)
+                    require_fresh.add(team_id(repeat))
                 probe=next((cast_probes[k] for k in l1_ranked if k in cast_probes),None)
                 if generation%2==0:
-                    defender=deepcopy(probe or leader)
-                    defender.setdefault('cast_timing',[2.,3.])
-                    defender['shelter_defense']=float(rng.uniform(.5,4.))
+                    defender=deepcopy(incumbent or leader)
+                    defender['missile_reserve']=float(rng.uniform(2,6))
                     population.append(defender)
-                elif generation%4==1:
+                elif generation%4==1 and leader.get('layout'):
+                    population.append(dict(deepcopy(leader),garrison_relocation=rng.integers(0,16,size=2).tolist()))
+                elif generation%4==3:
                     population.append(dict(deepcopy(leader),special_probe=float(rng.uniform(16,24))))
                 elif probe and not practice:population.append(probe)
                 elif practice:
@@ -721,17 +767,19 @@ def main():
             challenger=next(iter(qualified or distinct),leader)
             stage=next((i for i in range(1,6 if args.allow_progression else 2) if prior is None or
                         fitness.prefix_id(challenger,i)!=fitness.prefix_id(prior,i)),1)
-            jobs=[(copy,weights,challenger if i%2==0 else prior,
-                   args.seed+(args.generations+1)*len(copies)+i//2) for i,copy in enumerate(copies)]
+            pairs = len(copies)//2
+            waves = (6+pairs-1)//pairs if challenger in qualified else 1
+            seed = args.seed+(args.generations+1)*len(copies)
             evaluation=[]
-            arms={copy:('extra' if i>=2*(len(copies)//2) else 'candidate' if i%2==0 else 'incumbent' if prior else 'gru')
-                  for i,copy in enumerate(copies)}
-            for job,_,result in completed_rollouts(pool,jobs,allow_progression=args.allow_progression):
-                result.update(arm=arms[job[0]],team_id=team_id(job[2]) if job[2] else 'control')
-                evaluation.append(result)
-                with (directory/'holdout.jsonl').open('a') as f:
-                    f.write(json.dumps(result)+'\n')
-            if challenger in qualified and fitness.holdout_passed(evaluation,len(copies)//2,stage):
+            for wave in range(waves):
+                jobs,arms = holdout_assignments(copies,weights,challenger,prior,seed,wave)
+                for job,_,result in completed_rollouts(pool,jobs,allow_progression=args.allow_progression):
+                    result.update(arm=arms[job[0]],team_id=team_id(job[2]) if job[2] else 'control',
+                                  holdout_round=wave)
+                    evaluation.append(result)
+                    with (directory/'holdout.jsonl').open('a') as f:
+                        f.write(json.dumps(result)+'\n')
+            if challenger in qualified and fitness.holdout_passed(evaluation,pairs*waves,stage):
                 stages=[fitness.stats(evidence,challenger,i) for i in range(1,6)]
                 record=dict(team_id=team_id(challenger),team=challenger,base=base,generation=generation,
                             trials=stages[0]['starts'],fresh_stages=stages,holdout_stage=stage,holdout_opponent=team_id(prior) if prior else 'gru')

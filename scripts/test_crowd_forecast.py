@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from crowd_forecast import CrowdForecast, pairs
-from layout_memory import apply_layout, demonstrations, fit_refuge, remaining_layout, visible_points
+from layout_memory import apply_layout, demonstrations, fit_refuge, relocate_garrison, remaining_layout, visible_points
 
 
 class CrowdModelTests(unittest.TestCase):
@@ -60,6 +60,18 @@ class CrowdModelTests(unittest.TestCase):
         self.assertEqual(result[0]['result'],'below_observed_cost')
         env.vi.click.assert_not_called()
         self.assertEqual(env.scalar.call_count,2)
+
+    def test_garrison_relocation_preserves_refuge_and_uses_an_unused_enclosed_building(self):
+        layout=[dict(kind='zone',points=[[0,0],[10,0],[10,10],[0,10]]),
+                dict(kind='garrison',points=[[20,20]],observed_cost=80),
+                dict(kind='garrison',points=[[5,5]])]
+        building_centers=[[5,5],[5,2],[8,7],[5,-1]]
+        proposal,receipt=relocate_garrison(layout,building_centers,[0,0])
+        self.assertEqual(proposal[0],layout[0])
+        self.assertEqual(proposal[2],layout[2])
+        self.assertEqual(proposal[1],dict(kind='garrison',points=[[5,2]]))
+        self.assertEqual(receipt,dict(original=[20,20],target=[5,2]))
+        self.assertEqual(layout[1]['points'],[[20,20]])
 
     def test_archived_layout_outside_boundary_is_rejected_before_camera_input(self):
         env=Mock()

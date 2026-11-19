@@ -39,6 +39,22 @@ def stats(evidence,team,stage):
     return dict(starts=n,wins=wins,lower=max(0.,lower),mean=mean,objective=mean-costs)
 
 
+def replication_candidate(evidence, candidates, already_scheduled):
+    excluded = {prefix_id(team,1) for team in already_scheduled if team}
+    best = None
+    best_rank = ()
+    for candidate in candidates:
+        if prefix_id(candidate,1) in excluded:
+            continue
+        result = stats(evidence,candidate,1)
+        if not 0<result['starts']<4 or (not result['wins'] and result['mean']<.32):
+            continue
+        rank = result['wins']>0, result['lower'], result['mean']
+        if rank>best_rank:
+            best, best_rank = candidate, rank
+    return best
+
+
 def ranking(evidence,team):
     stages=[stats(evidence,team,i) for i in range(1,6)]
     depth=next((i for i,s in enumerate(stages) if s['wins']<2),5)

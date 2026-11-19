@@ -575,7 +575,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     c = int(np.random.choice(np.flatnonzero(mc)))
                     ulp, clp = -math.log(mu.sum()), -math.log(mc.sum())
                 else:
-                    if getattr(net, 'cast_timing', None) is not None:
+                    if getattr(net,'cast_timing',None) is not None or getattr(net,'missile_reserve',0.):
                         net.set_cast_targets(st, mu, mc, env.cw, env.ch)
                     if getattr(net,'special_probe',0.):
                         net.set_special_probe(st,env.cw,env.ch)
@@ -731,6 +731,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         footer = env.stop_log()
         logging = False
         battle_actions['logged_deployments']=footer.get('deployments') if footer else None
+        battle_actions['deploy_sim_seconds']=footer.get('deploy_sim_seconds') if footer else None
         saved = None
         if footer and footer.get('phase') == state['phase']:
             pct = footer.get('stats', {}).get('saved_pct')
@@ -784,7 +785,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     outside_targets=outside_targets, battle_actions=battle_actions,
                     shelter=dict(credited_civilians=len(shelter.credited),exposed_civilians=len(shelter.exposed),
                                  breach_exposures=shelter.breach_exposures,
-                                 occupied_breaches=shelter.occupied_breaches),
+                                 occupied_breaches=shelter.occupied_breaches,
+                                 first_occupied_breach=shelter.first_occupied_breach),
                     frac=o['civ']/civ0, bootstrap=bootstrap,
                     civ0=civ0, t=time.monotonic()-start, sim=state['sim'],
                     R=sum(rows['rews']), nbuy=nbuy, ndeck=len(st['deck']),

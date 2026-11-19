@@ -85,6 +85,31 @@ def fit_refuge(actions,civilians,boundary,params):
                        points=winner.tolist())
 
 
+def relocate_garrison(layout, buildings, directive):
+    """Move one candidate placement to an actual unused building inside its refuge."""
+    zone = next((np.asarray(action['points']) for action in layout if action['kind']=='zone'),None)
+    garrisons = [i for i,action in enumerate(layout) if action['kind']=='garrison']
+    if zone is None or len(zone)<3 or not garrisons:
+        return layout,None
+    donor,edge = directive
+    index = garrisons[donor%len(garrisons)]
+    points = np.asarray(buildings).reshape(-1,2)
+    occupied = np.asarray([action['points'][0] for action in layout if action['kind'] in BUILDINGS])
+    inside = points[inside_polygon(points,zone)]
+    if not len(inside):
+        return layout,None
+    unused = np.min(np.square(inside[:,None,:]-occupied).sum(axis=2),axis=1)>4.
+    choices = inside[unused]
+    if not len(choices):
+        return layout,None
+    midpoint = (zone[edge%len(zone)]+zone[(edge+1)%len(zone)])/2
+    target = choices[np.square(choices-midpoint).sum(axis=1).argmin()].tolist()
+    result = list(layout)
+    original = layout[index]['points'][0]
+    result[index] = dict(kind='garrison',points=[target])
+    return result,dict(original=original,target=target)
+
+
 def visible_points(env,ctrl,world):
     size=np.array([env.cw,env.ch])
     lower,upper=size*[.055,.10],size*[.935,.70]

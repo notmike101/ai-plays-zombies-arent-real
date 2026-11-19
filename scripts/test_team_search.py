@@ -131,6 +131,42 @@ class SearchTests(unittest.TestCase):
         policy.set_special_probe(st,1920,1200)
         self.assertEqual(policy.special_cells,[])
 
+    def test_holdout_rotates_frozen_arms_and_preserves_paired_policy_seeds(self):
+        copies=['a','b','c','d']
+        a,b={},{'incumbent':True}
+        before,first=search.holdout_assignments(copies,None,a,b,100,0)
+        after,second=search.holdout_assignments(copies,None,a,b,100,1)
+        self.assertEqual(before[0][3],before[1][3])
+        self.assertLess(max(job[3] for job in before),min(job[3] for job in after))
+        self.assertTrue(all(first[copy]!=second[copy] for copy in copies))
+        self.assertEqual([job[2] for job in before],[a,b,a,b])
+        self.assertEqual([job[2] for job in after],[b,a,b,a])
+
+    def test_missile_reserve_depends_on_local_pressure_and_remaining_stock(self):
+        team=search.random_team(np.random.default_rng(7))
+        base=search.TeamPolicy(team)
+        candidate=search.TeamPolicy(dict(team,missile_reserve=4.))
+        candidate.load_state_dict(base.state_dict())
+        candidate.shelter_perimeter[0]=1.
+        candidate.cast_targets[search.MISSILE_ROW,0]=True
+        obs=torch.zeros(1,1,search.tr.NOBS)
+
+        def difference():
+            with torch.no_grad():
+                old_tools,old_cells,*_=base(obs)
+                new_tools,new_cells,*_=candidate(obs)
+            return (new_tools-old_tools).flatten()[search.MISSILE], (
+                new_cells-old_cells).reshape(search.tr.NU,search.tr.NC)[search.MISSILE]
+        candidate.missile_charges=1.
+        self.assertAlmostEqual(difference()[0].item(),-4.,places=5)
+        candidate.missile_charges=2.
+        self.assertAlmostEqual(difference()[0].item(),-2.,places=5)
+        obs[...,search.GRID_START+search.tr.NC]=12.
+        delta,cells=difference()
+        self.assertGreater(delta,-.01)
+        self.assertGreater(cells[0],3.9)
+        self.assertEqual(cells[1],0.)
+
     def test_refuge_size_trial_keeps_other_decisions_fixed(self):
         parent=dict(refuge=dict(scale=1.,aspect=.8,defense_weight=.16),plan=[1])
         candidate=search.l1_candidate(parent,np.random.default_rng(7))

@@ -233,8 +233,10 @@ training outbreaks and, on equally sized fresh evaluation arms, at least two
 qualifying outbreaks, more qualifying wins and greater total saved at the first
 stage where policies differ. Earlier failures score zero at that stage.
 Keep the incumbent when evidence is insufficient. On cold start a block may
-produce only a provisional leader. Held-out outcomes gate promotion and never
-enter search fitness. A new holdout is needed for any later performance claim.
+produce only a provisional leader. Blocks with at least six copies dedicate a slot to promising distinct L1
+prefixes with fewer than four measured starts. Promotion-eligible challengers
+receive at least six held-out games per arm with assignments rotated between
+copies. Held-out outcomes gate promotion and never enter search fitness. A new holdout is needed for any later performance claim.
 
 **Default scope is L1.** A qualifying win counts and completes the copy's L1
 assignment. Campaign search, standalone PPO and the operator launcher require
@@ -373,3 +375,5 @@ Campaign search can test a cast-timing adjustment when a candidate repeatedly se
 Battle records include unique civilians credited for shelter, unique civilians exposed, total exposure events and occupied breach counts. Campaign search applies the two reward components only to its auxiliary objective. Candidate cast preferences can favor local zombie pressure near occupied, intact shelter perimeters. Actual saved percentages, qualifying win counts and held-out promotion use official outcomes.
 
 Special-building experiments spend at most six planning decisions favoring plausible special buildings already enclosed by the chosen refuge and then any game-enabled numeric special actions. The probe keeps the same zone proposal as its parent. Numeric activation receipts are logged by building index, with a .01 reward up to three buildings in search and PPO. Compare survival using the original 35% gate and held-out results.
+
+Controlled L1 defense proposals can retain a missile while occupied shelters face little local pressure, then favor shots near a threatened occupied perimeter. A separate placement proposal relocates one garrison to an unused building inside the existing refuge. Game receipts distinguish a proposed relocation from a purchase. Record native deploy times, first occupied breach, civilians exposed, and official saved fraction.

@@ -24,6 +24,15 @@ class FreshEvidence(unittest.TestCase):
         self.assertEqual(result['mean'],.36)
         self.assertAlmostEqual(result['objective'],.34)
 
+    def test_replication_nominates_promising_low_sample_distinct_policy(self):
+        self.record(self.a,self.row(1,.41))
+        self.record(self.c,self.row(2,.33))
+        self.assertIs(fitness.replication_candidate(self.data,[self.a,self.c],[]),self.a)
+        self.assertIs(fitness.replication_candidate(self.data,[self.a,self.c],[self.b]),self.c)
+        for seed in range(3,6):
+            self.record(self.c,self.row(seed,.36))
+        self.assertIsNone(fitness.replication_candidate(self.data,[self.a,self.c],[self.b]))
+
     def test_only_uninterrupted_fresh_prefix_counts(self):
         self.record(self.a,self.row(1,.2),self.row(2,.6,kind='carry',attempt=1),
                     self.row(3,.7,2,'next_level'))

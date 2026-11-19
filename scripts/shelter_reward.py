@@ -22,6 +22,7 @@ class Shelter:
         self.presence_credit = 0.
         self.breach_penalty = 0.
         self.occupied_breaches = 0
+        self.first_occupied_breach = None
         self.protected = []
 
     def observe(self, native, sim):
@@ -55,6 +56,8 @@ class Shelter:
                     if occupants:
                         exposed.update(occupants)
                         self.occupied_breaches += 1
+                        if self.first_occupied_breach is None:
+                            self.first_occupied_breach = sim
                 continue
             previous[key] = occupants
             sheltered.update(occupants & self.previous.get(key,set()))
