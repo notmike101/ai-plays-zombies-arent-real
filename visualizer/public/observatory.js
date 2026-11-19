@@ -24,7 +24,7 @@ const options = (select, entries) => {
 let view = 'monitor', source, generation = 0, live = {}, replay = null, baseline = null;
 let mapChoice = 0, page = 0, unit = 0, inspectedMemory = null, tile = null, weightCursor = 0;
 let pendingReplay = 0, pendingCompare = 0, pendingWeights = 0;
-let learning, learningRequest = 0;
+let learning, learningRequest = 0, learningPending = false;
 let gameView = null;
 let selectedWorker = null, manualWorker = null;
 const shown = () => replay || live;
@@ -774,16 +774,26 @@ function table(headers, rows) {
 async function loadLearning() {
   const target = $('learning-results');
   const request = ++learningRequest;
-  target.replaceChildren(el('p', 'Loading written results…'));
+  learningPending = true;
+  if (!learning) target.replaceChildren(el('p', 'Loading written results…'));
   try {
     const run = $('learning-run').value;
     const data = await getJSON('/api/learning', run ? {run} : undefined);
     if (request !== learningRequest) return;
+    if (learning && !target.querySelector('[role="alert"]') && JSON.stringify(data) === JSON.stringify(learning)) return;
     learning = data;
     options($('learning-run'), [['', 'Most recently written'], ...data.runs.map(id => [id, id.replace('coverage-team-', '')])]);
     renderLearning();
   } catch (error) {
-    if (request === learningRequest) target.replaceChildren(el('p', error.message));
+    if (request === learningRequest) {
+      const message = target.querySelector('[role="alert"]') || el('p');
+      message.setAttribute('role', 'alert');
+      message.textContent = error.message;
+      if (learning) target.prepend(message);
+      else target.replaceChildren(message);
+    }
+  } finally {
+    if (request === learningRequest) learningPending = false;
   }
 }
 
@@ -1064,6 +1074,11 @@ function renderTeams(target, run) {
 }
 
 window.addEventListener('hashchange', showLinkedView);
+function refreshVisibleLearning() {
+  if (view === 'learning' && !document.hidden && !learningPending) loadLearning();
+}
+setInterval(refreshVisibleLearning, 30000);
+document.addEventListener('visibilitychange', refreshVisibleLearning);
 $('follow-policy').onclick = () => { manualWorker = null; connect(); };
 $('map-layer').onchange = render;
 $('game-view').ontoggle = refreshGameView;
