@@ -1,6 +1,9 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 08:11 Central. The checkpoint heartbeat fired
+  with its scheduler set to ACTIVE despite the user's standing pause.
+  Restored PAUSED through the automation manager and skipped publication.
 - 2026-11-19 02:20 Central. Compacted the Observatory layout, moved Timeline
   into Monitor's Decision history, and made Game View permanently visible
   in Monitor. Isolated Chromium checks passed for responsive layout, replay,
