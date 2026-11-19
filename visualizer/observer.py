@@ -37,6 +37,7 @@ class Observer:
         self._versions = None
         self._graph = None
         self._revision = None
+        self._weight_bytes = ()
         self._last_publish = 0
         self.sequence = 0
         self.decision = 0
@@ -139,11 +140,34 @@ class Observer:
                  'edge_note': 'Top 6 weights per target. GRU edges: unsigned RMS across reset/update/candidate gates. Linear edges: signed weights.'}
         # Hash full weights, so different episodes with equal shapes cannot share stale topology.
         digest = hashlib.sha256()
-        for p in net.parameters():
-            digest.update(p.detach().cpu().float().numpy().tobytes())
+        matrices, chunks, offset = {}, [], 0
+        for name, p in net.named_parameters():
+            raw = p.detach().cpu().float().numpy().astype('<f4', copy=False).tobytes()
+            digest.update(raw)
+            if name in (f'{self.gru_name}.weight_ih_l0', f'{self.gru_name}.weight_hh_l0',
+                        f'{self.gru_name}.bias_ih_l0', f'{self.gru_name}.bias_hh_l0'):
+                kind = 'input' if '_ih_' in name else 'memory'
+                if '.bias_' in name:
+                    kind += '_bias'
+                gate_bytes = len(raw) // 3
+                for i, gate in enumerate(('reset', 'update', 'candidate')):
+                    matrices[f'{kind}_{gate}'] = [g.hidden_size, len(raw) // (12 * g.hidden_size),
+                                                   offset + i * gate_bytes]
+            elif name.endswith(('.weight', '.bias')) and name.split('.')[0] in self.heads:
+                rows = p.shape[0]
+                matrices[name] = [rows, len(raw) // (4 * rows), offset]
+            chunks.append(raw)
+            offset += len(raw)
+        graph['policy_id'] = digest.hexdigest()[:16]
+        if offset <= 32 * 1024 * 1024:
+            graph['matrices'] = matrices
+            self._weight_bytes = tuple(chunks)
+        else:
+            self._weight_bytes = ()
         digest.update(json.dumps(layers, sort_keys=True).encode())
         if self.team_id:
             forecast=getattr(net,'campaign_forecast_id',None)
+            graph['team_id'], graph['forecast_id'] = self.team_id, forecast
             graph['parameters']+=getattr(net,'campaign_forecast_parameters',0)
             graph['architecture']='GRU + preparation and battle specialists'+(' + crowd CNN' if forecast else '')
             graph['edge_note']='Tool and cell values are final combined logits. Edges show GRU gate RMS and value weights only. Parameters count PyTorch weights. Layout preparation precedes this stream.'
@@ -191,7 +215,7 @@ class Observer:
                 self._queue.get_nowait()
             except queue.Empty:
                 pass
-            self._queue.put_nowait(frame)
+            self._queue.put_nowait((frame, self._weight_bytes))
             return True
         except Exception:
             return False
@@ -200,13 +224,28 @@ class Observer:
         destination = self.directory / f'{self.stream}.json'
         temporary = self.directory / f'{self.stream}.tmp'
         graph, encoded_graph = None, None
+        weights = None
+        weights_temp = temporary.with_suffix('.weights-tmp')
         while True:
-            frame = self._queue.get()
-            if frame is None:
+            item = self._queue.get()
+            if item is None:
                 break
+            frame, chunks = item
             try:
                 current = frame.get('graph')
                 if current is not None:
+                    revision = frame['model_revision']
+                    next_weights = self.directory / f'{self.stream}-{revision}.weights'
+                    if chunks and weights != next_weights:
+                        try:
+                            with weights_temp.open('wb') as output:
+                                output.writelines(chunks)
+                            os.replace(weights_temp, next_weights)
+                            if weights is not None:
+                                weights.unlink(missing_ok=True)
+                            weights = next_weights
+                        except OSError:
+                            pass  # Optional weight inspection can fail independently of live capture.
                     if current is not graph:
                         encoded_graph = (',"graph":' + json.dumps(
                             current, allow_nan=False, separators=(',', ':')) + '}').encode('utf-8')
@@ -223,7 +262,9 @@ class Observer:
                 os.replace(temporary, destination)
             except (OSError, ValueError, TypeError):
                 pass
-        for path in (temporary, destination):
+        for path in (temporary, destination, weights_temp, weights):
+            if path is None:
+                continue
             try:
                 path.unlink(missing_ok=True)
             except OSError:

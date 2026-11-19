@@ -10,24 +10,29 @@ import sys
 import threading
 import time
 from urllib.parse import parse_qs, urlsplit
+import observatory
 
 ROOT = Path(__file__).resolve().parent
 FRESH_SECONDS = 15
 SAMPLE_SECONDS = .2
-PUBLIC = {'/': ('index.html', 'text/html'), '/style.css': ('style.css', 'text/css'),
-          '/app.js': ('app.js', 'text/javascript'), '/graph.js': ('graph.js', 'text/javascript')}
+PUBLIC = {'/': ('observatory.html', 'text/html'), '/legacy': ('index.html', 'text/html'),
+          '/style.css': ('style.css', 'text/css'), '/app.js': ('app.js', 'text/javascript'),
+          '/graph.js': ('graph.js', 'text/javascript'), '/observatory.css': ('observatory.css', 'text/css'),
+          '/observatory.js': ('observatory.js', 'text/javascript')}
 
 
 class Feed:
     def __init__(self, directory=ROOT / 'runtime'):
         self.directory = Path(directory)
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.active = {False: None, True: None}
         self.frames = []
         self.sampled_at = float('-inf')
         self.history = deque(maxlen=200)
         self.seen = {}
         self.decoded = {}
+        self.samples = deque(maxlen=200)
+        self.metadata = {}
 
     def _refresh(self, now):
         if 0 <= now - self.sampled_at < SAMPLE_SECONDS:
@@ -62,10 +67,18 @@ class Feed:
                     'game_pid': frame.get('game_pid'), 'episode': str(frame.get('episode', ''))[:128],
                     'phase': str(frame.get('phase', 'unknown'))[:64], 'choices': choices,
                     'skipped': max(0, sequence - previous - 1) if previous is not None else 0})
-            except (KeyError, TypeError, IndexError, AttributeError):
+                key = (stream, frame.get('model_revision'))
+                meta = self.metadata.get(key)
+                if meta is None:
+                    meta = self.metadata[key] = observatory.metadata(frame)
+                sample = observatory.decision(frame, meta, self.history[-1]['skipped'])
+                self.samples.append((sample, meta))
+            except (KeyError, TypeError, IndexError, AttributeError, ValueError):
                 # A malformed optional summary must not stop other workers' telemetry.
                 continue
         self.seen = {key: value for key, value in self.seen.items() if key in present}
+        kept = {(sample['stream'], sample['model_revision']) for sample, _ in self.samples}
+        self.metadata = {key: value for key, value in self.metadata.items() if key in kept}
 
     def _read(self, now):
         frames = []
@@ -81,7 +94,7 @@ class Feed:
         for _, path in paths[:32]:
             try:
                 stat = path.stat()
-                if stat.st_size > 8 * 1024 * 1024:
+                if stat.st_size > 8 * 1024 * 1024 or stat.st_mtime < now - 125:
                     continue
                 raw = path.read_bytes()
                 cached = self.decoded.get(path)
@@ -132,6 +145,43 @@ class Feed:
                 frame.pop('graph', None)
             return {'status': status, 'age': age, 'frame': frame, 'streams': streams, 'history': history}
 
+    def observatory(self, *, now=None, preview=False, stream=None):
+        with self.lock:
+            state = self.state(now=now, preview=preview, stream=stream)
+            frame = state.pop('frame') or {}
+            current = stream or frame.get('stream')
+            matching = []
+            streams = {entry['id']: entry for entry in state['streams']}
+            archived = {}
+            for sample, meta in self.samples:
+                if bool(sample['preview']) != preview:
+                    continue
+                key = sample['stream']
+                if key not in streams:
+                    archived[key] = {'id': key, 'game_pid': sample['game_pid'],
+                                     'worker_pid': sample['worker_pid'], 'archived': True}
+                if current == key:
+                    matching.append((sample, meta))
+            latest, meta = matching[-1] if matching else (None, None)
+            state.update(version=1, stream=current, sample=latest, metadata=meta,
+                         history=[observatory.summary(sample) for sample, _ in matching[-50:]],
+                         error=frame.get('error'), streams=[*streams.values(), *list(archived.values())[-24:]])
+            return state
+
+    def decision(self, stream, sequence, preview):
+        with self.lock:
+            for sample, meta in reversed(self.samples):
+                if (sample['stream'], sample['sequence'], bool(sample['preview'])) == (stream, sequence, preview):
+                    return {'version': 1, 'sample': sample, 'metadata': meta}
+        return None
+
+    def weights(self, stream, sequence, preview, matrix, row, column):
+        retained = self.decision(stream, sequence, preview)
+        if retained:
+            return observatory.weight_tile(self.directory, retained['sample'], retained['metadata'],
+                                           matrix, row, column)
+        return None
+
 
 def make_server(host, port, feed=None):
     feed = feed or Feed()
@@ -146,24 +196,45 @@ def make_server(host, port, feed=None):
             self.end_headers()
             revision, signature, history_signature = None, None, None
             sent_at = 0
+            compact = args.get('view') == ['observatory']
+            preview = args.get('preview') == ['1']
+            stream = args.get('stream', [None])[0]
+            sent_history = set()
+            last_sample = None
             try:
                 self.wfile.write(b'retry: 1000\n\n')
                 self.wfile.flush()
                 while not self.server.stopped.is_set():
                     with self.server.sample_ready:
                         generation = self.server.generation
-                    result = feed.state(preview=args.get('preview') == ['1'],
-                                        stream=args.get('stream', [None])[0], revision=revision)
-                    frame = result['frame'] or {}
+                    result = (feed.observatory(preview=preview, stream=stream) if compact
+                              else feed.state(preview=preview, stream=stream, revision=revision))
+                    frame = (result.get('sample') if compact else result['frame']) or {}
                     current = (result['status'], frame.get('stream'), frame.get('sequence'),
                                frame.get('timestamp'), frame.get('model_revision'),
-                               tuple((s['id'], s['age'] > FRESH_SECONDS) for s in result['streams']))
+                               tuple((s['id'], s.get('age', 121) > FRESH_SECONDS)
+                                     for s in result['streams']))
                     clock = time.monotonic()
                     if current != signature or clock - sent_at >= 1:
                         # Idle updates keep sample age honest and detect broken connections.
-                        history_key = tuple((e['stream'], e['sequence']) for e in result['history'])
-                        if history_key == history_signature:
-                            result['history'] = None
+                        if compact:
+                            sample_id = (result['stream'], frame.get('model_revision'), frame.get('sequence'))
+                            reset = last_sample is None or last_sample[0] != sample_id[0]
+                            if not reset and last_sample[:2] == sample_id[:2]:
+                                result['metadata'] = None
+                            if last_sample == sample_id:
+                                result['sample'] = None
+                            history_key = tuple(e['sequence'] for e in result['history'])
+                            result['history'] = [e for e in result['history']
+                                                 if reset or e['sequence'] not in sent_history]
+                            result['history_reset'] = reset
+                            result['oldest_sequence'] = history_key[0] if history_key else None
+                            sent_history = set(history_key)
+                            last_sample = sample_id
+                        else:
+                            history_key = tuple((e['stream'], e['sequence']) for e in result['history'])
+                            if history_key == history_signature:
+                                result['history'] = None
                         body = json.dumps(result, allow_nan=False, separators=(',', ':')).encode()
                         self.wfile.write(b'event: state\ndata: ' + body + b'\n\n')
                         self.wfile.flush()
@@ -188,7 +259,23 @@ def make_server(host, port, feed=None):
                 finally:
                     self.server.stream_slots.release()
                 return
-            if url.path == '/api/state':
+            if url.path in ('/api/decision', '/api/weights'):
+                args = parse_qs(url.query)
+                def get(name, default=''):
+                    return args.get(name, [default])[0]
+                try:
+                    identity = (get('stream'), int(get('sequence')), get('preview') == '1')
+                    result = (feed.decision(*identity) if url.path == '/api/decision' else
+                              feed.weights(*identity, get('matrix'), int(get('row', '0')),
+                                           int(get('column', '0'))))
+                except ValueError:
+                    self.send_error(400)
+                    return
+                if result is None:
+                    self.send_error(404)
+                    return
+                body, mime = json.dumps(result, allow_nan=False, separators=(',', ':')).encode(), 'application/json'
+            elif url.path == '/api/state':
                 args = parse_qs(url.query)
                 result = feed.state(preview=args.get('preview') == ['1'],
                                     stream=args.get('stream', [None])[0],

@@ -12,7 +12,7 @@ async page => {
   try {
     for(const fallback of [false,true]){
       await page.setViewportSize({width:390,height:844});
-      await page.goto(`${base}/${fallback?'?canvas2d=1':''}`);
+      await page.goto(`${base}/legacy${fallback?'?canvas2d=1':''}`);
       await page.waitForFunction(()=>document.querySelector('#status').textContent!=='CONNECTING');
       await page.locator('#preview').click();
       await page.waitForFunction(()=>document.querySelector('#status').textContent==='SYNTHETIC PREVIEW' && document.querySelector('#footer-state').textContent.includes('nodes'));
@@ -85,7 +85,7 @@ async page => {
   } finally {
     await cdp.detach();
     await page.setViewportSize({width:1280,height:720});
-    await page.goto(`${base}/`);
+    await page.goto(`${base}/legacy`);
   }
   return results;
 }

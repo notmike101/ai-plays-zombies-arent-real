@@ -7,7 +7,7 @@ async page => {
   const onError=error=>errors.push(String(error));
   page.on('request',onRequest);page.on('pageerror',onError);
   try {
-    await page.goto(`${base}/?canvas2d=1`);
+    await page.goto(`${base}/legacy?canvas2d=1`);
     await page.locator('#preview').click();
     await page.waitForFunction(()=>document.querySelector('#decision-log')?.children.length>0,{},{timeout:8000});
     expect(requests.includes('/api/events'),'Browser must use the persistent stream');
