@@ -875,7 +875,7 @@ function learningOverview(runs, matches, ppo) {
     if (event.pointerType === 'touch') return;
     inspectPointer(event);
     const point = points[selected];
-    tooltip.textContent = point.cohort + ' · ' + Math.round(overviewPercent.format(point.mean));
+    tooltip.textContent = point.cohort + ' · ' + overviewPercent.format(Math.round(point.mean));
     tooltip.hidden = false;
     const position = x(selected) * canvas.clientWidth / canvas.width;
     tooltip.style.left = Math.max(0, Math.min(position - tooltip.offsetWidth / 2, chart.clientWidth - tooltip.offsetWidth)) + 'px';
