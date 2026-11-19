@@ -51,7 +51,7 @@ class IntegrationTests(unittest.TestCase):
         if hasattr(self, 'temp'):
             self.temp.cleanup()
 
-    def episode(self, observer, fail=False, missile_cell=None):
+    def episode(self, observer, fail=False, missile_cell=None, special_receipts=None):
         game = FakeGame(-1)
         clock = FakeClock(game)
         FakeGame.fail = fail
@@ -72,6 +72,14 @@ class IntegrationTests(unittest.TestCase):
                     st['playarea_boundary'] = [(0,0),(500,0),(500,1000),(0,1000)]
             overrides['Mechanics'] = BoundedMechanics
             samples = (1, 0, 26, missile_cell)
+        if special_receipts is not None:
+            pending=iter(special_receipts)
+            class SpecialMechanics(FakeMechanics):
+                def execute(self,st,name,cell):
+                    return next(pending)
+            overrides.update(Mechanics=SpecialMechanics,PLAN_STEPS=10)
+            tool=self.globals['TOOLS'].index('panel_building_5')
+            samples=(tool,0)*len(special_receipts)+(1,0)+(0,0)*3
         with patch.dict(self.globals, overrides), patch.dict(sys.modules, {'env_zar': SimpleNamespace(ZAREnv=lambda pid: game, ZAREnvError=RuntimeError)}):
             with patch.object(torch.distributions.Categorical, 'sample', side_effect=[torch.tensor(v) for v in samples]):
                 with redirect_stderr(io.StringIO()):
@@ -110,6 +118,13 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(len(self.casts), 1)
         self.assertEqual(inside['battle_actions']['stock_decreased'], 1)
         self.assertEqual(inside['reward_components']['outside_playarea'], 0.)
+
+    def test_special_activation_receipts_credit_unique_buildings_and_cap_bonus(self):
+        result=self.episode(None,special_receipts=[None,(0,5),(0,5),(1,5),(2,5),(3,5)])
+        self.assertNotIn('err',result)
+        self.assertEqual(len(result['special_activations']),4)
+        self.assertAlmostEqual(result['reward_components']['special_activation'],.03)
+        self.assertEqual(result['rews'][:6],[0.,.01,0.,.01,.01,0.])
 
     def test_episode_failure_still_closes_observer(self):
         result = self.episode(self.factory, fail=True)

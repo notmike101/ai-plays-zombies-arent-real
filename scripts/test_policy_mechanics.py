@@ -40,6 +40,21 @@ class MechanicsTests(unittest.TestCase):
         self.assertGreater(zoomed['pan_left'],0)
         self.assertGreater(zoomed['pan_right'],0)
 
+    def test_special_activation_needs_matching_new_native_ability(self):
+        mechanics=Mechanics.__new__(Mechanics)
+        mechanics.env=Mock(cw=1920,ch=1200)
+        mechanics.controls=Mock()
+        mechanics.env.scalar.return_value=2
+        mechanics.env.array.return_value=np.array([0,5])
+        st={'native':{'selection':{'building':1},'buildings':{'ability':[0,0]}}}
+        self.assertEqual(mechanics.execute(st,'panel_building_5',0),(1,5))
+        self.assertIsNone(mechanics.execute(st,'panel_building_6',0))
+        st['native']['buildings']['ability'][1]=5
+        self.assertIsNone(mechanics.execute(st,'panel_building_5',0))
+        st['native']['buildings']['ability'][1]=0
+        mechanics.env.scalar.return_value=1
+        self.assertIsNone(mechanics.execute(st,'panel_building_5',0))
+
     def test_planning_picker_rejects_without_claiming_a_roster_change(self):
         from game_controls import PickerNavigationError
 

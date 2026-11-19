@@ -17,6 +17,7 @@ import torch
 import local_agent as operator
 import nn_play2 as tr
 from nn_report import records
+from spatial import project
 import zar_boot
 
 
@@ -29,6 +30,9 @@ def matching(prefix):
 FAMILIES = [sorted(tr.PLACEMENTS), [10, 15, 16, 17, 18, 9],
             matching('buy_'), matching('equip_'), matching('perk_'), list(range(tr.NU))]
 CASTS = sorted(tr.U2ABILITY)
+SELECT_BUILDING = tr.TOOLS.index('select_building')
+BUILDING_SPECIALS = {name.removeprefix('panel_'):i for i,name in enumerate(tr.TOOLS)
+                     if name.startswith('panel_building_') and name.rsplit('_',1)[1].isdigit()}
 GRID_START = tr.INPUT_LABELS.index('Grid civilians cell 1 (log1p count)')
 PAN = [tr.TOOLS.index('pan_'+name) for name in ('up','left','down','right')]
 PAUSE = tr.TOOLS.index('pause_toggle')
@@ -162,6 +166,11 @@ class TeamPolicy(tr.PolicyNet2):
         self.bias = torch.tensor(team['cast_bias'])
         self.cast_timing = team.get('cast_timing')
         self.shelter_defense = team.get('shelter_defense',0.)
+        self.special_probe = team.get('special_probe',0.)
+        self.special_steps = 0
+        self.inspected_buildings = set()
+        self.special_tools = []
+        self.special_cells = []
         self.shelter_perimeter = torch.zeros(tr.NC)
         self.cast_targets = torch.zeros((len(CASTS),tr.NC),dtype=torch.bool)
         self.camera_pause=torch.tensor(team.get('camera_pause',[0.]*6))
@@ -201,6 +210,36 @@ class TeamPolicy(tr.PolicyNet2):
                 eligible &= inside
             self.cast_targets[row] = torch.from_numpy(eligible)
 
+    def set_special_probe(self, st, width, height):
+        self.special_tools = []
+        self.special_cells = []
+        if (not st['planning'] or not st.get('native') or self.special_steps>=6
+                or self.index<len(self.steps) or st.get('anchor') or st.get('gesture_anchor')):
+            return
+        native = st['native']
+        if not native['zones']:
+            return
+        self.special_steps += 1
+        selected = native['selection']['building']
+        if selected>=0:
+            self.inspected_buildings.add(selected)
+        self.special_tools = [BUILDING_SPECIALS[key] for key in st['hud']['actions'] if key in BUILDING_SPECIALS]
+        if not self.special_tools:
+            buildings = native['buildings']
+            viable = np.flatnonzero((buildings['class']>0)&(buildings['destroyed']==0)&(buildings['ability']==0))
+            viable = [i for i in viable if i not in self.inspected_buildings]
+            if viable and native['zones']:
+                points = project(buildings['center'][viable],native['camera'],width,height).astype(int)
+                candidates = {tuple(point):i for point,i in zip(points,viable)}
+                for cell,point in enumerate(st['targets']['building']):
+                    index = candidates.get(point)
+                    if index is None:
+                        continue
+                    left,bottom,right,top = buildings['rect'][index]
+                    corners = [(left,bottom),(left,top),(right,bottom),(right,top)]
+                    if any(tr.inside_polygon(corners,zone).all() for zone in native['zones']):
+                        self.special_cells.append(cell)
+
     def forward(self, x, h=None):
         tools, cells, value, h = super().forward(x, h)
         grid = x[0,0,GRID_START:GRID_START+5*tr.NC].reshape(5,tr.NC)
@@ -216,6 +255,11 @@ class TeamPolicy(tr.PolicyNet2):
                 self.index += 1
             else:
                 tools[...,tr.TOOLS.index('ready')] += 15
+                if self.special_tools:
+                    tools[...,self.special_tools] += self.special_probe
+                elif self.special_cells:
+                    tools[...,SELECT_BUILDING] += self.special_probe
+                    cells[SELECT_BUILDING,self.special_cells] += self.special_probe
                 if 'blocked_tool' in self.team and not x[0,0,READY_LEGAL]:
                     tools[...,self.team['blocked_tool']]+=12
         else:
@@ -316,6 +360,8 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, pra
                                playarea_cost=tr.OUTSIDE_PLAYAREA_COST/tr.SAVED_REWARD_SCALE,
                                reward_components=row.get('reward_components',{}),
                                shelter=row.get('shelter',{}),
+                               special_activations=row.get('special_activations',{}),
+                               special_objective=row.get('reward_components',{}).get('special_activation',0.)/tr.SAVED_REWARD_SCALE,
                                shelter_objective=sum(row.get('reward_components',{}).get(k,0.)
                                    for k in ('shelter','occupied_breach'))/tr.SAVED_REWARD_SCALE,
                                score=score(row),sim=row['sim'],board=row['board_id'],
@@ -367,9 +413,13 @@ def checkpoint_team(record,base):
             numeric(obj['shelter_defense'],())
             if not 0<=obj['shelter_defense']<=8:
                 raise ValueError('Invalid shelter defense weight')
+        if 'special_probe' in obj:
+            numeric(obj['special_probe'],())
+            if not 0<=obj['special_probe']<=24:
+                raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe'))
     battle(team)
     numeric(team['idle_bias'],())
     if not isinstance(team['plan'],list) or len(team['plan'])>64:raise ValueError('Invalid campaign plan')
@@ -522,7 +572,7 @@ def main():
                 population[1]['refuge']=dict(scale=1.,aspect=float(rng.uniform(.7,1.5)),
                                              defense_weight=float(rng.uniform(.08,.22)))
         base=tr.policy_id(net)
-        view_revision='playable-overview-v2-bounded-targets-shelter-v2'
+        view_revision='playable-overview-v2-bounded-targets-shelter-v2-specials-v1'
         evidence={}
         prices={}
         if args.seed_from and (args.seed_from/'fitness.json').exists():
@@ -530,14 +580,12 @@ def main():
             if ledger['base']!=base:raise ValueError('Campaign fitness base mismatch')
             if ledger.get('view_revision')==view_revision:evidence=ledger['evidence']
             prices=ledger.get('layout_prices',{})
-        cast_probe=None
         if args.seed_from and not args.compare_forecast:
             best_budget=None
             paths=[args.seed_from/name for name in ('trials.jsonl','extra-trials.jsonl')]
             for trial in chain.from_iterable(records(path) for path in paths if path.is_file()):
                 if trial.get('view_revision')==view_revision:fitness.record(evidence,trial)
                 if not trial.get('levels'):continue
-                if prior and trial.get('team')==prior:cast_probe=cast_candidate(trial,rng) or cast_probe
                 candidate=budget_candidate(trial.get('team'),trial['levels'],prices)
                 if candidate:
                     rank=(max(r['stage'] for r in trial['levels']),team_id(candidate))
@@ -546,12 +594,11 @@ def main():
             for i in range(1,len(population)):
                 population[i]=budget_candidate(population[i],[],prices) or population[i]
         if prior and not args.compare_forecast:
-            population[1]=l1_candidate(prior,rng)
             previous=args.seed_from/'provisional.json'
             if previous.is_file():
                 saved=checkpoint_team(json.loads(previous.read_text()),base)['team']
                 if saved!=prior:population[-1]=saved
-            if cast_probe:population[1]=cast_probe
+            population[1]=dict(deepcopy(prior),special_probe=float(rng.uniform(16,24)))
         archive={}
         deepest={}
         incumbent=prior
@@ -648,6 +695,8 @@ def main():
                     defender.setdefault('cast_timing',[2.,3.])
                     defender['shelter_defense']=float(rng.uniform(.5,4.))
                     population.append(defender)
+                elif generation%4==1:
+                    population.append(dict(deepcopy(leader),special_probe=float(rng.uniform(16,24))))
                 elif probe and not practice:population.append(probe)
                 elif practice:
                     specialist=max(practice,key=lambda entry:(entry[0],entry[1],team_id(entry[2])))[2]

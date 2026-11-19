@@ -376,3 +376,5 @@ Keep cast-timing proposals separate from target preferences in campaign comparis
 
 ## Safe-zone defense credit
 Track unique sheltered civilians from native positions. Preserve credit after departure and charge only civilians still present at the first observed penetration of a previously intact zone. A civilian who reaches another intact shelter can incur a new exposure penalty if it falls. Do not count wall-cell breaches or overlapping failures as separate exposures. Preserve official saved fractions and qualification as the comparison criteria.
+
+Special-building exploration stays bounded. Reward an activation only when the selected building previously had no ability and the native ability becomes the exact HUD choice. One credit per building, capped at three per episode. Use official saved outcomes for promotion.

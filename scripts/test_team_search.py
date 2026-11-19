@@ -109,6 +109,28 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(boost[tool,7],0.)
         self.assertEqual(boost[search.tr.ABILITY_U['Nuke'],0],0.)
 
+    def test_special_probe_only_suggests_enclosed_building_and_enabled_choice(self):
+        team=search.random_team(np.random.default_rng(8))
+        team.update(plan=[],special_probe=20.)
+        policy=search.TeamPolicy(team)
+        buildings=dict(center=np.array([[100,100],[300,100],[500,100]]),
+                       rect=np.array([[80,80,120,120],[280,80,320,120],[480,80,520,120]]),
+                       **{'class':np.ones(3),'destroyed':np.zeros(3),'ability':np.zeros(3)})
+        camera=[960.,-600.,1.]
+        zone=np.array([[70,70],[310,70],[310,130],[70,130]])
+        st=dict(planning=True,hud={'actions':{}},targets={'building':[(100,-100),(300,-100),(500,-100)]},
+                native=dict(camera=camera,zones=[zone],buildings=buildings,selection={'building':-1}))
+        policy.set_special_probe(st,1920,1200)
+        self.assertEqual(policy.special_cells,[0])
+        st['native']['selection']['building']=0
+        st['hud']['actions']={'building_5':(1600,200),'next_special':(1600,250)}
+        policy.set_special_probe(st,1920,1200)
+        self.assertEqual(policy.special_tools,[search.BUILDING_SPECIALS['building_5']])
+        self.assertEqual(policy.special_cells,[])
+        st['hud']['actions']={}
+        policy.set_special_probe(st,1920,1200)
+        self.assertEqual(policy.special_cells,[])
+
     def test_refuge_size_trial_keeps_other_decisions_fixed(self):
         parent=dict(refuge=dict(scale=1.,aspect=.8,defense_weight=.16),plan=[1])
         candidate=search.l1_candidate(parent,np.random.default_rng(7))

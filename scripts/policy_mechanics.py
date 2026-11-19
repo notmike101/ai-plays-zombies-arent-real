@@ -309,6 +309,16 @@ class Mechanics:
                 if c.perks() != st['perks']:
                     raise
                 return False
+        if name.startswith('panel_building_') and name.rsplit('_',1)[0]=='panel_building':
+            ability=int(name.rsplit('_',1)[1])
+            index=st['native']['selection']['building']
+            before=st['native']['buildings']['ability']
+            c.panel_action(name[6:])
+            if 0<=index<len(before) and not before[index] and e.scalar(0x6593b0,'<q')-1==index:
+                after=e.array(0x658f50,'u1')
+                if index<len(after) and after[index]==ability:
+                    return index,ability
+            return None
         if name.startswith('panel_'):return c.panel_action(name[6:])
         if name.startswith('select_') and name[7:] in SELECTORS:
             return c.select(st['targets'][name[7:]][cell])

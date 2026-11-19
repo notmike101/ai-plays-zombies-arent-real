@@ -40,6 +40,8 @@ PLANNING_INDEX = INPUT_LABELS.index('Planning phase')
 BATTLE_GAMMA, BATTLE_LAMBDA = .99, .95
 SAVED_REWARD_SCALE = 5.
 OUTSIDE_PLAYAREA_COST = .02
+SPECIAL_ACTIVATION_CREDIT = .01
+MAX_CREDITED_SPECIALS = 3
 NU, NC = 72+len(EXTRA_TOOLS), 48
 TOOLS = ['wait', 'ready', 'garrison', 'mortar', 'napalm', 'turret', 'mine',
          'c4', 'gas_mortar', 'upgrade_unit', 'zone_rect', 'heli', 'cta',
@@ -369,7 +371,7 @@ def checkpoint_schema():
 
 
 def learning_config(*, legacy=False):
-    config = dict(revision=1 if legacy else 6, infection_cost=1.,
+    config = dict(revision=1 if legacy else 7, infection_cost=1.,
                   terminal_saved_scale=SAVED_REWARD_SCALE,
                   planning_gamma=1., planning_lambda=1.,
                   battle_gamma=BATTLE_GAMMA, battle_lambda=BATTLE_LAMBDA)
@@ -379,6 +381,8 @@ def learning_config(*, legacy=False):
         config['outside_playarea_cost'] = OUTSIDE_PLAYAREA_COST
         config['shelter_credit'] = SHELTER_CREDIT
         config['occupied_breach_cost'] = BREACH_COST
+        config['special_activation_credit'] = SPECIAL_ACTIVATION_CREDIT
+        config['max_credited_specials'] = MAX_CREDITED_SPECIALS
     return config
 
 
@@ -491,6 +495,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         nbuy = 0
         battle_actions = dict(decisions=0, cast_available=0, cast_sampled=0, stock_decreased=0)
         outside_actions = 0
+        special_activations = {}
         picker_rejections = {}
         picker_retry_at = {}
         plan_limit = options.get('plan_steps', PLAN_STEPS)
@@ -544,6 +549,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 else:
                     if getattr(net, 'cast_timing', None) is not None:
                         net.set_cast_targets(st, mu, mc, env.cw, env.ch)
+                    if getattr(net,'special_probe',0.):
+                        net.set_special_probe(st,env.cw,env.ch)
                     lu, lc, _, h = net(x, h)
                     du = torch.distributions.Categorical(logits=lu.flatten().masked_fill(torch.tensor(mu == 0), -1e9))
                     u = int(du.probs.argmax() if options.get('greedy') else du.sample())
@@ -567,6 +574,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             previous_state = state
             action_started = time.monotonic()
             picker_rejected = False
+            special_credit = 0.
             outside = outside_playarea(st, u, c, env.cw, env.ch)
             if outside:
                 outside_actions += 1
@@ -576,7 +584,14 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     cx,cy=map(int,st['build_targets'][c])
                 mechanics.controls.place(PLACEMENTS[u],(cx,cy))
             elif u >= 72:
-                picker_rejected = mechanics.execute(st,TOOLS[u],c) is False
+                receipt = mechanics.execute(st,TOOLS[u],c)
+                picker_rejected = receipt is False
+                if isinstance(receipt,tuple) and TOOLS[u].startswith('panel_building_'):
+                    building,ability=receipt
+                    if building not in special_activations:
+                        special_activations[building] = ability
+                        if len(special_activations)<=MAX_CREDITED_SPECIALS:
+                            special_credit = SPECIAL_ACTIVATION_CREDIT
             elif st['planning']:
                 if u == 1:
                     state = ready_once(env)
@@ -665,7 +680,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             nbuy += int(succ)
             st['spend_frac'] = max(0., (m0-o['money']) / max(m0, 1))
             prev_u, prev_c = float(u), float(c)
-            rows['rews'].append(transition_reward(before, o, civ0) - OUTSIDE_PLAYAREA_COST * outside)
+            rows['rews'].append(transition_reward(before, o, civ0) - OUTSIDE_PLAYAREA_COST * outside + special_credit)
             rows['sim_elapsed'].append(max(0., state['sim'] - previous_state['sim']))
             rows['trail'].append((state['sim'], o['civ'], o['zomb'], o['money'], u, c))
             for slot in st['deck']:
@@ -714,7 +729,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 planning_blockers.append('unfinished_gesture')
         outside_reward = -OUTSIDE_PLAYAREA_COST * outside_actions
         shelter = st['shelter']
-        rewards = dict(infections=sum(rows['rews'])-outside_reward-shelter.presence_credit-shelter.breach_penalty,
+        special_reward = SPECIAL_ACTIVATION_CREDIT * min(len(special_activations),MAX_CREDITED_SPECIALS)
+        rewards = dict(infections=sum(rows['rews'])-outside_reward-shelter.presence_credit-shelter.breach_penalty-special_reward,
+                       special_activation=special_reward,
                        outside_playarea=outside_reward, shelter=shelter.presence_credit,
                        occupied_breach=shelter.breach_penalty,
                        terminal=outcome_reward(saved, end))
@@ -731,6 +748,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     timeout_reason=timeout_reason if end=='timeout' else None,
                     planning_blockers=planning_blockers, picker_rejections=picker_rejections,
                     outbreak=footer.get('outbreak') if footer else None,
+                    special_activations=special_activations,
                     reward_components=rewards, outside_playarea_actions=outside_actions, battle_actions=battle_actions,
                     shelter=dict(credited_civilians=len(shelter.credited),exposed_civilians=len(shelter.exposed),
                                  breach_exposures=shelter.breach_exposures,

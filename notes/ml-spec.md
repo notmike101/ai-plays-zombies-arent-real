@@ -71,6 +71,7 @@ For a known completed/aborted outcome, add:
     episode_reward = sum(infection_reward) + terminal_reward - 0.02 * outside_playarea_actions
                      + 0.05 * unique_sheltered_civilians / initial_civilians
                      - 0.10 * new_breach_exposures / initial_civilians
+                     + 0.01 * min(verified_special_activations, 3)
 
 A civilian earns shelter credit once after appearing in an intact zone at two
 consecutive samples, at least 0.5 simulated seconds apart. Departing later
@@ -82,6 +83,11 @@ during the same exposure count once. Initial contamination and empty breaches
 earn no penalty. This is an observed penetration check along the polygon, not an
 interpretation of the native wall-cell event count. The original terminal
 survival score remains the main objective.
+
+Special-building credit requires the selected building's native ability to
+change from zero to the exact enabled choice clicked by the policy. Selection,
+discovery, already-active specials and officer variant switching pay no bonus.
+Count a building once per episode and cap rewarded buildings at three.
 
 The trainer checks issued target coordinates against the native playable boundary.
 It rejects an out-of-bounds target before sending input and records the attempt
