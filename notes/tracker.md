@@ -1,6 +1,11 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 01:40 Central. Simplified the Learning overview to one line
+  with one weighted mean per cohort and run. Public Chrome verified a
+  single plotted line in each dataset and the existing outcomes chart.
+  The mobile fixture verified weighted means, filters, touch and keyboard.
+  The existing observatory served the frontend change directly.
 - 2026-11-19 01:37 Central. Deployed Learning run-average overview on
   listener PID 12628 (create time 1795073834.2616203). Public Chrome
   loaded 10 dated campaign runs and 11 dated PPO runs and inspected

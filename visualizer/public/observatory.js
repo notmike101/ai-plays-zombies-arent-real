@@ -813,9 +813,20 @@ const overviewTime = new Intl.DateTimeFormat(undefined, {month: 'short', day: 'n
 
 function learningOverview(runs, matches, ppo) {
   const section = el('section');
-  section.append(el('h3', 'Overview · Average civilian saves by run'),
-    el('p', `Each point summarizes one ${ppo ? 'PPO run' : 'campaign search'} at its earliest available episode timestamp. Lines keep cohorts, board starts, and levels separate. Means use official win and loss scores. The latest run may still be recording results. The dashed line marks 35% saved.`, 'note'));
-  const points = runs.map(run => ({...run, groups: run.groups.filter(matches)})).filter(run => run.groups.length);
+  section.append(el('h3', 'Overview · Average civilian saves by cohort'),
+    el('p', `One point per cohort in each ${ppo ? 'PPO run' : 'campaign search'}, ordered by run. Averages use official win and loss scores.`, 'note'));
+  const points = runs.flatMap(run => {
+    const cohorts = new Map();
+    for (const group of run.groups.filter(matches)) {
+      if (!cohorts.has(group.cohort)) cohorts.set(group.cohort, {count: 0, total: 0});
+      const score = cohorts.get(group.cohort);
+      score.count += group.count;
+      score.total += group.mean * group.count;
+    }
+    return Array.from(cohorts, ([cohort, {count, total}]) => ({
+      id: run.id, started: run.started_at, cohort, count, mean: total / count,
+    }));
+  });
   if (!points.length) {
     section.append(el('p', 'No dated runs with official save scores match the filters.', 'readout'));
     return section;
@@ -823,87 +834,46 @@ function learningOverview(runs, matches, ppo) {
 
   const canvas = el('canvas', undefined, 'trend overview-trend');
   const caption = el('p', '', 'readout');
-  const details = el('ul', undefined, 'overview-series');
-  details.setAttribute('aria-live', 'polite');
+  caption.setAttribute('aria-live', 'polite');
   const axis = el('div', undefined, 'overview-axis');
-  const first = points[0].started_at, last = points.at(-1).started_at;
+  const first = points[0].started, last = points.at(-1).started;
   axis.append(el('span', overviewTime.format(first)));
   if (last !== first) axis.append(el('span', overviewTime.format(last)));
-  section.append(canvas, axis, caption, details);
+  section.append(canvas, axis, caption);
   canvas.tabIndex = 0;
-  canvas.setAttribute('aria-label', 'Average civilian saves by run. Use the left and right arrow keys to inspect runs.');
+  canvas.setAttribute('aria-label', 'Average civilian saves by cohort. Use the left and right arrow keys to inspect points.');
   canvas.width = Math.max(260, Math.floor($('learning-results').clientWidth));
   canvas.height = 190;
 
   const ctx = canvas.getContext('2d');
-  const left = 43, right = canvas.width - 13;
-  const x = ms => first === last ? (left + right) / 2 : left + (right - left) * (ms - first) / (last - first);
+  const left = 43, span = canvas.width - left - 13;
+  const x = i => left + span * (points.length === 1 ? .5 : i / (points.length - 1));
   const y = value => 176 - 160 * value;
-  const series = new Map();
-  const colors = ['#75e4d7', '#ffcc76', '#a7b3ff', '#ff9eae', '#aae493', '#82c8ff'];
-  for (const [index, run] of points.entries()) {
-    for (const score of run.groups) {
-      const key = JSON.stringify([score.cohort, score.start_kind, score.stage]);
-      if (!series.has(key)) series.set(key, {color: colors[series.size % colors.length], points: new Map()});
-      series.get(key).points.set(index, score);
-    }
-  }
   let selected = points.length - 1;
   function inspect(index) {
     selected = Math.max(0, Math.min(points.length - 1, index));
-    const run = points[selected];
+    const point = points[selected];
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.font = '12px system-ui';
     ctx.fillStyle = '#a2b6c3';
-    ctx.lineWidth = 1;
-    for (const tick of [0, .35, .5, 1]) {
-      ctx.fillText(`${tick * 100}%`, 3, y(tick) + 4);
-      ctx.strokeStyle = tick === .35 ? '#a2b6c3' : '#375160';
-      ctx.setLineDash(tick === .35 ? [5, 4] : []);
-      ctx.beginPath();
-      ctx.moveTo(left, y(tick));
-      ctx.lineTo(right, y(tick));
-      ctx.stroke();
-    }
-    ctx.strokeStyle = '#a2b6c3';
+    for (const tick of [0, .5, 1]) ctx.fillText(`${tick * 100}%`, 3, y(tick) + 4);
+    ctx.strokeStyle = ctx.fillStyle = '#75e4d7';
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(x(run.started_at), y(1));
-    ctx.lineTo(x(run.started_at), y(0));
+    ctx.moveTo(x(0), y(points[0].mean));
+    for (let i = 1; i < points.length; i++) ctx.lineTo(x(i), y(points[i].mean));
     ctx.stroke();
-    const values = [];
-    for (const line of series.values()) {
-      ctx.strokeStyle = ctx.fillStyle = line.color;
-      ctx.lineWidth = 2;
+    points.forEach(({mean}, i) => {
       ctx.beginPath();
-      let previous = -2;
-      for (const [i, score] of line.points) {
-        const position = [x(points[i].started_at), y(score.mean)];
-        if (i === previous + 1) ctx.lineTo(...position);
-        else ctx.moveTo(...position);
-        previous = i;
-      }
-      ctx.stroke();
-      for (const [i, score] of line.points) {
-        ctx.beginPath();
-        ctx.arc(x(points[i].started_at), y(score.mean), i === selected ? 5 : 3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      const score = line.points.get(selected);
-      if (score) {
-        const item = el('li', `${score.cohort} · ${boardStart(score.start_kind ?? 'unknown')} · ${score.stage == null ? 'Unknown stage' : `L${score.stage}`} · ${percent(score.mean)} mean · n=${score.count}`);
-        item.style.borderColor = line.color;
-        values.push(item);
-      }
-    }
-    caption.textContent = `${overviewTime.format(run.started_at)} · Run ${run.id.replace('coverage-team-', '')}`;
-    details.replaceChildren(...values);
+      ctx.arc(x(i), y(mean), i === selected ? 5 : 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    caption.textContent = `${point.cohort} · ${percent(point.mean)} mean · n=${point.count} · ${overviewTime.format(point.started)} · Run ${point.id.replace('coverage-team-', '')}`;
   }
   canvas.onclick = event => {
     const bounds = canvas.getBoundingClientRect();
     const coordinate = (event.clientX - bounds.left) * canvas.width / bounds.width;
-    const closest = points.reduce((best, run, i) => Math.abs(x(run.started_at) - coordinate) <
-      Math.abs(x(points[best].started_at) - coordinate) ? i : best, selected);
-    inspect(closest);
+    inspect(Math.round((coordinate - left) / span * (points.length - 1)));
   };
   canvas.onkeydown = event => {
     if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;

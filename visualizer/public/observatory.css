@@ -90,8 +90,6 @@ summary { cursor: pointer; color: var(--cyan); }
 .overview-trend { height: 190px; }
 .overview-axis { display: flex; justify-content: space-between; gap: .5rem; padding: .35rem 1rem .35rem 2.7rem; color: var(--muted); font-size: .8rem; }
 .overview-axis span:only-child { margin-inline: auto; }
-.overview-series { display: flex; flex-wrap: wrap; gap: .4rem 1rem; list-style: none; padding: 0; }
-.overview-series li { border-left: 3px solid; padding-left: .5rem; }
 #activation-layer, #feature-group, #matrix { max-width: 15rem; }
 .weight-controls input { width: 6rem; }
 #feature-search { width: min(100%, 14rem); }
