@@ -1,6 +1,9 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 02:02 Central. Backed up the uncommitted graph test rewrite
+  as a restorable patch and restored the tracked test in the deployed
+  checkout. Node reported Graph assertions passed; the file is clean.
 - 2026-11-19 02:00 Central. Verified the tracked legacy graph regression
   passes from a clean worktree with the same graph source. The deployed
   checkout carries an uncommitted alternative test that exits during
