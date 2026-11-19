@@ -1,6 +1,17 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 01:16 Central. Deployed standby telemetry between campaign
+  searches after 103851 ended. Supervisor launched 104851 naturally with
+  operators 53672/59616. Public Chrome switched from game-only to live and
+  saw two actual publishers: inst13 game 25292 / worker 57300 and inst14
+  game 27560 / worker 42680. The selected planning READY, probability,
+  identity, revision and first observation matched the retained server
+  record (4,889 inputs). Pinned inst14 in the public diagram and used
+  Follow live policy to return to inst13. Public game-only video also
+  played at 960x600 on the previous held-out games. Training was not
+  interrupted. Revised held-out observer coverage was tested in the suite
+  and has not yet reached a fresh live held-out batch.
 - 2026-11-19 01:08 Central. Fixed automatic Monitor selection so a live
   policy publisher takes precedence over a game-only node. A manually
   selected game remains pinned until it ends or Follow live policy is used.
