@@ -30,14 +30,16 @@ let selectedWorker = null, manualWorker = null;
 const shown = () => replay || live;
 const list = () => live.history || [];
 const preview = new URLSearchParams(location.search).get('preview') === '1';
+const viewLinks = [...document.querySelectorAll('nav a[data-view]')];
 
-function switchView(next) {
-  view = next;
+function showLinkedView() {
+  view = (viewLinks.find(link => link.hash === location.hash) || viewLinks[0]).dataset.view;
   $('worker-diagram').hidden = view === 'learning';
-  for (const button of document.querySelectorAll('nav button')) {
-    const active = button.dataset.view === view;
-    button.setAttribute('aria-pressed', active);
-    $(button.dataset.view).hidden = !active;
+  for (const link of viewLinks) {
+    const active = link.dataset.view === view;
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+    $(link.dataset.view).hidden = !active;
   }
   if (view === 'learning' && !$('learning-results').childElementCount) loadLearning();
   render();
@@ -734,7 +736,7 @@ function comparison(sample, meta) {
 async function inspectReplay(sequence) {
   const stream = live.sample?.stream;
   if (!stream || sequence === undefined) return;
-  if (view === 'activity') switchView('timeline');
+  if (view === 'activity') location.hash = '/timeline';
   const request = ++pendingReplay;
   ++pendingCompare;
   text('replay-status', 'Loading recorded sample…');
@@ -1061,7 +1063,7 @@ function renderTeams(target, run) {
   target.append(el('h3', 'Team parameters'), el('p', 'Differences compare two saved configurations. They do not establish parentage or what caused a score.', 'note'), controls, result);
 }
 
-for (const button of document.querySelectorAll('nav button')) button.onclick = () => switchView(button.dataset.view);
+window.addEventListener('hashchange', showLinkedView);
 $('follow-policy').onclick = () => { manualWorker = null; connect(); };
 $('map-layer').onchange = render;
 $('game-view').ontoggle = refreshGameView;
@@ -1088,7 +1090,7 @@ $('follow').onclick = () => {
   $('compare').value = '';
   render();
 };
-$('open-replay').onclick = () => switchView('monitor');
+$('open-replay').onclick = () => { location.hash = '/monitor'; };
 $('compare').onchange = async () => {
   const value = $('compare').value;
   const {sample, metadata} = shown();
@@ -1107,4 +1109,5 @@ $('compare').onchange = async () => {
 $('refresh-learning').onclick = loadLearning;
 $('learning-run').onchange = loadLearning;
 for (const id of ['learning-dataset', ...dimensions.map(([id]) => id)]) $(id).onchange = renderLearning;
+showLinkedView();
 connect();

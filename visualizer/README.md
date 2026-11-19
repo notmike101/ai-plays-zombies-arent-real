@@ -2,7 +2,8 @@
 
 A read-only interface for a running PyTorch GRU policy and its recorded training
 results. Open **http://localhost:8765** for the observatory or **/legacy** for the
-original network graph and its focused node inspector.
+original network graph and its focused node inspector. The Observatory tabs
+have shareable links such as **/#/learning** and **/#/timeline**.
 
 ## What each view answers
 
@@ -113,6 +114,8 @@ video whenever Game view is open.
   the scored sample count. Runs without a retained timestamp or official score
   are omitted. The latest run can still be recording outcomes.
   The search-run picker scopes the existing detailed charts and tables.
+  Learning loads when first opened and reloads when you choose another search
+  run or click **Refresh results**.
   Champion statistics use the search's fresh-board
   evidence. Raw trial counts can include repeats. Timeout snapshots are
   omitted from official save scores. Aborted readings appear as retry scores.

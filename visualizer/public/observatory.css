@@ -20,7 +20,6 @@ a { color: var(--cyan); }
 .brand { letter-spacing: .04em; font-size: 1.15rem; white-space: nowrap; }
 .brand span { color: var(--cyan); margin-right: .4rem; }
 nav { gap: .2rem; }
-nav button { border-color: transparent; background: transparent; }
 main { max-width: 1460px; margin: auto; padding: 1rem clamp(.8rem, 3vw, 2.5rem) 3rem; }
 .toolbar { padding: .6rem 0; }
 .stream-status { display: flex; align-items: baseline; gap: .7rem; margin-right: auto; }
@@ -32,13 +31,14 @@ h1 { font-size: clamp(1.6rem, 5vw, 2.5rem); letter-spacing: -.04em; margin: 1rem
 h2 { font-size: 1.11rem; margin: 0; }
 h3 { font-size: 1rem; margin: 1.1rem 0 .45rem; }
 p { margin: .55rem 0; }
-button, input, select {
+button, input, select, nav a {
   min-height: 2.5rem; padding: .38rem .65rem; border: 1px solid var(--line);
   border-radius: .4rem; font: inherit; background: #13212b; color: var(--text); max-width: 100%;
 }
+nav a { display: inline-flex; align-items: center; border-color: transparent; background: transparent; text-decoration: none; }
 button { cursor: pointer; }
 button:hover, a:hover { color: var(--cyan); }
-button[aria-pressed="true"], button[aria-current="true"] { border-color: var(--cyan); color: var(--cyan); background: #15312f; }
+button[aria-pressed="true"], button[aria-current="true"], nav a[aria-current="page"] { border-color: var(--cyan); color: var(--cyan); background: #15312f; }
 button:disabled { opacity: .55; cursor: default; }
 :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 label { display: inline-flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
@@ -113,7 +113,7 @@ thead th { background: #17252f; position: sticky; top: 0; }
 @media (max-width: 560px) {
   .header { align-items: baseline; gap: .4rem; padding: .7rem .8rem; }
   .header nav { order: 3; width: 100%; justify-content: space-between; gap: 0; }
-  .header nav button { padding-inline: .45rem; }
+  .header nav a { padding-inline: .45rem; }
   .stream-status { width: 100%; }
   #monitor .stack { display: contents; }
   #monitor .stack .panel:first-child { grid-row: 1; }

@@ -35,7 +35,7 @@ async page => {
   for (const [kind, route] of [['legacy', '/legacy?canvas2d=1'], ['monitor', '/'], ['activity', '/']]) {
     await page.goto(origin + route);
     await page.waitForFunction(() => window.benchmark.length > 0);
-    if (kind === 'activity') await page.getByRole('button', {name: 'Neural activity'}).click();
+    if (kind === 'activity') await page.getByRole('link', {name: 'Neural activity'}).click();
     await page.waitForFunction(() => window.benchmark.length >= 10);
     await cdp.send('HeapProfiler.collectGarbage');
     const {metrics} = await cdp.send('Performance.getMetrics');
