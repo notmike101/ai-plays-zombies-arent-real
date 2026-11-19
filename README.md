@@ -4,6 +4,21 @@ Train a GRU policy to save at least 35% of civilians consistently on every Bosto
 level at normal difficulty. The model chooses all strategy; automation supplies
 observations and executes its actions. This objective has **not** been achieved.
 
+Campaign search also trains preparation and battle specialists alongside the
+GRU. Once the game copies and weights pass preflight, a release that includes
+a campaign team can resume the search directly. With four idle owned copies
+and a verified release downloaded to `sessions/download`, run:
+
+```powershell
+.\.venv\Scripts\python.exe -B scripts/team_search.py --copies inst13 inst14 inst15 inst16 --seed-from sessions/download --generations 4
+```
+
+Use the names of the copies you prepared. The console prints the experiment
+directory. Use that directory with `--seed-from` for the following run and
+`scripts/nn_report.py --search-dir <directory>` for scores.
+See [checkpoint sharing](notes/checkpoint-sharing.md) and the
+[operator runbook](notes/operator-runbook.md).
+
 ## Starting with no context
 
 First-time Python setup uses **CPython 3.14 x64 on Windows**. Skip creation if this

@@ -28,6 +28,12 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
 - Current training uses `scripts/train_run.py` -> `scripts/nn_play2.py`, schema4,
   `sessions/nn_policy4.pt`. A fresh clone does not include this ignored checkpoint.
   Missing resume weights are an error, never permission to start random training.
+- For campaign team search, follow the active experiment in the tracker and
+  the campaign section of the operator runbook. Resume with
+  `scripts/team_search.py --seed-from <search-directory-or-team-bearing-release>`
+  using 4–8 idle, full-availability owned copies. Check the per-stage report.
+  The six-hour export now includes the newest compatible selected team plus
+  its GRU; an older GRU-only release resumes PPO only.
 - Active trainer/environment paths derive from this checkout. Copy zar.example.toml
   to ignored zar.local.toml and configure the read-only source game installation.
   `local.ps1 prepare-game --copy instN` creates a NEW owned copy; never overwrites

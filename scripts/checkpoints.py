@@ -52,6 +52,8 @@ def source_record():
                         ROOT/'scripts/zar_input.py', ROOT/'scripts/native_state.py',
                         ROOT/'scripts/native_hud.py', ROOT/'scripts/game_controls.py',
                         ROOT/'scripts/game_mechanics.py', ROOT/'scripts/mechanic_contract.py',
+                        ROOT/'scripts/team_search.py', ROOT/'scripts/layout_memory.py',
+                        ROOT/'scripts/crowd_forecast.py',
                         ROOT/'scripts/policy_mechanics.py', ROOT/'visualizer/labels.py']})
 
 
@@ -103,7 +105,31 @@ def verify_bundle(bundle):
     info = inspect_checkpoint(bundle/'nn_policy4.pt')
     if info['policy_id'] != manifest['policy_id']:
         raise ValueError('Policy identity differs from manifest')
+    if 'campaign_team' in manifest:
+        from team_search import checkpoint_team
+        record=manifest['campaign_team']
+        if checkpoint_team(record,info['policy_id'])!=record:
+            raise ValueError('Unexpected campaign checkpoint fields')
+        if manifest.get('bundle_id')!=bundle_id(sums['nn_policy4.pt'],record):
+            raise ValueError('Campaign bundle identity mismatch')
+    elif manifest.get('bundle_id',sums['nn_policy4.pt'])!=sums['nn_policy4.pt']:
+        raise ValueError('Bundle identity mismatch')
     return manifest
+
+
+def bundle_id(digest,record):
+    if record is None:return digest
+    return sha(digest.encode()+json.dumps(record,sort_keys=True,separators=(',',':')).encode())
+
+
+def latest_team(directory,base):
+    from team_search import checkpoint_team
+    paths=sorted(Path(directory).glob('coverage-team-*/champion.json'),key=lambda p:p.stat().st_mtime_ns,reverse=True)
+    for path in paths:
+        if path.stat().st_size>2**20:raise ValueError('Oversized campaign checkpoint')
+        record=json.loads(path.read_text())
+        if record.get('base')==base:return checkpoint_team(record,base)
+    return None
 
 
 def snapshot(model=MODEL, exports=EXPORTS):
@@ -114,14 +140,16 @@ def snapshot(model=MODEL, exports=EXPORTS):
     digest = sha(raw)
     exports = Path(exports)
     exports.mkdir(parents=True, exist_ok=True)
-    target = exports/digest
-    if target.exists():
-        verify_bundle(target)
-        return target
     with tempfile.TemporaryDirectory(prefix='.snapshot-', dir=exports) as temp:
         stage = Path(temp)/'bundle'; stage.mkdir()
         (stage/'nn_policy4.pt').write_bytes(raw)
         info = inspect_checkpoint(stage/'nn_policy4.pt')
+        record=latest_team(HISTORY.parent,info['policy_id'])
+        identity=bundle_id(digest,record)
+        target=exports/identity
+        if target.exists():
+            verify_bundle(target)
+            return target
         manifest = dict(format=1, captured_at=datetime.now(timezone.utc).isoformat(),
                         checkpoint_sha256=digest, policy_id=info['policy_id'], run_id=info['run_id'],
                         schema=data['schema'], learning=data.get('learning'),
@@ -130,6 +158,7 @@ def snapshot(model=MODEL, exports=EXPORTS):
                         metrics=metrics(info),
                         limitations=['Not a complete campaign/board/RNG snapshot',
                                      'No claim of >=35% saved consistently; objective unmet'])
+        if record:manifest.update(format=2,campaign_team=record,bundle_id=identity)
         (stage/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
         (stage/'SHA256SUMS').write_text(''.join(f'{sha((stage/name).read_bytes())}  {name}\n'
                                             for name in ASSETS[:2]), encoding='ascii')
@@ -175,14 +204,15 @@ def download_verified(tag, digest):
         for asset in ASSETS: args += ['--pattern', asset]
         gh(*args)
         manifest = verify_bundle(Path(temp))
-        if manifest['checkpoint_sha256'] != digest: raise ValueError('Remote checkpoint differs from local snapshot')
+        if manifest.get('bundle_id',manifest['checkpoint_sha256']) != digest:
+            raise ValueError('Remote checkpoint differs from local snapshot')
         return manifest
 
 
 def publish(bundle):
     bundle = Path(bundle)
     manifest = verify_bundle(bundle)
-    digest = manifest['checkpoint_sha256']
+    digest = manifest.get('bundle_id',manifest['checkpoint_sha256'])
     tag = 'checkpoint-'+digest[:16]
     existing = release_info(tag)
     if existing and not existing['isDraft']:
@@ -190,7 +220,9 @@ def publish(bundle):
         return dict(status='already_published', tag=tag, url=existing['url'])
     if not existing:
         notes = bundle/'release-notes.md'
-        notes.write_text(f"Schema-{manifest['schema']['version']} policy and Adam state `{manifest['policy_id']}`.\n\n"
+        team_note=(f"Campaign team `{manifest['campaign_team']['team_id']}` is included in manifest.json.\n\n"
+                   if 'campaign_team' in manifest else '')
+        notes.write_text(f"Schema-{manifest['schema']['version']} policy and Adam state `{manifest['policy_id']}`.\n\n"+team_note+
                          "Experimental training snapshot; the >=35% campaign objective is unmet. "
                          "Manifest metrics describe training, not an independent evaluation.\n\n"
                          "Verify SHA256SUMS and exact schema before import. Includes no game files, "

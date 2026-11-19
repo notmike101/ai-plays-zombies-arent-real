@@ -272,6 +272,69 @@ def team_id(team):
     return hashlib.sha256(json.dumps(team,sort_keys=True).encode()).hexdigest()[:16]
 
 
+def checkpoint_team(record,base):
+    """Only reviewed strategy fields may enter a public model bundle."""
+    from layout_memory import BUILDINGS
+    team=record['team']
+    def fields(obj,required=(),optional=()):
+        if not isinstance(obj,dict) or not set(required)<=obj.keys()<=set(required)|set(optional):
+            raise ValueError('Unexpected campaign strategy fields')
+    def numeric(value,shape):
+        a=np.asarray(value)
+        if a.shape!=shape or a.dtype.kind not in 'fiu' or not np.isfinite(a).all():
+            raise ValueError('Invalid campaign strategy numbers')
+    def battle(obj):
+        for k,shape in [('battle',(len(CASTS),5)),('cast_bias',(len(CASTS),)),('camera_pause',(6,))]:
+            if k in obj:numeric(obj[k],shape)
+        if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
+            raise ValueError('Invalid campaign recovery action')
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge'))
+    battle(team)
+    numeric(team['idle_bias'],())
+    if not isinstance(team['plan'],list) or len(team['plan'])>64:raise ValueError('Invalid campaign plan')
+    for g in team['plan']:
+        fields(g,('family','tool','duration','x','y','dx','dy','weights'))
+        for k,low,high in [('family',0,len(FAMILIES)-1),('tool',0,tr.NU-1),('duration',1,60),
+                           ('x',0,7),('y',0,4),('dx',-7,7),('dy',-5,5)]:
+            if type(g[k])!=int or not low<=g[k]<=high:raise ValueError('Invalid campaign planning gene')
+        numeric(g['weights'],(5,))
+    for k in ('later_layouts','stage_battle'):fields(team.get(k,{}),optional=('2','3','4','5'))
+    for override in team.get('stage_battle',{}).values():
+        fields(override,optional=('battle','cast_bias','camera_pause','blocked_tool'))
+        battle(override)
+    if 'refuge' in team:
+        fields(team['refuge'],('scale','aspect','defense_weight'))
+        for value in team['refuge'].values():numeric(value,())
+        if min(team['refuge']['scale'],team['refuge']['aspect'])<=0:raise ValueError('Invalid refuge geometry')
+    for layout in [team.get('layout',[]),*team.get('later_layouts',{}).values()]:
+        if not isinstance(layout,list) or len(layout)>4096:raise ValueError('Invalid campaign layout')
+        for a in layout:
+            fields(a,('kind','points'),('observed_cost',))
+            kind=a['kind']
+            if kind not in (*BUILDINGS,'gate','zone','wall','hold','corridor'):raise ValueError('Unknown placement')
+            n=len(a['points'])
+            if not (3<=n<=128 if kind=='zone' else n==(2 if kind in ('wall','hold','corridor') else 1)):
+                raise ValueError('Invalid placement geometry')
+            numeric(a['points'],(n,2))
+            if 'observed_cost' in a:
+                numeric(a['observed_cost'],())
+                if a['observed_cost']<0:raise ValueError('Invalid placement cost')
+    if record['base']!=base or record['team_id']!=team_id(team):raise ValueError('Campaign policy identity mismatch')
+    return dict(base=base,team_id=record['team_id'],team=team)
+
+
+def restore_team(net,directory):
+    if (directory/'champion.json').is_file():
+        record=json.loads((directory/'champion.json').read_text())
+        net.load_state_dict(torch.load(directory/'base.pt',weights_only=True))
+    else:
+        from checkpoints import verify_bundle
+        record=verify_bundle(directory).get('campaign_team')
+        if not record:raise ValueError('This checkpoint bundle has no campaign team')
+        tr.load_pretrained(net,directory/'nn_policy4.pt')
+    return checkpoint_team(record,tr.policy_id(net))['team']
+
+
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False):
     if starts is None:starts=[1]*len(jobs)
     observed=next((j[0] for j in jobs if j[2]),None) if training else None
@@ -337,11 +400,7 @@ def main():
         net=tr.PolicyNet2()
         prior=None
         if args.seed_from:
-            champion=json.loads((args.seed_from/'champion.json').read_text())
-            net.load_state_dict(torch.load(args.seed_from/'base.pt',weights_only=True))
-            prior=champion['team']
-            if team_id(prior)!=champion['team_id'] or tr.policy_id(net)!=champion['base']:
-                raise ValueError('Champion and base policy do not match the saved identities')
+            prior=restore_team(net,args.seed_from)
         else:
             tr.load_pretrained(net,tr.MODEL)
         weights=net.state_dict()

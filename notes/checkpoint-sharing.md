@@ -28,6 +28,15 @@ loads state into workers or changes training. Exactly three release assets:
   and available last training-batch outcomes.
 - `SHA256SUMS`: checksums of the checkpoint and manifest.
 
+When a campaign search has selected a champion with the same GRU identity,
+export includes the most recently saved compatible team's strategy in
+`manifest.json`. It contains reviewed numeric policy parameters, placement
+types and coordinates, and any learned cost estimates. The source progress
+file, game assets, logs and board state stay local. Changing either the
+team or the GRU creates a distinct bundle ID and release tag. Existing
+GRU-only bundles remain valid. A training-selected champion may still fail
+held-out games.
+
 No game assets, DLLs, saves/unlocks, configuration, logs or credentials publish.
 Unexpected checkpoint fields cause refusal pending review. The source revision
 is the checkout **at capture**, not proof of the revision that trained historical
@@ -70,6 +79,11 @@ Then run `local.ps1 check` and resume only when game/DLL/profile checks pass.
 Weights/Adam resume, but board state, exact RNG/recurrent memory and unfinished
 batches do not. Game copies separately use the full-availability training profile
 authorized by the user; this unlocks options, not purchases, SP or placements.
+
+For a team-bearing bundle, keep the downloaded directory and pass it to
+`scripts/team_search.py --seed-from sessions/download`. The search validates
+all three files and resumes from the embedded champion and frozen GRU. See
+the campaign command in the operator runbook for copy and generation arguments.
 
 Implementation: `scripts/checkpoints.py`; tests: `scripts/test_checkpoints.py`.
 CLI reference: [GitHub release commands](https://cli.github.com/manual/gh_release).
