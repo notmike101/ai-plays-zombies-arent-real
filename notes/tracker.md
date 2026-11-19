@@ -1,6 +1,10 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 02:16 Central. Merged PR #1 as 1cd20fa and pulled by fast-forward.
+  Only requirements.txt changed. The active environment still imports Pillow
+  12.3.0, and campaign search operators 50880 and 59348 were still running.
+  Default inst1 preflight still reports the pre-existing unlock-profile issue.
 - 2026-11-19 02:13 Central. Reviewed Dependabot PR #1 (Pillow 13.0.0).
   Simulated merge onto origin/main 01deff5 cleanly with only the pin change.
   Isolated CPython 3.14 x64 wheel passed screenshot conversion, PNG and menu
