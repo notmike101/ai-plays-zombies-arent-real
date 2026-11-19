@@ -1,6 +1,16 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 08:30 Central. Six-copy minimum requested.
+  Supplemental inst17/18 (PIDs 53148/45804) reached live L1 battle on CPUs
+  8–11 while seed 121851 kept its original inst13–16 on CPUs 0–7. About
+  8.2 GiB RAM remained available, with 6.4 GiB VRAM free. Transition helper
+  PID 60596 repeats fresh extras if resources permit and writes their results
+  alongside the active search. Old supervisor PID 49644 is draining its
+  existing block. New supervisor PID 59164 uses the min-six hold marker
+  and waits for idle copies, 12.5 GiB available RAM, and 3 GiB free disk.
+  It chooses six copies, or eight at 16 GiB. Normal launches reserve half
+  the logical CPUs for desktop use. The 204 trainer tests passed.
 - 2026-11-19 08:14 Central. Checked continuous search seed
   120851 with four owned copies inst13–16, Boston L1 only. Latest leader
   43ee3ee08e4dca6d has 15 qualifying wins in 51 fresh starts and 33.07%
