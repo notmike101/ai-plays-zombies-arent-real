@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 22:18 Central. Verified continuous supervisor PID 49644 and enabled hold
+  marker. Seed 98851 is in generation 4 of 4 on inst13–16. Three copies
+  were in battle when sampled and inst13 had already logged its result.
+  A candidate saved 35.47% on one fresh L1 outbreak in generation 3, then
+  hit a native map read error in L2. The incumbent remains 79deb3a2929af18a.
+  The supervisor will start the next block after the held-out evaluation,
+  subject to its RAM and disk floors. About 10.4 GiB RAM and 10.1 GiB disk
+  were free at this check. No restart was needed.
 - 22:01 Central. Latest-camera fresh L1 comparison completed on full-profile
   inst19/20 with swapped copies; both pilot copies exited. Incumbent saved
   41.65% and 23.45% (one confirmed cast total). Cast-preference variant saved
