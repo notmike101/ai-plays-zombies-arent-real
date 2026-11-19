@@ -1,6 +1,12 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 Central. Added compact combat context to opt-in shadow states
+  from the existing native snapshot, with no additional game reads. Includes
+  local conversion, defenders by kind, wall/hazard/mutation centers, bounded
+  shelter polygons, sampled terrain/bridges/fire, and live helicopter positions.
+  Native missile flight and impact remain unverified. Six-copy production
+  was active and inst13 preflight passed; no competing capture launched.
 - 2026-11-19 Central. Added opt-in shadow transition schema 2 and evaluated
   a receipt-conditioned model offline. Existing archive admitted 23 battles;
   new fits train on inst13–15, calibrate on inst16 and test on inst17–18.

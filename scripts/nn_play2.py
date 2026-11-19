@@ -526,7 +526,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         shadow = dict(frames=[], casts=[]) if options.get('capture_shadow') else None
         if shadow is not None:
             import psutil
-            from shadow_transitions import TransitionCapture
+            from shadow_transitions import TransitionCapture, combat_context
             capture = TransitionCapture()
             shadow.update(schema=2, pid=pid, created=psutil.Process(pid).create_time(),
                           viewport=[env.cw, env.ch], policy=policy_id(net) if net is not None else 'random',
@@ -617,12 +617,13 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 battle_actions['decisions'] += 1
                 battle_actions['cast_available'] += int(any(mu[tool] for tool in U2ABILITY))
                 battle_actions['cast_sampled'] += int(u in U2ABILITY)
-                if shadow is not None and state['phase'] == 'playing':
+                if shadow is not None and not capture.truncated and state['phase'] == 'playing':
                     capture.observe(
                         dict(sim=state['sim'], tick=int(st['native']['tick']), speed=state['mult'],
                              paused=state['paused'], camera=list(st['native']['camera']),
                              counts={k:o[k] for k in ('civ','zomb','converting','infections')},
                              grid=st['grid'].tolist(), anchor=st.get('anchor'),
+                             context=combat_context(st['native'], env.cw, env.ch),
                              stock={slot['name']:[slot['charges'],slot['ready_t'],slot['pending']]
                                     for slot in st['deck']}),
                         dict(tool=TOOLS[u], cell=c, legal_tools=np.flatnonzero(mu).tolist(),

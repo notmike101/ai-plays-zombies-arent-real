@@ -16,6 +16,12 @@ tests only a subset of this state. It does not establish that the subset is
 sufficient. Capture records population, stock, timing, and the observed grid
 including building counts and shelter occupancy. Terrain, detailed static
 defenses and authoritative in-flight entities remain gaps.
+Opt-in context now retains defender-kind and local conversion counts,
+wall midpoints, bounded shelter polygons, sampled terrain/bridges/fire,
+hazard and mutation centers, and live helicopter positions. A null shelter
+polygon list means the vertex budget was exceeded. These fields reuse the
+native policy snapshot. Hazard centers do not describe affected footprints,
+and helicopter positions and cooldown estimates do not track missile flight.
 
 Opt-in `team_search.py --capture-shadow` exports schema 2 beside existing
 samples. One episode identifies the copy, PID and process birth time, native

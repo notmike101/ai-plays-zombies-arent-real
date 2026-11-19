@@ -1,10 +1,26 @@
 import unittest
+import numpy as np
 
-from shadow_transitions import TransitionCapture
+from shadow_transitions import TransitionCapture, combat_context
 from shadow_benchmark import chains, commands
+from test_policy_mechanics import fixture
 
 
 class ShadowTransitionTests(unittest.TestCase):
+    def test_context_excludes_offscreen_units_and_keeps_conversion_separate(self):
+        native = fixture()
+        native['units']['pos'] = np.array([[0., 0.], [500., 0.]])
+        native['units']['converting'][0] = 1
+        native['zones'] = [np.array([[0., 0.], [1., 0.], [0., 1.]])]
+        context = combat_context(native, 100, 100)
+        self.assertEqual(sum(context['conversion']), 1)
+        self.assertEqual(sum(context['defenders'][5]), 1)
+        self.assertEqual(len(context['terrain']), 48)
+        self.assertEqual(sum(context['wall_midpoints']), 0)
+        self.assertEqual(context['shelter_polygons'], [native['zones'][0].tolist()])
+        native['zones'] = [np.zeros((257, 2))]
+        self.assertIsNone(combat_context(native, 100, 100)['shelter_polygons'])
+
     def test_rollout_pairs_reject_an_intervening_camera_change(self):
         frames = [{'sim': t, 'camera': [0, y, 1]} for t, y in [(0, 0), (1, 2), (2, 0), (4, 0)]]
         self.assertEqual(list(chains({'frames': frames, 'casts': []}, 2)), [])
