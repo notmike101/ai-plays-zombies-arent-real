@@ -21,15 +21,15 @@ const options = (select, entries) => {
   select.dataset.options = signature;
 };
 
-let view = 'monitor', source, generation = 0, live = {}, frozen = null, replay = null, baseline = null;
+let view = 'monitor', source, generation = 0, live = {}, replay = null, baseline = null;
 let mapChoice = 0, page = 0, unit = 0, inspectedMemory = null, tile = null, weightCursor = 0;
 let pendingReplay = 0, pendingCompare = 0, pendingWeights = 0;
 let learning, learningRequest = 0;
 let gameView = null;
 let selectedWorker = null, manualWorker = null;
-const shown = () => replay || frozen || live;
-const list = () => (frozen || live).history || [];
-const preview = () => $('mode').value === 'preview';
+const shown = () => replay || live;
+const list = () => live.history || [];
+const preview = new URLSearchParams(location.search).get('preview') === '1';
 
 function switchView(next) {
   view = next;
@@ -55,10 +55,10 @@ function renderWorkers(workers) {
     button.type = 'button';
     button.dataset.worker = worker.id;
     button.setAttribute('aria-pressed', worker.id === selectedWorker);
-    button.append(el('strong', worker.copy || (preview() ? 'Synthetic preview' : `Game ${worker.game_pid}`)),
-      el('small', preview() ? `Worker ${worker.worker_pid}` :
+    button.append(el('strong', worker.copy || (preview ? 'Synthetic preview' : `Game ${worker.game_pid}`)),
+      el('small', preview ? `Worker ${worker.worker_pid}` :
         `Game ${worker.game_pid}${worker.worker_pid == null ? '' : ` · worker ${worker.worker_pid}`}`),
-      el('span', preview() ? 'Synthetic' : worker.stream ? 'Policy live' : 'Game only', 'worker-state'));
+      el('span', preview ? 'Synthetic' : worker.stream ? 'Policy live' : 'Game only', 'worker-state'));
     button.onclick = () => {
       if (manualWorker === worker.id) return;
       selectedWorker = manualWorker = worker.id;
@@ -80,13 +80,12 @@ function connect() {
   ++pendingCompare;
   ++pendingWeights;
   live = {};
-  frozen = replay = baseline = tile = null;
+  replay = baseline = tile = null;
   page = unit = 0;
   mapChoice = 0;
-  syncPause();
   status('connecting');
   render();
-  const query = new URLSearchParams({view: 'observatory', workers: '1', preview: preview() ? '1' : '0'});
+  const query = new URLSearchParams({view: 'observatory', workers: '1', preview: preview ? '1' : '0'});
   if (manualWorker) query.set('game', manualWorker);
   source = new EventSource('/api/events?' + query);
   source.addEventListener('state', event => {
@@ -107,15 +106,15 @@ function connect() {
         ...data.history],
       error: data.error,
     };
-    if (reset && !frozen && !replay) {
+    if (reset && !replay) {
       ++pendingReplay;
       ++pendingCompare;
       ++pendingWeights;
       baseline = tile = inspectedMemory = null;
       mapChoice = page = unit = 0;
     }
-    if (!frozen && (!same(previous.sample, live.sample) || data.history.length ||
-        previous.error !== live.error || previous.game?.id !== live.game?.id)) render();
+    if (!same(previous.sample, live.sample) || data.history.length ||
+        previous.error !== live.error || previous.game?.id !== live.game?.id) render();
     refreshGameView();
   });
   source.onerror = () => {
@@ -135,11 +134,6 @@ function status(state, age) {
   text('age', age === undefined ? '' : `Last capture ${age.toFixed(1)} s ago`);
 }
 
-function syncPause() {
-  $('pause').setAttribute('aria-pressed', Boolean(frozen));
-  text('pause', frozen ? 'Unfreeze view' : 'Freeze view');
-}
-
 function render() {
   const {sample, metadata, error} = shown();
   $('empty').hidden = Boolean(sample && !error) || view === 'learning';
@@ -147,9 +141,9 @@ function render() {
     'Policy details will appear when this game starts publishing decisions.' : 'Waiting for an instrumented worker.'));
   $('sample-context').hidden = !sample;
   if (sample) {
-    const message = preview() ? 'Synthetic preview · ' : '';
+    const message = preview ? 'Synthetic preview · ' : '';
     const interval = Number.isFinite(sample.decision_interval_ms) ? ` · ${Math.round(sample.decision_interval_ms)} ms since prior inference` : '';
-    text('sample-context', message + `${replay ? 'Replay' : frozen ? 'Frozen' : 'Latest capture'} · ${clock(sample.timestamp)} · published #${sample.sequence}` +
+    text('sample-context', message + `${replay ? 'Replay' : 'Latest capture'} · ${clock(sample.timestamp)} · published #${sample.sequence}` +
       (sample.decision == null ? '' : ` · inference ${sample.decision}`) + interval +
       (metadata?.label_warning ? ` · ${metadata.label_warning}` : ''));
   }
@@ -169,12 +163,11 @@ function clearGameView() {
   image.removeAttribute('src');
 }
 
-function stopGameVideo(active, preserve = false) {
+function stopGameVideo(active) {
   if (!active.video) return;
   active.video.controller.abort();
   const player = $('game-video');
   player.pause();
-  if (preserve) return;
   if (active.video.url) URL.revokeObjectURL(active.video.url);
   player.removeAttribute('src');
   player.load();
@@ -222,7 +215,7 @@ async function playGameVideo(active, label) {
       stopGameVideo(active);
       return;
     }
-    if (response.status === 409 && gameView === active && !frozen) {
+    if (response.status === 409 && gameView === active) {
       active.busyRetries = (active.busyRetries || 0) + 1;
       if (active.busyRetries <= 4) {
         stopGameVideo(active);
@@ -266,7 +259,7 @@ async function playGameVideo(active, label) {
       }
     }
   } catch {
-    if (gameView === active && active.video === session && !frozen) {
+    if (gameView === active && active.video === session) {
       stopGameVideo(active);
       active.videoRestarts = (active.videoRestarts || 0) + 1;
       if (started && active.videoRestarts <= 2) {
@@ -289,15 +282,9 @@ async function refreshGameView() {
   const label = message => {
     if ($('game-capture-status').textContent !== message) text('game-capture-status', message);
   };
-  if (replay || preview()) {
+  if (replay || preview) {
     clearGameView();
     label('Game views are available for live decisions.');
-    return;
-  }
-  if (frozen) {
-    if (gameView) stopGameVideo(gameView, true);
-    label(!$('game-video').hidden ? 'Frozen · live game video' : gameView?.captured ?
-      `Frozen · captured ${clock(gameView.captured)}` : 'Unfreeze the view to request an image.');
     return;
   }
   const state = $('status').dataset.state;
@@ -335,7 +322,7 @@ async function refreshGameView() {
   try {
     const response = await fetch('/api/screenshot?' + new URLSearchParams({stream}),
       {signal: AbortSignal.timeout(6000)});
-    if (gameView !== active || frozen) return;
+    if (gameView !== active) return;
     if (response.status === 403) {
       active.denied = true;
       label('Game view sharing is disabled on this host.');
@@ -349,7 +336,7 @@ async function refreshGameView() {
     }
     const captured = Number(response.headers.get('X-Captured-At'));
     const blob = await response.blob();
-    if (gameView !== active || frozen || !Number.isFinite(captured) || captured <= 0) return;
+    if (gameView !== active || !Number.isFinite(captured) || captured <= 0) return;
     if (active.captured !== captured) {
       if (active.url) URL.revokeObjectURL(active.url);
       active.url = URL.createObjectURL(blob);
@@ -360,7 +347,7 @@ async function refreshGameView() {
     label(active.copy ? `Game image only · ${active.copy} · captured ${clock(captured)}` :
       `Captured ${clock(captured)} · game PID ${active.gamePid}`);
   } catch {
-    if (gameView === active && !frozen) label('Game image unavailable. Retrying while the Game view is open.');
+    if (gameView === active) label('Game image unavailable. Retrying while the Game view is open.');
   } finally {
     active.pending = false;
   }
@@ -672,7 +659,7 @@ async function getJSON(path, params) {
   return response.json();
 }
 
-const identity = (stream, sequence) => ({stream, sequence, preview: preview() ? '1' : '0'});
+const identity = (stream, sequence) => ({stream, sequence, preview: preview ? '1' : '0'});
 
 async function loadWeights() {
   const {sample, metadata} = shown();
@@ -694,7 +681,7 @@ async function loadWeights() {
 function renderTimeline(sample, meta) {
   const samples = list();
   const selected = replay?.sample.sequence;
-  const stamp = (frozen || live).sample?.stream + '/' + samples.map(row => row.sequence).join(',') + '/' + selected;
+  const stamp = live.sample?.stream + '/' + samples.map(row => row.sequence).join(',') + '/' + selected;
   if ($('events').dataset.stamp !== stamp) {
     $('events').replaceChildren(...samples.slice().reverse().map(row => {
       const position = row.position_kind ? ` · ${row.position_kind} ${row.position + 1}` : '';
@@ -745,7 +732,7 @@ function comparison(sample, meta) {
 }
 
 async function inspectReplay(sequence) {
-  const stream = (frozen || live).sample?.stream;
+  const stream = live.sample?.stream;
   if (!stream || sequence === undefined) return;
   if (view === 'activity') switchView('timeline');
   const request = ++pendingReplay;
@@ -1075,9 +1062,7 @@ function renderTeams(target, run) {
 }
 
 for (const button of document.querySelectorAll('nav button')) button.onclick = () => switchView(button.dataset.view);
-$('mode').onchange = () => { selectedWorker = manualWorker = null; renderWorkers([]); connect(); };
 $('follow-policy').onclick = () => { manualWorker = null; connect(); };
-$('pause').onclick = () => { frozen = frozen ? null : live; syncPause(); render(); };
 $('map-layer').onchange = render;
 $('game-view').ontoggle = refreshGameView;
 document.addEventListener('visibilitychange', refreshGameView);
@@ -1099,9 +1084,8 @@ $('load-weights').onclick = loadWeights;
 $('follow').onclick = () => {
   ++pendingReplay;
   ++pendingCompare;
-  replay = baseline = frozen = null;
+  replay = baseline = null;
   $('compare').value = '';
-  syncPause();
   render();
 };
 $('open-replay').onclick = () => switchView('monitor');

@@ -13,8 +13,8 @@ original network graph and its focused node inspector.
 | **Timeline** | What did the model see at an earlier decision? | Up to 50 replayable samples for the selected stream from a shared 200-sample retention window. Replay restores captured observations, distributions and recurrent state. Comparison lists changes in inputs, probabilities and hidden state where their definitions match. |
 | **Learning** | How often does a policy qualify on independent boards, and what evidence supports a team change? | Recent validated schema-4 PPO history and campaign trial/holdout outputs. Filter by source, start kind and level. Inspect the incumbent and provisional team, held-out arms, PPO updates, available cast counts, selected casts, stock decreases and changed saved team parameters. |
 
-The view freeze affects the browser. Use the process picker to inspect retained
-history after a worker disappears. A stale inference can coexist with an open
+Select an observed sample in **Timeline** to inspect a historical decision.
+Choose **Follow latest** to return to live updates. A stale inference can coexist with an open
 connection. The legacy graph remains available for focused connectivity
 inspection. Its unsigned GRU edges summarize weights across gates.
 
@@ -200,9 +200,9 @@ To include a clearly labeled, separate PyTorch preview with synthetic inputs:
 .\visualizer\start.ps1 -Preview
 ```
 
-Then choose **Synthetic preview** in the source selector. The default **Live**
-source accepts real observer streams. Closing the server with Ctrl+C also stops
-its preview process.
+Open **http://localhost:8765/?preview=1** for the synthetic Observatory or use
+**Preview** in the legacy graph. The regular Observatory URL opens live
+telemetry. Closing the server with Ctrl+C also stops its preview process.
 
 The launcher defaults to the repository's `.venv\Scripts\python.exe`; follow
 the root README to create it from `requirements.txt`. Override it with

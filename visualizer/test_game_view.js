@@ -37,13 +37,6 @@ async page => {
   if (captureRequests.length) throw new Error('Game view must wait for a live game');
   await page.evaluate(() => window.showFixture('first'));
   await page.waitForFunction(() => document.querySelector('#game-screenshot').naturalWidth > 0);
-  const first = await page.locator('#game-screenshot').getAttribute('src');
-  await page.getByRole('button', {name: 'Freeze view'}).click();
-  await page.waitForTimeout(2100);
-  await page.evaluate(() => window.showFixture('first'));
-  if (captureRequests.length !== 1) throw new Error('Freeze must suspend capture requests');
-  if (await page.locator('#game-screenshot').getAttribute('src') !== first) throw new Error('Freeze must preserve the image');
-  await page.getByRole('button', {name: 'Unfreeze view'}).click();
   await page.evaluate(() => window.showFixture('second'));
   await page.waitForFunction(() => window.document.querySelector('#game-capture-status').textContent === 'Waiting for the previous video to close.',
     null, {timeout: 3000});
@@ -59,5 +52,5 @@ async page => {
   if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Game view overflows mobile');
   await page.getByText('Game view', {exact: true}).click();
   await page.locator('#game-screenshot').waitFor({state: 'hidden'});
-  return {expandedByDefault: true, imageDecoded: true, freeze: true, targeted: true, mobile: true};
+  return {expandedByDefault: true, imageDecoded: true, targeted: true, mobile: true};
 }

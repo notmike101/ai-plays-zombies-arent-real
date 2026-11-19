@@ -2,16 +2,14 @@
 async page => {
   await page.goto(new URL(page.url()).origin);
   await page.waitForFunction(() => document.querySelector('#status').dataset.state === 'live', null, {timeout: 90000});
-  await page.getByRole('button', {name: 'Freeze view'}).click();
-  const context = await page.locator('#sample-context').innerText();
-  const sequence = Number(context.match(/published #(\d+)/)[1]);
   await page.getByRole('button', {name: 'Timeline', exact: true}).click();
-  const event = page.locator('#events button').filter({hasText: new RegExp(`^#${sequence} ·`)});
+  const event = page.locator('#events button').first();
   const [response] = await Promise.all([
     page.waitForResponse(response => response.url().includes('/api/decision?')),
     event.click(),
   ]);
   const {sample, metadata} = await response.json();
+  const sequence = sample.sequence;
   await page.waitForFunction(() => document.querySelector('#sample-context').textContent.includes('Replay'));
   await page.getByRole('button', {name: 'Inspect in monitor'}).click();
   const action = await page.locator('.choice').innerText();

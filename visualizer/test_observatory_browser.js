@@ -5,9 +5,10 @@ async page => {
   page.on('pageerror', error => errors.push(error.message));
   page.on('request', request => requested.push(new URL(request.url()).pathname));
   const root = new URL(page.url()).origin;
-  await page.goto(root);
-  await page.locator('#mode').selectOption('preview');
+  const preview = root + '/?preview=1';
+  await page.goto(preview);
   await page.waitForFunction(() => document.querySelector('#status').textContent === 'Synthetic preview');
+  assert(await page.locator('#mode, #pause').count() === 0, 'Live controls stay out of the toolbar');
   await page.getByRole('button', {name: 'Neural activity'}).click();
   await page.waitForFunction(() => document.querySelector('#feature-page').textContent.includes('4889'));
   assert(await page.locator('#feature-list button').count() === 16, 'Keep feature DOM bounded');
@@ -36,13 +37,14 @@ async page => {
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${name} must fit ${width}px`);
     }
   }
+  await page.locator('.worker-node').first().click();
+  await page.waitForFunction(() => !document.querySelector('#follow-policy').disabled);
   await page.context().setOffline(true);
-  await page.locator('#mode').selectOption('live');
-  await page.locator('#mode').selectOption('preview');
+  await page.getByRole('button', {name: 'Follow live policy'}).click();
   await page.waitForFunction(() => document.querySelector('#status').textContent.includes('Disconnected'));
   await page.context().setOffline(false);
   await page.waitForFunction(() => document.querySelector('#status').textContent === 'Synthetic preview');
-  await page.locator('#mode').selectOption('live');
+  await page.goto(root);
   await page.waitForFunction(() => document.querySelector('#status').textContent === 'Waiting for worker');
   assert(await page.locator('#sample-context').isHidden(), 'Preview data must clear when switching to live');
   assert(!requested.includes('/api/state'), 'Use SSE for live traffic');
