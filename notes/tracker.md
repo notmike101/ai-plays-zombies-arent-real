@@ -1,6 +1,10 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 23:51 Central. Enabled screenshot sharing on the named observatory hostname
+  and made Game view expanded by default. Listener PID 27652 (create time
+  1795067420.3287635). Chrome displayed a real 800×519 public thumbnail for
+  inst13 PID 55080 after seed 101851 started. Campaign training was active.
 - 23:46 Central. Deployed opt-in Game view on observatory PID 28384
   (create time 1795067149.3525112). The screenshot helper captured actual
   planning and battle on isolated inst20 (800×519, 57–63 KB), and local
