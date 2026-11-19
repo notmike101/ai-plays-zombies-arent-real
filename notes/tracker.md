@@ -1,6 +1,16 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 22:01 Central. Latest-camera fresh L1 comparison completed on full-profile
+  inst19/20 with swapped copies; both pilot copies exited. Incumbent saved
+  41.65% and 23.45% (one confirmed cast total). Cast-preference variant saved
+  43.00% and 24.13% (six casts, all confirmed). Both qualified once in two
+  distinct outbreaks; incumbent retained. Across these four L1 battles
+  109/111 resting checks confirmed the boundary fit. One L2 run timed out
+  after a zone took funds from 18.93 to -825.93; the other failed awaiting
+  UI frames in stage 2. Evidence: analysis/coverage-cast-pilot-98851/holdout.jsonl.
+  Continuous search seed 98851 launched generation 2 on four copies. Its first
+  two generations supplied zero fresh qualifiers for the leading L1 policy.
 - 21:45 Central. Supervisor recovered into seed 98851, four copies inst13–16
   in analysis/coverage-team-fad86c1af0. First completed incumbent battle had
   23/23 successful camera-fit checks, 9.73% at early abort. During deliberate
