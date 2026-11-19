@@ -150,6 +150,20 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(completed[0][2]['failed_stage'],2)
         self.assertEqual(completed[0][2]['error'],'no board')
         self.assertEqual(completed[1][2],{'copy':'a'})
+    def test_campaign_batches_publish_a_primary_and_a_low_rate_standby(self):
+        jobs = [('baseline', {}, None, 10), ('candidate', {}, {'plan': []}, 11),
+                ('other', {}, None, 12)]
+        for training, expected in ((True, [.2, 1.]), (False, [1., 1.])):
+            with self.subTest(training=training), patch.object(search, 'ProcessPoolExecutor') as pool:
+                futures = [Future() for _ in jobs]
+                for future in futures:
+                    future.set_result({})
+                pool.submit.side_effect = futures
+                list(search.completed_rollouts(pool, jobs, training=training))
+                selected = {call.args[1][0]: call.kwargs['observer_interval']
+                            for call in pool.submit.call_args_list if call.kwargs['observe']}
+                self.assertEqual(selected, {'candidate': expected[0], 'baseline': expected[1]})
+
     def test_default_rollout_and_ppo_batch_stop_on_qualifying_l1_win(self):
         row=dict(scenario=1,end='won',saved_frac=.43,advance=True,win=True,
                  campaign='Boston',board_id='b',board={'scenario':1,'scenario_count':5},

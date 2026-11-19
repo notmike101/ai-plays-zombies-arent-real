@@ -39,8 +39,9 @@ run independently of decisions and do not appear in replay. Freezing the view
 holds the displayed frame and stops media requests.
 Game view follows the Monitor's **Process** picker. Automatic attachment
 keeps the current worker while its telemetry is fresh and switches when
-another fresh stream is available. Campaign search normally publishes one
-candidate stream per training generation.
+another fresh stream is available. Campaign search normally publishes a primary and one standby stream per
+batch. The standby publishes once per second. Held-out batches also publish
+at the lower rate during policy inference.
 
 On Windows, install the optional Graphics Capture dependencies into the
 ignored runtime directory. The repository's Python environment supplies
@@ -156,7 +157,7 @@ inspection and interactive comparison were exercised in preview.
 
 ## Run
 
-During campaign team search, one candidate publishes its GRU state, final
+During campaign team search, observed workers publish their GRU state, final
 combined logits, masked probabilities and selected actions. The architecture
 label identifies the preparation and battle specialists. The graph draws
 the GRU and value connections. The specialist scoring functions contribute
@@ -236,9 +237,8 @@ Automatic attachment stays on a healthy, fresh stream. It switches to another
 fresh, healthy stream when the selected stream disappears, reports an observer
 error, or goes 15 seconds without a sample. A paused game or slow inference can
 look stale. Streams older than 120 seconds are omitted. Manual selection holds
-the requested stream. Campaign search usually observes one candidate per
-training generation, so automatic handoff needs another instrumented worker
-before it can resume live viewing.
+the requested stream. Campaign search observes up to two workers per batch.
+If both go quiet, the observatory waits for the next instrumented worker.
 
 The browser holds one **server-sent events (SSE)** connection to `/api/events` using native `EventSource`; it does not poll. A disconnected connection automatically retries with a one-second retry interval. Mode/worker changes close the old connection; every new connection receives current topology. Idle updates arrive about once per second so sample age and connection health stay visible. The graph redraws only for new samples or view changes. A connected but stale worker is distinct from an offline server.
 
