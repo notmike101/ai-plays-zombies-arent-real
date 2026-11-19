@@ -1,6 +1,12 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 01:47 Central. Removed the source dropdown and Freeze view
+  control from the Observatory. Default navigation opens live; explicit
+  /?preview=1 retains isolated diagnostics. Public Chrome verified the
+  controls were absent and Learning and Timeline loaded. All 57 visualizer
+  tests and isolated browser replay, reconnect, game-view and mobile
+  regressions passed. Frontend deployed through the existing listener.
 - 2026-11-19 01:43 Central. Added precise cohort-mean hover tooltips
   to the Learning overview. Verified against public recorded results in
   Chrome, including edge positioning and tap/keyboard inspection.
