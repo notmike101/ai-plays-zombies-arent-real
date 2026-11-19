@@ -362,3 +362,6 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
 - Missing F6 observer requests get one bounded retry only in an unobstructed game
   world. Never dismiss modal/menu state merely to force an observation. Persistent
   initial-dump failures report phase/modal/menu state and still stop the run.
+
+## Campaign search selection
+Pool fresh uninterrupted trials by frozen GRU and stage-policy prefix. Deduplicate native outbreak seeds. Keep carry and CONTINUE for practice. Preserve the incumbent until a challenger qualifies repeatedly and beats it on fresh held-out campaigns. Report counts and mean saved alongside the best score. See notes/operator-runbook.md.

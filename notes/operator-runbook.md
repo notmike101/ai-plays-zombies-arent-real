@@ -209,15 +209,27 @@ starts the frozen evaluation block again. Use one complete evaluation block.
 With idle full-availability copies, run
 `.venv/Scripts/python.exe -B scripts/team_search.py --copies inst13 inst14 inst15 inst16 inst17 inst18 inst19 inst20 --generations 5`.
 The search trains planning sequences and battle target scores by selection on
-live outcomes. The frozen GRU supplies action preferences to both phases. One
-unmodified greedy GRU runs in the first generation and in held-out games as
-a control. Intervening generations use every copy for candidates. The policy still uses
-the native action masks, normal difficulty, early retry and 35% curriculum gate.
-Candidates earn priority for qualifying clears, then game wins and actual
-winning score. For failed candidates, the tie-breaker integrates surviving
-civilians over the first 120 simulated seconds, assigning zero after early
-retry. It is a search heuristic. The final evaluation uses new boards with
-paired policy seeds. The game controls its own randomness.
+live outcomes. The frozen GRU supplies action preferences to both phases. A greedy GRU runs in the first generation. Rank candidates using fresh,
+uninterrupted campaign attempts. Pool identical stage policy prefixes across
+later-stage variants and deduplicate native outbreak seeds. Search favors
+consecutive stages with at least two qualifying outbreaks, then the Wilson
+lower score for qualifying rate, then the mean saved fraction. An incomplete
+attempt contributes zero to this search mean. Technical failures without a
+trajectory are reported separately. The score guides search and does not
+establish generalization.
+
+Each generation reserves fresh slots for repeat evaluation and L1 variation.
+For adaptive refuges, one proposal varies size alone while holding battle
+behavior fixed. A resumed block inherits the prior fitness ledger, incumbent,
+and provisional leader. Finals evaluate a frozen challenger against the
+starting incumbent (greedy GRU on cold start). Copies have paired policy seeds
+and independently drawn native outbreaks. Promotion requires two qualifying
+training outbreaks and, on equally sized fresh evaluation arms, at least two
+qualifying outbreaks, more qualifying wins and greater total saved at the first
+stage where policies differ. Earlier failures score zero at that stage.
+Keep the incumbent when evidence is insufficient. On cold start a block may
+produce only a provisional leader. Held-out outcomes gate promotion and never
+enter search fitness. A new holdout is needed for any later performance claim.
 
 When a copy actually reached a later stage during the preceding generation,
 some candidates can practice there via the game's CONTINUE menu. The trainer

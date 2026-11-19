@@ -1,6 +1,12 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 21:33 Central. The eight fresh L1 attempts for the 40.35% policy prefix in
+  coverage-team-d18fd6a8de yielded one qualifier and 19.74% mean saved/observed
+  at abort. All eight distinct outbreaks began with 14.6% inside safe zones.
+  Old selection split these by L2 genes and scored retries. Revised search
+  pools fresh results, explores L1 variants, and gates promotion on a fresh
+  head-to-head. The active supervisor adopts this at its next block.
 - At 21:18 Central, six owned copies inst13–18 were in generation 2 of
   analysis/coverage-team-d18fd6a8de (supervisor log analysis/coverage-stage-search-96851.log).
   The latest selected team 2f70a627a7be4d51 won L1 at 40.35% and timed out

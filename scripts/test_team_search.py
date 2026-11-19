@@ -9,6 +9,13 @@ import team_search as search
 
 
 class SearchTests(unittest.TestCase):
+    def test_refuge_size_trial_keeps_other_decisions_fixed(self):
+        parent=dict(refuge=dict(scale=1.,aspect=.8,defense_weight=.16),plan=[1])
+        candidate=search.l1_candidate(parent,np.random.default_rng(7))
+        self.assertNotEqual(candidate['refuge']['scale'],parent['refuge']['scale'])
+        candidate['refuge']['scale']=1.
+        self.assertEqual(parent,candidate)
+
     def test_completed_results_keep_their_copy_and_error_when_workers_finish_out_of_order(self):
         a,b=Future(),Future()
         a.set_result({'copy':'a'})

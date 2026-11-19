@@ -1,6 +1,6 @@
 """Population search over planning sequences and battle targeting on real game copies."""
 import argparse
-from collections import defaultdict
+import campaign_fitness as fitness
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from copy import deepcopy
 import hashlib
@@ -58,6 +58,16 @@ def loadout_candidate(parent,rng):
     candidate['plan'].insert(0,pick)
     if 'blocked_tool' not in candidate:candidate['blocked_tool']=int(rng.choice(REPAIRS))
     return candidate
+
+
+def l1_candidate(parent,rng):
+    if not parent.get('refuge'):return offspring(parent,parent,rng)
+    # Isolate the change in initial protection from changes in battle behavior.
+    child=deepcopy(parent)
+    scale=child['refuge']['scale']
+    choices=[v for v in (.8,1.,1.15,1.3,1.45) if abs(v-scale)>.05]
+    child['refuge']['scale']=float(rng.choice(choices))
+    return child
 
 
 def vary_layout(layout,rng):
@@ -435,11 +445,18 @@ def main():
             if prior and prior.get('layout'):
                 population[1]['refuge']=dict(scale=1.,aspect=float(rng.uniform(.7,1.5)),
                                              defense_weight=float(rng.uniform(.08,.22)))
+        base=tr.policy_id(net)
+        evidence={}
+        if args.seed_from and (args.seed_from/'fitness.json').exists():
+            ledger=json.loads((args.seed_from/'fitness.json').read_text())
+            if ledger['base']!=base:raise ValueError('Campaign fitness base mismatch')
+            evidence=ledger['evidence']
         prices={}
         if args.seed_from and not args.compare_forecast and (args.seed_from/'trials.jsonl').is_file():
             best_budget=None
             for line in (args.seed_from/'trials.jsonl').read_text().splitlines():
                 trial=json.loads(line)
+                fitness.record(evidence,trial)
                 candidate=budget_candidate(trial.get('team'),trial.get('levels',[]),prices)
                 if candidate:
                     rank=(max(r['stage'] for r in trial['levels']),team_id(candidate))
@@ -447,9 +464,15 @@ def main():
                         best_budget,population[-1]=rank,candidate
             for i in range(1,len(population)):
                 population[i]=budget_candidate(population[i],[],prices) or population[i]
+        if prior and not args.compare_forecast:
+            population[1]=l1_candidate(prior,rng)
+            previous=args.seed_from/'provisional.json'
+            if previous.is_file():
+                saved=checkpoint_team(json.loads(previous.read_text()),base)['team']
+                if saved!=prior:population[-1]=saved
         archive={}
         deepest={}
-        scores=defaultdict(list)
+        incumbent=prior
         continued={}
         require_fresh=set()
         with ProcessPoolExecutor(len(copies)) as pool:
@@ -507,40 +530,65 @@ def main():
                         valid_candidates+=1
                         archive[key]=team
                         deepest[key]=max(deepest.get(key,1),levels[-1]['stage'],result.get('failed_stage',1))
-                        best=[max(r['score'] for r in levels if r['stage']==stage)
-                              for stage in sorted({r['stage'] for r in levels})]
-                        first=[r['score'] for r in levels if r['attempt']==0]
-                        scores[key].append([sum(r[0] for r in best),sum(r[0] for r in first),
-                                            sum(r[1] for r in first),sum(r[2] for r in first),best[-1][3]])
+                        fitness.record(evidence,result)
                     print(generation,key,[(r['stage'],r['end'],r['saved'],round(r['sim'],1)) for r in levels],flush=True)
                 if not valid_candidates:raise RuntimeError('No valid candidates this generation; inspect trials')
-                ranked=sorted(scores,key=lambda k:(tuple(np.mean(scores[k],axis=0)),k),reverse=True)
-                elites=[archive[k] for k in ranked[:2]]
-                population=list(elites)
-                if affordable:population.append(max(affordable,key=lambda entry:(entry[0],team_id(entry[1])))[1])
+                ranked=sorted(archive,key=lambda k:fitness.ranking(evidence,archive[k]),reverse=True)
+                leader=archive[ranked[0]]
+                report=fitness.stats(evidence,leader,1)
+                print('fresh L1 leader',ranked[0],report,flush=True)
+                for filename,data in [('fitness',dict(base=base,evidence=evidence)),
+                                      ('provisional',dict(team=leader,team_id=team_id(leader),base=base))]:
+                    temp=directory/(filename+'.tmp')
+                    temp.write_text(json.dumps(data))
+                    temp.replace(directory/(filename+'.json'))
+                if incumbent:
+                    stages=[fitness.stats(evidence,incumbent,i) for i in range(1,6)]
+                    champion=dict(team_id=team_id(incumbent),team=incumbent,base=base,
+                                  generation=generation,trials=stages[0]['starts'],fresh_stages=stages)
+                    temp=directory/'champion.tmp'
+                    temp.write_text(json.dumps(champion))
+                    temp.replace(directory/'champion.json')
+                # Replicate the leader on independent boards and reserve one L1 mutation.
+                population=[leader,incumbent or leader]
+                require_fresh.update(team_id(t) for t in population)
+                population.append(l1_candidate(leader,rng) if generation%2==0 else offspring(leader,leader,rng,stage=1))
                 if practice:
                     specialist=max(practice,key=lambda entry:(entry[0],entry[1],team_id(entry[2])))[2]
-                    if specialist not in population:population.append(specialist)
+                    population.append(specialist)
                     require_fresh.add(team_id(specialist))
-                if len(copies)>=6:
-                    population.append(random_team(rng))
+                elif affordable:
+                    population.append(max(affordable,key=lambda entry:(entry[0],team_id(entry[1])))[1])
                 while len(population)<len(copies):
-                    parent=elites[int(rng.integers(len(elites)))]
-                    child=offspring(parent,elites[int(rng.integers(len(elites)))],rng,stage=deepest[team_id(parent)])
+                    key=ranked[int(rng.integers(min(2,len(ranked))))]
+                    stage=deepest[key] if len(population)%2 else 1
+                    child=offspring(archive[key],leader,rng,stage=stage)
                     population.append(budget_candidate(child,[],prices) or child)
-                print('elite',ranked[0],len(scores[ranked[0]]),np.mean(scores[ranked[0]],axis=0),flush=True)
-                champion = dict(team_id=ranked[0], team=archive[ranked[0]], base=tr.policy_id(net),
-                                generation=generation, trials=len(scores[ranked[0]]))
-                temp=directory/'champion.tmp'
-                temp.write_text(json.dumps(champion))
-                temp.replace(directory/'champion.json')
-            # New boards and seeds: these scores never drive candidate selection.
-            jobs=[(copy,weights,archive[ranked[0]] if i%2==0 else None,
+            # Frozen arms on fresh boards. The game chooses its own outbreak seeds.
+            distinct=[archive[k] for k in ranked if archive[k]!=prior]
+            qualified=[t for t in distinct if fitness.promote(evidence,t,prior) is t]
+            challenger=next(iter(qualified or distinct),leader)
+            stage=next((i for i in range(1,6) if prior is None or
+                        fitness.prefix_id(challenger,i)!=fitness.prefix_id(prior,i)),1)
+            jobs=[(copy,weights,challenger if i%2==0 else prior,
                    args.seed+(args.generations+1)*len(copies)+i//2) for i,copy in enumerate(copies)]
+            evaluation=[]
+            arms={copy:('extra' if i>=2*(len(copies)//2) else 'candidate' if i%2==0 else 'incumbent' if prior else 'gru')
+                  for i,copy in enumerate(copies)}
             for job,_,result in completed_rollouts(pool,jobs):
-                result['team_id']=ranked[0] if job[2] else 'control'
+                result.update(arm=arms[job[0]],team_id=team_id(job[2]) if job[2] else 'control')
+                evaluation.append(result)
                 with (directory/'holdout.jsonl').open('a') as f:
                     f.write(json.dumps(result)+'\n')
+            if challenger in qualified and fitness.holdout_passed(evaluation,len(copies)//2,stage):
+                stages=[fitness.stats(evidence,challenger,i) for i in range(1,6)]
+                record=dict(team_id=team_id(challenger),team=challenger,base=base,generation=generation,
+                            trials=stages[0]['starts'],fresh_stages=stages,holdout_stage=stage,holdout_opponent=team_id(prior) if prior else 'gru')
+                temp=directory/'champion.tmp'
+                temp.write_text(json.dumps(record))
+                temp.replace(directory/'champion.json')
+                print('promoted after fresh holdout',record['team_id'],flush=True)
+
 
 
 if __name__=='__main__':
