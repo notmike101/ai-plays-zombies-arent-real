@@ -407,7 +407,8 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                score=score(row),sim=row['sim'],board=row['board_id'],
                                actions=list(zip(row['us'],row['cs'])),log_started=row['log_started']))
             if capture_shadow and 'shadow' in row:
-                levels[-1]['shadow'] = row['shadow']
+                levels[-1]['shadow'] = dict(row['shadow'], copy=copy,
+                                             team=team_id(active) if active else None)
             if row['advance']:
                 if not allow_progression or row['scenario']==row['board'].get('scenario_count'):break
                 stage+=1
@@ -702,7 +703,8 @@ def main():
                     for i,copy in enumerate(copies):
                         job=(copy,weights,contender,args.seed+swap*len(copies)+i//2)
                         jobs.append(job+(args.compare_forecast,) if (i+swap)%2 else job)
-                    for job,_,result in completed_rollouts(pool,jobs,allow_progression=args.allow_progression):
+                    for job,_,result in completed_rollouts(pool,jobs,allow_progression=args.allow_progression,
+                                                           capture_shadow=args.capture_shadow):
                         result.update(cnn=len(job)==5,team_id=team_id(contender))
                         with (directory/'forecast-comparison.jsonl').open('a') as f:
                             f.write(json.dumps(result)+'\n')
@@ -822,7 +824,8 @@ def main():
             evaluation=[]
             for wave in range(waves):
                 jobs,arms = holdout_assignments(copies,weights,challenger,prior,seed,wave)
-                for job,_,result in completed_rollouts(pool,jobs,allow_progression=args.allow_progression):
+                for job,_,result in completed_rollouts(pool,jobs,allow_progression=args.allow_progression,
+                                                       capture_shadow=args.capture_shadow):
                     result.update(arm=arms[job[0]],team_id=team_id(job[2]) if job[2] else 'control',
                                   holdout_round=wave)
                     evaluation.append(result)

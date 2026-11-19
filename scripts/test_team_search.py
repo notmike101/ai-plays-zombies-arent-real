@@ -24,7 +24,7 @@ class SearchTests(unittest.TestCase):
                                         fixed_speed='speed_2', capture_shadow=True)
         self.assertEqual(run.call_args.args[0][4]['fixed_speed'], 'speed_2')
         self.assertTrue(run.call_args.args[0][4]['capture_shadow'])
-        self.assertEqual(experiment['levels'][0]['shadow'], row['shadow'])
+        self.assertEqual(experiment['levels'][0]['shadow'], dict(row['shadow'], copy='inst13', team=None))
 
     def test_failed_boot_still_records_worker_lifetime(self):
         with patch.object(search.operator, 'owned_copy'), patch.object(

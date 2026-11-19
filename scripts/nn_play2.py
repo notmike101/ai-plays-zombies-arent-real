@@ -524,6 +524,14 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         nbuy = 0
         battle_actions = dict(decisions=0, cast_available=0, cast_sampled=0, stock_decreased=0)
         shadow = dict(frames=[], casts=[]) if options.get('capture_shadow') else None
+        if shadow is not None:
+            import psutil
+            from shadow_transitions import TransitionCapture
+            capture = TransitionCapture()
+            shadow.update(schema=2, pid=pid, created=psutil.Process(pid).create_time(),
+                          viewport=[env.cw, env.ch], policy=policy_id(net) if net is not None else 'random',
+                          campaign=session.get('campaign'), scenario=session.get('scenario'),
+                          map=session.get('map'), board=board_id, tools=TOOLS)
         outside_actions = 0
         outside_targets = {}
         special_activations = {}
@@ -571,6 +579,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
             update_outside_retries(st,env.cw,env.ch)
             mu, mc = masks_for(st)
+            base_cells = mc
             if fixed_speed:
                 for name in SPEED_TICKS:
                     mu[TOOLS.index(name)] = 0
@@ -608,6 +617,19 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 battle_actions['decisions'] += 1
                 battle_actions['cast_available'] += int(any(mu[tool] for tool in U2ABILITY))
                 battle_actions['cast_sampled'] += int(u in U2ABILITY)
+                if shadow is not None and state['phase'] == 'playing':
+                    capture.observe(
+                        dict(sim=state['sim'], tick=int(st['native']['tick']), speed=state['mult'],
+                             paused=state['paused'], camera=list(st['native']['camera']),
+                             counts={k:o[k] for k in ('civ','zomb','converting','infections')},
+                             grid=st['grid'].tolist(), anchor=st.get('anchor'),
+                             stock={slot['name']:[slot['charges'],slot['ready_t'],slot['pending']]
+                                    for slot in st['deck']}),
+                        dict(tool=TOOLS[u], cell=c, legal_tools=np.flatnonzero(mu).tolist(),
+                             legal_cells=np.flatnonzero(mc).tolist(),
+                             legal_cast_cells={TOOLS[tool]:np.flatnonzero(cell_mask(st,tool,base_cells)).tolist()
+                                               for tool in U2ABILITY if mu[tool]}))
+                    capture.receipt('not_applicable' if u == 0 else 'unknown')
                 if shadow is not None and state['phase'] == 'playing' and not state['paused']:
                     frames = shadow['frames']
                     if len(frames) < 2048 and (not frames or state['sim'] >= frames[-1]['sim'] + .25):
@@ -622,6 +644,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             special_credit = 0.
             outside = outside_playarea(st, u, c, env.cw, env.ch)
             if outside:
+                if shadow is not None and state['phase'] == 'playing':
+                    capture.receipt('rejected', reason='outside_playarea')
                 outside_actions += 1
                 st['outside_retries'].setdefault(u,set()).add(c)
                 target = f'{TOOLS[u]}/{c+1}'
@@ -683,6 +707,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 slot = next(s for s in st['deck'] if s['name'] == U2ABILITY[u])
                 if u in BATTLE_GEOMETRY and not st.get('anchor'):
                     st['anchor'] = (u, c)
+                    if shadow is not None:
+                        capture.receipt('gesture_started')
                 else:
                     before_stock = env.battle_stock()[slot['name']]
                     if u in BATTLE_GEOMETRY:
@@ -691,6 +717,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         env._arm(vk, ctypes.windll.user32.MapVirtualKeyW(vk, 0))
                         start_xy = battle_point(st,u,st.pop('anchor')[1],env.cw,env.ch)
                         end_xy = cell_of_px(c, env.cw, env.ch)
+                        points = (start_xy, end_xy)
                         if u == 27:
                             env.vi.click(*start_xy)
                             time.sleep(.15)
@@ -699,12 +726,19 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                             env.vi.drag(*start_xy, *end_xy)
                         mechanics.controls.frames()
                     else:
-                        env.cast(slot['key'], *battle_point(st,u,c,env.cw,env.ch))
+                        points = (battle_point(st,u,c,env.cw,env.ch),)
+                        env.cast(slot['key'], *points[0])
                     slot['charges'] = env.battle_stock()[slot['name']]
+                    if shadow is not None:
+                        pixels = [[float(x), float(y)] for x, y in points]
+                        capture.receipt('attempted', before=before_stock, after=slot['charges'], pixels=pixels)
                     # The stock receipt, not a sent keypress, proves a resource was spent.
                     if slot['charges'] < before_stock:
                         battle_actions['stock_decreased'] += 1
                         slot['last_cast_t'] = env.game_state()['sim']
+                        if shadow is not None:
+                            capture.receipt('confirmed', before=before_stock, after=slot['charges'],
+                                            sim=slot['last_cast_t'], pixels=pixels)
                         if shadow is not None and len(shadow['casts']) < 512:
                             shadow['casts'].append(dict(tool=TOOLS[u], cell=c,
                                                        sim=slot['last_cast_t'], spent=before_stock-slot['charges']))
@@ -797,7 +831,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             rows['layout_text']='\n'.join(line for line in initial['_text'].splitlines() if line.startswith('board '))
         if shadow is not None:
             rows['shadow'] = dict(shadow, session=header['wall'], native_footer=footer is not None,
-                                  truncated=len(shadow['frames']) >= 2048 or len(shadow['casts']) >= 512)
+                                  outbreak=footer.get('outbreak') if footer else None,
+                                  states=capture.states, transitions=capture.transitions,
+                                  tail=capture.pending,
+                                  truncated=capture.truncated or len(shadow['casts']) >= 512)
         return dict(rows, level=tag, pid=pid, win=end == 'won', advance=advance, end=end,
                     saved_frac=saved if end != 'timeout' else None,
                     observed_saved_frac=saved, timeout_phase=state['phase'] if end == 'timeout' else None,

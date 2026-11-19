@@ -1,6 +1,17 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 Central. Added opt-in shadow transition schema 2 and evaluated
+  a receipt-conditioned model offline. Existing archive admitted 23 battles;
+  new fits train on inst13–15, calibrate on inst16 and test on inst17–18.
+  About 3,600–3,900 single-window or 24,700–31,500 batch-64 forecasts/s on one
+  idle-priority CPU thread including feature preparation and scoring.
+  Conditioned civilian MAE rose from 63 to 146 on the same 83 chains.
+  Only four held-out one-step
+  windows contained new confirmed deployments; civilian MAE there was 97
+  versus 77 state-only. All decision use is refused. See notes/shadow-simulator.md
+  and local analysis/shadow-action-benchmark.json. Active search was preserved;
+  schema 2 capture still needs its first live exercise at a coordinated boundary.
 - 2026-11-19 Central. Audited unnecessary camera movement. Speed trial
   125952 selected pan_down 936 times and no other camera action.
   Its down-pan search bias was negative; the overview mask still allowed
