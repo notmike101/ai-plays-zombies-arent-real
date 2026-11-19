@@ -211,6 +211,22 @@ def team_id(team):
     return hashlib.sha256(json.dumps(team,sort_keys=True).encode()).hexdigest()[:16]
 
 
+def budget_candidate(team,levels):
+    if not team:return None
+    child=None
+    for stage in levels:
+        for receipt in stage.get('layout_receipts',[]):
+            if receipt.get('after',0)>=0 or receipt['before']<=0:continue
+            if child is None:child=deepcopy(team)
+            number=stage['stage']
+            layout=child.get('layout',[]) if number==1 else child.get('later_layouts',{}).get(str(number),[])
+            matches=[a for a in layout if a['kind']==receipt['kind'] and
+                     ('world_points' not in receipt or a['points']==receipt['world_points'])]
+            if len(matches)==1:
+                matches[0]['observed_cost']=receipt['before']-receipt['after']
+    return child if child!=team else None
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--copies',nargs='+',required=True)
@@ -273,6 +289,11 @@ def main():
                 for actions in vary:
                     if i==2:actions.sort(key=lambda item:item['kind']=='garrison')
                     if i>2:rng.shuffle(actions)
+        if args.seed_from and not args.compare_forecast and (args.seed_from/'trials.jsonl').is_file():
+            for line in (args.seed_from/'trials.jsonl').read_text().splitlines():
+                trial=json.loads(line)
+                candidate=budget_candidate(trial.get('team'),trial.get('levels',[]))
+                if candidate:population[-1]=candidate
         archive={}
         deepest={}
         scores=defaultdict(list)
@@ -307,6 +328,7 @@ def main():
                 continued={}
                 require_fresh.clear()
                 practice=[]
+                affordable=[]
                 futures=[pool.submit(rollout,job,args.later_retries,stage) for job,stage in zip(jobs,starts)]
                 valid_candidates=0
                 for team, future, job,start_stage in zip(population,futures,jobs,starts):
@@ -320,6 +342,8 @@ def main():
                         print('failed',job[0],result['error'],flush=True)
                         continue
                     levels=result['levels']
+                    candidate=budget_candidate(team,levels)
+                    if candidate:affordable.append((max(r['stage'] for r in levels),candidate))
                     last=levels[-1]
                     if last['stage']>1 and last['end'] in ('aborted','lost','won') and not last['advance']:
                         continued[job[0]]=last['stage']
@@ -340,6 +364,7 @@ def main():
                 ranked=sorted(scores,key=lambda k:tuple(np.mean(scores[k],axis=0)),reverse=True)
                 elites=[archive[k] for k in ranked[:2]]
                 population=list(elites)
+                if affordable:population.append(max(affordable,key=lambda entry:entry[0])[1])
                 if practice:
                     specialist=max(practice,key=lambda entry:(entry[0],entry[1]))[2]
                     if specialist not in population:population.append(specialist)

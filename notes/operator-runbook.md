@@ -259,6 +259,11 @@ purchases through the normal roster. Each stage's `unmatched_layout` lists
 proposed coordinates absent from the game's post-placement board dump.
 Structures match one-to-one within two world units on each axis. Inspect
 both this list and the budget receipts when diagnosing missing defenses.
+If a receipt shows an overdraft, search proposes a child that learns the
+observed price of that exact placement. When funds fall below that estimate,
+the child ends its recorded layout at the preceding action. The original
+candidate remains eligible for comparison. Fresh campaign play determines
+whether the revised plan works.
 Search can take up to two additional
 normal retries after a later-stage loss or below-target win. Set
 `--later-retries 0` for a single-attempt search. Held-out games always use

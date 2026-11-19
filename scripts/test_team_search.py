@@ -99,6 +99,20 @@ class SearchTests(unittest.TestCase):
             self.assertEqual(child[key],parent[key])
         self.assertIn('2',child['stage_battle'])
 
+    def test_budget_candidate_learns_only_from_identified_overdraft(self):
+        team={'later_layouts':{'2':[{'kind':'zone','points':[[0,1],[2,3],[4,1]]}]}}
+        loss={'kind':'zone','before':11.875,'after':-898.05}
+        stages=[dict(stage=2,layout_receipts=[loss])]
+        child=search.budget_candidate(team,stages)
+        self.assertAlmostEqual(child['later_layouts']['2'][0]['observed_cost'],909.925)
+        self.assertNotIn('observed_cost',team['later_layouts']['2'][0])
+        team['later_layouts']['2'].append({'kind':'zone','points':[[5,6],[7,8],[9,6]]})
+        self.assertIsNone(search.budget_candidate(team,stages))
+        loss['world_points']=team['later_layouts']['2'][1]['points']
+        child=search.budget_candidate(team,stages)
+        self.assertNotIn('observed_cost',child['later_layouts']['2'][0])
+        self.assertIn('observed_cost',child['later_layouts']['2'][1])
+
     def test_layout_search_can_learn_new_coordinates_without_distorting_shapes(self):
         original=[dict(kind='wall',points=[[0,0],[15,20]]), dict(kind='mortar',points=[[80,50]])]
         sizes=set()

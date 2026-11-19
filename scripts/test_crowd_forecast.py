@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from crowd_forecast import CrowdForecast, pairs
-from layout_memory import demonstrations, remaining_layout, visible_points
+from layout_memory import apply_layout, demonstrations, remaining_layout, visible_points
 
 
 class CrowdModelTests(unittest.TestCase):
@@ -49,3 +49,14 @@ class CrowdModelTests(unittest.TestCase):
         tower=dict(kind='garrison',points=[[5,6]])
         dump={'_text':'board zone = 2 10 20 30 40 1 1\nboard garrison = 5 6 1'}
         self.assertEqual(remaining_layout([tower,wall,tower],dump),[tower])
+
+    def test_budget_proposal_skips_before_moving_the_camera(self):
+        env=Mock()
+        env.scalar.return_value=0.
+        env.game_state.return_value={'phase':'planning'}
+        env.money.return_value=11.875
+        proposal={'kind':'zone','points':[[0,0],[10,0],[0,10]],'observed_cost':909.925}
+        result=apply_layout(env,[proposal])
+        self.assertEqual(result[0]['result'],'below_observed_cost')
+        env.vi.click.assert_not_called()
+        self.assertEqual(env.scalar.call_count,2)

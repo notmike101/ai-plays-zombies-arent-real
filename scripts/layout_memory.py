@@ -84,14 +84,18 @@ def apply_layout(env,actions,occupied=()):
     protected=set(occupied)|{BUILDINGS[a['kind']] for a in actions if a['kind'] in BUILDINGS}
     for action in actions:
         if env.game_state()['phase']!='planning':raise RuntimeError('Layout lost planning phase')
-        points=visible_points(env,ctrl,np.array(action['points'])-origin)
         kind=action['kind']
-        if not points:
-            records.append(dict(kind=kind,result='outside_view'))
-            continue
         before=env.money()
         if before is None:raise RuntimeError('Missing native budget')
         if before<=0:break
+        if before<action.get('observed_cost',0):
+            records.append(dict(kind=kind,result='below_observed_cost',before=before,
+                                observed_cost=action['observed_cost']))
+            break
+        points=visible_points(env,ctrl,np.array(action['points'])-origin)
+        if not points:
+            records.append(dict(kind=kind,result='outside_view'))
+            continue
         if kind in BUILDINGS:
             unit=BUILDINGS[kind]
             roster=ctrl.planning_roster()
@@ -115,5 +119,5 @@ def apply_layout(env,actions,occupied=()):
             ctrl.frames()
         after=env.money()
         if after is None:raise RuntimeError('Missing post-action budget')
-        records.append(dict(kind=kind,points=points,before=before,after=after))
+        records.append(dict(kind=kind,points=points,world_points=action['points'],before=before,after=after))
     return records
