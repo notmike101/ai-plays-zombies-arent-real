@@ -26,7 +26,7 @@ let mapChoice = 0, page = 0, unit = 0, inspectedMemory = null, tile = null, weig
 let pendingReplay = 0, pendingCompare = 0, pendingWeights = 0;
 let learning, learningRequest = 0;
 let gameView = null;
-let selectedWorker = null;
+let selectedWorker = null, manualWorker = null;
 const shown = () => replay || frozen || live;
 const list = () => (frozen || live).history || [];
 const preview = () => $('mode').value === 'preview';
@@ -44,6 +44,7 @@ function switchView(next) {
 
 function renderWorkers(workers) {
   const group = $('worker-nodes');
+  $('follow-policy').disabled = !manualWorker;
   const signature = JSON.stringify([selectedWorker, workers]);
   if (group.dataset.signature === signature) return;
   group.dataset.signature = signature;
@@ -58,8 +59,8 @@ function renderWorkers(workers) {
         `Game ${worker.game_pid}${worker.worker_pid == null ? '' : ` · worker ${worker.worker_pid}`}`),
       el('span', preview() ? 'Synthetic' : worker.stream ? 'Policy live' : 'Game only', 'worker-state'));
     button.onclick = () => {
-      if (selectedWorker === worker.id) return;
-      selectedWorker = worker.id;
+      if (manualWorker === worker.id) return;
+      selectedWorker = manualWorker = worker.id;
       renderWorkers(workers);
       connect();
     };
@@ -85,14 +86,15 @@ function connect() {
   status('connecting');
   render();
   const query = new URLSearchParams({view: 'observatory', workers: '1', preview: preview() ? '1' : '0'});
-  if (selectedWorker) query.set('game', selectedWorker);
+  if (manualWorker) query.set('game', manualWorker);
   source = new EventSource('/api/events?' + query);
   source.addEventListener('state', event => {
     if (nonce !== generation) return;
     const data = JSON.parse(event.data);
     if (data.version !== 1) return;
-    status(data.status, data.age);
+    status(data.status === 'waiting' && data.game_view && !data.sample ? 'game' : data.status, data.age);
     selectedWorker = data.selected_worker ?? null;
+    manualWorker = data.worker_pinned ? selectedWorker : null;
     renderWorkers(data.workers || []);
     const previous = live;
     const reset = data.history_reset || previous.sample?.stream !== data.stream;
@@ -111,7 +113,8 @@ function connect() {
       baseline = tile = inspectedMemory = null;
       mapChoice = page = unit = 0;
     }
-    if (!frozen && (!same(previous.sample, live.sample) || data.history.length || previous.error !== live.error)) render();
+    if (!frozen && (!same(previous.sample, live.sample) || data.history.length ||
+        previous.error !== live.error || previous.game?.id !== live.game?.id)) render();
     refreshGameView();
   });
   source.onerror = () => {
@@ -124,7 +127,8 @@ function connect() {
 
 function status(state, age) {
   const labels = {connecting: 'Connecting', live: 'Live worker', preview: 'Synthetic preview',
-    stale: 'Stale stream', waiting: 'Waiting for worker', error: 'Observer error', offline: 'Disconnected · retrying'};
+    stale: 'Stale stream', waiting: 'Waiting for worker', game: 'Game only · waiting for policy',
+    error: 'Observer error', offline: 'Disconnected · retrying'};
   $('status').dataset.state = state;
   text('status', labels[state]);
   text('age', age === undefined ? '' : `Last capture ${age.toFixed(1)} s ago`);
@@ -138,7 +142,8 @@ function syncPause() {
 function render() {
   const {sample, metadata, error} = shown();
   $('empty').hidden = Boolean(sample && !error) || view === 'learning';
-  if (!$('empty').hidden) text('empty', error || 'Waiting for an instrumented worker.');
+  if (!$('empty').hidden) text('empty', error || (live.game ?
+    'Policy details will appear when this game starts publishing decisions.' : 'Waiting for an instrumented worker.'));
   $('sample-context').hidden = !sample;
   if (sample) {
     const message = preview() ? 'Synthetic preview · ' : '';
@@ -970,7 +975,8 @@ function renderTeams(target, run) {
 }
 
 for (const button of document.querySelectorAll('nav button')) button.onclick = () => switchView(button.dataset.view);
-$('mode').onchange = () => { selectedWorker = null; renderWorkers([]); connect(); };
+$('mode').onchange = () => { selectedWorker = manualWorker = null; renderWorkers([]); connect(); };
+$('follow-policy').onclick = () => { manualWorker = null; connect(); };
 $('pause').onclick = () => { frozen = frozen ? null : live; syncPause(); render(); };
 $('map-layer').onchange = render;
 $('game-view').ontoggle = refreshGameView;

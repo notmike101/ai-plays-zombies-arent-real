@@ -78,6 +78,14 @@ class ScreenshotTests(unittest.TestCase):
                         observed = wait_state(response, lambda state: state['status'] == 'live')
                         self.assertEqual(observed['game_view']['id'], b['id'])
                         self.assertEqual(observed['sample']['game_pid'], 222)
+                        with urlopen(address, timeout=3) as automatic:
+                            follow = wait_state(automatic, lambda state: 'selected_worker' in state)
+                            self.assertEqual(follow['selected_worker'], b['id'])
+                            self.assertEqual(follow['status'], 'live')
+                        with urlopen(address + '&game=' + a['id'], timeout=3) as pinned:
+                            inspect = wait_state(pinned, lambda state: 'selected_worker' in state)
+                            self.assertEqual(inspect['selected_worker'], a['id'])
+                            self.assertIsNone(inspect['sample'])
                         inventory.records = (a,)
                         removed = wait_state(response, lambda state: state.get('selected_worker') == a['id'])
                         self.assertEqual([node['id'] for node in removed['workers']], [a['id']])

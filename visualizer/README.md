@@ -34,10 +34,11 @@ encoder. A stalled established video connection can reconnect while telemetry
 stays live.
 
 The **Active workers** diagram lists running games and marks which have policy
-telemetry. Choosing a node selects its Game view and policy details. The view
-stays with that game through policy gaps. If it exits, the first available game
-is selected. When no games are present, the next available one is selected
-automatically. The video is labeled game-only while policy data is unavailable.
+telemetry. Choosing a node pins its Game view and policy details until it
+exits or you select **Follow live policy**. Automatic selection prefers a
+game with live policy telemetry and falls back to the first running game
+when none publishes. The video is labeled game-only while policy data is
+unavailable.
 
 Live video requires FFmpeg with `h264_nvenc` on the host and an H.264 Media Source
 decoder in the browser. If streaming is unavailable, Game view falls back to

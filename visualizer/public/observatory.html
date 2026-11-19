@@ -27,7 +27,8 @@
       <button id="pause" aria-pressed="false">Freeze view</button>
     </section>
     <section class="worker-diagram" aria-labelledby="workers-heading">
-      <h2 id="workers-heading">Active workers</h2>
+      <div class="panel-head"><h2 id="workers-heading">Active workers</h2>
+        <button id="follow-policy" type="button" disabled>Follow live policy</button></div>
       <div id="worker-nodes" class="worker-nodes" role="group" aria-label="Choose a worker"></div>
       <p id="worker-empty" class="note">Waiting for an available worker.</p>
     </section>

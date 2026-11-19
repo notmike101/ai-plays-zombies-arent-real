@@ -206,7 +206,7 @@ class Feed:
         return None
 
 
-def worker_diagram(feed, result, games, owned_pids, selected, preview):
+def worker_diagram(feed, result, games, owned_pids, selected, pinned, preview):
     observed = {}
     for item in sorted(result['streams'], key=lambda stream: stream.get('age', 121)):
         if (not item.get('error') and item.get('age', 121) <= FRESH_SECONDS
@@ -222,15 +222,17 @@ def worker_diagram(feed, result, games, owned_pids, selected, preview):
         workers.append({'id': policy['id'], 'game_pid': policy['game_pid'], 'copy': None,
                         'stream': policy['id'], 'worker_pid': policy['worker_pid']})
 
-    chosen = next((worker for worker in workers if selected in (worker['id'], worker['stream']) and selected),
-                  workers[0] if workers else None)
+    chosen = next((worker for worker in workers if selected and selected in (worker['id'], worker['stream'])), None)
+    pinned = pinned and chosen is not None
+    if not pinned and (not chosen or not chosen['stream']):
+        chosen = next((worker for worker in workers if worker['stream']), chosen or (workers[0] if workers else None))
     policy = chosen['stream'] if chosen else None
     if not policy:
         result.pop('age', None)
         result.update(status='waiting', stream=None, sample=None, metadata=None, history=[], error=None)
     elif result['stream'] != policy:
         result = feed.observatory(preview=preview, stream=policy)
-    result.update(workers=workers, selected_worker=chosen['id'] if chosen else None,
+    result.update(workers=workers, selected_worker=chosen['id'] if chosen else None, worker_pinned=pinned,
                   game_view=chosen if not preview else None)
     return result
 
@@ -269,6 +271,7 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
             stream = args.get('stream', [None])[0]
             diagram = compact and args.get('workers') == ['1']
             selected_worker = args.get('game', [None])[0]
+            worker_pinned = bool(selected_worker)
             sent_history = set()
             last_sample = None
             parked_game = None
@@ -284,8 +287,9 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
                     if diagram:
                         games = inventory.snapshot() if inventory and not preview else ()
                         owned = inventory.observed_pids() if inventory and not preview else None
-                        result = worker_diagram(feed, result, games, owned, selected_worker, preview)
+                        result = worker_diagram(feed, result, games, owned, selected_worker, worker_pinned, preview)
                         selected_worker = result['selected_worker']
+                        worker_pinned = result['worker_pinned']
                     elif compact and not preview and not stream and result['status'] != 'live' and inventory:
                         games = sorted(inventory.snapshot(), key=lambda game: game['copy'])
                         fallback = next((game for game in games if game['id'] == parked_game), None)

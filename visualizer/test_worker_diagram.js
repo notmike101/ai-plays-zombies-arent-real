@@ -11,6 +11,7 @@ async page => {
         window.publishWorkers = (workers, chosen) => callback({data: JSON.stringify({
           version: 1, status: 'waiting', stream: null, history: [], workers,
           selected_worker: chosen?.id ?? null, game_view: chosen || null,
+          worker_pinned: chosen?.id === window.workerQuery,
         })});
       }
       close() {}
@@ -27,6 +28,8 @@ async page => {
   await page.waitForFunction(id => window.workerQuery === id, b.id);
   await page.evaluate(([a, b]) => window.publishWorkers([a, b], b), [a, b]);
   if (await nodeB.getAttribute('aria-pressed') !== 'true') throw new Error('Worker selection was lost');
+  await page.getByRole('button', {name: 'Follow live policy'}).click();
+  await page.waitForFunction(() => window.workerQuery === null);
   await page.evaluate(a => window.publishWorkers([a], a), a);
   await nodeB.waitFor({state: 'detached'});
   if (await nodeA.getAttribute('aria-pressed') !== 'true') throw new Error('The first remaining worker must be selected');
