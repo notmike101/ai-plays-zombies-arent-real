@@ -113,6 +113,18 @@ class LearningTests(unittest.TestCase):
         self.assertEqual(int(train.cell_distribution(logits, 2, np.ones(train.NC)).probs.argmax()), 3)
         self.assertEqual(int(train.cell_distribution(logits, 3, np.ones(train.NC)).probs.argmax()), 9)
 
+    def test_boundary_checks_actual_building_and_both_battle_endpoints(self):
+        boundary=[(0,0),(500,0),(500,900),(0,900)]
+        targets=[None]*48
+        targets[7]=(450,220)
+        st=dict(planning=True,playarea_boundary=boundary,build_targets=targets)
+        self.assertFalse(train.outside_playarea(st,2,7,1920,1200))
+        self.assertTrue(train.outside_playarea(st,4,7,1920,1200))
+        st.update(planning=False,anchor=(22,0))
+        self.assertTrue(train.outside_playarea(st,22,7,1920,1200))
+        self.assertFalse(train.outside_playarea(st,22,8,1920,1200))
+        self.assertFalse(train.outside_playarea(st,train.TOOLS.index('zoom_out'),7,1920,1200))
+
     def test_targeted_abilities_snap_only_the_target_not_drag_direction(self):
         targets=[None]*48;targets[9]=(433,344)
         st={'planning':False,'battle_targets':{19:targets,24:targets}}

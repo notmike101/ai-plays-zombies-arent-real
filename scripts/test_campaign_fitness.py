@@ -17,6 +17,13 @@ class FreshEvidence(unittest.TestCase):
     def record(self,team,*rows,**kwargs):
         fitness.record(self.data,dict(copy='inst1',team=team,levels=rows,**kwargs))
 
+    def test_outside_actions_reduce_search_fitness_without_changing_official_score(self):
+        self.record(self.a,dict(self.row(17,.36),outside_playarea_actions=5,playarea_cost=.004))
+        result=fitness.stats(self.data,self.a,1)
+        self.assertEqual(result['wins'],1)
+        self.assertEqual(result['mean'],.36)
+        self.assertAlmostEqual(result['objective'],.34)
+
     def test_only_uninterrupted_fresh_prefix_counts(self):
         self.record(self.a,self.row(1,.2),self.row(2,.6,kind='carry',attempt=1),
                     self.row(3,.7,2,'next_level'))

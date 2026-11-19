@@ -20,7 +20,8 @@ def record(evidence,trial):
         sample=f'seed/{seed}' if seed is not None else f"log/{trial['copy']}/{row['log_started']}"
         won=row['end']=='won' and row['saved'] is not None and row['saved']>=.35
         samples=evidence.setdefault(prefix_id(team,stage),{})
-        value=[won,row['saved'] or 0.]
+        cost=row.get('outside_playarea_actions',0)*row.get('playarea_cost',0.)
+        value=[won,row['saved'] or 0.,cost]
         samples[sample]=min(samples.get(sample,value),value)
         if not won:break
 
@@ -28,18 +29,20 @@ def record(evidence,trial):
 def stats(evidence,team,stage):
     samples=evidence.get(prefix_id(team,stage),{})
     n=len(samples)
-    wins=sum(won for sample,(won,_) in samples.items() if sample.startswith('seed/'))
-    if not n:return dict(starts=0,wins=0,lower=0.,mean=0.)
+    wins=sum(value[0] for sample,value in samples.items() if sample.startswith('seed/'))
+    if not n:return dict(starts=0,wins=0,lower=0.,mean=0.,objective=0.)
     p=wins/n
     z=1.96
     lower=(p+z*z/(2*n)-z*math.sqrt(p*(1-p)/n+z*z/(4*n*n)))/(1+z*z/n)
-    return dict(starts=n,wins=wins,lower=max(0.,lower),mean=sum(s for _,s in samples.values())/n)
+    mean=sum(row[1] for row in samples.values())/n
+    costs=sum(row[2] for row in samples.values() if len(row)>2)/n
+    return dict(starts=n,wins=wins,lower=max(0.,lower),mean=mean,objective=mean-costs)
 
 
 def ranking(evidence,team):
     stages=[stats(evidence,team,i) for i in range(1,6)]
     depth=next((i for i,s in enumerate(stages) if s['wins']<2),5)
-    return (depth,*(s['lower'] for s in stages),*(s['mean'] for s in stages))
+    return (depth,*(s['lower'] for s in stages),*(s['objective'] for s in stages))
 
 def promote(evidence, challenger, incumbent):
     for stage in range(1,6):

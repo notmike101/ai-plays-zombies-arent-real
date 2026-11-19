@@ -1,7 +1,7 @@
 """ZAR recurrent PPO: the model chooses loadout, planning geometry and battle actions.
 
 Schema 4: native mechanics observations and 48 cells conditioned on the tool.
-Reward = -new infections / initial population + 5 * actual terminal saved fraction.
+Reward = -new infections / initial population + 5 * terminal saved fraction - .02 per outside target.
 Timeouts bootstrap; they never earn a terminal save reward. R carries the board.
 """
 import argparse
@@ -39,6 +39,7 @@ NOBS, HID = 332+len(EXTRA_LABELS), 128
 PLANNING_INDEX = INPUT_LABELS.index('Planning phase')
 BATTLE_GAMMA, BATTLE_LAMBDA = .99, .95
 SAVED_REWARD_SCALE = 5.
+OUTSIDE_PLAYAREA_COST = .02
 NU, NC = 72+len(EXTRA_TOOLS), 48
 TOOLS = ['wait', 'ready', 'garrison', 'mortar', 'napalm', 'turret', 'mine',
          'c4', 'gas_mortar', 'upgrade_unit', 'zone_rect', 'heli', 'cta',
@@ -72,7 +73,7 @@ TOOLS += EXTRA_TOOLS
 CELL_LABELS += [extra_cell_label(tool,c) for tool in EXTRA_TOOLS for c in range(NC)]
 PLANNING_U = list(range(11)) + [15, 16, 17, 18]
 BATTLE_GEOMETRY = {12, 20, 22, 24, 27, 28, 30, 33}
-from spatial import XF, YF
+from spatial import XF, YF, inside_polygon
 WORLD_CELLS = np.repeat(YF < .70, len(XF))  # The last grid row overlaps the 1920x1200 HUD.
 # resizes itself after tiling (probe: client 1920x1200 despite SetWindowPos),
 # so cell coords are always computed from the LIVE client size.
@@ -224,6 +225,40 @@ def battle_point(st, tool, cell, width, height):
     return target if target is not None else cell_of_px(cell,width,height)
 
 
+def outside_playarea(st, tool, cell, width, height):
+    boundary = st.get('playarea_boundary')
+    if boundary is None:
+        return False
+    name = TOOLS[tool]
+    center = cell_of_px(cell, width, height)
+    points = []
+    if st['planning'] and tool in (*PLANNING_U[2:], *PLACEMENTS):
+        building_units = ('Garrison','Sniper','Mortar','Nest','GasMortar','FireMortar','Railgun','Howitzer','MLRS')
+        if PLACEMENTS.get(tool) in building_units or tool in (5, 9):
+            points = [st['build_targets'][cell]]
+        else:
+            points = [center]
+        if st.get('anchor') and tool in (10, 15, 17, 18):
+            x1, y1 = cell_of_px(st['anchor'][1], width, height)
+            x2, y2 = center
+            points.append((x1, y1))
+            if tool == 10:
+                points.extend(((x1, y2), (x2, y1)))
+    elif not st['planning'] and tool in U2ABILITY:
+        if st.get('anchor') and tool in BATTLE_GEOMETRY:
+            points = [battle_point(st, tool, st['anchor'][1], width, height), center]
+        else:
+            points = [battle_point(st, tool, cell, width, height)]
+    elif name in ('click_world', 'right_click_world', 'drag_world', 'shift_drag_world',
+                  'zone_begin', 'zone_corner', 'drag_corner', 'drag_edge',
+                  'move_selection', 'reaim_selection'):
+        points = [(round(XF[cell%8]*width), round(YF[cell//8]*height))]
+        if name in ('drag_world', 'shift_drag_world') and st.get('gesture_anchor'):
+            start = st['gesture_anchor'][1]
+            points.append((round(XF[start%8]*width), round(YF[start//8]*height)))
+    return bool(points) and not inside_polygon(points, boundary).all()
+
+
 def cell_distribution(logits, tool, mask):
     logits = logits.reshape(-1, NU, NC)
     tools = torch.as_tensor(tool, dtype=torch.long).reshape(-1)
@@ -333,13 +368,14 @@ def checkpoint_schema():
 
 
 def learning_config(*, legacy=False):
-    config = dict(revision=1 if legacy else 3, infection_cost=1.,
+    config = dict(revision=1 if legacy else 4, infection_cost=1.,
                   terminal_saved_scale=SAVED_REWARD_SCALE,
                   planning_gamma=1., planning_lambda=1.,
                   battle_gamma=BATTLE_GAMMA, battle_lambda=BATTLE_LAMBDA)
     if not legacy:
         config['battle_discount_reference_sim_seconds'] = STEP_S
         config['planning_target'] = 'undiscounted_episode_return'
+        config['outside_playarea_cost'] = OUTSIDE_PLAYAREA_COST
     return config
 
 
@@ -445,6 +481,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         end = None
         nbuy = 0
         battle_actions = dict(decisions=0, cast_available=0, cast_sampled=0, stock_decreased=0)
+        outside_actions = 0
         picker_rejections = {}
         picker_retry_at = {}
         plan_limit = options.get('plan_steps', PLAN_STEPS)
@@ -517,7 +554,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             previous_state = state
             action_started = time.monotonic()
             picker_rejected = False
-            if u in PLACEMENTS:
+            outside = outside_playarea(st, u, c, env.cw, env.ch)
+            if outside:
+                outside_actions += 1
+            elif u in PLACEMENTS:
                 cx,cy=cell_of_px(c,env.cw,env.ch)
                 if PLACEMENTS[u] in ('Garrison','Sniper','Mortar','Nest','GasMortar','FireMortar','Railgun','Howitzer','MLRS'):
                     cx,cy=map(int,st['build_targets'][c])
@@ -612,7 +652,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             nbuy += int(succ)
             st['spend_frac'] = max(0., (m0-o['money']) / max(m0, 1))
             prev_u, prev_c = float(u), float(c)
-            rows['rews'].append(transition_reward(before, o, civ0))
+            rows['rews'].append(transition_reward(before, o, civ0) - OUTSIDE_PLAYAREA_COST * outside)
             rows['sim_elapsed'].append(max(0., state['sim'] - previous_state['sim']))
             rows['trail'].append((state['sim'], o['civ'], o['zomb'], o['money'], u, c))
             for slot in st['deck']:
@@ -659,7 +699,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 planning_blockers.append('modal_dialog')
             if st.get('anchor') or st.get('gesture_anchor'):
                 planning_blockers.append('unfinished_gesture')
-        rewards = dict(infections=sum(rows['rews']), terminal=outcome_reward(saved, end))
+        outside_reward = -OUTSIDE_PLAYAREA_COST * outside_actions
+        rewards = dict(infections=sum(rows['rews'])-outside_reward, outside_playarea=outside_reward,
+                       terminal=outcome_reward(saved, end))
         if rows['rews']:
             rows['rews'][-1] += rewards['terminal']
         advance = end == 'won' and saved is not None and saved >= .35
@@ -673,7 +715,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     timeout_reason=timeout_reason if end=='timeout' else None,
                     planning_blockers=planning_blockers, picker_rejections=picker_rejections,
                     outbreak=footer.get('outbreak') if footer else None,
-                    reward_components=rewards, battle_actions=battle_actions,
+                    reward_components=rewards, outside_playarea_actions=outside_actions, battle_actions=battle_actions,
                     frac=o['civ']/civ0, bootstrap=bootstrap,
                     civ0=civ0, t=time.monotonic()-start, sim=state['sim'],
                     R=sum(rows['rews']), nbuy=nbuy, ndeck=len(st['deck']),

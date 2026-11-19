@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 22:40 Central. Training seed 99851 advanced to generation 2 on inst13–18.
+  Its workers predate the playable-target guard and the supervisor will load
+  it on the next block. The guard rejects outside cast, placement and world
+  targets before input, deducts .02 per attempt in PPO and charges the same
+  cost in campaign ranking. Live inst20 L1 geometry classified 27 of 40
+  HUD-safe targets as outside for missile, firebomb and police drop. The
+  isolated copy exited after the probe. Episode tests verified both missile
+  dispatch and reward/stock behavior (analysis/coverage-target-boundary-live.log).
 - 22:18 Central. Verified continuous supervisor PID 49644 and enabled hold
   marker. Seed 98851 is in generation 4 of 4 on inst13–16. Three copies
   were in battle when sampled and inst13 had already logged its result.

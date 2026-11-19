@@ -68,7 +68,12 @@ For each action, read the resulting state and compute:
 For a known completed/aborted outcome, add:
 
     terminal_reward = 5 * actual_saved_fraction
-    episode_reward = sum(infection_reward) + terminal_reward
+    episode_reward = sum(infection_reward) + terminal_reward - 0.02 * outside_playarea_actions
+
+The trainer checks issued target coordinates against the native playable boundary.
+It rejects an out-of-bounds target before sending input and records the attempt
+as a separate negative reward. For authored geometry, the check uses the action
+points, including secondary endpoints and rectangle corners.
 
 The outcome comes from this episode's native session-log footer, never a best
 badge or the live civilian fraction. An aborted score is measured at retry, not

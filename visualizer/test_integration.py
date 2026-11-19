@@ -51,7 +51,7 @@ class IntegrationTests(unittest.TestCase):
         if hasattr(self, 'temp'):
             self.temp.cleanup()
 
-    def episode(self, observer, fail=False):
+    def episode(self, observer, fail=False, missile_cell=None):
         game = FakeGame(-1)
         clock = FakeClock(game)
         FakeGame.fail = fail
@@ -59,8 +59,21 @@ class IntegrationTests(unittest.TestCase):
                          Mechanics=FakeMechanics,
                          load_bind_keys=lambda env: [], q_saved=lambda pid, dur: None,
                          time=clock)
+        samples = (1, 0, 0, 0)
+        self.casts = []
+        if missile_cell is not None:
+            game.cast = lambda key, x, y: self.casts.append((key,x,y))
+            game.battle_stock = lambda: {'Missile': 1-int(bool(self.casts))}
+            overrides['build_deck'] = lambda *args: [
+                dict(name='Missile', key='1', charges=1, unlock=0, arrival=0, pending=False)]
+            class BoundedMechanics(FakeMechanics):
+                def refresh(self, st):
+                    super().refresh(st)
+                    st['playarea_boundary'] = [(0,0),(500,0),(500,1000),(0,1000)]
+            overrides['Mechanics'] = BoundedMechanics
+            samples = (1, 0, 26, missile_cell)
         with patch.dict(self.globals, overrides), patch.dict(sys.modules, {'env_zar': SimpleNamespace(ZAREnv=lambda pid: game, ZAREnvError=RuntimeError)}):
-            with patch.object(torch.distributions.Categorical, 'sample', side_effect=[torch.tensor(v) for v in (1, 0, 0, 0)]):
+            with patch.object(torch.distributions.Categorical, 'sample', side_effect=[torch.tensor(v) for v in samples]):
                 with redirect_stderr(io.StringIO()):
                     return self.run_episode((-1, self.model.state_dict(), False, 'test-episode'))
 
@@ -84,6 +97,19 @@ class IntegrationTests(unittest.TestCase):
             self.assertNotRegex(' '.join(inp['labels']), r'\binput \d+\b')
             self.assertAlmostEqual(sum(frame['probabilities']['hu']), 1, places=6)
         self.assertFalse(list(Path(self.temp.name).glob('*.json')))
+
+    def test_outside_missile_penalizes_transition_without_spending_charge(self):
+        outside = self.episode(None, missile_cell=7)
+        self.assertNotIn('err', outside)
+        self.assertEqual(self.casts, [])
+        self.assertEqual(outside['outside_playarea_actions'], 1)
+        self.assertEqual(outside['rews'][-1], -.02)
+        self.assertEqual(outside['reward_components']['outside_playarea'], -.02)
+        inside = self.episode(None, missile_cell=0)
+        self.assertNotIn('err', inside)
+        self.assertEqual(len(self.casts), 1)
+        self.assertEqual(inside['battle_actions']['stock_decreased'], 1)
+        self.assertEqual(inside['reward_components']['outside_playarea'], 0.)
 
     def test_episode_failure_still_closes_observer(self):
         result = self.episode(self.factory, fail=True)

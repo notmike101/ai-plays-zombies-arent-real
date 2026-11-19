@@ -265,7 +265,7 @@ class Mechanics:
                 (active and not hold,active and hold,e.scalar(0x6651ec,'<f'))))
         boundary=p(s['playarea'])
         st['pan_room']=pan_room(boundary,e.cw,e.ch)
-        st['playarea_cells']=inside_polygon(centers(e.cw,e.ch),boundary)
+        st['playarea_boundary']=boundary
         kinds=s['units']['kind'];defenders=(kinds>=2)&(kinds!=3)
         targets=dict(unit=s['units']['pos'][defenders],building=s['buildings']['center'],
             wall=(s['walls']['a']+s['walls']['b'])/2,gate=s['gates'],evac=s['evac']['a'],

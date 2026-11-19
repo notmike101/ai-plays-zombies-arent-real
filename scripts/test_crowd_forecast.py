@@ -61,6 +61,18 @@ class CrowdModelTests(unittest.TestCase):
         env.vi.click.assert_not_called()
         self.assertEqual(env.scalar.call_count,2)
 
+    def test_archived_layout_outside_boundary_is_rejected_before_camera_input(self):
+        env=Mock()
+        env.scalar.return_value=0.
+        env.game_state.return_value={'phase':'planning'}
+        env.money.return_value=100.
+        boundary=[(0,0),(10,0),(10,10),(0,10)]
+        proposal=dict(kind='wall',points=[[5,5],[12,5]])
+        with patch('layout_memory.visible_points') as visible:
+            result=apply_layout(env,[proposal],boundary=boundary)
+            self.assertEqual(result[0]['result'],'outside_playarea')
+            visible.assert_not_called()
+
     def test_unchanged_picker_rejection_uses_another_free_slot(self):
         from game_controls import PickerNavigationError
         env=Mock()

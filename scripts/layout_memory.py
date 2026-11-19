@@ -110,7 +110,7 @@ def visible_points(env,ctrl,world):
     return []
 
 
-def apply_layout(env,actions,occupied=()):
+def apply_layout(env,actions,occupied=(), *, boundary=None):
     ctrl=Controls(env)
     origin=np.array([env.scalar(r,'<f') for r in (0x665358,0x66535c)])
     records=[]
@@ -126,6 +126,9 @@ def apply_layout(env,actions,occupied=()):
             records.append(dict(kind=kind,result='below_observed_cost',before=before,
                                 observed_cost=action['observed_cost']))
             break
+        if boundary is not None and not inside_polygon(action['points'],boundary).all():
+            records.append(dict(kind=kind,result='outside_playarea',world_points=action['points']))
+            continue
         points=visible_points(env,ctrl,np.array(action['points'])-origin)
         if not points:
             records.append(dict(kind=kind,result='outside_view'))

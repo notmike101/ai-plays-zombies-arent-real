@@ -238,17 +238,17 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, pra
                     raise RuntimeError(f'Expected live Boston stage {stage}')
             if layout:
                 from layout_memory import apply_layout, remaining_layout, BUILDINGS
+                from native_state import VEC
+                origin=np.array([env.scalar(r,'<f') for r in (0x665358,0x66535c)])
+                boundary=env.array(0x6652e0,VEC,limit=10000)+origin
                 if stage==1 and team.get('refuge'):
                     from layout_memory import fit_refuge
-                    from native_state import VEC
                     points=env.array(0x650280,VEC)
                     kinds=env.array(0x6502d0,'u1')
                     if len(points)!=len(kinds):raise RuntimeError('Inconsistent planning population')
-                    origin=np.array([env.scalar(r,'<f') for r in (0x665358,0x66535c)])
-                    boundary=env.array(0x6652e0,VEC,limit=10000)+origin
                     layout,refuge=fit_refuge(layout,points[kinds==0]+origin,boundary,team['refuge'])
                 occupied=[unit for kind,unit in BUILDINGS.items() if f'board {kind} = ' in board['_text']]
-                receipts=apply_layout(env,remaining_layout(layout,board),occupied)
+                receipts=apply_layout(env,remaining_layout(layout,board),occupied,boundary=boundary)
                 if stage==1 and attempt==0:layout_receipts=receipts
             active={**team,**team.get('stage_battle',{}).get(str(stage),{})} if team else None
             start_kind='carry' if attempt else ('fresh' if stage==1 else
@@ -269,6 +269,10 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, pra
                                timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
                                unmatched_layout=remaining_layout(layout,{'_text':row['layout_text']}) if layout else [],
                                layout_receipts=receipts,battle_actions=row['battle_actions'],
+                               outside_playarea_actions=row.get('outside_playarea_actions',0)+
+                                   sum(r.get('result')=='outside_playarea' for r in receipts),
+                               playarea_cost=tr.OUTSIDE_PLAYAREA_COST/tr.SAVED_REWARD_SCALE,
+                               reward_components=row.get('reward_components',{}),
                                score=score(row),sim=row['sim'],board=row['board_id'],
                                actions=list(zip(row['us'],row['cs'])),log_started=row['log_started']))
             if row['advance']:
@@ -461,7 +465,7 @@ def main():
                 population[1]['refuge']=dict(scale=1.,aspect=float(rng.uniform(.7,1.5)),
                                              defense_weight=float(rng.uniform(.08,.22)))
         base=tr.policy_id(net)
-        view_revision='playable-overview-v2'
+        view_revision='playable-overview-v2-bounded-targets'
         evidence={}
         if args.seed_from and (args.seed_from/'fitness.json').exists():
             ledger=json.loads((args.seed_from/'fitness.json').read_text())
@@ -559,7 +563,7 @@ def main():
                 ranked=sorted(archive,key=lambda k:fitness.ranking(evidence,archive[k]),reverse=True)
                 def l1_rank(key):
                     outcomes=fitness.stats(evidence,archive[key],1)
-                    return outcomes['lower'],outcomes['mean']
+                    return outcomes['lower'],outcomes['objective']
                 l1_ranked=sorted(archive,key=l1_rank,reverse=True)
                 leader=archive[l1_ranked[0]]
                 report=fitness.stats(evidence,leader,1)

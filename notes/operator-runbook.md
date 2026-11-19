@@ -331,6 +331,15 @@ Repeated consistency failures briefly yield to the next game update; a
 persistent failure is an incomplete trial. The other world systems are
 sampled independently.
 
+### Playable target boundary
+
+The trainer checks cast, placement and world-action targets against the projected
+native playable polygon before issuing input. An outside target is rejected and
+costs .02 in PPO reward. Logs include `outside_playarea_actions` and the separate
+reward component. Campaign search rejects outside layout points and deducts the
+same cost from its ranking objective, converted to saved-fraction units. Official
+saved percentages and qualifying wins come from the game footer.
+
 ### Camera and stage isolation
 
 The episode controller fits the playable polygon into the world area above the HUD. It uses virtual WASD and wheel input before sampling the next policy observation. Explicit camera actions open a two-second excursion. Active gestures and dialogs defer restoration. Battle records include successful fits and view checks. A changed camera contract starts a new fitness ledger because it changes spatial inputs.
