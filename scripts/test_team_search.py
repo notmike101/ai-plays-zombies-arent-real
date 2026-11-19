@@ -178,6 +178,17 @@ class SearchTests(unittest.TestCase):
         self.assertNotIn('observed_cost',child['later_layouts']['2'][0])
         self.assertIn('observed_cost',child['later_layouts']['2'][1])
 
+    def test_cost_observed_by_another_team_transfers_only_to_matching_stage_and_placement(self):
+        action={'kind':'zone','points':[[0,0],[1,1],[2,0]]}
+        parent={'layout':[action],'later_layouts':{'2':[action]}}
+        prices={}
+        search.budget_candidate(parent,[dict(stage=2,layout_receipts=[dict(kind='zone',before=20,after=-80)])],prices)
+        team={'layout':[action],'later_layouts':{'2':[dict(kind='wall',points=[[0,0],[2,0]]),action]}}
+        child=search.budget_candidate(team,[],prices)
+        self.assertEqual(child['later_layouts']['2'][1]['observed_cost'],100)
+        self.assertNotIn('observed_cost',child['layout'][0])
+        self.assertNotIn('observed_cost',child['later_layouts']['2'][0])
+
     def test_layout_search_can_learn_new_coordinates_without_distorting_shapes(self):
         original=[dict(kind='wall',points=[[0,0],[15,20]]), dict(kind='mortar',points=[[80,50]])]
         sizes=set()
@@ -209,7 +220,7 @@ class SearchTests(unittest.TestCase):
         for seed in range(128):
             layout=[copy.deepcopy(zone)]
             search.vary_layout(layout,np.random.default_rng(seed))
-            if 'observed_cost' not in layout[0]:
+            if not np.isclose(np.ptp(np.asarray(layout[0]['points'])[:,0]),10):
                 points=np.asarray(layout[0]['points'])
                 np.testing.assert_allclose(points.mean(axis=0),[5,5])
                 widths.append(np.ptp(points[:,0]))

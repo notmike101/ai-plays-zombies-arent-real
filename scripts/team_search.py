@@ -90,6 +90,7 @@ def vary_layout(layout,rng):
         span=np.ptp(np.concatenate([a['points'] for a in layout]),axis=0)
         offset=rng.normal(size=2)*np.maximum(1.,span*.025)
         item['points']=(np.asarray(item['points'])+offset).tolist()
+        item.pop('observed_cost',None)
         if move=='translate':layout[index]=item
         else:layout.insert(index+1,item)
 
@@ -283,20 +284,30 @@ def completed_rollouts(pool,jobs,starts=None,retries=0,training=False):
         yield job,stage,result
 
 
-def budget_candidate(team,levels):
+def budget_candidate(team,levels,prices=None):
     if not team:return None
-    child=None
+    if prices is None:prices={}
+    layouts={'1':team.get('layout',[]),**team.get('later_layouts',{})}
+    def key(stage,action):
+        return (stage,action['kind'],tuple(tuple(p) for p in action['points']))
     for stage in levels:
         for receipt in stage.get('layout_receipts',[]):
             if receipt.get('after',0)>=0 or receipt['before']<=0:continue
-            if child is None:child=deepcopy(team)
-            number=stage['stage']
-            layout=child.get('layout',[]) if number==1 else child.get('later_layouts',{}).get(str(number),[])
+            number=str(stage['stage'])
+            layout=layouts.get(number,[])
             matches=[a for a in layout if a['kind']==receipt['kind'] and
                      ('world_points' not in receipt or a['points']==receipt['world_points'])]
             if len(matches)==1:
-                matches[0]['observed_cost']=receipt['before']-receipt['after']
-    return child if child!=team else None
+                where=key(number,matches[0])
+                prices[where]=min(prices.get(where,float('inf')),receipt['before']-receipt['after'])
+    changes=[(stage,i,prices[key(stage,a)]) for stage,layout in layouts.items() for i,a in enumerate(layout)
+             if key(stage,a) in prices and a.get('observed_cost')!=prices[key(stage,a)]]
+    if not changes:return None
+    child=deepcopy(team)
+    for stage,i,price in changes:
+        layout=child['layout'] if stage=='1' else child['later_layouts'][stage]
+        layout[i]=dict(layout[i],observed_cost=price)
+    return child
 
 
 def main():
@@ -365,15 +376,18 @@ def main():
             if prior and prior.get('layout'):
                 population[1]['refuge']=dict(scale=1.,aspect=float(rng.uniform(.7,1.5)),
                                              defense_weight=float(rng.uniform(.08,.22)))
+        prices={}
         if args.seed_from and not args.compare_forecast and (args.seed_from/'trials.jsonl').is_file():
             best_budget=None
             for line in (args.seed_from/'trials.jsonl').read_text().splitlines():
                 trial=json.loads(line)
-                candidate=budget_candidate(trial.get('team'),trial.get('levels',[]))
+                candidate=budget_candidate(trial.get('team'),trial.get('levels',[]),prices)
                 if candidate:
                     rank=(max(r['stage'] for r in trial['levels']),team_id(candidate))
                     if best_budget is None or rank>best_budget:
                         best_budget,population[-1]=rank,candidate
+            for i in range(1,len(population)):
+                population[i]=budget_candidate(population[i],[],prices) or population[i]
         archive={}
         deepest={}
         scores=defaultdict(list)
@@ -420,7 +434,7 @@ def main():
                         print('failed',job[0],result['error'],flush=True)
                         if not result.get('levels'):continue
                     levels=result['levels']
-                    candidate=budget_candidate(team,levels)
+                    candidate=budget_candidate(team,levels,prices)
                     if candidate:affordable.append((max(r['stage'] for r in levels),candidate))
                     last=levels[-1]
                     stopped_in_planning=last.get('timeout_reason')=='planning_decisions'
@@ -453,8 +467,8 @@ def main():
                     population.append(random_team(rng))
                 while len(population)<len(copies):
                     parent=elites[int(rng.integers(len(elites)))]
-                    population.append(offspring(parent,elites[int(rng.integers(len(elites)))],
-                                                rng,stage=deepest[team_id(parent)]))
+                    child=offspring(parent,elites[int(rng.integers(len(elites)))],rng,stage=deepest[team_id(parent)])
+                    population.append(budget_candidate(child,[],prices) or child)
                 print('elite',ranked[0],len(scores[ranked[0]]),np.mean(scores[ranked[0]],axis=0),flush=True)
                 champion = dict(team_id=ranked[0], team=archive[ranked[0]], base=tr.policy_id(net),
                                 generation=generation, trials=len(scores[ranked[0]]))

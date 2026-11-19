@@ -281,8 +281,9 @@ both this list and the budget receipts when diagnosing missing defenses.
 Layout purchases prefer empty roster slots. If a picker rejects a slot and
 the native roster confirms nothing changed, the planner tries another free
 slot and records the rejection. It preserves occupied defense types.
-If a receipt shows an overdraft, search proposes a child that learns the
-observed price of that exact placement. When funds fall below that estimate,
+If a receipt shows an overdraft, new candidates share the lowest observed
+price for that exact stage, type and geometry. The original elite keeps its
+tested policy. When funds fall below a candidate's estimate,
 the child ends its recorded layout at the preceding action. The original
 candidate remains eligible for comparison. Fresh campaign play determines
 whether the revised plan works.
