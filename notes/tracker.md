@@ -6,6 +6,14 @@
   1924×1247 in WGC with a 1920×1200 client area. Chrome on the named tunnel
   displayed the resulting 1280×800 thumbnail for game 55004, worker 33124.
   The crop helper took 0.49 s for a 250 KiB JPEG. All 47 visualizer tests passed.
+- 2026-11-19 00:04 Central. Safe-zone reward live check completed on isolated
+  inst19 PID 43856 and the test copy exited. Fresh L1 recorded 1,191 uniquely
+  sheltered civilians (+0.007314), one occupied penetration exposing 1,080
+  civilians (-0.013265), and official 9.62% saved. That verifies the new
+  components in a real game. It does not establish a survival improvement.
+  Pilot: analysis/coverage-shelter-pilot.json. Scope remains L1. Active
+  supervisor seed 101851 predates the new reward and adopts it next block.
+  199 trainer tests, 47 visualizer Python tests and the model check passed.
 - 23:51 Central. Enabled screenshot sharing on the named observatory hostname
   and made Game view expanded by default. Listener PID 27652 (create time
   1795067420.3287635). Chrome displayed a real 800×519 public thumbnail for
