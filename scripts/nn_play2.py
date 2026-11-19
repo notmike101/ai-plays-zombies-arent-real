@@ -374,6 +374,17 @@ def planning_limit_reached(steps, limit, modal_open):
     return steps >= limit + int(bool(modal_open))
 
 
+def battle_timeout(state,now,battle_start,paused_since,options):
+    if state['phase']=='playing' and state['paused']:
+        if paused_since is None:paused_since=now
+        if now-paused_since>=options.get('paused_seconds',float('inf')):
+            return 'continuous_pause',paused_since
+    else:paused_since=None
+    if battle_start is not None and now-battle_start>=options.get('battle_seconds',BATTLE_T):
+        return 'battle_clock',paused_since
+    return None,paused_since
+
+
 def run_episode(args, *, policy_factory=None, telemetry=True):
     pid, sd, eps_rand, tag, *extra = args
     options = extra[0] if extra else {}
@@ -427,6 +438,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         prev_u = prev_c = succ = trend = slope = 0.
         start = time.monotonic()
         battle_start = None
+        paused_since = timeout_reason = None
         end = None
         nbuy = 0
         battle_actions = dict(decisions=0, cast_available=0, cast_sampled=0, stock_decreased=0)
@@ -585,15 +597,17 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             for slot in st['deck']:
                 if slot['pending'] and state['sim'] >= slot['ready_t']:
                     slot['pending'] = False
+            timeout_reason,paused_since=battle_timeout(state,time.monotonic(),battle_start,paused_since,options)
             if state['phase'] in ('won', 'lost'):
                 end = state['phase']
             elif state['phase'] == 'playing' and o['civ'] <= .1*civ0 and o['infections'] >= .9*civ0:
                 end = 'aborted'
-            elif battle_start is not None and time.monotonic()-battle_start >= options.get('battle_seconds', BATTLE_T):
+            elif timeout_reason:
                 end = 'timeout'
             elif (state['phase'] == 'planning' and len(rows['obs']) >= plan_limit
                   and planning_limit_reached(len(rows['obs']), plan_limit, env.scalar(0x667868, '<B'))):
                 end = 'timeout'
+                timeout_reason='planning_decisions'
         footer = env.stop_log()
         logging = False
         battle_actions['logged_deployments']=footer.get('deployments') if footer else None
@@ -635,6 +649,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         return dict(rows, level=tag, pid=pid, win=end == 'won', advance=advance, end=end,
                     saved_frac=saved if end != 'timeout' else None,
                     observed_saved_frac=saved, timeout_phase=state['phase'] if end == 'timeout' else None,
+                    timeout_reason=timeout_reason if end=='timeout' else None,
                     planning_blockers=planning_blockers, picker_rejections=picker_rejections,
                     reward_components=rewards, battle_actions=battle_actions,
                     frac=o['civ']/civ0, bootstrap=bootstrap,

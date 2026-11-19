@@ -209,6 +209,16 @@ class StateTests(unittest.TestCase):
         with patch.object(train.time, 'sleep'), self.assertRaises(env_zar.ZAREnvError):
             train.ready_once(Env())
 
+    def test_search_pause_limit_resets_on_resume_and_is_opt_in(self):
+        state=dict(phase='playing',paused=True)
+        limits={'paused_seconds':45}
+        self.assertEqual(train.battle_timeout(state,20,0,None,limits),(None,20))
+        self.assertEqual(train.battle_timeout(state,65,0,20,limits),('continuous_pause',20))
+        self.assertEqual(train.battle_timeout(state,65,0,20,{}),(None,20))
+        state['paused']=False
+        self.assertEqual(train.battle_timeout(state,64,0,20,limits),(None,None))
+        self.assertEqual(train.battle_timeout(state,600,0,None,{}),('battle_clock',None))
+
     def test_log_outcome_requires_this_session_footer(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'episode.jsonl'

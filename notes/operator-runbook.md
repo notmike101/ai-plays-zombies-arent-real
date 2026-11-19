@@ -226,6 +226,11 @@ verifies the live stage before acting and records `start_stage` and
 Practice scores can nominate a specialist for a fresh campaign trial. They
 never enter campaign rankings or held-out results.
 
+Search truncates a training battle after 45 wall seconds continuously paused.
+Resuming resets that timer. The model keeps control of the pause key. Held-out
+and ordinary PPO games keep the full battle deadline. A timeout has no saved
+score; its `timeout_reason` identifies the clock or planning limit.
+
 The command holds the operator lock and writes its base weights, tested
 genomes, action sequences, native log identifiers, champion and held-out
 results to an ignored `analysis/coverage-team-*` directory. Search runs

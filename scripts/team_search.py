@@ -152,7 +152,7 @@ def score(row):
             float(row['saved_frac'] or 0.) if row['win'] else 0.,area/120.]
 
 
-def rollout(job, retries=0, start_stage=1):
+def rollout(job, retries=0, start_stage=1, *, training=False):
     copy, weights, team, seed, *forecast_path = job
     forecast=None
     if forecast_path:
@@ -181,15 +181,17 @@ def rollout(job, retries=0, start_stage=1):
             active={**team,**team.get('stage_battle',{}).get(str(stage),{})} if team else None
             start_kind='carry' if attempt else ('fresh' if stage==1 else
                                                 'continue' if stage==start_stage else 'next_level')
-            row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}/a{attempt}',
-                                  dict(start_kind=start_kind,seed=seed,
-                                       record_layout=bool(layout),greedy=True)),policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
+            options=dict(start_kind=start_kind,seed=seed,record_layout=bool(layout),greedy=True)
+            if training:options['paused_seconds']=45
+            row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}/a{attempt}',options),
+                                 policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
                                  telemetry=False)
             if not tr.valid_trajectory(row):
                 return dict(copy=copy,seed=seed,levels=levels,error=row.get('err','invalid trajectory'))
             levels.append(dict(stage=row['scenario'],end=row['end'],saved=row['saved_frac'],
                                win=row['win'],advance=row['advance'],campaign=row['campaign'],
                                attempt=attempt,start_kind=start_kind,
+                               timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
                                unmatched_layout=remaining_layout(layout,{'_text':row['layout_text']}) if layout else [],
                                layout_receipts=receipts,battle_actions=row['battle_actions'],
                                score=score(row),sim=row['sim'],board=row['board_id'],
@@ -329,7 +331,7 @@ def main():
                 require_fresh.clear()
                 practice=[]
                 affordable=[]
-                futures=[pool.submit(rollout,job,args.later_retries,stage) for job,stage in zip(jobs,starts)]
+                futures=[pool.submit(rollout,job,args.later_retries,stage,training=True) for job,stage in zip(jobs,starts)]
                 valid_candidates=0
                 for team, future, job,start_stage in zip(population,futures,jobs,starts):
                     try: result=future.result()
