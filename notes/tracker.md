@@ -1,6 +1,12 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 14:32 Central. Production seed 129851 completed normally.
+  Staged capture code deployed at the idle boundary; six-copy shadow
+  capture seed 129952 started on inst13–18 with frozen base 8a691469a829158d.
+  Output is `analysis/coverage-team-bd8e7ef03e`. The held supervisor marker
+  is restored by the handoff, which resumes from the last production search.
+  A passive collector preserves native launch and impact events by session.
 - 2026-11-19 Central. Added compact combat context to opt-in shadow states
   from the existing native snapshot, with no additional game reads. Includes
   local conversion, defenders by kind, wall/hazard/mutation centers, bounded
