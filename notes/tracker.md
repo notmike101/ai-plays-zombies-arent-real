@@ -1,6 +1,11 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 08:14 Central. Checked continuous search seed
+  120851 with four owned copies inst13–16, Boston L1 only. Latest leader
+  43ee3ee08e4dca6d has 15 qualifying wins in 51 fresh starts and 33.07%
+  mean saved in the search ledger. Supervisor hold marker is present.
+  Host had about 9.1 GiB available RAM and 8.6 GiB free disk.
 - 2026-11-19 08:11 Central. The checkpoint heartbeat fired
   with its scheduler set to ACTIVE despite the user's standing pause.
   Restored PAUSED through the automation manager and skipped publication.
