@@ -116,6 +116,7 @@ def rollout(job):
             if not tr.valid_trajectory(row):
                 return dict(copy=copy,seed=seed,levels=levels,error=row.get('err','invalid trajectory'))
             levels.append(dict(stage=row['scenario'],end=row['end'],saved=row['saved_frac'],
+                               win=row['win'],advance=row['advance'],campaign=row['campaign'],
                                score=score(row),sim=row['sim'],board=row['board_id'],
                                actions=list(zip(row['us'],row['cs'])),log_started=row['log_started']))
             if not row['advance'] or row['scenario']==row['board'].get('scenario_count'):
@@ -134,6 +135,7 @@ def main():
     parser.add_argument('--copies',nargs='+',required=True)
     parser.add_argument('--generations',type=int,default=10)
     parser.add_argument('--seed',type=int,default=92851)
+    parser.add_argument('--seed-from',type=Path,help='Start with a previous search champion and its frozen GRU')
     args=parser.parse_args()
     copies=args.copies
     if not 4<=len(copies)<=8 or len(set(copies))!=len(copies) or args.generations<1:
@@ -147,13 +149,24 @@ def main():
         operator.limit_resources(len(copies))
         rng=np.random.default_rng(args.seed)
         net=tr.PolicyNet2()
-        tr.load_pretrained(net,tr.MODEL)
+        prior=None
+        if args.seed_from:
+            champion=json.loads((args.seed_from/'champion.json').read_text())
+            net.load_state_dict(torch.load(args.seed_from/'base.pt',weights_only=True))
+            prior=champion['team']
+            if team_id(prior)!=champion['team_id'] or tr.policy_id(net)!=champion['base']:
+                raise ValueError('Champion and base policy do not match the saved identities')
+        else:
+            tr.load_pretrained(net,tr.MODEL)
         weights=net.state_dict()
         directory=operator.ROOT/'analysis'/('coverage-team-'+uuid.uuid4().hex[:10])
         directory.mkdir()
         torch.save(weights,directory/'base.pt')
         print(directory,'base',tr.policy_id(net),flush=True)
         population=[random_team(rng) for _ in copies[1:]]
+        if prior:
+            population[0]=prior
+            population[1]=offspring(prior,prior,rng)
         archive={}
         scores=defaultdict(list)
         with ProcessPoolExecutor(len(copies)) as pool:
@@ -163,6 +176,7 @@ def main():
                 jobs=[(copy,weights,team,args.seed+generation*len(copies)+i)
                       for i,(copy,team) in enumerate(zip(copies,population))]
                 futures=[pool.submit(rollout,job) for job in jobs]
+                valid_candidates=0
                 for team, future, job in zip(population,futures,jobs):
                     try: result=future.result()
                     except Exception as exc: result=dict(error=str(exc),copy=job[0],seed=job[3])
@@ -175,12 +189,13 @@ def main():
                         continue
                     levels=result['levels']
                     if team:
+                        valid_candidates+=1
                         archive[key]=team
                         scores[key].append([sum(r['score'][0] for r in levels),
                                             sum(r['score'][1] for r in levels),
                                             sum(r['score'][2] for r in levels),levels[-1]['score'][3]])
                     print(generation,key,[(r['stage'],r['end'],r['saved'],round(r['sim'],1)) for r in levels],flush=True)
-                if not scores:raise RuntimeError('No valid search results; inspect trials')
+                if not valid_candidates:raise RuntimeError('No valid candidates this generation; inspect trials')
                 ranked=sorted(scores,key=lambda k:tuple(np.mean(scores[k],axis=0)),reverse=True)
                 elites=[archive[k] for k in ranked[:2]]
                 population=list(elites)

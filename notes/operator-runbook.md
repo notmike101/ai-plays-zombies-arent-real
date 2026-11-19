@@ -222,3 +222,4 @@ The command holds the operator lock and writes its base weights, tested
 genomes, action sequences, native log identifiers, champion and held-out
 results to an ignored `analysis/coverage-team-*` directory. Search runs
 disable the GRU-only visualizer for both candidates and controls.
+Use --seed-from analysis/<previous-search-directory> with a new --seed to retain the previous champion, verify its base weights, and train another population.
