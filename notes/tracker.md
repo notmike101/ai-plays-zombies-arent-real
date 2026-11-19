@@ -1,6 +1,15 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 21:39 Central. The old selection block finished. Its selected variant
+  scored zero qualifying wins on three fresh held-out L1 games (two early
+  aborts and one below-target game win). An isolated inst12 live check moved
+  the Boston boundary partially above the screen then restored the entire
+  boundary in planning and battle (analysis/coverage-rest-view-live.log).
+  Stage search now reserves L1 selection for L1 evidence, and standalone PPO
+  separates optimizer updates and checkpoint files per stage. Old camera
+  fitness is archived. Supervisor seed 97851 encountered a legacy trial
+  without levels; resume now skips such rows before replaying prices.
 - 21:33 Central. The eight fresh L1 attempts for the 40.35% policy prefix in
   coverage-team-d18fd6a8de yielded one qualifier and 19.74% mean saved/observed
   at abort. All eight distinct outbreaks began with 14.6% inside safe zones.

@@ -42,15 +42,12 @@ def ranking(evidence,team):
     return (depth,*(s['lower'] for s in stages),*(s['mean'] for s in stages))
 
 def promote(evidence, challenger, incumbent):
-    depth,*_=ranking(evidence,challenger)
-    if not depth:return incumbent
-    if incumbent is None:return challenger
-    old_depth,*_=ranking(evidence,incumbent)
-    if depth!=old_depth:return challenger if depth>old_depth else incumbent
-    for stage in range(1,depth+1):
-        new=stats(evidence,challenger,stage)['lower']
-        old=stats(evidence,incumbent,stage)['lower']
-        if new!=old:return challenger if new>old else incumbent
+    for stage in range(1,6):
+        if incumbent is not None and prefix_id(challenger,stage)==prefix_id(incumbent,stage):continue
+        new=stats(evidence,challenger,stage)
+        if new['wins']<2:return incumbent
+        if incumbent is None or new['lower']>stats(evidence,incumbent,stage)['lower']:return challenger
+        return incumbent
     return incumbent
 
 

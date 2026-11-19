@@ -330,3 +330,9 @@ then the payloads, and require equal lengths and a matching simulation tick.
 Repeated consistency failures briefly yield to the next game update; a
 persistent failure is an incomplete trial. The other world systems are
 sampled independently.
+
+### Camera and stage isolation
+
+The episode controller fits the playable polygon into the world area above the HUD. It uses virtual WASD and wheel input before sampling the next policy observation. Explicit camera actions open a two-second excursion. Active gestures and dialogs defer restoration. Battle records include successful fits and view checks. A changed camera contract starts a new fitness ledger because it changes spatial inputs.
+
+L1 parents are ranked solely on fresh L1 outcomes. A later-stage change must preserve all earlier decisions and beat its reference at the first changed stage. In standalone PPO, Boston L1 continues in the configured model file. An earned later stage starts with the current L1 weights once and its own fresh Adam optimizer. Subsequent updates and evaluation use the sibling checkpoint (e.g. nn_policy4.L2.pt). Local sidecars are required to resume those PPO specialists; the campaign search release carries the frozen GRU and stage strategy overrides. Historic L1 weights retain their original training history.

@@ -430,6 +430,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         net = None if eps_rand else (policy_factory or PolicyNet2)().eval()
         if net is not None:
             net.load_state_dict(sd)
+            if options.get('stage_model'):
+                path=stage_model_path(options['stage_model'],session.get('scenario'))
+                if session['scenario']>1 and os.path.isfile(path):load_pretrained(net,path)
             if Observer is not None and telemetry:
                 observer = Observer(net, pid, tag, labels={
                     'input': INPUT_LABELS, 'hu': TOOLS, 'hc': CELL_LABELS})
@@ -446,6 +449,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         picker_retry_at = {}
         plan_limit = options.get('plan_steps', PLAN_STEPS)
         state = env.game_state()
+        next_rest=0.
+        excursion=False
         while end is None:
             if state['phase'] in ('won', 'lost'):
                 end = state['phase']
@@ -464,6 +469,19 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             frac = o['civ'] / civ0
             st['picker_blocked'] = [pair for pair, retry_at in picker_retry_at.items()
                                     if len(rows['obs']) < retry_at]
+            if (time.monotonic()>=next_rest and not st.get('anchor') and not st.get('gesture_anchor')
+                    and not st.get('corridor_armed') and not st.get('dialog')):
+                fitted=mechanics.controls.rest_view()
+                if not st['planning']:
+                    battle_actions['view_checks']=battle_actions.get('view_checks',0)+1
+                    battle_actions['view_fits']=battle_actions.get('view_fits',0)+int(fitted)
+                excursion=False
+                next_rest=time.monotonic()+2.
+                after_view=env.game_state()
+                if after_view['phase']!=state['phase']:
+                    state=after_view
+                    o=env.obs()
+                    continue
             mechanics.refresh(st)
             blobs = []
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
@@ -574,6 +592,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         slot['pending'] = slot['arrival'] > 0
                     if slot['name'] == 'Heli':
                         slot['alive'] = bool(np.any(mechanics.reader.snapshot()['helicopters']['alive']))
+            if not excursion and TOOLS[u].startswith(('pan_','zoom_')):
+                excursion=True
+                next_rest=time.monotonic()+2.
             if picker_rejected:
                 picker_rejections[TOOLS[u]] = picker_rejections.get(TOOLS[u], 0) + 1
                 # Try other actions before reopening a picker that just rejected this choice.
@@ -829,6 +850,12 @@ def load_checkpoint(net, opt, path):
         opt.load_state_dict(data['optimizer'])
 
 
+def stage_model_path(base, stage):
+    if type(stage) is not int or not 1<=stage<=5:raise ValueError('Invalid Boston stage')
+    stem,ext=os.path.splitext(base)
+    return os.fspath(base) if stage==1 else f'{stem}.L{stage}{ext}'
+
+
 def policy_id(net):
     digest = hashlib.sha256()
     for p in net.parameters():
@@ -872,37 +899,47 @@ def main():
     if not a.random:
         load_checkpoint(net, opt, a.model)
     run_id = uuid.uuid4().hex[:12]
+    stage_models={1:(net,opt)}
     sd = net.state_dict()
     with mp.Pool(len(pids)) as pool:
         for rnd in range(a.rounds):
             options = dict(seed=a.seed+rnd*len(pids)*a.eps, starts=starts,
                            greedy=a.mode == 'greedy', plan_steps=a.plan_steps,
-                           battle_seconds=a.battle_seconds)
+                           battle_seconds=a.battle_seconds,stage_model=os.path.abspath(a.model))
             jobs = episode_batches(pids, sd, a.random, f'{run_id}/r{rnd}', a.eps, options)
             trajs = [tr for batch in pool.map(run_batch, jobs) for tr in batch]
-            good = []
+            good = {}
             checkpoint_id = 'random' if a.random else policy_id(net)
             with open(a.history, 'a', encoding='utf-8') as fh:
                 for tr in trajs:
                     row = {k: v for k,v in tr.items() if k not in
                            ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'sim_elapsed', 'board')}
+                    stage=tr.get('scenario')
+                    if not a.random and type(stage) is int and stage>1 and stage not in stage_models:
+                        # Workers used frozen L1 weights if this stage had no specialist yet.
+                        specialist=PolicyNet2()
+                        specialist.load_state_dict(sd)
+                        optimizer=torch.optim.Adam(specialist.parameters(),lr=3e-4) if opt is not None else None
+                        load_checkpoint(specialist,optimizer,stage_model_path(a.model,stage))
+                        stage_models[stage]=(specialist,optimizer)
                     row.update(kind='episode', run_id=run_id, round=rnd, mode=a.mode,
-                               checkpoint_id=checkpoint_id, schema=4, learning=learning_config())
+                               checkpoint_id=policy_id(stage_models[stage][0]) if stage in stage_models and not a.random else checkpoint_id, schema=4, learning=learning_config())
                     fh.write(json.dumps(row) + '\n')
                     starts[tr['pid']] = 'next_level' if tr.get('advance') else 'carry'
                     if 'err' in tr:
                         print('ERR', tr['pid'], tr['err'][:120], flush=True)
                         continue
-                    if tr.get('obs') and valid_trajectory(tr):
-                        good.append(tr)
+                    if opt is not None and tr.get('obs') and valid_trajectory(tr):
+                        good.setdefault(stage,[]).append(tr)
                     print('ep pid', tr['pid'], 'end', tr['end'],
                           'saved', tr['saved_frac'], 'R', round(tr['R'], 2), flush=True)
-                if opt is not None and good:
-                    diagnostics = ppo_update(net, good, opt)
-                    sd = net.state_dict()
-                    save_checkpoint(net, opt, a.model, run_id)
+                for stage,episodes in good.items():
+                    model,optimizer=stage_models[stage]
+                    diagnostics = ppo_update(model, episodes, optimizer)
+                    save_checkpoint(model, optimizer, stage_model_path(a.model,stage), run_id)
+
                     fh.write(json.dumps(dict(kind='update', run_id=run_id, round=rnd,
-                                             checkpoint_id=policy_id(net), learning=learning_config(),
+                                             scenario=stage, checkpoint_id=policy_id(model), learning=learning_config(),
                                              **diagnostics))+'\n')
             if any('err' in tr for tr in trajs):
                 raise RuntimeError('Worker failed; stopped this run after preserving error history')

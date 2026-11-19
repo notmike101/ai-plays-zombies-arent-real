@@ -9,6 +9,36 @@ import team_search as search
 
 
 class SearchTests(unittest.TestCase):
+    def test_ppo_later_stage_update_preserves_l1_weights_and_optimizer(self):
+        import json
+        from pathlib import Path
+        import tempfile
+        tr=search.tr
+        def row(stage):
+            return dict(pid=123,scenario=stage,obs=[1],advance=False,end='won',saved_frac=.2,R=1.)
+        def update(net,episodes,opt):
+            self.assertEqual(len({r['scenario'] for r in episodes}),1)
+            opt.zero_grad()
+            next(net.parameters()).sum().backward()
+            opt.step()
+            return {}
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory)/'base.pt'
+            hist=Path(directory)/'history'
+            net=tr.PolicyNet2()
+            optimizer=torch.optim.Adam(net.parameters(),lr=3e-4)
+            tr.save_checkpoint(net,optimizer,base,'base')
+            before=base.read_bytes()
+            args=['nn_play2','train','--pids','123','--model',str(base),'--history',str(hist),'--rounds','2']
+            with patch('sys.argv',args),patch.object(tr.mp,'Pool') as pool,patch.object(tr,'ppo_update',side_effect=update),patch.object(tr,'valid_trajectory',return_value=True):
+                pool.return_value.__enter__.return_value.map.return_value=[[row(2)]]
+                tr.main()
+            self.assertEqual(base.read_bytes(),before)
+            specialist=torch.load(tr.stage_model_path(base,2),weights_only=True)
+            self.assertEqual(next(iter(specialist['optimizer']['state'].values()))['step'].item(),2)
+            updates=[json.loads(line) for line in hist.read_text().splitlines()]
+            self.assertEqual(updates[1]['checkpoint_id'],updates[2]['checkpoint_id'])
+
     def test_refuge_size_trial_keeps_other_decisions_fixed(self):
         parent=dict(refuge=dict(scale=1.,aspect=.8,defense_weight=.16),plan=[1])
         candidate=search.l1_candidate(parent,np.random.default_rng(7))
@@ -160,6 +190,14 @@ class SearchTests(unittest.TestCase):
                 x[...,search.READY_LEGAL]=legal
                 diff=(repair(x)[0]-base(x)[0]).flatten()
                 self.assertAlmostEqual(diff[tool].item(),expected,places=4)
+
+    def test_later_stage_without_archived_layout_cannot_mutate_l1(self):
+        rng=np.random.default_rng(32)
+        parent=search.random_team(rng)
+        child=search.offspring(parent,parent,rng,stage=2)
+        overrides=child.pop('stage_battle')
+        self.assertIn('2',overrides)
+        self.assertEqual(parent,child)
 
     def test_later_stage_search_preserves_earlier_policy(self):
         rng=np.random.default_rng(32)

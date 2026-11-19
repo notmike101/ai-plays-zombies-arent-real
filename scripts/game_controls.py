@@ -49,6 +49,37 @@ class Controls:
         frame = self.env.scalar(0x68e590, '<Q')
         wait_until(lambda: self.env.scalar(0x68e590, '<Q') >= frame+count, 'UI frames', timeout=2.)
 
+    def rest_view(self):
+        """Return the playable boundary to the world viewport using ordinary camera inputs."""
+        import numpy as np
+        from spatial import project
+        e=self.env
+        # These bounds belong to the stage and this Controls is owned by one episode.
+        if not hasattr(self,'play_bounds'):
+            polygon=e.array(0x6652e0,('<f4',2),limit=10000)
+            if len(polygon)<3:return False
+            self.play_bounds=np.array([polygon.min(axis=0),polygon.max(axis=0)])
+        size=np.array([e.cw,e.ch])
+        for _ in range(30):
+            if (e.scalar(0x667868,'<B') or e.scalar(0x666870,'<B') or
+                    e.scalar(0x6651e0,'<B') or e.game_state()['phase'] not in ('planning','playing')):
+                return False
+            camera=[e.scalar(r,'<f') for r in (0x6553ac,0x6553b0,0x6553b4)]
+            points=project(self.play_bounds,camera,*size)/size
+            fill=max(np.ptp(points,axis=0)/[.76,.595])
+            offset=points.mean(axis=0)-[.50,.35]
+            if fill>1.09 or fill<.83:
+                self.zoom(-1 if fill>1.09 else 1,(e.cw//2,e.ch//2))
+                self.frames(5)
+            elif max(abs(offset))>.028:
+                axis=int(np.argmax(abs(offset)))
+                name=(('pan_left','pan_right'),('pan_up','pan_down'))[axis][int(offset[axis]>0)]
+                vk,sc,_=KEY_ACTIONS[name]
+                e.vi.key_press(vk,sc=sc,hold=float(np.clip(abs(offset[axis])*.7,.01,.15)))
+                self.frames(2)
+            else:return True
+        return False
+
     def tool_active(self):
         # Discriminator bytes (e.g. corridor vs hold) persist after cancellation.
         return any(self.env.scalar(rva,'<B') for rva in (
