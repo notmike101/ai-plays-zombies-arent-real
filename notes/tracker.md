@@ -1,6 +1,11 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 02:13 Central. Reviewed Dependabot PR #1 (Pillow 13.0.0).
+  Simulated merge onto origin/main 01deff5 cleanly with only the pin change.
+  Isolated CPython 3.14 x64 wheel passed screenshot conversion, PNG and menu
+  image checks and all 57 visualizer tests. Recommend merge. Live game capture
+  was not exercised. Active campaign search and its Python environment were untouched.
 - 2026-11-19 02:12 Central. Learning now refreshes every 30 seconds while visible.
   Public Chrome observed an automatic results request and all four workers of
   search 106851 publishing decisions together. Deployed between searches.
