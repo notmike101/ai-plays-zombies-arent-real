@@ -1,12 +1,28 @@
 """Game-free checks for genome search, independent team state and outcome scoring."""
 import copy
 import unittest
+from unittest.mock import patch
 import numpy as np
 import torch
 import team_search as search
 
 
 class SearchTests(unittest.TestCase):
+    def test_later_retries_are_training_only_and_keep_stage_identity(self):
+        for retries,count in [(0,2),(2,4)]:
+            with self.subTest(retries=retries):
+                rows=[dict(scenario=stage,end=end,saved_frac=saved,bootstrap=0.,
+                           advance=end=='won',win=end=='won',campaign='Boston',board_id='b',
+                           board={'scenario_count':5},sim=10,trail=[],civ0=100,
+                           us=[],cs=[],log_started=True)
+                      for stage,end,saved in [(1,'won',.4),(2,'aborted',.1),
+                                               (2,'won',.36),(3,'timeout',None)]]
+                with patch.object(search.zar_boot,'boot'), patch.object(search.zar_boot,'stop'), \
+                     patch.object(search.operator,'owned_copy'), patch.object(search.tr,'run_episode',side_effect=rows):
+                    result=search.rollout(('inst14',{},None,10),retries)
+                expected=[(1,0,'fresh'),(2,0,'next_level'),(2,1,'carry'),(3,0,'next_level')]
+                self.assertEqual([(r['stage'],r['attempt'],r['start_kind']) for r in result['levels']],expected[:count])
+
     def test_tool_and_cell_heads_keep_the_trainer_contract(self):
         candidate=search.random_team(np.random.default_rng(4))
         net=search.TeamPolicy(candidate)

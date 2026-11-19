@@ -124,7 +124,7 @@ def score(row):
             float(row['saved_frac'] or 0.) if row['win'] else 0.,area/120.]
 
 
-def rollout(job):
+def rollout(job, retries=0):
     copy, weights, team, seed, *forecast_path = job
     forecast=None
     if forecast_path:
@@ -135,7 +135,8 @@ def rollout(job):
     try:
         levels = []
         layout_receipts=[]
-        for stage in range(1,6):
+        stage, attempt = 1, 0
+        while stage <= 5:
             layout = (team or {}).get('layout',[]) if stage==1 else (team or {}).get('later_layouts',{}).get(str(stage),[])
             receipts=[]
             if layout:
@@ -148,18 +149,26 @@ def rollout(job):
                 receipts=apply_layout(env,remaining_layout(layout,board),occupied)
                 if stage==1:layout_receipts=receipts
             active={**team,**team.get('stage_battle',{}).get(str(stage),{})} if team else None
-            row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}',
-                                  dict(start_kind='fresh' if stage==1 else 'next_level',seed=seed,
+            start_kind='carry' if attempt else ('fresh' if stage==1 else 'next_level')
+            row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}/a{attempt}',
+                                  dict(start_kind=start_kind,seed=seed,
                                        greedy=True)),policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
                                  telemetry=False)
             if not tr.valid_trajectory(row):
                 return dict(copy=copy,seed=seed,levels=levels,error=row.get('err','invalid trajectory'))
             levels.append(dict(stage=row['scenario'],end=row['end'],saved=row['saved_frac'],
                                win=row['win'],advance=row['advance'],campaign=row['campaign'],
+                               attempt=attempt,start_kind=start_kind,
                                layout_receipts=receipts,
                                score=score(row),sim=row['sim'],board=row['board_id'],
                                actions=list(zip(row['us'],row['cs'])),log_started=row['log_started']))
-            if not row['advance'] or row['scenario']==row['board'].get('scenario_count'):
+            if row['advance']:
+                if row['scenario']==row['board'].get('scenario_count'):break
+                stage+=1
+                attempt=0
+            elif stage>1 and attempt<retries and row['end'] in ('aborted','lost','won'):
+                attempt+=1
+            else:
                 break
         return dict(copy=copy,seed=seed,levels=levels,layout_receipts=layout_receipts)
     finally:
@@ -175,12 +184,13 @@ def main():
     parser.add_argument('--copies',nargs='+',required=True)
     parser.add_argument('--generations',type=int,default=10)
     parser.add_argument('--seed',type=int,default=92851)
+    parser.add_argument('--later-retries',type=int,default=2,help='Normal board retries per later stage during search only')
     parser.add_argument('--seed-from',type=Path,help='Start with a previous search champion and its frozen GRU')
     parser.add_argument('--demonstration',type=Path,help='Seed candidates from a local Boston progress file')
     parser.add_argument('--compare-forecast',type=Path,help='Evaluate the same saved champion with and without its CNN forecast')
     args=parser.parse_args()
     copies=args.copies
-    if not 4<=len(copies)<=8 or len(set(copies))!=len(copies) or args.generations<1:
+    if not 4<=len(copies)<=8 or len(set(copies))!=len(copies) or args.generations<1 or args.later_retries<0:
         parser.error('Use 4–8 distinct owned copies and positive generations')
     if args.compare_forecast and (not args.seed_from or len(copies)%2 or args.demonstration):
         parser.error('Forecast comparison requires a saved champion and paired copies')
@@ -249,7 +259,7 @@ def main():
                 rng.shuffle(population)
                 jobs=[(copy,weights,team,args.seed+generation*len(copies)+i)
                       for i,(copy,team) in enumerate(zip(copies,population))]
-                futures=[pool.submit(rollout,job) for job in jobs]
+                futures=[pool.submit(rollout,job,args.later_retries) for job in jobs]
                 valid_candidates=0
                 for team, future, job in zip(population,futures,jobs):
                     try: result=future.result()
@@ -266,9 +276,10 @@ def main():
                         valid_candidates+=1
                         archive[key]=team
                         deepest[key]=max(deepest.get(key,1),levels[-1]['stage'])
-                        scores[key].append([sum(r['score'][0] for r in levels),
-                                            sum(r['score'][1] for r in levels),
-                                            sum(r['score'][2] for r in levels),levels[-1]['score'][3]])
+                        best=[max(r['score'] for r in levels if r['stage']==stage)
+                              for stage in sorted({r['stage'] for r in levels})]
+                        scores[key].append([sum(r[0] for r in best),sum(r[1] for r in best),
+                                            sum(r[2] for r in best),best[-1][3]])
                     print(generation,key,[(r['stage'],r['end'],r['saved'],round(r['sim'],1)) for r in levels],flush=True)
                 if not valid_candidates:raise RuntimeError('No valid candidates this generation; inspect trials')
                 ranked=sorted(scores,key=lambda k:tuple(np.mean(scores[k],axis=0)),reverse=True)

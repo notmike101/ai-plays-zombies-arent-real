@@ -239,3 +239,10 @@ held-out games. Use the normal team search command with paired copies,
 to compare the same champion on new games with current versus forecast counts.
 The CNN changes battle target scoring only. Report forecast error and actual
 civilian saves separately.
+
+Later-stage candidates project the recorded layout through the current
+stage's camera and map origin, skip structures already carried, and issue
+purchases through the normal roster. Search can take up to two additional
+normal retries after a later-stage loss or below-target win. Set
+`--later-retries 0` for a single-attempt search. Held-out games always use
+one attempt per stage. Inspect `attempt` and `start_kind` in the stage record.
