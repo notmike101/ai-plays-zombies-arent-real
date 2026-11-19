@@ -345,6 +345,7 @@ def _slot(name, lvl, pl, counts, keys, i):
     return {'name': name, 'lvl': lvl, 'max_charges': mx, 'charges': mx,
             'unlock': _rule(counts, name, '_unlock_seconds'),
             'arrival': _rule(counts, name, '_arrival_seconds'),
+            'flight': _rule(counts, name, '_flight_seconds') if name=='Missile' else 0.,
             'pending': False, 'ready_t': 0.0, 'alive': False,
             'key': keys[i] if i < len(keys) else None}
 
@@ -575,7 +576,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     c = int(np.random.choice(np.flatnonzero(mc)))
                     ulp, clp = -math.log(mu.sum()), -math.log(mc.sum())
                 else:
-                    if getattr(net,'cast_timing',None) is not None or getattr(net,'missile_reserve',0.):
+                    if (getattr(net,'cast_timing',None) is not None or getattr(net,'missile_reserve',0.)
+                            or getattr(net,'missile_followup',0.)):
                         net.set_cast_targets(st, mu, mc, env.cw, env.ch)
                     if getattr(net,'special_probe',0.):
                         net.set_special_probe(st,env.cw,env.ch)
@@ -687,7 +689,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     # The stock receipt, not a sent keypress, proves a resource was spent.
                     if slot['charges'] < before_stock:
                         battle_actions['stock_decreased'] += 1
-                        slot['ready_t'] = env.game_state()['sim'] + slot['arrival']
+                        slot['last_cast_t'] = env.game_state()['sim']
+                        slot['ready_t'] = slot['last_cast_t'] + slot['arrival']
                         slot['pending'] = slot['arrival'] > 0
                     if slot['name'] == 'Heli':
                         slot['alive'] = bool(np.any(mechanics.reader.snapshot()['helicopters']['alive']))

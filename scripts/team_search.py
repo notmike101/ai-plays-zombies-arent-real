@@ -169,6 +169,8 @@ class TeamPolicy(tr.PolicyNet2):
         self.cast_timing = team.get('cast_timing')
         self.shelter_defense = team.get('shelter_defense',0.)
         self.missile_reserve = team.get('missile_reserve',0.)
+        self.missile_followup = team.get('missile_followup',0.)
+        self.missile_in_flight = False
         self.missile_charges = 0.
         self.occupied_shelter = False
         self.special_probe = team.get('special_probe',0.)
@@ -193,6 +195,7 @@ class TeamPolicy(tr.PolicyNet2):
     def set_cast_targets(self, st, tools, cells, width, height):
         self.cast_targets.zero_()
         self.shelter_perimeter.zero_()
+        self.missile_in_flight = False
         self.occupied_shelter = False
         self.missile_charges = 0.
         if st['planning'] or st.get('anchor') or st.get('dialog'):
@@ -217,9 +220,12 @@ class TeamPolicy(tr.PolicyNet2):
             else:
                 eligible &= inside
             self.cast_targets[row] = torch.from_numpy(eligible)
-        if self.missile_reserve and self.occupied_shelter and self.cast_targets[MISSILE_ROW].any():
-            self.missile_charges = next((slot['charges'] for slot in st.get('deck',[])
-                                         if slot['name']=='Missile'),0.)
+        if (self.missile_followup or self.missile_reserve) and self.cast_targets[MISSILE_ROW].any():
+            missile = next((slot for slot in st.get('deck',[]) if slot['name']=='Missile'),None)
+            if missile:
+                self.missile_in_flight = st['sim'] < missile.get('last_cast_t',-np.inf)+missile.get('flight',0.)
+                if self.occupied_shelter:
+                    self.missile_charges = missile['charges']
 
     def set_special_probe(self, st, width, height):
         self.special_tools = []
@@ -289,6 +295,8 @@ class TeamPolicy(tr.PolicyNet2):
                     cells[CASTS] += defense*self.cast_targets
                 best = demand.expand_as(self.cast_targets).masked_fill(~self.cast_targets,-torch.inf).amax(dim=-1)
                 tools[...,CASTS] += gain*torch.where(self.cast_targets.any(dim=-1), best.tanh(), 0.)
+            if self.missile_in_flight:
+                tools[...,MISSILE] -= self.missile_followup
             if self.missile_charges>0:
                 pressure = self.shelter_perimeter*(grid[1]/3).tanh()
                 legal_pressure = pressure*self.cast_targets[MISSILE_ROW]
@@ -432,6 +440,10 @@ def checkpoint_team(record,base):
             gain,threshold=obj['cast_timing']
             if not (0<=gain<=8 and 0<=threshold<=8):
                 raise ValueError('Invalid campaign cast timing')
+        if 'missile_followup' in obj:
+            numeric(obj['missile_followup'],())
+            if not 0<=obj['missile_followup']<=16:
+                raise ValueError('Invalid missile follow-up weight')
         if 'missile_reserve' in obj:
             numeric(obj['missile_reserve'],())
             if not 0<=obj['missile_reserve']<=8:
@@ -446,7 +458,7 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup'))
     battle(team)
     numeric(team['idle_bias'],())
     if not isinstance(team['plan'],list) or len(team['plan'])>64:raise ValueError('Invalid campaign plan')
@@ -458,7 +470,7 @@ def checkpoint_team(record,base):
         numeric(g['weights'],(5,))
     for k in ('later_layouts','stage_battle'):fields(team.get(k,{}),optional=('2','3','4','5'))
     for override in team.get('stage_battle',{}).values():
-        fields(override,optional=('battle','cast_bias','camera_pause','blocked_tool','cast_timing','shelter_defense','missile_reserve'))
+        fields(override,optional=('battle','cast_bias','camera_pause','blocked_tool','cast_timing','shelter_defense','missile_reserve','missile_followup'))
         battle(override)
     if 'garrison_relocation' in team:
         numeric(team['garrison_relocation'],(2,))
@@ -740,7 +752,10 @@ def main():
                 probe=next((cast_probes[k] for k in l1_ranked if k in cast_probes),None)
                 if generation%2==0:
                     defender=deepcopy(incumbent or leader)
-                    defender['missile_reserve']=float(rng.uniform(2,6))
+                    if generation%4==0:
+                        defender['missile_followup']=float(rng.uniform(6,14))
+                    else:
+                        defender['missile_reserve']=float(rng.uniform(2,6))
                     population.append(defender)
                 elif generation%4==1 and leader.get('layout'):
                     population.append(dict(deepcopy(leader),garrison_relocation=rng.integers(0,16,size=2).tolist()))

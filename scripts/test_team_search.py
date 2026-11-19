@@ -142,6 +142,27 @@ class SearchTests(unittest.TestCase):
         self.assertEqual([job[2] for job in before],[a,b,a,b])
         self.assertEqual([job[2] for job in after],[b,a,b,a])
 
+    def test_verified_missile_flight_changes_logits_without_masking_the_cast(self):
+        team=search.random_team(np.random.default_rng(7))
+        model=search.TeamPolicy(dict(team,missile_followup=10.))
+        slot=search.tr._slot('Missile',1,{},{
+            'missile_flight_seconds':'2.5','missile_unlock_seconds':'30'},['1'],0)
+        slot.update(charges=2,last_cast_t=31.)
+        st=dict(planning=False,sim=33.,deck=[slot],
+                playarea_boundary=[(0,0),(500,0),(500,1000),(0,1000)])
+        obs=torch.zeros(1,1,search.tr.NOBS)
+        tools,cells=search.tr.masks_for(st)
+        self.assertTrue(tools[search.MISSILE])
+        model.set_cast_targets(st,tools,cells,1920,1200)
+        self.assertTrue(model.missile_in_flight)
+        with torch.no_grad():
+            pending=model(obs)[0]
+            st['sim']=33.5
+            model.set_cast_targets(st,tools,cells,1920,1200)
+            self.assertFalse(model.missile_in_flight)
+            resolved=model(obs)[0]
+        self.assertAlmostEqual((resolved-pending).flatten()[search.MISSILE].item(),10.,places=5)
+
     def test_missile_reserve_depends_on_local_pressure_and_remaining_stock(self):
         team=search.random_team(np.random.default_rng(7))
         base=search.TeamPolicy(team)
