@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 23:44 Central. Audited two matched fresh L1 game logs for
+  safe-zone defense. inst14 (seed 1918897396) and inst17 (seed 3529359300)
+  started with 14.6% civilians inside zones. First logged breach points
+  lined up with the northern edge of the recorded refuge (local y about
+  1841.54) at 51.73 and 55.23 sim seconds. Neither spent battle stock;
+  early retry scores were 9.84% and 9.20%. Native wall_breach logs are
+  cell events and do not identify unique lost zones or track occupants.
+  Training was active. Audit did not change reward or policy.
 - 23:37 Central. Expanded seed 100851 from four to six concurrent
   L1 copies. Existing training still owns inst13–16 on CPUs 0–7, and supplemental
   trials inst17–18 (PIDs 45424 and 52500) are ready on CPUs 8–11. CPUs 12–23
