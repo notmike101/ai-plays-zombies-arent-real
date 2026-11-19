@@ -212,7 +212,7 @@ def score(row):
             float(row['saved_frac'] or 0.) if row['win'] else 0.,area/120.]
 
 
-def rollout(job, retries=0, start_stage=1, *, training=False, observe=False):
+def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, practice_retry=False):
     copy, weights, team, seed, *forecast_path = job
     forecast=None
     if forecast_path:
@@ -275,7 +275,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False):
                 if row['scenario']==row['board'].get('scenario_count'):break
                 stage+=1
                 attempt=0
-            elif (stage>1 or (training and row['win'])) and attempt<retries and row['end'] in ('aborted','lost','won'):
+            elif (stage>1 or (practice_retry and training and row['win'])) and attempt<retries and row['end'] in ('aborted','lost','won'):
                 attempt+=1
             else:
                 break
@@ -361,7 +361,9 @@ def restore_team(net,directory):
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False):
     if starts is None:starts=[1]*len(jobs)
     observed=next((j[0] for j in jobs if j[2]),None) if training else None
-    futures={pool.submit(rollout,job,retries,stage,training=training,observe=job[0]==observed):(job,stage)
+    practice_copy=next((j[0] for j,stage in zip(jobs,starts) if training and j[2] and stage==1),None)
+    futures={pool.submit(rollout,job,retries,stage,training=training,observe=job[0]==observed,
+                         practice_retry=job[0]==practice_copy):(job,stage)
              for job,stage in zip(jobs,starts,strict=True)}
     for future in as_completed(futures):
         job,stage=futures[future]
@@ -459,7 +461,7 @@ def main():
                 population[1]['refuge']=dict(scale=1.,aspect=float(rng.uniform(.7,1.5)),
                                              defense_weight=float(rng.uniform(.08,.22)))
         base=tr.policy_id(net)
-        view_revision='playable-overview-v1'
+        view_revision='playable-overview-v2'
         evidence={}
         if args.seed_from and (args.seed_from/'fitness.json').exists():
             ledger=json.loads((args.seed_from/'fitness.json').read_text())

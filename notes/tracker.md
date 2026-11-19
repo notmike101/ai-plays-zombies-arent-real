@@ -1,6 +1,18 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 21:45 Central. Supervisor recovered into seed 98851, four copies inst13–16
+  in analysis/coverage-team-fad86c1af0. First completed incumbent battle had
+  23/23 successful camera-fit checks, 9.73% at early abort. During deliberate
+  repeated pan commands, live samples still saw a cropped boundary, so the
+  next block also limits outward pan travel. On isolated inst12 in a real L1
+  battle, one outward pan was legal, a second was masked, and the entire map
+  remained visible. Vertical bounds after resting were 4.31–63.81% of the
+  window (analysis/coverage-pan-boundary-live.log). Test copy stopped.
+  Final prior-block pooled L1 result: 1/11 fresh qualifiers, mean 20.49%;
+  held-out attempts 9.78%, 10.00%, 25.39%, no qualifiers. The first two
+  sampled no cast despite 76/79 legal opportunities. Next block explores
+  cast preference alone and reserves only one L1 carry-practice slot.
 - 21:39 Central. The old selection block finished. Its selected variant
   scored zero qualifying wins on three fresh held-out L1 games (two early
   aborts and one below-target game win). An isolated inst12 live check moved

@@ -20,6 +20,18 @@ NONSPATIAL = set(KEY_ACTIONS)-{'pan_up','pan_left','pan_down','pan_right'} | {
     'zone_finish','zone_back','cancel_tool','undo'} | {'panel_'+name for name in PANEL_ACTIONS}
 
 
+def pan_room(projected,width,height):
+    if len(projected)<3:return {}
+    points=projected/np.array([width,height])
+    lo,hi=points.min(axis=0),points.max(axis=0)
+    # Allow close inspection when zoomed in, while keeping the playable area in frame.
+    top_left=np.array([.03,.025]);bottom_right=np.array([.97,.69])
+    keep=.95*np.minimum(hi-lo,bottom_right-top_left)
+    right,down=hi-top_left-keep
+    left,up=bottom_right-lo-keep
+    return dict(pan_left=left,pan_right=right,pan_up=up,pan_down=down)
+
+
 def extra_masks(st):
     masks=np.zeros((len(EXTRA_TOOLS),48),dtype=np.float32)
     if st.get('dialog'):
@@ -50,6 +62,7 @@ def extra_masks(st):
         elif name.startswith('select_') and name[7:] in SELECTORS:
             mask *= [point is not None for point in st['targets'][name[7:]]]
         elif name in ('corridor_wider','corridor_narrower'):enabled=planning
+        elif name.startswith('pan_'):enabled=st.get('pan_room',{}).get(name,1.)>.018
         elif name in ('zoom_in','zoom_out'):enabled=not st.get('corridor_armed',False)
         elif name=='arm_slot':
             enabled=planning;mask[:]=0;mask[:7]=[n!='-' for n in st['planning_roster']]
@@ -250,7 +263,9 @@ class Mechanics:
                 [e.scalar(rva,'<B') for rva in (0x667060,0x65d2e1,0x65d309)],
                 paused,speed,st['dialog'],
                 (active and not hold,active and hold,e.scalar(0x6651ec,'<f'))))
-        st['playarea_cells']=inside_polygon(centers(e.cw,e.ch),p(s['playarea']))
+        boundary=p(s['playarea'])
+        st['pan_room']=pan_room(boundary,e.cw,e.ch)
+        st['playarea_cells']=inside_polygon(centers(e.cw,e.ch),boundary)
         kinds=s['units']['kind'];defenders=(kinds>=2)&(kinds!=3)
         targets=dict(unit=s['units']['pos'][defenders],building=s['buildings']['center'],
             wall=(s['walls']['a']+s['walls']['b'])/2,gate=s['gates'],evac=s['evac']['a'],
@@ -323,6 +338,8 @@ class Mechanics:
             st.pop('anchor',None);st.pop('gesture_anchor',None);st.pop('gesture_point',None);return c.cancel()
         if name=='refund_selection':return c.refund(xy)
         if name=='undo':return c.undo()
+        if name.startswith('pan_'):
+            return c.key_action(name,pan_hold=float(np.clip(st['pan_room'][name]*.65,.01,.15)))
         if name in KEY_ACTIONS:return c.key_action(name)
         if name in ('zoom_in','zoom_out'):return c.zoom(1 if name=='zoom_in' else -1,xy)
         raise ValueError('Unimplemented mechanics action: '+name)

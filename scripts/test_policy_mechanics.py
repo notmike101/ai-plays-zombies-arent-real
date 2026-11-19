@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import numpy as np
 
 from native_state import WALL, EVAC, HELI, VEHICLE, MEDEVAC, PATCH, MOSH
-from policy_mechanics import observation, unit_names, nearest_per_cell, extra_masks, SELECTORS, Mechanics
+from policy_mechanics import observation, unit_names, nearest_per_cell, pan_room, extra_masks, SELECTORS, Mechanics
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, GLOBAL_LABELS, GRID_CHANNELS
 
 
@@ -30,6 +30,16 @@ def fixture():
 
 
 class MechanicsTests(unittest.TestCase):
+    def test_panning_toward_empty_space_stops_before_losing_the_playable_map(self):
+        shape=np.array([[30,-38],[70,-38],[70,25],[30,25]])
+        room=pan_room(shape,100,100)
+        self.assertLess(room['pan_down'],0)
+        self.assertGreater(room['pan_up'],0)
+        self.assertGreater(pan_room(shape+[0,42],100,100)['pan_down'],0)
+        zoomed=pan_room(shape*10-[450,0],100,100)
+        self.assertGreater(zoomed['pan_left'],0)
+        self.assertGreater(zoomed['pan_right'],0)
+
     def test_planning_picker_rejects_without_claiming_a_roster_change(self):
         from game_controls import PickerNavigationError
 

@@ -74,9 +74,7 @@ class Controls:
             elif max(abs(offset))>.028:
                 axis=int(np.argmax(abs(offset)))
                 name=(('pan_left','pan_right'),('pan_up','pan_down'))[axis][int(offset[axis]>0)]
-                vk,sc,_=KEY_ACTIONS[name]
-                e.vi.key_press(vk,sc=sc,hold=float(np.clip(abs(offset[axis])*.7,.01,.15)))
-                self.frames(2)
+                self.key_action(name,pan_hold=float(np.clip(abs(offset[axis])*.7,.01,.15)))
             else:return True
         return False
 
@@ -203,11 +201,11 @@ class Controls:
         self.frames()
         wait_until(lambda:not self.env.scalar(0x667868,'<B'),'dialog closed')
 
-    def key_action(self, name):
+    def key_action(self, name, *, pan_hold=.15):
         vk,sc,shift = KEY_ACTIONS[name]
         vi = self.env.vi
         if shift: vi.key_down(16,sc=42)
-        try: vi.key_press(vk,sc=sc,hold=.15 if name.startswith('pan_') else .05)
+        try: vi.key_press(vk,sc=sc,hold=pan_hold if name.startswith('pan_') else .05)
         finally:
             if shift: vi.key_up(16,sc=42)
         self.frames()

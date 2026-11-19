@@ -338,3 +338,5 @@ The episode controller fits the playable polygon into the world area above the H
 L1 parents are ranked solely on fresh L1 outcomes. A later-stage change must preserve all earlier decisions and beat its reference at the first changed stage. In standalone PPO, Boston L1 continues in the configured model file. An earned later stage starts with the current L1 weights once and its own fresh Adam optimizer. Subsequent updates and evaluation use the sibling checkpoint (e.g. nn_policy4.L2.pt). Local sidecars are required to resume those PPO specialists; the campaign search release carries the frozen GRU and stage strategy overrides. Historic L1 weights retain their original training history.
 
 Fresh L1 games with ten or more legal cast decisions and zero sampled casts can nominate a challenger with only its cast preference changed. Native legality masks still apply. Only game outcomes enter fitness.
+
+At most one fresh search copy per generation spends additional attempts on below-target L1 wins to reach later stages for practice. The others finish their fresh trial immediately. Pans shorten as the visible playable boundary approaches the HUD or window edge.

@@ -148,7 +148,7 @@ class SearchTests(unittest.TestCase):
                                                            saved_frac=None,win=False,bootstrap=0.)]
         with patch.object(search.zar_boot,'boot'),patch.object(search.zar_boot,'stop'), \
              patch.object(search.operator,'owned_copy'),patch.object(search.tr,'run_episode',side_effect=rows):
-            result=search.rollout(('inst14',{},None,10),2,training=True)
+            result=search.rollout(('inst14',{},None,10),2,training=True,practice_retry=True)
         self.assertEqual([(r['stage'],r['start_kind']) for r in result['levels']],
                          [(1,'fresh'),(1,'carry'),(2,'next_level')])
 
