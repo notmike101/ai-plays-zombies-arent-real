@@ -46,8 +46,7 @@ decoder in the browser. If streaming is unavailable, Game view falls back to
 the higher-resolution JPEG thumbnail every two seconds. Video and thumbnails
 run independently of decisions and do not appear in replay. Freezing the view
 holds the displayed frame and stops media requests.
-Campaign search publishes a primary and one standby stream per batch. The
-standby publishes up to once per second. Held-out workers use the lower rate.
+Campaign search publishes every worker. Secondary workers publish up to once per second. Held-out workers use the lower rate.
 
 On Windows, install the optional Graphics Capture dependencies into the
 ignored runtime directory. The repository's Python environment supplies
@@ -114,8 +113,8 @@ video whenever Game view is open.
   the scored sample count. Runs without a retained timestamp or official score
   are omitted. The latest run can still be recording outcomes.
   The search-run picker scopes the existing detailed charts and tables.
-  Learning loads when first opened and reloads when you choose another search
-  run or click **Refresh results**.
+  Learning refreshes every 30 seconds while visible, when the browser tab becomes visible,
+  when you choose another search run, and when you click **Refresh results**.
   Champion statistics use the search's fresh-board
   evidence. Raw trial counts can include repeats. Timeout snapshots are
   omitted from official save scores. Aborted readings appear as retry scores.
@@ -251,8 +250,7 @@ Automatic attachment stays on a healthy, fresh stream. It switches to another
 fresh, healthy stream when the selected stream disappears, reports an observer
 error, or goes 15 seconds without a sample. A paused game or slow inference can
 look stale. Streams older than 120 seconds are omitted. Manual selection holds
-the requested stream. Campaign search observes up to two workers per batch.
-If both go quiet, the observatory waits for the next instrumented worker.
+the requested stream. Campaign search observes each worker after its first policy sample.
 
 The browser holds one **server-sent events (SSE)** connection to `/api/events` using native `EventSource`; it does not poll. A disconnected connection automatically retries with a one-second retry interval. Mode/worker changes close the old connection; every new connection receives current topology. Idle updates arrive about once per second so sample age and connection health stay visible. The graph redraws only for new samples or view changes. A connected but stale worker is distinct from an offline server.
 

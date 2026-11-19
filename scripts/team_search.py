@@ -469,12 +469,10 @@ def restore_team(net,directory):
 
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False):
     if starts is None:starts=[1]*len(jobs)
-    observed = sorted(jobs, key=lambda job: not bool(job[2]))[:2]
-    rates = {job[0]: (.2 if training and index == 0 else 1.)
-             for index, job in enumerate(observed)}
+    primary = next((job for job in jobs if job[2]), jobs[0] if jobs else None)
     practice_copy=next((j[0] for j,stage in zip(jobs,starts) if training and j[2] and stage==1),None)
-    futures={pool.submit(rollout,job,retries,stage,training=training,observe=job[0] in rates,
-                         observer_interval=rates.get(job[0], .2),
+    futures={pool.submit(rollout,job,retries,stage,training=training,observe=True,
+                         observer_interval=.2 if training and job is primary else 1.,
                          practice_retry=job[0]==practice_copy,allow_progression=allow_progression):(job,stage)
              for job,stage in zip(jobs,starts,strict=True)}
     for future in as_completed(futures):

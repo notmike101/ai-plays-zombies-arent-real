@@ -151,8 +151,8 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   data. A stale stream can mean paused/idle inference; check worker activity and
   telemetry before diagnosing a hang. Auto-attach needs an instrumented worker's
   first decision, not merely a spawned game process.
-- Campaign search observes up to two workers per batch. Training keeps the
-  primary at up to 5 Hz and the standby at up to 1 Hz. Held-out observers use
+- Campaign search observes each worker in the batch. Training keeps the
+  primary at up to 5 Hz and other workers at up to 1 Hz. Held-out observers use
   up to 1 Hz. The team
   observer captures final combined tool/cell logits from the model return.
   Draw edges for the GRU and value head only, identify the team and forecast
