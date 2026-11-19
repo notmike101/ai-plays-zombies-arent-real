@@ -1,6 +1,12 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 00:13 Central. Automatic observatory attachment skips observer
+  errors if another fresh stream exists. Verified error and removal
+  handoffs with fixtures and preserved manual selection. Listener PID
+  49400 (create time 1795068792.149233), 51 visualizer tests passed.
+  Campaign training stayed active. Campaign search still normally publishes
+  one candidate at a time, so this change does not create a standby feed.
 - 2026-11-19 00:09 Central. Game view now delivers shared hardware H.264
   video on observatory PID 18652 (create time 1795068261.3722775). Chrome
   through the named tunnel displayed 960×600 video from inst13 PID 56912:

@@ -41,6 +41,22 @@ class FeedTests(unittest.TestCase):
         self.assertEqual(self.feed.state(now=120)['frame']['stream'], 'two')
         self.assertEqual(self.feed.state(now=140)['status'], 'stale')
 
+    def test_auto_attachment_skips_recent_observer_errors_and_manual_selection_stays(self):
+        self.write(frame('primary', 100))
+        self.assertEqual(self.feed.state(now=101)['frame']['stream'], 'primary')
+        self.write(dict(frame('primary', 102), error='capture failed'))
+        self.assertEqual(self.feed.state(now=102)['status'], 'error')
+        self.write(frame('standby', 103))
+        automatic = self.feed.state(now=103)
+        self.assertEqual(automatic['status'], 'live')
+        self.assertEqual(automatic['frame']['stream'], 'standby')
+        manual = self.feed.state(now=103, stream='primary')
+        self.assertEqual(manual['status'], 'error')
+        self.assertEqual(manual['frame']['stream'], 'primary')
+        (self.root / 'standby.json').unlink()
+        self.write(frame('next', 104))
+        self.assertEqual(self.feed.state(now=104)['frame']['stream'], 'next')
+
     def test_preview_is_never_live_and_missing_selection_does_not_switch(self):
         self.write(frame('preview', 100, True))
         self.assertEqual(self.feed.state(now=101)['status'], 'waiting')

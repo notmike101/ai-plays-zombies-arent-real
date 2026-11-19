@@ -148,9 +148,9 @@ class Feed:
             frames = [f for f in self.frames if bool(f.get('preview')) == preview]
             frames.sort(key=lambda f: (f['timestamp'], f['stream']))
             available = {f['stream']: f for f in frames}
-            fresh = [f for f in frames if now - f['timestamp'] <= FRESH_SECONDS]
+            fresh = [f for f in frames if 'error' not in f and now - f['timestamp'] <= FRESH_SECONDS]
             chosen = available.get(stream or self.active[preview])
-            if not stream and (chosen is None or now - chosen['timestamp'] > FRESH_SECONDS):
+            if not stream and (chosen is None or 'error' in chosen or now - chosen['timestamp'] > FRESH_SECONDS):
                 chosen = fresh[0] if fresh else chosen or (frames[-1] if frames else None)
                 self.active[preview] = chosen['stream'] if chosen else None
             streams = [{'id': f['stream'], 'game_pid': f.get('game_pid'),

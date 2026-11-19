@@ -229,7 +229,13 @@ The graph fills the window beneath a compact control bar. Click or tap a node to
 
 On mobile, pinch to zoom around your fingers and drag with one finger to pan. The +/− buttons also zoom; Fit restores the overview. Magnification reaches 12× so dense nodes and labels can be read on narrow screens. The mobile Inspector spans the available width and scrolls independently to expose all details, including in landscape. Tap Inspector again to close it. On desktop, the mouse wheel zooms around the cursor. Pause freezes only the view; inference continues. Dense graph labels appear as you zoom in.
 
-Automatic attachment stays on the selected fresh stream. After 15 seconds without a sample, it switches to another fresh stream if one exists; otherwise it labels the retained frame stale. A paused game or slow inference can therefore look stale without the process having crashed. Streams older than 120 seconds are omitted. Manual selection holds the requested stream rather than silently switching.
+Automatic attachment stays on a healthy, fresh stream. It switches to another
+fresh, healthy stream when the selected stream disappears, reports an observer
+error, or goes 15 seconds without a sample. A paused game or slow inference can
+look stale. Streams older than 120 seconds are omitted. Manual selection holds
+the requested stream. Campaign search usually observes one candidate per
+training generation, so automatic handoff needs another instrumented worker
+before it can resume live viewing.
 
 The browser holds one **server-sent events (SSE)** connection to `/api/events` using native `EventSource`; it does not poll. A disconnected connection automatically retries with a one-second retry interval. Mode/worker changes close the old connection; every new connection receives current topology. Idle updates arrive about once per second so sample age and connection health stay visible. The graph redraws only for new samples or view changes. A connected but stale worker is distinct from an offline server.
 
