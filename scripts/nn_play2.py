@@ -437,12 +437,18 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         env.validate_build()
         mechanics = Mechanics(env)
         env.discard_dump_states = True
+        allow_progression = options.get('allow_progression', False)
+        if not allow_progression and env.game_state()['phase'] == 'won':
+            raise ZAREnvError('Won board requires explicit campaign progression or a fresh L1 start')
         env.to_planning()
         initial = env.dump()
         if not initial or initial.get('where', {}).get('phase') != 'planning':
             raise ZAREnvError(f'No confirmed initial planning dump; state={env.game_state()}, '
                                   f'modal={env.scalar(0x667868, "<B")}, '
                                   f'menu={env.scalar(0x666870, "<B")}')
+        stage_text = initial['where'].get('stage')
+        if not allow_progression and stage_text and not stage_text.startswith('0 '):
+            raise ZAREnvError(f'Expected L1 in default training mode, got {stage_text}')
         header = env.start_log()
         logging = True
         session = header['session']
@@ -866,7 +872,8 @@ def run_batch(jobs):
         result = run_episode(job)
         results.append(result)
         board = result.get('board', {})
-        if 'err' in result or result.get('advance') and board.get('scenario') == board.get('scenario_count'):
+        if 'err' in result or result.get('advance') and (
+                not job[4].get('allow_progression') or board.get('scenario') == board.get('scenario_count')):
             break
     return results
 
@@ -915,6 +922,7 @@ def main():
     ap.add_argument('--eps', type=int, default=2)
     ap.add_argument('--rounds', type=int, default=6)
     ap.add_argument('--random', action='store_true')
+    ap.add_argument('--allow-progression', action='store_true', help='Explicitly allow Boston L2–L5')
     ap.add_argument('--model', default=MODEL)
     ap.add_argument('--history', default=HIST)
     ap.add_argument('--seed', type=int, default=0)
@@ -945,11 +953,13 @@ def main():
     run_id = uuid.uuid4().hex[:12]
     stage_models={1:(net,opt)}
     sd = net.state_dict()
-    with mp.Pool(len(pids)) as pool:
+    copy_count = len(pids)
+    with mp.Pool(copy_count) as pool:
         for rnd in range(a.rounds):
-            options = dict(seed=a.seed+rnd*len(pids)*a.eps, starts=starts,
+            options = dict(seed=a.seed+rnd*copy_count*a.eps, starts=starts,
                            greedy=a.mode == 'greedy', plan_steps=a.plan_steps,
-                           battle_seconds=a.battle_seconds,stage_model=os.path.abspath(a.model))
+                           battle_seconds=a.battle_seconds,stage_model=os.path.abspath(a.model),
+                           allow_progression=a.allow_progression)
             jobs = episode_batches(pids, sd, a.random, f'{run_id}/r{rnd}', a.eps, options)
             trajs = [tr for batch in pool.map(run_batch, jobs) for tr in batch]
             good = {}
@@ -970,6 +980,8 @@ def main():
                                checkpoint_id=policy_id(stage_models[stage][0]) if stage in stage_models and not a.random else checkpoint_id, schema=4, learning=learning_config())
                     fh.write(json.dumps(row) + '\n')
                     starts[tr['pid']] = 'next_level' if tr.get('advance') else 'carry'
+                    if not a.allow_progression and tr.get('advance'):
+                        pids.remove(tr['pid'])
                     if 'err' in tr:
                         print('ERR', tr['pid'], tr['err'][:120], flush=True)
                         continue
@@ -987,7 +999,10 @@ def main():
                                              **diagnostics))+'\n')
             if any('err' in tr for tr in trajs):
                 raise RuntimeError('Worker failed; stopped this run after preserving error history')
-            if any(tr.get('advance') and tr.get('board', {}).get('scenario') ==
+            if not pids:
+                print('All copies met the L1 target; ending run', flush=True)
+                break
+            if a.allow_progression and any(tr.get('advance') and tr.get('board', {}).get('scenario') ==
                    tr.get('board', {}).get('scenario_count') for tr in trajs):
                 print('Campaign completed; ending run for review', flush=True)
                 break

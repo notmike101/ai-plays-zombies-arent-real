@@ -275,8 +275,9 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
   seed and start kind. Fresh, carry and next-level scores must remain separate.
 - Report >=35% actual saved, plus minimum/mean and unknown/incomplete counts.
   A planning timeout with100% civilians alive is never a completed success.
-- Advance curriculum only after a confirmed game win with >=35% saved; retry
-  lower-score wins. CONTINUE is phase-gated; never blindly restart a won board.
+- Default training and evaluation are L1-only. Require explicit user direction
+  and `--allow-progression` for L2–L5. In opted-in campaigns, advance only after
+  a confirmed win with >=35% saved. CONTINUE is phase-gated.
 - Eight picker rows fit the calibrated1920x1200 loadout UI. Clamp scroll to N-8.
   A persisted roster name with native level0 is an empty card, not a plus button.
 - Dense graph layers use grids; labels remain accessible in the Inspector.

@@ -1,5 +1,7 @@
 # AI plays Zombies Aren't Real
 
+Training and evaluation default to Boston Level 1. Campaign progression requires the explicit `--allow-progression` flag.
+
 Train a GRU policy to save at least 35% of civilians consistently on every Boston
 level at normal difficulty. The model chooses all strategy; automation supplies
 observations and executes its actions. This objective has **not** been achieved.

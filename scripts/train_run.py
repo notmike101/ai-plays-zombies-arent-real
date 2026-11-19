@@ -28,6 +28,7 @@ def main():
     ap.add_argument('--random', action='store_true')
     ap.add_argument('--mode', choices=['train', 'play'], default='train')
     ap.add_argument('--start', choices=['fresh', 'continue'], default='fresh')
+    ap.add_argument('--allow-progression', action='store_true')
     ap.add_argument('--model', default=os.path.join(ROOT, 'sessions', 'nn_policy4.pt'))
     ap.add_argument('--history', default=os.path.join(ROOT, 'analysis', 'nn_hist4.jsonl'))
     ap.add_argument('--seed', type=int, default=0)
@@ -35,6 +36,8 @@ def main():
     ap.add_argument('--battle-seconds', type=float, default=560.)
     ap.add_argument('--log', default='')
     a = ap.parse_args()
+    if a.start == 'continue' and not a.allow_progression:
+        ap.error('--start continue requires --allow-progression')
     if not a.copies and not a.pids:
         ap.error('give --copies and/or --pids')
 
@@ -72,6 +75,8 @@ def main():
                '--battle-seconds', str(a.battle_seconds)]
         if owns and a.start == 'fresh':
             cmd += ['--fresh-pids', ','.join(map(str, owns))]
+        if a.allow_progression:
+            cmd.append('--allow-progression')
         if a.random:
             cmd.append('--random')
         log = a.log or os.path.join(ROOT, 'analysis',

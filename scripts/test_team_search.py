@@ -29,7 +29,7 @@ class SearchTests(unittest.TestCase):
             optimizer=torch.optim.Adam(net.parameters(),lr=3e-4)
             tr.save_checkpoint(net,optimizer,base,'base')
             before=base.read_bytes()
-            args=['nn_play2','train','--pids','123','--model',str(base),'--history',str(hist),'--rounds','2']
+            args=['nn_play2','train','--pids','123','--model',str(base),'--history',str(hist),'--rounds','2','--allow-progression']
             with patch('sys.argv',args),patch.object(tr.mp,'Pool') as pool,patch.object(tr,'ppo_update',side_effect=update),patch.object(tr,'valid_trajectory',return_value=True):
                 pool.return_value.__enter__.return_value.map.return_value=[[row(2)]]
                 tr.main()
@@ -97,6 +97,21 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(completed[0][2]['failed_stage'],2)
         self.assertEqual(completed[0][2]['error'],'no board')
         self.assertEqual(completed[1][2],{'copy':'a'})
+    def test_default_rollout_and_ppo_batch_stop_on_qualifying_l1_win(self):
+        row=dict(scenario=1,end='won',saved_frac=.43,advance=True,win=True,
+                 campaign='Boston',board_id='b',board={'scenario':1,'scenario_count':5},
+                 sim=100,trail=[],civ0=100,us=[],cs=[],log_started=True,battle_actions={})
+        with patch.object(search.zar_boot,'boot'),patch.object(search.zar_boot,'stop'),              patch.object(search.operator,'owned_copy'),patch.object(search.tr,'run_episode',return_value=row) as run:
+            result=search.rollout(('inst13',{},None,10))
+            self.assertEqual([level['stage'] for level in result['levels']],[1])
+            run.assert_called_once()
+            run.reset_mock()
+            jobs=[(123,{},False,'test',{})]*2
+            self.assertEqual(search.tr.run_batch(jobs),[row])
+            run.assert_called_once()
+            with self.assertRaisesRegex(ValueError,'explicit campaign progression'):
+                search.rollout(('inst13',{},None,10),start_stage=2)
+
     def test_later_retries_are_training_only_and_keep_stage_identity(self):
         for retries,count in [(0,2),(2,4)]:
             with self.subTest(retries=retries):
@@ -108,7 +123,7 @@ class SearchTests(unittest.TestCase):
                                                (2,'won',.36),(3,'timeout',None)]]
                 with patch.object(search.zar_boot,'boot'), patch.object(search.zar_boot,'stop'), \
                      patch.object(search.operator,'owned_copy'), patch.object(search.tr,'run_episode',side_effect=rows):
-                    result=search.rollout(('inst14',{},None,10),retries)
+                    result=search.rollout(('inst14',{},None,10),retries,allow_progression=True)
                 expected=[(1,0,'fresh'),(2,0,'next_level'),(2,1,'carry'),(3,0,'next_level')]
                 self.assertEqual([(r['stage'],r['attempt'],r['start_kind']) for r in result['levels']],expected[:count])
 
@@ -132,11 +147,11 @@ class SearchTests(unittest.TestCase):
              patch.object(search.operator,'owned_copy',return_value='copy'), patch.object(search.tr,'run_episode',return_value=row) as run:
             env=boot.return_value
             env.dump.return_value={'where':{'stage':'1 (stage 2 of 5)'}}
-            result=search.rollout(('inst14',{},None,10),start_stage=2)
+            result=search.rollout(('inst14',{},None,10),start_stage=2,allow_progression=True)
             self.assertEqual(result['levels'][0]['start_kind'],'continue')
             boot.assert_called_once_with('copy',('campaign','continue'),discard_dump_states=True)
             env.dump.return_value={'where':{'stage':'0 (stage 1 of 5)'}}
-            mismatch=search.rollout(('inst14',{},None,10),start_stage=2)
+            mismatch=search.rollout(('inst14',{},None,10),start_stage=2,allow_progression=True)
             self.assertIn('Expected live Boston stage 2',mismatch['error'])
             self.assertEqual(mismatch['failed_stage'],2)
             run.assert_called_once()
@@ -149,7 +164,7 @@ class SearchTests(unittest.TestCase):
              patch.object(search.operator,'owned_copy'),patch.object(search.tr,'run_episode',return_value=row):
             boot.return_value.dump.side_effect=RuntimeError('lost planning receipt')
             team={'later_layouts':{'2':[{'kind':'mortar','points':[[10,20]]}]}}
-            result=search.rollout(('inst13',{},team,10))
+            result=search.rollout(('inst13',{},team,10),allow_progression=True)
             self.assertEqual(result['levels'][0]['saved'],.43)
             self.assertEqual(result['failed_stage'],2)
             self.assertEqual(result['error'],'lost planning receipt')
@@ -173,7 +188,7 @@ class SearchTests(unittest.TestCase):
                                                            saved_frac=None,win=False,bootstrap=0.)]
         with patch.object(search.zar_boot,'boot'),patch.object(search.zar_boot,'stop'), \
              patch.object(search.operator,'owned_copy'),patch.object(search.tr,'run_episode',side_effect=rows):
-            result=search.rollout(('inst14',{},None,10),2,training=True,practice_retry=True)
+            result=search.rollout(('inst14',{},None,10),2,training=True,practice_retry=True,allow_progression=True)
         self.assertEqual([(r['stage'],r['start_kind']) for r in result['levels']],
                          [(1,'fresh'),(1,'carry'),(2,'next_level')])
 

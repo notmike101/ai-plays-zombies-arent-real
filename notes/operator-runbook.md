@@ -231,7 +231,14 @@ Keep the incumbent when evidence is insufficient. On cold start a block may
 produce only a provisional leader. Held-out outcomes gate promotion and never
 enter search fitness. A new holdout is needed for any later performance claim.
 
-When a copy actually reached a later stage during the preceding generation,
+**Default scope is L1.** A qualifying win counts and completes the copy's L1
+assignment. Campaign search, standalone PPO and the operator launcher require
+`--allow-progression` to enter L2–L5. With explicit authorization, append the
+flag to `team_search.py` or use `.\local.ps1 train --allow-progression`.
+`train_run.py --start continue` also requires this flag. The ordinary continuous
+supervisor runs L1 by default.
+
+In opted-in campaigns, when a copy reached a later stage during the preceding generation,
 some candidates can practice there via the game's CONTINUE menu. The trainer
 verifies the live stage before acting and records `start_stage` and
 `start_kind=continue`. More than half of each generation starts fresh.
@@ -348,6 +355,6 @@ L1 parents are ranked solely on fresh L1 outcomes. A later-stage change must pre
 
 Fresh L1 games with ten or more legal cast decisions and zero sampled casts can nominate a challenger with only its cast preference changed. Native legality masks still apply. Only game outcomes enter fitness.
 
-At most one fresh search copy per generation spends additional attempts on below-target L1 wins to reach later stages for practice. The others finish their fresh trial immediately. Pans shorten as the visible playable boundary approaches the HUD or window edge.
+With progression enabled, at most one fresh search copy per generation spends additional attempts on below-target L1 wins to reach later stages for practice. The others finish their fresh trial immediately. Pans shorten as the visible playable boundary approaches the HUD or window edge.
 
 Campaign search can test a cast-timing adjustment when a candidate repeatedly sees legal casts and samples none. The adjustment scores each available ability using its best eligible cell, zombie and civilian counts, and a candidate-specific gain and threshold. It changes ability choice while keeping the existing target preferences. The frozen incumbent remains the comparison arm. The local fitness ledger also retains known overdraft prices by stage, tool and geometry so a block with no L2 starts does not erase useful L2 preparation receipts.

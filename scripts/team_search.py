@@ -238,7 +238,9 @@ def score(row):
             float(row['saved_frac'] or 0.) if row['win'] else 0.,area/120.]
 
 
-def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, practice_retry=False):
+def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, practice_retry=False, allow_progression=False):
+    if start_stage>1 and not allow_progression:
+        raise ValueError('Later-stage starts require explicit campaign progression')
     copy, weights, team, seed, *forecast_path = job
     forecast=None
     if forecast_path:
@@ -279,7 +281,8 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, pra
             active={**team,**team.get('stage_battle',{}).get(str(stage),{})} if team else None
             start_kind='carry' if attempt else ('fresh' if stage==1 else
                                                 'continue' if stage==start_stage else 'next_level')
-            options=dict(start_kind=start_kind,seed=seed,record_layout=bool(layout),greedy=True)
+            options=dict(start_kind=start_kind,seed=seed,record_layout=bool(layout),greedy=True,
+                         allow_progression=allow_progression)
             if training:options['paused_seconds']=45
             row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}/a{attempt}',options),
                                  policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
@@ -302,10 +305,10 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, pra
                                score=score(row),sim=row['sim'],board=row['board_id'],
                                actions=list(zip(row['us'],row['cs'])),log_started=row['log_started']))
             if row['advance']:
-                if row['scenario']==row['board'].get('scenario_count'):break
+                if not allow_progression or row['scenario']==row['board'].get('scenario_count'):break
                 stage+=1
                 attempt=0
-            elif (stage>1 or (practice_retry and training and row['win'])) and attempt<retries and row['end'] in ('aborted','lost','won'):
+            elif allow_progression and (stage>1 or (practice_retry and training and row['win'])) and attempt<retries and row['end'] in ('aborted','lost','won'):
                 attempt+=1
             else:
                 break
@@ -393,12 +396,12 @@ def restore_team(net,directory):
     return checkpoint_team(record,tr.policy_id(net))['team']
 
 
-def completed_rollouts(pool,jobs,starts=None,retries=0,training=False):
+def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False):
     if starts is None:starts=[1]*len(jobs)
     observed=next((j[0] for j in jobs if j[2]),None) if training else None
     practice_copy=next((j[0] for j,stage in zip(jobs,starts) if training and j[2] and stage==1),None)
     futures={pool.submit(rollout,job,retries,stage,training=training,observe=job[0]==observed,
-                         practice_retry=job[0]==practice_copy):(job,stage)
+                         practice_retry=job[0]==practice_copy,allow_progression=allow_progression):(job,stage)
              for job,stage in zip(jobs,starts,strict=True)}
     for future in as_completed(futures):
         job,stage=futures[future]
@@ -438,6 +441,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--copies',nargs='+',required=True)
     parser.add_argument('--generations',type=int,default=10)
+    parser.add_argument('--allow-progression',action='store_true',help='Explicitly allow Boston L2–L5')
     parser.add_argument('--seed',type=int,default=92851)
     parser.add_argument('--stage-retries','--later-retries',dest='later_retries',type=int,default=2,
                         help='Training retries on later stages and below-target first-stage wins')
@@ -541,7 +545,7 @@ def main():
                     for i,copy in enumerate(copies):
                         job=(copy,weights,contender,args.seed+swap*len(copies)+i//2)
                         jobs.append(job+(args.compare_forecast,) if (i+swap)%2 else job)
-                    for job,_,result in completed_rollouts(pool,jobs):
+                    for job,_,result in completed_rollouts(pool,jobs,allow_progression=args.allow_progression):
                         result.update(cnn=len(job)==5,team_id=team_id(contender))
                         with (directory/'forecast-comparison.jsonl').open('a') as f:
                             f.write(json.dumps(result)+'\n')
@@ -564,7 +568,7 @@ def main():
                 affordable=[]
                 cast_probes={}
                 valid_candidates=0
-                for job,start_stage,result in completed_rollouts(pool,jobs,starts,args.later_retries,training=True):
+                for job,start_stage,result in completed_rollouts(pool,jobs,starts,args.later_retries,training=True,allow_progression=args.allow_progression):
                     team=job[2]
                     key=team_id(team) if team else 'control'
                     result.update(view_revision=view_revision,generation=generation,team_id=key,team=team,start_stage=start_stage)
@@ -632,17 +636,19 @@ def main():
                     child=offspring(archive[key],leader,rng,stage=stage)
                     population.append(budget_candidate(child,[],prices) or child)
             # Frozen arms on fresh boards. The game chooses its own outbreak seeds.
-            distinct=[archive[k] for k in ranked if archive[k]!=prior]
+            distinct=[archive[k] for k in ranked if archive[k]!=prior and
+                      (args.allow_progression or prior is None or
+                       fitness.prefix_id(archive[k],1)!=fitness.prefix_id(prior,1))]
             qualified=[t for t in distinct if fitness.promote(evidence,t,prior) is t]
             challenger=next(iter(qualified or distinct),leader)
-            stage=next((i for i in range(1,6) if prior is None or
+            stage=next((i for i in range(1,6 if args.allow_progression else 2) if prior is None or
                         fitness.prefix_id(challenger,i)!=fitness.prefix_id(prior,i)),1)
             jobs=[(copy,weights,challenger if i%2==0 else prior,
                    args.seed+(args.generations+1)*len(copies)+i//2) for i,copy in enumerate(copies)]
             evaluation=[]
             arms={copy:('extra' if i>=2*(len(copies)//2) else 'candidate' if i%2==0 else 'incumbent' if prior else 'gru')
                   for i,copy in enumerate(copies)}
-            for job,_,result in completed_rollouts(pool,jobs):
+            for job,_,result in completed_rollouts(pool,jobs,allow_progression=args.allow_progression):
                 result.update(arm=arms[job[0]],team_id=team_id(job[2]) if job[2] else 'control')
                 evaluation.append(result)
                 with (directory/'holdout.jsonl').open('a') as f:

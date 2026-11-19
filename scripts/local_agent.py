@@ -263,6 +263,8 @@ def train(args):
         command = [sys.executable, '-B', str(Path(__file__).resolve()), 'train',
                    '--foreground', '--copy', args.copy, '--rounds', str(args.rounds),
                    '--seed', str(args.seed)]
+        if getattr(args, 'allow_progression', False):
+            command.append('--allow-progression')
         if episodes != 2:
             command.extend(['--episodes-per-copy', str(episodes)])
         for copy in extra_copies:
@@ -281,6 +283,8 @@ def train(args):
                    '--copies', *copies, '--eps', str(episodes), '--rounds', str(args.rounds),
                    '--seed', str(args.seed), '--start', 'fresh', '--model', str(MODEL),
                    '--history', str(HISTORY), '--log', str(ROOT/f'analysis/nn3_{stamp}.log')]
+        if getattr(args, 'allow_progression', False):
+            command.append('--allow-progression')
         print(json.dumps(dict(status='launching', command=command)), flush=True)
         rc = subprocess.call(command, cwd=ROOT)
         return dict(ok=rc == 0, status='finished', returncode=rc)
@@ -364,6 +368,7 @@ def main():
     parser.add_argument('--episodes-per-copy', type=int, default=2,
                         help='Sequential episodes per game per update (default: 2)')
     parser.add_argument('--rounds', type=int, default=6)
+    parser.add_argument('--allow-progression', action='store_true', help='Explicitly allow Boston L2–L5')
     parser.add_argument('--seed', type=int, default=20261140)
     parser.add_argument('--foreground', action='store_true', help='Keep training attached to this terminal')
     parser.add_argument('--port', type=int, default=8765)
