@@ -1,6 +1,12 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 00:51 Central. Deployed the active-worker diagram on
+  observatory PID 10284 (create time 1795071053.233222). Public Chrome
+  displayed six game nodes and played inst13 and inst14 simultaneously
+  in separate viewers. Verified add/remove/automatic selection with SSE
+  fixtures, mobile and keyboard selection in Chrome, and 54 visualizer
+  tests in the deployed checkout. Campaign training stayed active.
 - 2026-11-19 00:37 Central. Deployed game-only video fallback for automatic
   observatory attachment on listener 59624 (create time 1795070198.3777268).
   A public Chrome check rendered 960×600 live video for verified inst15
