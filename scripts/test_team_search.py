@@ -9,6 +9,23 @@ import team_search as search
 
 
 class SearchTests(unittest.TestCase):
+    def test_experiment_options_and_capture_are_opt_in(self):
+        row = dict(scenario=1, end='won', saved_frac=.43, advance=True, win=True,
+                   campaign='Boston', board_id='b', board={'scenario': 1}, sim=100,
+                   trail=[], civ0=100, us=[], cs=[], log_started=1, battle_actions={},
+                   shadow={'session': 1, 'frames': [], 'casts': []})
+        with patch.object(search.zar_boot, 'boot'), patch.object(search.zar_boot, 'stop'), \
+                patch.object(search.operator, 'owned_copy'), \
+                patch.object(search.tr, 'run_episode', return_value=row) as run:
+            regular = search.rollout(('inst13', {}, None, 10))
+            self.assertNotIn('shadow', regular['levels'][0])
+            self.assertNotIn('fixed_speed', run.call_args.args[0][4])
+            experiment = search.rollout(('inst13', {}, None, 10),
+                                        fixed_speed='speed_2', capture_shadow=True)
+        self.assertEqual(run.call_args.args[0][4]['fixed_speed'], 'speed_2')
+        self.assertTrue(run.call_args.args[0][4]['capture_shadow'])
+        self.assertEqual(experiment['levels'][0]['shadow'], row['shadow'])
+
     def test_failed_boot_still_records_worker_lifetime(self):
         with patch.object(search.operator, 'owned_copy'), patch.object(
             search.zar_boot, 'boot', side_effect=RuntimeError('no board')

@@ -32,7 +32,7 @@ try:
 except ImportError:
     Observer = None
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, extra_cell_label
-from policy_mechanics import Mechanics, PLACEMENTS, extra_masks
+from policy_mechanics import Mechanics, PLACEMENTS, SPEED_TICKS, extra_masks
 MODEL = os.path.join(ROOT, 'sessions', 'nn_policy4.pt')
 HIST = os.path.join(ROOT, 'analysis', 'nn_hist4.jsonl')
 NOBS, HID = 332+len(EXTRA_LABELS), 128
@@ -491,7 +491,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             'plan': [line for line in initial.get('_text', '').splitlines() if line.startswith('board ')]},
             sort_keys=True).encode()).hexdigest()[:16]
         keys = load_bind_keys(env)
-        mechanics.controls.key_action('speed_1')
+        fixed_speed = options.get('fixed_speed')
+        speed_action = fixed_speed or 'speed_1'
+        mechanics.controls.key_action(speed_action)
         o = env.obs()
         civ0 = max(o['civ'], 1)
         m0 = o['money']
@@ -521,6 +523,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         end = None
         nbuy = 0
         battle_actions = dict(decisions=0, cast_available=0, cast_sampled=0, stock_decreased=0)
+        shadow = dict(frames=[], casts=[]) if options.get('capture_shadow') else None
         outside_actions = 0
         outside_targets = {}
         special_activations = {}
@@ -562,12 +565,22 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     o=env.obs()
                     continue
             mechanics.refresh(st)
+            if shadow is not None and state['phase'] == 'playing' and not state['paused']:
+                frames = shadow['frames']
+                if len(frames) < 2048 and (not frames or state['sim'] >= frames[-1]['sim'] + .25):
+                    frames.append(dict(sim=state['sim'], camera=list(st['native']['camera']),
+                                       grid=st['grid'][:4].tolist(), civilians=o['civ'], zombies=o['zomb']))
             if not st['planning'] and rows['rews']:
                 rows['rews'][-1] += st['shelter'].observe(st.get('native'),st['sim'])
             blobs = []
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
             update_outside_retries(st,env.cw,env.ch)
             mu, mc = masks_for(st)
+            if fixed_speed:
+                for name in SPEED_TICKS:
+                    mu[TOOLS.index(name)] = 0
+                if state['phase'] == 'playing' and state['mult'] != SPEED_TICKS[fixed_speed]:
+                    raise ZAREnvError(f'Expected {fixed_speed}, observed native speed {state["mult"]}')
             x = torch.tensor([[f]], dtype=torch.float32)
             with torch.no_grad():
                 if net is None:
@@ -690,6 +703,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     if slot['charges'] < before_stock:
                         battle_actions['stock_decreased'] += 1
                         slot['last_cast_t'] = env.game_state()['sim']
+                        if shadow is not None and len(shadow['casts']) < 512:
+                            shadow['casts'].append(dict(tool=TOOLS[u], cell=c,
+                                                       sim=slot['last_cast_t'], spent=before_stock-slot['charges']))
                         slot['ready_t'] = slot['last_cast_t'] + slot['arrival']
                         slot['pending'] = slot['arrival'] > 0
                     if slot['name'] == 'Heli':
@@ -777,6 +793,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             env.retry()
         if options.get('record_layout'):
             rows['layout_text']='\n'.join(line for line in initial['_text'].splitlines() if line.startswith('board '))
+        if shadow is not None:
+            rows['shadow'] = dict(shadow, session=header['wall'], native_footer=footer is not None)
         return dict(rows, level=tag, pid=pid, win=end == 'won', advance=advance, end=end,
                     saved_frac=saved if end != 'timeout' else None,
                     observed_saved_frac=saved, timeout_phase=state['phase'] if end == 'timeout' else None,
