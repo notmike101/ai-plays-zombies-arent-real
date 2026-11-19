@@ -1,6 +1,15 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — sustained comparison complete, production GRU resumed)
+- 18:50 Central: production launch seed 20264050, eight games, four rounds,
+  analysis/coverage-supervise-credit.ps1 and operator log
+  analysis/nn3_operator_20261118-184409-875eb8.log. Supervisor recognizes
+  isolated UI-frame timeouts and backs off worker count. Verify current PIDs.
+  Revision 3 (96cd441) gives planning the full measured return. The delayed-
+  outcome regression failed on revision 2 and passed on revision 3; 146 script
+  tests passed. Original schema-4 policy/Adam resumed. First live update:
+  eight early retries, 2,307 battle decisions, 57 with a cast available, 22
+  cast actions including gesture starts, four confirmed stock decreases. Zero wins.
 - At 17:27 Central the eight-copy production supervisor resumed (operator log
   analysis/nn3_operator_20261118-172747-0cddf2.log). Recheck live ownership.
 - Sustained outcome: 32 training episodes per arm, eight PPO updates, then 16
