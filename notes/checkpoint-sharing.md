@@ -1,11 +1,14 @@
 # Checkpoint sharing and restore
 
 The user authorized GitHub Releases every six hours, only for changed checkpoints.
-The active local Codex heartbeat is **Share ZAR checkpoints**, ID
+The local Codex heartbeat is **Share ZAR checkpoints**, ID
 `share-zar-checkpoints`. It operates while this computer/Codex local automation
 environment is available; GitHub does not reach into this computer. A clone does
 not install that schedule. Other operators can run the same command manually or
 arrange their own explicitly authorized schedule.
+At the November 18 evening check, the local heartbeat was paused. A manual
+publication succeeded. Check the automation's actual state before relying
+on unattended publication.
 
 Configure `[sharing]` in ignored `zar.local.toml` using `zar.example.toml`:
 repository=`OWNER/REPO`, identity_helper=the installed GitHub App identity helper.
@@ -55,6 +58,12 @@ Compatible schema4 snapshot (2026-11-17):
 It contains policy c30d8dd4df23b6ce and Adam after a completed update; its batch
 ended in planning timeouts, not wins. Schema3 releases are incompatible with
 current4. Prefer a newer verified schema4 snapshot when one is available.
+
+The [first team-bearing release](https://github.com/notmike101/ai-plays-zombies-arent-real/releases/tag/checkpoint-ce43be030aab16a5)
+contains schema4 GRU `8a691469a829158d` and campaign team
+`2f70a627a7be4d51`. The publisher downloaded and verified the assets.
+Local restore reproduced both identities. This candidate cleared L1 at
+40.35% in one training trial and timed out in L2 preparation.
 
 ## Restore in an idle checkout
 

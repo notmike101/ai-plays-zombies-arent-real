@@ -1,6 +1,21 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- At 21:18 Central, six owned copies inst13–18 were in generation 2 of
+  analysis/coverage-team-d18fd6a8de (supervisor log analysis/coverage-stage-search-96851.log).
+  The latest selected team 2f70a627a7be4d51 won L1 at 40.35% and timed out
+  in L2 preparation. The roster picker and negative final preparation budget
+  remain the observed L2 failure modes. The budget-aware alternative is being
+  evaluated. New search processes share measured prices across proposals.
+  One adaptive refuge predicted 14.84% sheltered; the game logged 14.6%.
+  Its three L1 wins were 16.94%, 23.27%, 36.75% (last two on retries).
+- Published [checkpoint-ce43be030aab16a5](https://github.com/notmike101/ai-plays-zombies-arent-real/releases/tag/checkpoint-ce43be030aab16a5).
+  Verified remote bytes and local restore of GRU 8a691469a829158d plus team
+  2f70a627a7be4d51. The local six-hour sharing heartbeat was paused when
+  checked. This publication was run manually under the existing authorization.
+  New campaign processes also observe one candidate per generation. Synthetic
+  SSE/reconnect, WebGPU/Canvas and mobile tests passed; verify the live
+  composite stream at the next supervisor launch.
 - At 20:20 Central, four copies (inst13–16) were training stage-specific
   layouts in analysis/coverage-team-674d66ed24. Check the operator for live
   PIDs. The ongoing supervisor is analysis/coverage-campaign-supervisor.ps1
