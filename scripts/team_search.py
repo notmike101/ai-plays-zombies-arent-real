@@ -78,8 +78,7 @@ def cast_candidate(trial,rng):
     actions=first.get('battle_actions',{})
     if actions.get('cast_available',0)<10 or actions.get('cast_sampled')!=0:return None
     child=deepcopy(trial['team'])
-    shift=rng.uniform(2,7)
-    child['cast_bias']=(np.asarray(child['cast_bias'])+shift).tolist()
+    child['cast_timing']=[float(rng.uniform(2,7)),float(rng.uniform(.5,3.))]
     return child
 
 
@@ -159,6 +158,8 @@ class TeamPolicy(tr.PolicyNet2):
         self.coords = torch.arange(tr.NC)
         self.battle = torch.tensor(team['battle'])
         self.bias = torch.tensor(team['cast_bias'])
+        self.cast_timing = team.get('cast_timing')
+        self.cast_targets = torch.zeros((len(CASTS),tr.NC),dtype=torch.bool)
         self.camera_pause=torch.tensor(team.get('camera_pause',[0.]*6))
         self.predict = None if forecast is None else forecast.forward
         self.campaign_team_id=team_id(team)
@@ -170,6 +171,26 @@ class TeamPolicy(tr.PolicyNet2):
                 digest.update(parameter.detach().cpu().numpy().tobytes())
                 self.campaign_forecast_parameters+=parameter.numel()
             self.campaign_forecast_id=digest.hexdigest()[:16]
+
+    def set_cast_targets(self, st, tools, cells, width, height):
+        self.cast_targets.zero_()
+        if st['planning'] or st.get('anchor') or st.get('dialog'):
+            return
+        boundary = st.get('playarea_boundary')
+        if boundary is None:
+            return
+        centers = [tr.cell_of_px(cell,width,height) for cell in range(tr.NC)]
+        inside = tr.inside_polygon(centers,boundary)
+        for row,tool in enumerate(CASTS):
+            if not tools[tool]:
+                continue
+            eligible = tr.cell_mask(st,tool,cells).astype(bool)
+            if tool in st.get('battle_targets',{}):
+                points = [tr.battle_point(st,tool,cell,width,height) for cell in range(tr.NC)]
+                eligible &= tr.inside_polygon(points,boundary)
+            else:
+                eligible &= inside
+            self.cast_targets[row] = torch.from_numpy(eligible)
 
     def forward(self, x, h=None):
         tools, cells, value, h = super().forward(x, h)
@@ -195,6 +216,11 @@ class TeamPolicy(tr.PolicyNet2):
                 future=self.predict(grid[:3].reshape(1,3,6,8)).clamp_min(0).reshape(2,tr.NC)
                 grid=torch.cat((future,grid[2:]))
             tools[..., CASTS] += self.bias
+            if self.cast_timing is not None:
+                gain, threshold = self.cast_timing
+                demand = grid[1] - .75*grid[0] - threshold
+                best = demand.expand_as(self.cast_targets).masked_fill(~self.cast_targets,-torch.inf).amax(dim=-1)
+                tools[...,CASTS] += gain*torch.where(self.cast_targets.any(dim=-1), best.tanh(), 0.)
             tools[...,tr.TOOLS.index('wait')] += self.team['idle_bias']
             cells[CASTS] += self.battle @ grid
         return tools, cells.reshape(1,1,-1), value, h
@@ -313,9 +339,14 @@ def checkpoint_team(record,base):
     def battle(obj):
         for k,shape in [('battle',(len(CASTS),5)),('cast_bias',(len(CASTS),)),('camera_pause',(6,))]:
             if k in obj:numeric(obj[k],shape)
+        if 'cast_timing' in obj:
+            numeric(obj['cast_timing'],(2,))
+            gain,threshold=obj['cast_timing']
+            if not (0<=gain<=8 and 0<=threshold<=8):
+                raise ValueError('Invalid campaign cast timing')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing'))
     battle(team)
     numeric(team['idle_bias'],())
     if not isinstance(team['plan'],list) or len(team['plan'])>64:raise ValueError('Invalid campaign plan')
@@ -327,7 +358,7 @@ def checkpoint_team(record,base):
         numeric(g['weights'],(5,))
     for k in ('later_layouts','stage_battle'):fields(team.get(k,{}),optional=('2','3','4','5'))
     for override in team.get('stage_battle',{}).values():
-        fields(override,optional=('battle','cast_bias','camera_pause','blocked_tool'))
+        fields(override,optional=('battle','cast_bias','camera_pause','blocked_tool','cast_timing'))
         battle(override)
     if 'refuge' in team:
         fields(team['refuge'],('scale','aspect','defense_weight'))
@@ -381,7 +412,8 @@ def budget_candidate(team,levels,prices=None):
     if prices is None:prices={}
     layouts={'1':team.get('layout',[]),**team.get('later_layouts',{})}
     def key(stage,action):
-        return (stage,action['kind'],tuple(tuple(p) for p in action['points']))
+        points = [[float(x),float(y)] for x,y in action['points']]
+        return json.dumps([stage,action['kind'],points],separators=(',',':'))
     for stage in levels:
         for receipt in stage.get('layout_receipts',[]):
             if receipt.get('after',0)>=0 or receipt['before']<=0:continue
@@ -467,11 +499,12 @@ def main():
         base=tr.policy_id(net)
         view_revision='playable-overview-v2-bounded-targets'
         evidence={}
+        prices={}
         if args.seed_from and (args.seed_from/'fitness.json').exists():
             ledger=json.loads((args.seed_from/'fitness.json').read_text())
             if ledger['base']!=base:raise ValueError('Campaign fitness base mismatch')
             if ledger.get('view_revision')==view_revision:evidence=ledger['evidence']
-        prices={}
+            prices=ledger.get('layout_prices',{})
         cast_probe=None
         if args.seed_from and not args.compare_forecast and (args.seed_from/'trials.jsonl').is_file():
             best_budget=None
@@ -489,11 +522,11 @@ def main():
                 population[i]=budget_candidate(population[i],[],prices) or population[i]
         if prior and not args.compare_forecast:
             population[1]=l1_candidate(prior,rng)
-            if cast_probe:population[-1]=cast_probe
             previous=args.seed_from/'provisional.json'
             if previous.is_file():
                 saved=checkpoint_team(json.loads(previous.read_text()),base)['team']
                 if saved!=prior:population[-1]=saved
+            if cast_probe:population[1]=cast_probe
         archive={}
         deepest={}
         incumbent=prior
@@ -568,7 +601,7 @@ def main():
                 leader=archive[l1_ranked[0]]
                 report=fitness.stats(evidence,leader,1)
                 print('fresh L1 leader',team_id(leader),report,flush=True)
-                for filename,data in [('fitness',dict(base=base,view_revision=view_revision,evidence=evidence)),
+                for filename,data in [('fitness',dict(base=base,view_revision=view_revision,evidence=evidence,layout_prices=prices)),
                                       ('provisional',dict(team=leader,team_id=team_id(leader),base=base))]:
                     temp=directory/(filename+'.tmp')
                     temp.write_text(json.dumps(data))

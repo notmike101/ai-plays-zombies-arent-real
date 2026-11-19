@@ -531,6 +531,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     c = int(np.random.choice(np.flatnonzero(mc)))
                     ulp, clp = -math.log(mu.sum()), -math.log(mc.sum())
                 else:
+                    if getattr(net, 'cast_timing', None) is not None:
+                        net.set_cast_targets(st, mu, mc, env.cw, env.ch)
                     lu, lc, _, h = net(x, h)
                     du = torch.distributions.Categorical(logits=lu.flatten().masked_fill(torch.tensor(mu == 0), -1e9))
                     u = int(du.probs.argmax() if options.get('greedy') else du.sample())

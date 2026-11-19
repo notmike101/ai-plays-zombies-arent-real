@@ -45,13 +45,38 @@ class SearchTests(unittest.TestCase):
         first=dict(stage=1,start_kind='fresh',battle_actions=dict(cast_available=16,cast_sampled=0))
         trial=dict(team=team,levels=[first])
         child=search.cast_candidate(trial,rng)
-        self.assertTrue(np.all(np.asarray(child['cast_bias'])>team['cast_bias']))
-        child['cast_bias']=team['cast_bias']
+        self.assertGreater(child.pop('cast_timing')[0],0)
         self.assertEqual(team,child)
         first['start_kind']='carry'
         self.assertIsNone(search.cast_candidate(trial,rng))
         first.update(start_kind='next_level',stage=2)
         self.assertIsNone(search.cast_candidate(trial,rng))
+
+    def test_contextual_cast_timing_responds_only_to_legal_cells(self):
+        team=search.random_team(np.random.default_rng(7))
+        base=search.TeamPolicy(team)
+        model=search.TeamPolicy(dict(team,cast_timing=[4.,1.]))
+        model.load_state_dict(base.state_dict())
+        tool=search.tr.ABILITY_U['Missile']
+        tools=np.zeros(search.tr.NU)
+        tools[tool]=1
+        st=dict(planning=False,playarea_boundary=[(0,0),(500,0),(500,1000),(0,1000)])
+        x=torch.zeros(1,1,search.tr.NOBS)
+        zombies=search.GRID_START+search.tr.NC
+        x[...,zombies+7]=8.  # Dense crowd beyond the playable boundary.
+        model.set_cast_targets(st,tools,np.ones(search.tr.NC),1920,1200)
+        with torch.no_grad():
+            def adjustment():
+                return (model(x)[0]-base(x)[0]).flatten()
+            low=adjustment()
+            self.assertLess(low[tool],0.)
+            self.assertEqual(low[search.tr.ABILITY_U['Nuke']],0.)
+            x[...,zombies]=5.
+            self.assertGreater(adjustment()[tool],0.)
+            x[...,search.GRID_START]=8.
+            self.assertLess(adjustment()[tool],0.)
+            model.set_cast_targets(dict(st,anchor=(tool,0)),tools,np.ones(search.tr.NC),1920,1200)
+            self.assertEqual(adjustment()[tool],0.)
 
     def test_refuge_size_trial_keeps_other_decisions_fixed(self):
         parent=dict(refuge=dict(scale=1.,aspect=.8,defense_weight=.16),plan=[1])
@@ -243,6 +268,7 @@ class SearchTests(unittest.TestCase):
         prices={}
         search.budget_candidate(parent,[dict(stage=2,layout_receipts=[dict(kind='zone',before=20,after=-80)])],prices)
         team={'layout':[action],'later_layouts':{'2':[dict(kind='wall',points=[[0,0],[2,0]]),action]}}
+        prices=search.json.loads(search.json.dumps(prices))
         child=search.budget_candidate(team,[],prices)
         self.assertEqual(child['later_layouts']['2'][1]['observed_cost'],100)
         self.assertNotIn('observed_cost',child['layout'][0])

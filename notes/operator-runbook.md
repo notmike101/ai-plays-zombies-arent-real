@@ -349,3 +349,5 @@ L1 parents are ranked solely on fresh L1 outcomes. A later-stage change must pre
 Fresh L1 games with ten or more legal cast decisions and zero sampled casts can nominate a challenger with only its cast preference changed. Native legality masks still apply. Only game outcomes enter fitness.
 
 At most one fresh search copy per generation spends additional attempts on below-target L1 wins to reach later stages for practice. The others finish their fresh trial immediately. Pans shorten as the visible playable boundary approaches the HUD or window edge.
+
+Campaign search can test a cast-timing adjustment when a candidate repeatedly sees legal casts and samples none. The adjustment scores each available ability using its best eligible cell, zombie and civilian counts, and a candidate-specific gain and threshold. It changes ability choice while keeping the existing target preferences. The frozen incumbent remains the comparison arm. The local fitness ledger also retains known overdraft prices by stage, tool and geometry so a block with no L2 starts does not erase useful L2 preparation receipts.

@@ -370,3 +370,5 @@ deployment, inspect one fresh REAL worker frame (`visualizer/runtime/<pid>-*.jso
 Pool fresh uninterrupted trials by frozen GRU and stage-policy prefix. Deduplicate native outbreak seeds. Keep carry and CONTINUE for practice. Preserve the incumbent until a challenger qualifies repeatedly and beats it on fresh held-out campaigns. Report counts and mean saved alongside the best score. See notes/operator-runbook.md.
 
 Keep L1 parent selection and mutations independent of later-stage scores. Later-stage search overrides and PPO optimizers are stage-specific. Native playable-boundary camera framing applies to all episode modes. Preserve deliberate pan/zoom excursions, open dialogs and incomplete gestures. Re-evaluate policies under the same camera revision before comparing results.
+
+Keep cast-timing proposals separate from target preferences in campaign comparisons. The timing feature uses legal, playable targets and the current civilian/zombie counts. Retain observed layout costs scoped to the matching stage, tool and points across search blocks.
