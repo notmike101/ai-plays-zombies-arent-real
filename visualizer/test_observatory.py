@@ -172,3 +172,47 @@ class ObservatoryTests(unittest.TestCase):
             self.assertTrue(campaign['outcomes'][0]['qualifies'])
             self.assertNotIn('actions', campaign['outcomes'][0])
             self.assertEqual(campaign['incumbent']['holdout_stage'], 1)
+
+    def test_learning_overview_groups_recorded_scores_by_run_and_provenance(self):
+        from learning import read_results
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            early, late = 'coverage-team-012345abcd', 'coverage-team-012345abce'
+
+            def score(value, ms, end='won', start='fresh', stage=1):
+                return dict(saved=value, log_started=ms, end=end, start_kind=start, stage=stage)
+
+            def write(path, rows):
+                path.write_text(''.join(json.dumps(row) + '\n' for row in rows))
+
+            for name, trials in [(early, [score(.2, 1000, 'lost'), score(.4, 2000),
+                                          score(.8, 3000, start='carry'),
+                                          score(.6, 3500, stage=2),
+                                          score(.9, 4000, 'aborted'), score(1, 5000, 'timeout')]),
+                                 (late, [score(.5, 6000)])]:
+                run = root / name
+                run.mkdir()
+                write(run / 'trials.jsonl', [{'levels': trials}])
+                write(run / 'holdout.jsonl', [{'levels': [score(.7, 7000)]}])
+            write(root / 'nn_hist4.jsonl', [
+                dict(kind='episode', run_id=run, scenario=1, saved_frac=saved,
+                     mode=mode, log_started=ms, end='won', start_kind='fresh')
+                for run, mode, saved, ms in [('a', 'train', .4, 1000), ('a', 'train', .6, 2000),
+                                             ('a', 'play', .8, 3000), ('b', 'train', .7, 4000)]
+            ])
+
+            data = read_results(root, late)
+            self.assertEqual([r['id'] for r in data['campaigns']], [late])
+            campaign = data['overview']['campaign']
+            self.assertEqual([(r['id'], r['started_at']) for r in campaign], [(early, 1000), (late, 6000)])
+            scores = {(g['cohort'], g['start_kind'], g['stage']): (g['mean'], g['count'])
+                      for g in campaign[0]['groups']}
+            mean, count = scores['Training trial', 'fresh', 1]
+            self.assertAlmostEqual(mean, .3)
+            self.assertEqual(count, 2)
+            self.assertEqual(scores['Training trial', 'carry', 1], (.8, 1))
+            self.assertEqual(scores['Training trial', 'fresh', 2], (.6, 1))
+            self.assertEqual(scores['Held-out', 'fresh', 1], (.7, 1))
+            self.assertEqual([r['id'] for r in data['overview']['ppo']], ['a', 'b'])
+            self.assertEqual([(g['cohort'], g['mean'], g['count']) for g in data['overview']['ppo'][0]['groups']],
+                             [('PPO train', .5, 2), ('PPO play', .8, 1)])

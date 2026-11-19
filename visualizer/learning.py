@@ -65,8 +65,53 @@ def outcome(row, *, cohort, stage, saved):
     }
 
 
-def campaign_results(directory):
-    outcomes, teams = [], {}
+def campaign_trials(directory):
+    return [(cohort, trial)
+            for file, cohort in [('trials.jsonl', 'Training trial'), ('holdout.jsonl', 'Held-out')]
+            for trial in lines(directory / file, TRIALS)]
+
+
+def campaign_outcomes(trials):
+    for cohort, trial in trials:
+        context = pick(trial, ('team_id', 'generation', 'arm', 'view_revision', 'seed', 'copy'))
+        levels = trial.get('levels', [])
+        for row in levels[:20] if isinstance(levels, list) else []:
+            if isinstance(row, dict):
+                yield {**outcome(row, cohort=cohort, stage=row.get('stage'), saved=row.get('saved')), **context}
+        if trial.get('error'):
+            yield {**outcome({}, cohort=cohort, stage=trial.get('failed_stage'), saved=None),
+                   **context, 'end': 'error',
+                   'start_kind': ('carry' if trial.get('failed_attempt', 0) else 'unknown')}
+
+
+def overview(rows, run_id):
+    runs = {}
+    for row in rows:
+        key = run_id(row)
+        if not isinstance(key, str) or not key:
+            continue
+        run = runs.setdefault(key, {'id': key, 'started_at': None, 'groups': {}})
+        started = row.get('log_started')
+        if type(started) in (int, float) and 0 < started <= 8_640_000_000_000_000:
+            if run['started_at'] is None or started < run['started_at']:
+                run['started_at'] = started
+        if row['saved'] is None:
+            continue
+        start = row.get('start_kind')
+        stage = row.get('stage')
+        group = (row['cohort'], start if isinstance(start, str) else None, stage if type(stage) is int else None)
+        totals = run['groups'].setdefault(group, [0, 0])
+        totals[0] += row['saved']
+        totals[1] += 1
+    return sorted((
+        {**run, 'groups': [{'cohort': cohort, 'start_kind': start, 'stage': stage, 'mean': total / count, 'count': count}
+                           for (cohort, start, stage), (total, count) in run['groups'].items()]}
+        for run in runs.values() if run['started_at'] is not None and run['groups']),
+        key=lambda run: (run['started_at'], run['id']))
+
+
+def campaign_results(directory, trials, outcomes):
+    teams = {}
     incumbent, leader, fitness = [next(iter(lines(directory / (name + '.json'), 1)), {})
                                   for name in ('champion', 'provisional', 'fitness')]
 
@@ -79,26 +124,15 @@ def campaign_results(directory):
                                          if len(json.dumps(value)) <= 60_000}
             teams[key] = team_record
 
-    for file, cohort in [('trials.jsonl', 'Training trial'), ('holdout.jsonl', 'Held-out')]:
-        for trial in lines(directory / file, TRIALS):
-            team(trial)
-            context = pick(trial, ('team_id', 'generation', 'arm', 'view_revision', 'seed', 'copy'))
-            levels = trial.get('levels', [])
-            for row in levels[:20] if isinstance(levels, list) else []:
-                if isinstance(row, dict):
-                    outcomes.append({**outcome(row, cohort=cohort, stage=row.get('stage'),
-                                               saved=row.get('saved')), **context})
-            if trial.get('error'):
-                outcomes.append({**outcome({}, cohort=cohort, stage=trial.get('failed_stage'), saved=None),
-                                 **context, 'end': 'error',
-                                 'start_kind': ('carry' if trial.get('failed_attempt', 0) else 'unknown')})
+    for _, trial in trials:
+        team(trial)
     for row in (leader, incumbent):
         team(row)
     return {
         'id': directory.name, 'incumbent': pick(incumbent, ('team_id', 'base', 'generation',
                       'fresh_stages', 'holdout_stage', 'holdout_opponent')),
         'leader': pick(leader, ('team_id', 'base')), 'camera_revision': fitness.get('view_revision'),
-        'outcomes': outcomes[-400:], 'teams': list(teams.values())[-24:],
+        'outcomes': list(outcomes), 'teams': list(teams.values())[-24:],
     }
 
 
@@ -126,5 +160,13 @@ def read_results(root, run=None):
         elif row.get('kind') == 'update':
             updates.append(pick(row, ('run_id', 'round', 'scenario', 'checkpoint_id', 'loss',
                                       'approx_kl', 'clip_fraction', 'entropy', 'explained_variance')))
-    return {'version': 1, 'ppo': list(ppo), 'updates': list(updates), 'runs': list(paths),
-            'campaigns': [campaign_results(selected)] if selected else []}
+    campaigns, campaign_overview = [], []
+    for path in paths.values():
+        trials = campaign_trials(path)
+        outcomes = deque(campaign_outcomes(trials), maxlen=400)
+        campaign_overview.extend(overview(outcomes, lambda _: path.name))
+        if path == selected:
+            campaigns.append(campaign_results(path, trials, outcomes))
+    campaign_overview.sort(key=lambda run: (run['started_at'], run['id']))
+    return {'version': 1, 'ppo': list(ppo), 'updates': list(updates), 'runs': list(paths), 'campaigns': campaigns,
+            'overview': {'campaign': campaign_overview, 'ppo': overview(ppo, lambda row: row.get('run_id'))}}

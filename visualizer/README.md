@@ -107,7 +107,13 @@ video whenever Game view is open.
   [Quick Tunnel limitations](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)
 - Learning reads up to the last 4 MiB per recognized result file, 400 PPO
   outcomes, 60 PPO updates, the 16 most recently written campaign runs, and 400
-  outcomes per selected run. Champion statistics use the search's fresh-board
+  outcomes per campaign run. The overview plots the mean official civilian-save
+  result for each campaign search or PPO run at its first retained episode
+  timestamp. It keeps cohort, board start and level on separate lines and shows
+  the scored sample count for each point. Runs without a retained timestamp or
+  official score are omitted. The latest run can still be recording outcomes.
+  The search-run picker scopes the existing detailed charts and tables.
+  Champion statistics use the search's fresh-board
   evidence. Raw trial counts can include repeats. Timeout snapshots are
   omitted from official save scores. Aborted readings appear as retry scores.
   Older outputs omit explicit lineage. Team comparison lists saved parameter
