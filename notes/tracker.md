@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 00:32 Central. Implemented and tested special
+  activation credit at .01 each for up to three buildings. Native receipt
+  requires the selected building's ability to change from zero to the exact
+  enabled choice. Search can test bounded inspection after building a refuge.
+  The fresh L1 inst19 pilot finished at 15.59% saved with zero selections
+  and zero activations, then exited. Tests confirmed receipt, deduplication
+  and cap (202 trainer, 52 visualizer). Active seed 102851 predates the
+  change. Pilot: analysis/coverage-building-special-pilot.json.
 - 2026-11-19 00:27 Central. Public and local traces agreed: live game 57260
   published through its episode, then the server had zero live streams
   while the public browser kept receiving waiting heartbeats. Deployed
