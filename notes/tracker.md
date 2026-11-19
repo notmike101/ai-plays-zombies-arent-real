@@ -1,6 +1,25 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 Central. Throughput audit during active six-copy search, with
+  inst13 preflight passing. Search 123851 recorded 24 fresh L1 starts across
+  four generations, nine qualifying wins, five timeouts and one early retry.
+  First native log timestamps across successive generations were 276, 347
+  and 310 seconds apart. These spans include the wave barrier and other work;
+  the ledger cannot isolate per-copy idle time. Keep the current search active.
+- Existing crowd forecast replayed on three held-out process recordings at
+  idle priority and one CPU thread while search ran. Both channels beat
+  persistence on per-cell squared error in all three recordings. An offline
+  densest-future-zombie-cell probe improved on two recordings and regressed
+  on one. Brief batch-256 inference measured roughly 265,000 grids/s, excluding
+  data loading and game interaction. Archived live comparison
+  `analysis/coverage-team-cda1c7a4b1/forecast-comparison.jsonl` had two L1
+  qualifiers in four control attempts and zero in four forecast attempts,
+  including one forecast snapshot failure. No recorded stock decreases in
+  either arm. Keep forecast experiments out of production policy updates.
+  An action-conditioned shadow screen needs attributable native receipts and
+  held-out outcome evidence. The first real throughput experiment is a 1x/2x
+  comparison at the same copy count at a coordinated training boundary.
 - 2026-11-19 Central. Pushed five pending main commits (f7f6e0a..3ddca28) through the GitHub App identity helper. Its authentication check passed. The reason for the earlier delay is unverified.
 - 2026-11-19 08:30 Central. Six-copy minimum requested.
   Supplemental inst17/18 (PIDs 53148/45804) reached live L1 battle on CPUs
