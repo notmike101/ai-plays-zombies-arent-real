@@ -1,6 +1,7 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 Central. Pushed five pending main commits (f7f6e0a..3ddca28) through the GitHub App identity helper. Its authentication check passed. The reason for the earlier delay is unverified.
 - 2026-11-19 08:30 Central. Six-copy minimum requested.
   Supplemental inst17/18 (PIDs 53148/45804) reached live L1 battle on CPUs
   8–11 while seed 121851 kept its original inst13–16 on CPUs 0–7. About
