@@ -1,6 +1,17 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 Central. Staged frozen-champion 1×/2× waves and opt-in
+  offline shadow capture on `codex/rollout-timing`. Deployed inst13
+  preflight passed and the production scheduler was active. Keep that
+  checkout and its checkpoint untouched until a coordinated launch boundary.
+  A scan of 100 completed native logs found 41 deploy events, 39 after
+  excluding sessions with console commands. Four cruise missiles had a
+  snapshot within two sim seconds before and eight after; no action had
+  an isolated sample in the stricter six-to-eight-second outcome window.
+  The older spatial recordings lack action/session joins. Collect dense
+  episode-bound grids, legal cast opportunities and stock receipts before
+  fitting an action-response predictor. No synthetic policy updates.
 - 2026-11-19 Central. Throughput audit during active six-copy search, with
   inst13 preflight passing. Search 123851 recorded 24 fresh L1 starts across
   four generations, nine qualifying wins, five timeouts and one early retry.

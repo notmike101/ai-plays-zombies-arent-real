@@ -565,11 +565,6 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     o=env.obs()
                     continue
             mechanics.refresh(st)
-            if shadow is not None and state['phase'] == 'playing' and not state['paused']:
-                frames = shadow['frames']
-                if len(frames) < 2048 and (not frames or state['sim'] >= frames[-1]['sim'] + .25):
-                    frames.append(dict(sim=state['sim'], camera=list(st['native']['camera']),
-                                       grid=st['grid'][:4].tolist(), civilians=o['civ'], zombies=o['zomb']))
             if not st['planning'] and rows['rews']:
                 rows['rews'][-1] += st['shelter'].observe(st.get('native'),st['sim'])
             blobs = []
@@ -613,6 +608,13 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 battle_actions['decisions'] += 1
                 battle_actions['cast_available'] += int(any(mu[tool] for tool in U2ABILITY))
                 battle_actions['cast_sampled'] += int(u in U2ABILITY)
+                if shadow is not None and state['phase'] == 'playing' and not state['paused']:
+                    frames = shadow['frames']
+                    if len(frames) < 2048 and (not frames or state['sim'] >= frames[-1]['sim'] + .25):
+                        frames.append(dict(sim=state['sim'], camera=list(st['native']['camera']),
+                                           grid=st['grid'][:4].tolist(), civilians=o['civ'], zombies=o['zomb'],
+                                           legal_casts=[TOOLS[tool] for tool in U2ABILITY if mu[tool]],
+                                           selected=TOOLS[u], cell=c))
             before = o
             previous_state = state
             action_started = time.monotonic()
@@ -794,7 +796,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         if options.get('record_layout'):
             rows['layout_text']='\n'.join(line for line in initial['_text'].splitlines() if line.startswith('board '))
         if shadow is not None:
-            rows['shadow'] = dict(shadow, session=header['wall'], native_footer=footer is not None)
+            rows['shadow'] = dict(shadow, session=header['wall'], native_footer=footer is not None,
+                                  truncated=len(shadow['frames']) >= 2048 or len(shadow['casts']) >= 512)
         return dict(rows, level=tag, pid=pid, win=end == 'won', advance=advance, end=end,
                     saved_frac=saved if end != 'timeout' else None,
                     observed_saved_frac=saved, timeout_phase=state['phase'] if end == 'timeout' else None,
