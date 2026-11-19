@@ -1,6 +1,16 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 01:08 Central. Fixed automatic Monitor selection so a live
+  policy publisher takes precedence over a game-only node. A manually
+  selected game remains pinned until it ends or Follow live policy is used.
+  Restarted only the observatory via the ownership-checked launcher on
+  PID 26040 (create time 1795072062.7120326). Public Chrome received the
+  new SSE state and showed game-only nodes while no policy was publishing.
+  56 visualizer tests, 203 trainer tests, exact model parity, graph checks
+  and synthetic browser stream, diagram and mobile checks passed. Campaign
+  search stayed active. Standby rollout is staged separately for an idle
+  search boundary.
 - 2026-11-19 00:51 Central. Deployed the active-worker diagram on
   observatory PID 10284 (create time 1795071053.233222). Public Chrome
   displayed six game nodes and played inst13 and inst14 simultaneously
