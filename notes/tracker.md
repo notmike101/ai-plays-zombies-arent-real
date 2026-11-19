@@ -1,6 +1,12 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 00:37 Central. Deployed game-only video fallback for automatic
+  observatory attachment on listener 59624 (create time 1795070198.3777268).
+  A public Chrome check rendered 960×600 live video for verified inst15
+  PID 55568 while policy telemetry was waiting. When a fresh policy stream
+  appears, it takes precedence. Manual selection and preview stay scoped.
+  Main visualizer suite: 53 tests. Campaign training remained active.
 - 2026-11-19 00:32 Central. Implemented and tested special
   activation credit at .01 each for up to three buildings. Native receipt
   requires the selected building's ability to change from zero to the exact
