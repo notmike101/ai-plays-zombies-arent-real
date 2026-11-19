@@ -124,6 +124,13 @@ class LifecycleTests(unittest.TestCase):
                 self.assertEqual(argv[argv.index('--seed')+1], '42')
                 self.assertEqual(launch.call_args.kwargs['creationflags'], subprocess.CREATE_NO_WINDOW)
 
+    def test_six_copy_cpu_budget_reserves_half_the_desktop(self):
+        proc = Mock()
+        proc.cpu_affinity.return_value = list(range(24))
+        with patch('psutil.Process', return_value=proc),              patch('psutil.virtual_memory', return_value=SimpleNamespace(available=16*2**30)),              patch('shutil.disk_usage', return_value=SimpleNamespace(free=8*2**30)):
+            ops.limit_resources(6)
+        proc.cpu_affinity.assert_called_with(list(range(12)))
+
     def test_insufficient_resources_never_launches_game_or_trainer(self):
         args = SimpleNamespace(copy='inst1', rounds=1, seed=42, foreground=True)
         with tempfile.TemporaryDirectory() as d, \

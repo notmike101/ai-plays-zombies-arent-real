@@ -234,7 +234,9 @@ def limit_resources(copy_count=1):
     p = psutil.Process()
     cpus = p.cpu_affinity()
     p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
-    p.cpu_affinity(cpus[:min(8, max(1, len(cpus)//2))])
+    # Keep at least half the logical CPUs available to the desktop.
+    budget = min(max(8, 2*copy_count), max(1, len(cpus)//2))
+    p.cpu_affinity(cpus[:budget])
 
 
 def train(args):
