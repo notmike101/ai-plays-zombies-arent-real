@@ -2,12 +2,25 @@
 import copy
 import unittest
 from unittest.mock import patch
+from concurrent.futures import Future
 import numpy as np
 import torch
 import team_search as search
 
 
 class SearchTests(unittest.TestCase):
+    def test_completed_results_keep_their_copy_and_error_when_workers_finish_out_of_order(self):
+        a,b=Future(),Future()
+        a.set_result({'copy':'a'})
+        b.set_exception(RuntimeError('no board'))
+        jobs=[('a',{},None,10),('b',{},None,11)]
+        with patch.object(search,'as_completed',return_value=[b,a]),patch.object(search,'ProcessPoolExecutor') as pool:
+            pool.submit.side_effect=[a,b]
+            completed=list(search.completed_rollouts(pool,jobs,[1,2],2,True))
+        self.assertEqual(completed[0][0],jobs[1])
+        self.assertEqual(completed[0][2]['failed_stage'],2)
+        self.assertEqual(completed[0][2]['error'],'no board')
+        self.assertEqual(completed[1][2],{'copy':'a'})
     def test_later_retries_are_training_only_and_keep_stage_identity(self):
         for retries,count in [(0,2),(2,4)]:
             with self.subTest(retries=retries):

@@ -238,6 +238,8 @@ disable the GRU-only visualizer for both candidates and controls.
 Run `.venv/Scripts/python.exe -B scripts/nn_report.py --search-dir analysis/<search-directory>`
 to count official game wins, qualifying wins, incomplete attempts and errors
 by team, stage, starting board and experiment. This also works during a run.
+Workers append results as they finish. A long campaign on one copy does not
+delay reporting completed trials from the others.
 If a later board fails to initialize or loses observation, previously confirmed
 stage outcomes remain in its trial. The failed attempt gets an error and no
 saved percentage. Older records may lack the attempted stage.

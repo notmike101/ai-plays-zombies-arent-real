@@ -1,7 +1,7 @@
 """Population search over planning sequences and battle targeting on real game copies."""
 import argparse
 from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from copy import deepcopy
 import hashlib
 import json
@@ -249,6 +249,17 @@ def team_id(team):
     return hashlib.sha256(json.dumps(team,sort_keys=True).encode()).hexdigest()[:16]
 
 
+def completed_rollouts(pool,jobs,starts=None,retries=0,training=False):
+    if starts is None:starts=[1]*len(jobs)
+    futures={pool.submit(rollout,job,retries,stage,training=training):(job,stage)
+             for job,stage in zip(jobs,starts,strict=True)}
+    for future in as_completed(futures):
+        job,stage=futures[future]
+        try:result=future.result()
+        except Exception as exc:result=dict(copy=job[0],seed=job[3],levels=[],error=str(exc),failed_stage=stage)
+        yield job,stage,result
+
+
 def budget_candidate(team,levels):
     if not team:return None
     child=None
@@ -332,10 +343,14 @@ def main():
                 population[1]['refuge']=dict(scale=1.,aspect=float(rng.uniform(.7,1.5)),
                                              defense_weight=float(rng.uniform(.08,.22)))
         if args.seed_from and not args.compare_forecast and (args.seed_from/'trials.jsonl').is_file():
+            best_budget=None
             for line in (args.seed_from/'trials.jsonl').read_text().splitlines():
                 trial=json.loads(line)
                 candidate=budget_candidate(trial.get('team'),trial.get('levels',[]))
-                if candidate:population[-1]=candidate
+                if candidate:
+                    rank=(max(r['stage'] for r in trial['levels']),team_id(candidate))
+                    if best_budget is None or rank>best_budget:
+                        best_budget,population[-1]=rank,candidate
         archive={}
         deepest={}
         scores=defaultdict(list)
@@ -350,7 +365,7 @@ def main():
                     for i,copy in enumerate(copies):
                         job=(copy,weights,contender,args.seed+swap*len(copies)+i//2)
                         jobs.append(job+(args.compare_forecast,) if (i+swap)%2 else job)
-                    for job,result in zip(jobs,pool.map(rollout,jobs)):
+                    for job,_,result in completed_rollouts(pool,jobs):
                         result.update(cnn=len(job)==5,team_id=team_id(contender))
                         with (directory/'forecast-comparison.jsonl').open('a') as f:
                             f.write(json.dumps(result)+'\n')
@@ -371,11 +386,9 @@ def main():
                 require_fresh.clear()
                 practice=[]
                 affordable=[]
-                futures=[pool.submit(rollout,job,args.later_retries,stage,training=True) for job,stage in zip(jobs,starts)]
                 valid_candidates=0
-                for team, future, job,start_stage in zip(population,futures,jobs,starts):
-                    try: result=future.result()
-                    except Exception as exc: result=dict(error=str(exc),copy=job[0],seed=job[3])
+                for job,start_stage,result in completed_rollouts(pool,jobs,starts,args.later_retries,training=True):
+                    team=job[2]
                     key=team_id(team) if team else 'control'
                     result.update(generation=generation,team_id=key,team=team,start_stage=start_stage)
                     with (directory/'trials.jsonl').open('a') as f:
@@ -404,12 +417,12 @@ def main():
                                             sum(r[1] for r in first),sum(r[2] for r in first),best[-1][3]])
                     print(generation,key,[(r['stage'],r['end'],r['saved'],round(r['sim'],1)) for r in levels],flush=True)
                 if not valid_candidates:raise RuntimeError('No valid candidates this generation; inspect trials')
-                ranked=sorted(scores,key=lambda k:tuple(np.mean(scores[k],axis=0)),reverse=True)
+                ranked=sorted(scores,key=lambda k:(tuple(np.mean(scores[k],axis=0)),k),reverse=True)
                 elites=[archive[k] for k in ranked[:2]]
                 population=list(elites)
-                if affordable:population.append(max(affordable,key=lambda entry:entry[0])[1])
+                if affordable:population.append(max(affordable,key=lambda entry:(entry[0],team_id(entry[1])))[1])
                 if practice:
-                    specialist=max(practice,key=lambda entry:(entry[0],entry[1]))[2]
+                    specialist=max(practice,key=lambda entry:(entry[0],entry[1],team_id(entry[2])))[2]
                     if specialist not in population:population.append(specialist)
                     require_fresh.add(team_id(specialist))
                 if len(copies)>=6:
@@ -427,7 +440,7 @@ def main():
             # New boards and seeds: these scores never drive candidate selection.
             jobs=[(copy,weights,archive[ranked[0]] if i%2==0 else None,
                    args.seed+(args.generations+1)*len(copies)+i//2) for i,copy in enumerate(copies)]
-            for job,result in zip(jobs,pool.map(rollout,jobs)):
+            for job,_,result in completed_rollouts(pool,jobs):
                 result['team_id']=ranked[0] if job[2] else 'control'
                 with (directory/'holdout.jsonl').open('a') as f:
                     f.write(json.dumps(result)+'\n')
