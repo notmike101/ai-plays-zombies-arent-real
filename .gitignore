@@ -18,6 +18,12 @@ scripts/hookdll/target/
 .omp/
 *.tmp
 
+# Legacy local diagnostic output and PID markers
+analysis/heli_probe.jsonl
+analysis/inst7pid.txt
+analysis/nn2_train_*.log
+analysis/w4.pid
+
 # Schema-3 live training artifacts (checkpoints are atomically backed up)
 sessions/nn_policy3.pt*
 analysis/nn_hist3.jsonl

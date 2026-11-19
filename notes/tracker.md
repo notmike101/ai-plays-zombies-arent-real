@@ -1,6 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 02:04 Central. Archived the six outstanding
+  legacy runtime files from analysis and sessions in ignored
+  analysis/coverage-legacy-cleanup-20261119, preserving relative paths
+  and verifying SHA-256. Restored the committed historical nn_hist2.jsonl
+  and nn_policy2.pt baselines. Active campaign seed 105851 uses its own
+  search folder and base weights. Added narrow ignores for the four
+  untracked legacy filenames/patterns. Training stayed active.
 - 2026-11-19 02:02 Central. Backed up the uncommitted graph test rewrite
   as a restorable patch and restored the tracked test in the deployed
   checkout. Node reported Graph assertions passed; the file is clean.
