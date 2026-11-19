@@ -8,6 +8,7 @@ from pathlib import Path
 import torch
 from torch import nn
 
+from observatory import metadata, weight_tile
 from observer import Observer
 
 
@@ -113,8 +114,19 @@ class ObserverTests(unittest.TestCase):
         self.assertEqual(data['decision'], 1)
         self.assertIsNone(data['decision_interval_ms'])
         self.assertEqual(self.observer._queue.maxsize, 1)
+        directory = Path(self.tmp.name)
+        for key, expected in {
+            'input_reset': self.net.gru.weight_ih_l0[:8],
+            'input_update': self.net.gru.weight_ih_l0[8:16],
+            'memory_candidate': self.net.gru.weight_hh_l0[16:24],
+            'hu.weight': self.net.hu.weight,
+        }.items():
+            with self.subTest(key=key):
+                tile = weight_tile(directory, data, metadata(data), key, 0, 0)
+                self.assertEqual(tile['values'], expected.detach().tolist())
         self.observer.close()
         self.assertFalse(self.net.gru._forward_hooks)
+        self.assertFalse(list(directory.glob('*.weights')))
 
     def test_decision_counter_includes_throttled_decisions(self):
         with torch.no_grad():
