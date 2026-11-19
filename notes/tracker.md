@@ -1,6 +1,11 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 23:12 Central. inst13 PID 56400 (seed 99851) reached L3 through earned
+  advancement. Native footers show fresh L1 win 25.87%, same-board L1
+  retry win 47.53%, then L2 win 36.68%. The first L3 attempt ended at
+  the early retry cutoff with 9.01% saved. The L1 retry permits later-stage
+  practice; it does not count as a fresh L1 qualifier.
 - 23:09 Central. Learning now works through the observatory's direct LAN
   address or host computer name. The restarted listener is PID 51628
   (create time 1795064932.9065344). Localhost and the Ethernet address both
