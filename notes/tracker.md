@@ -1,6 +1,10 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 02:00 Central. Verified the tracked legacy graph regression
+  passes from a clean worktree with the same graph source. The deployed
+  checkout carries an uncommitted alternative test that exits during
+  import because it requests exports absent from public/graph.js.
 - 2026-11-19 01:52 Central. Deployed shareable Observatory tab links.
   Public Chrome verified a direct Learning link, Back/Forward, and
   one live SSE connection throughout. Learning reload remains manual
