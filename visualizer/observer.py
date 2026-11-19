@@ -53,7 +53,12 @@ class Observer:
                     any(m.in_features != self.gru.hidden_size for m in self.heads.values())):
                 raise ValueError('expected one unidirectional GRU and direct linear heads')
             self._hooks.append(self.gru.register_forward_hook(self._capture_gru))
+            self.team_id=getattr(net,'campaign_team_id',None)
+            if self.team_id:
+                if set(self.heads)!={'hu','hc','val'}:raise ValueError('unexpected campaign heads')
+                self._hooks.append(net.register_forward_hook(self._capture_team))
             for name, head in self.heads.items():
+                if self.team_id and name in ('hu','hc'):continue
                 self._hooks.append(head.register_forward_hook(self._capture_head(name)))
         except Exception as exc:
             self.error = f'Unsupported or unavailable observer: {type(exc).__name__}: {exc}'
@@ -88,6 +93,14 @@ class Observer:
                 self.error = f'Capture unavailable: {exc}'
         return capture
 
+    def _capture_team(self,module,args,output):
+        if torch.is_grad_enabled() or self._closed or not self.values:return
+        try:
+            self.values['hu']=vector(output[0])
+            self.values['hc']=vector(output[1])
+        except Exception as exc:
+            self.error=f'Campaign output capture unavailable: {exc}'
+
     def _topology(self):
         net = self.net()
         if net is None:
@@ -121,7 +134,7 @@ class Observer:
             connect(source, self.gru_name, aggregate, 'gate-rms')
         for name, head in self.heads.items():
             layer(name, head.out_features, 'value' if head.out_features == 1 else 'policy')
-            connect(self.gru_name, name, head.weight, 'linear')
+            if not self.team_id or name=='val':connect(self.gru_name, name, head.weight, 'linear')
         graph = {'layers': layers, 'edges': edges, 'parameters': sum(p.numel() for p in net.parameters()),
                  'edge_note': 'Top 6 weights per target. GRU edges: unsigned RMS across reset/update/candidate gates. Linear edges: signed weights.'}
         # Hash full weights, so different episodes with equal shapes cannot share stale topology.
@@ -129,6 +142,12 @@ class Observer:
         for p in net.parameters():
             digest.update(p.detach().cpu().float().numpy().tobytes())
         digest.update(json.dumps(layers, sort_keys=True).encode())
+        if self.team_id:
+            forecast=getattr(net,'campaign_forecast_id',None)
+            graph['parameters']+=getattr(net,'campaign_forecast_parameters',0)
+            graph['architecture']='GRU + preparation and battle specialists'+(' + crowd CNN' if forecast else '')
+            graph['edge_note']='Tool and cell values are final combined logits. Edges show GRU gate RMS and value weights only. Parameters count PyTorch weights. Layout preparation precedes this stream.'
+            digest.update(json.dumps([self.team_id,forecast]).encode())
         self._revision = digest.hexdigest()[:16]
         self._versions, self._graph = versions, graph
 

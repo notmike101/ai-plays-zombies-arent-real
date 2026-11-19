@@ -62,7 +62,7 @@ function updateFrame(next) {
   [...$('observations').children].forEach((row,index)=>{
     row.lastChild.textContent=formatNumber(frame.values?.[inputs.id]?.[index]);
   });
-  text('architecture',`${inputs.size} → GRU ${hidden.size} → ${heads.map(l=>l.size).join(' / ')}`);
+  text('architecture',graph.architecture||`${inputs.size} → GRU ${hidden.size} → ${heads.map(l=>l.size).join(' / ')}`);
   text('revision',frame.model_revision.slice(0,10));text('graph-note',`${graph.edge_note} Brightness is normalized per layer.`);
   const actionHead=heads.find(l=>l.kind==='policy'),cellHead=heads.find(l=>l.id==='hc');
   const action=frame.selected?.[actionHead?.id],cell=frame.selected?.[cellHead?.id];

@@ -132,6 +132,15 @@ class TeamPolicy(tr.PolicyNet2):
         self.bias = torch.tensor(team['cast_bias'])
         self.camera_pause=torch.tensor(team.get('camera_pause',[0.]*6))
         self.predict = None if forecast is None else forecast.forward
+        self.campaign_team_id=team_id(team)
+        self.campaign_forecast_id=None
+        self.campaign_forecast_parameters=0
+        if forecast is not None:
+            digest=hashlib.sha256()
+            for parameter in forecast.parameters():
+                digest.update(parameter.detach().cpu().numpy().tobytes())
+                self.campaign_forecast_parameters+=parameter.numel()
+            self.campaign_forecast_id=digest.hexdigest()[:16]
 
     def forward(self, x, h=None):
         tools, cells, value, h = super().forward(x, h)
@@ -172,7 +181,7 @@ def score(row):
             float(row['saved_frac'] or 0.) if row['win'] else 0.,area/120.]
 
 
-def rollout(job, retries=0, start_stage=1, *, training=False):
+def rollout(job, retries=0, start_stage=1, *, training=False, observe=False):
     copy, weights, team, seed, *forecast_path = job
     forecast=None
     if forecast_path:
@@ -216,7 +225,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False):
             if training:options['paused_seconds']=45
             row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}/a{attempt}',options),
                                  policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
-                                 telemetry=False)
+                                 telemetry=observe)
             if not tr.valid_trajectory(row):
                 return dict(copy=copy,seed=seed,levels=levels,failed_stage=stage,
                             failed_attempt=attempt,error=row.get('err','invalid trajectory'))
@@ -251,7 +260,8 @@ def team_id(team):
 
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False):
     if starts is None:starts=[1]*len(jobs)
-    futures={pool.submit(rollout,job,retries,stage,training=training):(job,stage)
+    observed=next((j[0] for j in jobs if j[2]),None) if training else None
+    futures={pool.submit(rollout,job,retries,stage,training=training,observe=job[0]==observed):(job,stage)
              for job,stage in zip(jobs,starts,strict=True)}
     for future in as_completed(futures):
         job,stage=futures[future]

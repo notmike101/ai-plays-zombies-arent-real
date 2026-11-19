@@ -4,6 +4,14 @@ A read-only visualizer for a running PyTorch GRU policy. The browser shows actua
 
 ## Run
 
+During campaign team search, one candidate publishes its GRU state, final
+combined logits, masked probabilities and selected actions. The architecture
+label identifies the preparation and battle specialists. The graph draws
+the GRU and value connections. The specialist scoring functions contribute
+to the displayed logits and have no drawn edges. The worker is quiet during
+layout construction and after its own game finishes. Other games can still
+be running.
+
 For a new session, start with the [operator runbook](../notes/operator-runbook.md).
 It covers existing-server detection, background start/stop, process identity
 checks and training resume. Read CURRENT STATE in `../notes/tracker.md` for the

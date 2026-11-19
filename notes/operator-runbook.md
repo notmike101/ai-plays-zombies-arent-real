@@ -233,8 +233,11 @@ score; its `timeout_reason` identifies the clock or planning limit.
 
 The command holds the operator lock and writes its base weights, tested
 genomes, action sequences, native log identifiers, champion and held-out
-results to an ignored `analysis/coverage-team-*` directory. Search runs
-disable the GRU-only visualizer for both candidates and controls.
+results to an ignored `analysis/coverage-team-*` directory. One candidate
+worker per training generation publishes its decisions to the normal live
+visualizer. Look for `search/<seed>/L<stage>/a<attempt>`. Layout construction
+precedes the first sampled decision. The held-out and CNN comparisons run
+without the observer.
 Run `.venv/Scripts/python.exe -B scripts/nn_report.py --search-dir analysis/<search-directory>`
 to count official game wins, qualifying wins, incomplete attempts and errors
 by team, stage, starting board and experiment. This also works during a run.

@@ -145,6 +145,11 @@ the campaign; badges persist as BEST; R restart keeps board + leftover budget).
   data. A stale stream can mean paused/idle inference; check worker activity and
   telemetry before diagnosing a hang. Auto-attach needs an instrumented worker's
   first decision, not merely a spawned game process.
+- Campaign search observes one candidate per training generation. The team
+  observer captures final combined tool/cell logits from the model return.
+  Draw edges for the GRU and value head only, identify the team and forecast
+  in the revision, and retain native masks and actual selections. Layout
+  construction before the decision loop has no synthetic neural activations.
 - Serve the visualizer from the same deployed checkout as the observer's runtime
   directory. Existing workers must be relaunched normally to pick up integration
   changes. Coordinate source updates/restarts with the training owner; never

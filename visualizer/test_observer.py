@@ -25,6 +25,28 @@ class Policy(nn.Module):
 
 
 class ObserverTests(unittest.TestCase):
+    def test_campaign_combined_logits_have_no_fictitious_direct_edges(self):
+        class Campaign(Policy):
+            campaign_team_id='a'
+            campaign_forecast_id='cnn'
+            def forward(self,x,h=None):
+                u,c,v,h=super().forward(x,h)
+                return u+17,c-11,v,h
+        net=Campaign().eval()
+        revisions=[]
+        for identity in ('a','b'):
+            net.campaign_team_id=identity
+            obs=Observer(net,321,directory=self.tmp.name)
+            try:
+                with torch.no_grad():u,c,_,_=net(torch.ones(1,1,3))
+                frame=obs.snapshot()
+                self.assertEqual(frame['values']['hu'],u.flatten().tolist())
+                self.assertEqual(frame['values']['hc'],c.flatten().tolist())
+                self.assertIn('CNN',frame['graph']['architecture'])
+                self.assertFalse(any(e['to'].startswith(('hu:','hc:')) for e in frame['graph']['edges']))
+                revisions.append(frame['model_revision'])
+            finally:obs.close()
+        self.assertNotEqual(*revisions)
     def setUp(self):
         (Path(__file__).parent / 'runtime').mkdir(exist_ok=True)
         self.tmp = tempfile.TemporaryDirectory(dir=Path(__file__).parent / 'runtime')
