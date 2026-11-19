@@ -51,6 +51,18 @@ class SearchTests(unittest.TestCase):
                 search.rollout(('inst14',{},None,10),start_stage=2)
             run.assert_called_once()
 
+    def test_training_reuses_an_actual_below_target_l1_win_to_reach_l2(self):
+        row=dict(scenario=1,end='won',saved_frac=.24,advance=False,win=True,
+                 campaign='Boston',board_id='b',board={'scenario_count':5},sim=100,
+                 trail=[],civ0=100,us=[],cs=[],log_started=True,battle_actions={})
+        rows=[row,dict(row,saved_frac=.4,advance=True),dict(row,scenario=2,end='timeout',
+                                                           saved_frac=None,win=False,bootstrap=0.)]
+        with patch.object(search.zar_boot,'boot'),patch.object(search.zar_boot,'stop'), \
+             patch.object(search.operator,'owned_copy'),patch.object(search.tr,'run_episode',side_effect=rows):
+            result=search.rollout(('inst14',{},None,10),2,training=True)
+        self.assertEqual([(r['stage'],r['start_kind']) for r in result['levels']],
+                         [(1,'fresh'),(1,'carry'),(2,'next_level')])
+
     def test_tool_and_cell_heads_keep_the_trainer_contract(self):
         candidate=search.random_team(np.random.default_rng(4))
         net=search.TeamPolicy(candidate)

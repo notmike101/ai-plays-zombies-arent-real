@@ -207,7 +207,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False):
                     layout,refuge=fit_refuge(layout,points[kinds==0]+origin,boundary,team['refuge'])
                 occupied=[unit for kind,unit in BUILDINGS.items() if f'board {kind} = ' in board['_text']]
                 receipts=apply_layout(env,remaining_layout(layout,board),occupied)
-                if stage==1:layout_receipts=receipts
+                if stage==1 and attempt==0:layout_receipts=receipts
             active={**team,**team.get('stage_battle',{}).get(str(stage),{})} if team else None
             start_kind='carry' if attempt else ('fresh' if stage==1 else
                                                 'continue' if stage==start_stage else 'next_level')
@@ -232,7 +232,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False):
                 if row['scenario']==row['board'].get('scenario_count'):break
                 stage+=1
                 attempt=0
-            elif stage>1 and attempt<retries and row['end'] in ('aborted','lost','won'):
+            elif (stage>1 or (training and row['win'])) and attempt<retries and row['end'] in ('aborted','lost','won'):
                 attempt+=1
             else:
                 break
@@ -266,7 +266,8 @@ def main():
     parser.add_argument('--copies',nargs='+',required=True)
     parser.add_argument('--generations',type=int,default=10)
     parser.add_argument('--seed',type=int,default=92851)
-    parser.add_argument('--later-retries',type=int,default=2,help='Normal board retries per later stage during search only')
+    parser.add_argument('--stage-retries','--later-retries',dest='later_retries',type=int,default=2,
+                        help='Training retries on later stages and below-target first-stage wins')
     parser.add_argument('--seed-from',type=Path,help='Start with a previous search champion and its frozen GRU')
     parser.add_argument('--demonstration',type=Path,help='Seed candidates from a local Boston progress file')
     parser.add_argument('--compare-forecast',type=Path,help='Evaluate the same saved champion with and without its CNN forecast')
@@ -394,8 +395,9 @@ def main():
                         deepest[key]=max(deepest.get(key,1),levels[-1]['stage'])
                         best=[max(r['score'] for r in levels if r['stage']==stage)
                               for stage in sorted({r['stage'] for r in levels})]
-                        scores[key].append([sum(r[0] for r in best),sum(r[1] for r in best),
-                                            sum(r[2] for r in best),best[-1][3]])
+                        first=[r['score'] for r in levels if r['attempt']==0]
+                        scores[key].append([sum(r[0] for r in best),sum(r[0] for r in first),
+                                            sum(r[1] for r in first),sum(r[2] for r in first),best[-1][3]])
                     print(generation,key,[(r['stage'],r['end'],r['saved'],round(r['sim'],1)) for r in levels],flush=True)
                 if not valid_candidates:raise RuntimeError('No valid candidates this generation; inspect trials')
                 ranked=sorted(scores,key=lambda k:tuple(np.mean(scores[k],axis=0)),reverse=True)
