@@ -87,7 +87,9 @@ summary { cursor: pointer; color: var(--cyan); }
 .heat { display: block; width: 100%; height: 132px; background: #091219; border: 1px solid var(--line); margin: .8rem 0 .3rem; image-rendering: pixelated; cursor: crosshair; }
 .heat.memory { height: 180px; }
 .trend { display: block; width: 100%; height: 155px; margin-top: .7rem; background: #091219; border: 1px solid var(--line); }
+.overview-chart { position: relative; }
 .overview-trend { height: 190px; }
+.overview-tooltip { position: absolute; pointer-events: none; margin: 0; max-width: 100%; padding: .3rem .5rem; border: 1px solid var(--line); border-radius: .3rem; background: #111f28; font-size: .85rem; }
 .overview-axis { display: flex; justify-content: space-between; gap: .5rem; padding: .35rem 1rem .35rem 2.7rem; color: var(--muted); font-size: .8rem; }
 .overview-axis span:only-child { margin-inline: auto; }
 #activation-layer, #feature-group, #matrix { max-width: 15rem; }

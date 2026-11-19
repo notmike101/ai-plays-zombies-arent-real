@@ -809,6 +809,7 @@ const dimensions = [
 ];
 const usageKeys = ['decisions', 'cast_available', 'cast_sampled', 'stock_decreased'];
 const usageColumns = ['Battle decisions', 'Cast available', 'Cast selected', 'Stock decreased'];
+const overviewPercent = new Intl.NumberFormat(undefined, {style: 'percent', maximumSignificantDigits: 17});
 const overviewTime = new Intl.DateTimeFormat(undefined, {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'});
 
 function learningOverview(runs, matches, ppo) {
@@ -832,14 +833,19 @@ function learningOverview(runs, matches, ppo) {
     return section;
   }
 
+  const chart = el('div', undefined, 'overview-chart');
   const canvas = el('canvas', undefined, 'trend overview-trend');
+  const tooltip = el('p', '', 'overview-tooltip');
+  tooltip.hidden = true;
+  tooltip.setAttribute('aria-hidden', 'true');
+  chart.append(canvas, tooltip);
   const caption = el('p', '', 'readout');
   caption.setAttribute('aria-live', 'polite');
   const axis = el('div', undefined, 'overview-axis');
   const first = points[0].started, last = points.at(-1).started;
   axis.append(el('span', overviewTime.format(first)));
   if (last !== first) axis.append(el('span', overviewTime.format(last)));
-  section.append(canvas, axis, caption);
+  section.append(chart, axis, caption);
   canvas.tabIndex = 0;
   canvas.setAttribute('aria-label', 'Average civilian saves by cohort. Use the left and right arrow keys to inspect points.');
   canvas.width = Math.max(260, Math.floor($('learning-results').clientWidth));
@@ -849,9 +855,11 @@ function learningOverview(runs, matches, ppo) {
   const left = 43, span = canvas.width - left - 13;
   const x = i => left + span * (points.length === 1 ? .5 : i / (points.length - 1));
   const y = value => 176 - 160 * value;
-  let selected = points.length - 1;
+  let selected = -1;
   function inspect(index) {
-    selected = Math.max(0, Math.min(points.length - 1, index));
+    index = Math.max(0, Math.min(points.length - 1, index));
+    if (index === selected) return;
+    selected = index;
     const point = points[selected];
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.font = '12px system-ui';
@@ -868,19 +876,33 @@ function learningOverview(runs, matches, ppo) {
       ctx.arc(x(i), y(mean), i === selected ? 5 : 3, 0, Math.PI * 2);
       ctx.fill();
     });
-    caption.textContent = `${point.cohort} · ${percent(point.mean)} mean · n=${point.count} · ${overviewTime.format(point.started)} · Run ${point.id.replace('coverage-team-', '')}`;
+    caption.textContent = `${point.cohort} · ${overviewPercent.format(point.mean)} mean · n=${point.count} · ${overviewTime.format(point.started)} · Run ${point.id.replace('coverage-team-', '')}`;
   }
-  canvas.onclick = event => {
+  const inspectPointer = event => {
     const bounds = canvas.getBoundingClientRect();
     const coordinate = (event.clientX - bounds.left) * canvas.width / bounds.width;
     inspect(Math.round((coordinate - left) / span * (points.length - 1)));
   };
+  canvas.onclick = inspectPointer;
+  canvas.onpointermove = event => {
+    if (event.pointerType === 'touch') return;
+    inspectPointer(event);
+    const point = points[selected];
+    tooltip.textContent = point.cohort + ' · ' + overviewPercent.format(point.mean);
+    tooltip.hidden = false;
+    const position = x(selected) * canvas.clientWidth / canvas.width;
+    tooltip.style.left = Math.max(0, Math.min(position - tooltip.offsetWidth / 2, chart.clientWidth - tooltip.offsetWidth)) + 'px';
+    const top = y(point.mean) * canvas.clientHeight / canvas.height;
+    tooltip.style.top = (top >= tooltip.offsetHeight + 8 ? top - tooltip.offsetHeight - 8 : top + 8) + 'px';
+  };
+  canvas.onpointerleave = () => { tooltip.hidden = true; };
   canvas.onkeydown = event => {
     if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
     event.preventDefault();
+    tooltip.hidden = true;
     inspect(selected + (event.key === 'ArrowLeft' ? -1 : 1));
   };
-  inspect(selected);
+  inspect(points.length - 1);
   return section;
 }
 

@@ -1,6 +1,9 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 01:43 Central. Added precise cohort-mean hover tooltips
+  to the Learning overview. Verified against public recorded results in
+  Chrome, including edge positioning and tap/keyboard inspection.
 - 2026-11-19 01:40 Central. Simplified the Learning overview to one line
   with one weighted mean per cohort and run. Public Chrome verified a
   single plotted line in each dataset and the existing outcomes chart.
