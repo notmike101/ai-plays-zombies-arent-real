@@ -321,7 +321,7 @@ def score(row):
 
 
 def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, observer_interval=.2,
-            practice_retry=False, allow_progression=False):
+            practice_retry=False, allow_progression=False, capture_shadow=False, fixed_speed=None):
     timing = {'started': monotonic()}
     if start_stage>1 and not allow_progression:
         raise ValueError('Later-stage starts require explicit campaign progression')
@@ -374,6 +374,8 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
             options=dict(start_kind=start_kind,seed=seed,record_layout=bool(layout),greedy=True,
                          allow_progression=allow_progression, observer_interval=observer_interval)
             if training:options['paused_seconds']=45
+            if capture_shadow:options['capture_shadow']=True
+            if fixed_speed:options['fixed_speed']=fixed_speed
             episode_started = monotonic()
             row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}/a{attempt}',options),
                                  policy_factory=(lambda:TeamPolicy(active,forecast)) if active else None,
@@ -404,6 +406,8 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                    for k in ('shelter','occupied_breach'))/tr.SAVED_REWARD_SCALE,
                                score=score(row),sim=row['sim'],board=row['board_id'],
                                actions=list(zip(row['us'],row['cs'])),log_started=row['log_started']))
+            if capture_shadow and 'shadow' in row:
+                levels[-1]['shadow'] = row['shadow']
             if row['advance']:
                 if not allow_progression or row['scenario']==row['board'].get('scenario_count'):break
                 stage+=1
@@ -529,13 +533,16 @@ def holdout_assignments(copies, weights, challenger, incumbent, seed, wave):
     return jobs,arms
 
 
-def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False):
+def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False,
+                       capture_shadow=False, speeds=None):
     if starts is None:starts=[1]*len(jobs)
     primary = next((job for job in jobs if job[2]), jobs[0] if jobs else None)
     practice_copy=next((j[0] for j,stage in zip(jobs,starts) if training and j[2] and stage==1),None)
     futures={pool.submit(rollout,job,retries,stage,training=training,observe=True,
                          observer_interval=.2 if training and job is primary else 1.,
-                         practice_retry=job[0]==practice_copy,allow_progression=allow_progression):(job,stage)
+                         practice_retry=job[0]==practice_copy,allow_progression=allow_progression,
+                         capture_shadow=capture_shadow,
+                         fixed_speed=speeds[job[0]] if speeds else None):(job,stage)
              for job,stage in zip(jobs,starts,strict=True)}
     for future in as_completed(futures):
         job,stage=futures[future]
@@ -582,12 +589,17 @@ def main():
     parser.add_argument('--seed-from',type=Path,help='Start with a previous search champion and its frozen GRU')
     parser.add_argument('--demonstration',type=Path,help='Seed candidates from a local Boston progress file')
     parser.add_argument('--compare-forecast',type=Path,help='Evaluate the same saved champion with and without its CNN forecast')
+    parser.add_argument('--compare-speed',action='store_true',help='Compare fixed stock 1x and 2x on fresh L1 boards')
+    parser.add_argument('--capture-shadow',action='store_true',help='Record bounded crowd frames and confirmed stock spends for offline analysis')
     args=parser.parse_args()
     copies=args.copies
     if not 4<=len(copies)<=8 or len(set(copies))!=len(copies) or args.generations<1 or args.later_retries<0:
         parser.error('Use 4–8 distinct owned copies and positive generations')
     if args.compare_forecast and (not args.seed_from or len(copies)%2 or args.demonstration):
         parser.error('Forecast comparison requires a saved champion and paired copies')
+    if args.compare_speed and (not args.seed_from or args.generations % 2 or args.demonstration
+                               or args.allow_progression or args.compare_forecast):
+        parser.error('Speed comparison requires a saved champion, an even number of waves and fresh L1 only')
     with operator.training_lock(operator.LOCK):
         ancestors=[p.pid for p in psutil.Process().parents()]
         for copy in copies:
@@ -644,7 +656,7 @@ def main():
             if ledger['base']!=base:raise ValueError('Campaign fitness base mismatch')
             if ledger.get('view_revision')==view_revision:evidence=ledger['evidence']
             prices=ledger.get('layout_prices',{})
-        if args.seed_from and not args.compare_forecast:
+        if args.seed_from and not (args.compare_forecast or args.compare_speed):
             best_budget=None
             paths=[args.seed_from/name for name in ('trials.jsonl','extra-trials.jsonl')]
             for trial in chain.from_iterable(records(path) for path in paths if path.is_file()):
@@ -657,7 +669,7 @@ def main():
                         best_budget,population[-1]=rank,candidate
             for i in range(1,len(population)):
                 population[i]=budget_candidate(population[i],[],prices) or population[i]
-        if prior and not args.compare_forecast:
+        if prior and not (args.compare_forecast or args.compare_speed):
             previous=args.seed_from/'provisional.json'
             if previous.is_file():
                 saved=checkpoint_team(json.loads(previous.read_text()),base)['team']
@@ -670,6 +682,18 @@ def main():
         continued={}
         require_fresh=set()
         with ProcessPoolExecutor(len(copies)) as pool:
+            if args.compare_speed:
+                for wave in range(args.generations):
+                    speed = ('speed_1', 'speed_2')[(wave + wave // 2) % 2]
+                    jobs = [(copy, weights, prior, args.seed + (wave // 2) * len(copies) + i)
+                            for i, copy in enumerate(copies)]
+                    speeds = dict.fromkeys(copies, speed)
+                    for job, _, result in completed_rollouts(pool, jobs, speeds=speeds,
+                                                            capture_shadow=args.capture_shadow):
+                        result.update(wave=wave, fixed_speed=speed, team_id=team_id(prior))
+                        with (directory/'speed-comparison.jsonl').open('a') as f:
+                            f.write(json.dumps(result)+'\n')
+                return
             if args.compare_forecast:
                 contender=loadout_candidate(prior,rng)
                 (directory/'comparison-team.json').write_text(json.dumps(contender))
@@ -701,7 +725,8 @@ def main():
                 affordable=[]
                 cast_probes={}
                 valid_candidates=0
-                for job,start_stage,result in completed_rollouts(pool,jobs,starts,args.later_retries,training=True,allow_progression=args.allow_progression):
+                for job,start_stage,result in completed_rollouts(pool,jobs,starts,args.later_retries,training=True,
+                        allow_progression=args.allow_progression,capture_shadow=args.capture_shadow):
                     team=job[2]
                     key=team_id(team) if team else 'control'
                     result.update(view_revision=view_revision,generation=generation,team_id=key,team=team,start_stage=start_stage)

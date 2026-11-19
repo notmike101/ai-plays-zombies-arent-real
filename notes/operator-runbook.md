@@ -305,6 +305,24 @@ episode. A missing footer makes this field unknown. A game with zero casts
 provides no test of targeting. Report
 forecast error and actual civilian saves separately.
 
+At an idle, coordinated launch boundary, add
+`--compare-speed --generations 4` to team search with a saved champion and
+4–8 preflighted copies. Waves run 1×, 2×, 2×, 1× with the same copies, frozen
+champion and paired policy seeds. The game still chooses outbreak seeds.
+Both arms mask policy speed controls and check native battle speed. Results
+go to `speed-comparison.jsonl` without promoting any teams. Compare fresh
+scored trials per wall hour, qualifying wins, timeouts and confirmed spends.
+Use the spread of worker finish times within each wave to estimate the time
+lost waiting for other copies.
+
+Add `--capture-shadow` to a bounded search or speed experiment to record
+camera-tagged crowd grids and confirmed stock spends under the native
+session header. Keep these files local. The cell identifies the policy's
+selection. Check camera alignment and corroborate spends with native
+deployment events before attributing outcomes. Preserve held-out outbreak
+sessions and include opportunities where legal casts were available and the
+model waited. Treat the data as observational.
+
 Later-stage candidates project the recorded layout through the current
 stage's camera and map origin, skip structures already carried, and issue
 purchases through the normal roster. Each stage's `unmatched_layout` lists
