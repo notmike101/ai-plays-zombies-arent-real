@@ -1,6 +1,9 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 02:10 Central. Published [checkpoint-82e4a4d891d2cb2e](https://github.com/notmike101/ai-plays-zombies-arent-real/releases/tag/checkpoint-82e4a4d891d2cb2e), policy 8a691469a829158d.
+  The publisher downloaded all three release assets and verified checksums and schema before publication.
+  GitHub initially rejected the target because capture commit 2351514 was local only. A fast-forward push made the exact SHA resolvable. The six-hour job now preflights the manifest's capture SHA.
 - 2026-11-19 02:04 Central. Archived the six outstanding
   legacy runtime files from analysis and sessions in ignored
   analysis/coverage-legacy-cleanup-20261119, preserving relative paths
