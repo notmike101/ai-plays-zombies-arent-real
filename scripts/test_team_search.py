@@ -62,11 +62,27 @@ class SearchTests(unittest.TestCase):
     def test_later_stage_search_preserves_earlier_policy(self):
         rng=np.random.default_rng(32)
         parent=search.random_team(rng)
-        parent['later_layouts']={'2':[{'kind':'mortar'},{'kind':'garrison'}]}
+        parent['later_layouts']={'2':[{'kind':'mortar','points':[[12,5]]},
+                                     {'kind':'garrison','points':[[20,15]]}]}
         child=search.offspring(parent,parent,rng,stage=2)
         for key in ('plan','cast_bias','idle_bias','battle'):
             self.assertEqual(child[key],parent[key])
         self.assertIn('2',child['stage_battle'])
+
+    def test_layout_search_can_learn_new_coordinates_without_distorting_shapes(self):
+        original=[dict(kind='wall',points=[[0,0],[15,20]]), dict(kind='mortar',points=[[80,50]])]
+        sizes=set()
+        moved=False
+        for seed in range(64):
+            layout=copy.deepcopy(original)
+            search.vary_layout(layout,np.random.default_rng(seed))
+            sizes.add(len(layout))
+            for item in layout:
+                if item['kind']=='wall':
+                    np.testing.assert_allclose(np.diff(item['points'],axis=0),[[15,20]])
+                    moved |= item['points']!=original[0]['points']
+        self.assertEqual(sizes,{1,2,3})
+        self.assertTrue(moved)
 
     def test_time_in_pause_adds_no_survival_credit(self):
         row=dict(advance=False,win=False,saved_frac=.1,civ0=100,

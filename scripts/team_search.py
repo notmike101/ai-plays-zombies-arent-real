@@ -53,14 +53,28 @@ def loadout_candidate(parent,rng):
     return candidate
 
 
+def vary_layout(layout,rng):
+    if not layout:return
+    index=int(rng.integers(len(layout)))
+    move=rng.choice(('reorder','translate','duplicate','remove'))
+    if move=='reorder':
+        layout.insert(int(rng.integers(len(layout))),layout.pop(index))
+    elif move=='remove':
+        if len(layout)>1:layout.pop(index)
+    else:
+        item=deepcopy(layout[index])
+        span=np.ptp(np.concatenate([a['points'] for a in layout]),axis=0)
+        offset=rng.normal(size=2)*np.maximum(1.,span*.025)
+        item['points']=(np.asarray(item['points'])+offset).tolist()
+        if move=='translate':layout[index]=item
+        else:layout.insert(index+1,item)
+
+
 def offspring(parent, donor, rng, stage=1):
     child = deepcopy(parent)
     if stage>1 and str(stage) in child.get('later_layouts',{}):
         layout=child['later_layouts'][str(stage)]
-        if len(layout)>1:
-            a,b=rng.choice(len(layout),2,replace=False)
-            item=layout.pop(int(a))
-            layout.insert(int(b),item)
+        vary_layout(layout,rng)
         params=child.setdefault('stage_battle',{}).setdefault(str(stage),{})
         for key in ('battle','cast_bias'):
             base=np.asarray(params.get(key,child[key]))
@@ -78,9 +92,7 @@ def offspring(parent, donor, rng, stage=1):
         base = np.asarray((donor if rng.random()<.5 else parent)[key])
         child[key] = (base + rng.normal(0,.35,base.shape)).tolist()
     layout=child.get('layout')
-    if layout and len(layout)>1:
-        a,b=rng.choice(len(layout),2,replace=False)
-        layout[a],layout[b]=layout[b],layout[a]
+    if layout:vary_layout(layout,rng)
     return child
 
 

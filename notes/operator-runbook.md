@@ -249,3 +249,6 @@ purchases through the normal roster. Search can take up to two additional
 normal retries after a later-stage loss or below-target win. Set
 `--later-retries 0` for a single-attempt search. Held-out games always use
 one attempt per stage. Inspect `attempt` and `start_kind` in the stage record.
+Search offspring can reorder, translate, omit or add a nearby copy of a
+placement. Translation uses world coordinates and moves a polygon's corners
+together. Only actual in-game outcomes determine whether an offspring survives.
