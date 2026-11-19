@@ -25,6 +25,7 @@ let view = 'monitor', source, generation = 0, live = {}, frozen = null, replay =
 let mapChoice = 0, page = 0, unit = 0, inspectedMemory = null, tile = null, weightCursor = 0;
 let pendingReplay = 0, pendingCompare = 0, pendingWeights = 0;
 let learning, learningRequest = 0;
+let gameView = null;
 const shown = () => replay || frozen || live;
 const list = () => (frozen || live).history || [];
 const preview = () => $('mode').value === 'preview';
@@ -84,8 +85,14 @@ function connect() {
       mapChoice = page = unit = 0;
     }
     if (!frozen && (!same(previous.sample, live.sample) || data.history.length || previous.error !== live.error)) render();
+    refreshGameView();
   });
-  source.onerror = () => { if (nonce === generation) status('offline'); };
+  source.onerror = () => {
+    if (nonce === generation) {
+      status('offline');
+      refreshGameView();
+    }
+  };
 }
 
 function status(state, age) {
@@ -116,6 +123,79 @@ function render() {
   if (view === 'monitor') renderMonitor(sample, metadata);
   if (view === 'activity') renderActivity(sample, metadata);
   if (view === 'timeline') renderTimeline(sample, metadata);
+  refreshGameView();
+}
+
+function clearGameView() {
+  if (!gameView) return;
+  if (gameView?.url) URL.revokeObjectURL(gameView.url);
+  gameView = null;
+  const image = $('game-screenshot');
+  image.hidden = true;
+  image.removeAttribute('src');
+}
+
+async function refreshGameView() {
+  if (view !== 'monitor' || !$('game-view').open || document.hidden) { clearGameView(); return; }
+  const label = message => {
+    if ($('game-capture-status').textContent !== message) text('game-capture-status', message);
+  };
+  if (replay || preview()) {
+    clearGameView();
+    label('Game views are available for live decisions.');
+    return;
+  }
+  if (frozen) {
+    label(gameView?.captured ? `Frozen · captured ${clock(gameView.captured)}` : 'Unfreeze the view to request an image.');
+    return;
+  }
+  const stream = $('status').dataset.state === 'live' && live.sample?.stream;
+  if (!stream) {
+    clearGameView();
+    label('Waiting for a live game.');
+    return;
+  }
+  if (gameView?.stream !== stream) {
+    clearGameView();
+    gameView = {stream, lastRequest: -Infinity, pending: false};
+    label('Waiting for a game image.');
+  }
+  const active = gameView;
+  const now = performance.now();
+  if (active.pending || active.denied || now - active.lastRequest < 1950) return;
+  active.pending = true;
+  active.lastRequest = now;
+  try {
+    const response = await fetch('/api/screenshot?' + new URLSearchParams({stream}),
+      {signal: AbortSignal.timeout(6000)});
+    if (gameView !== active || frozen) return;
+    if (response.status === 403) {
+      active.denied = true;
+      label('Game view sharing is disabled on this host.');
+      return;
+    }
+    if (response.status !== 200) {
+      const image = $('game-screenshot');
+      image.hidden = true;
+      label('Waiting for a game image. The window may be minimized or unavailable.');
+      return;
+    }
+    const captured = Number(response.headers.get('X-Captured-At'));
+    const blob = await response.blob();
+    if (gameView !== active || frozen || !Number.isFinite(captured) || captured <= 0) return;
+    if (active.captured !== captured) {
+      if (active.url) URL.revokeObjectURL(active.url);
+      active.url = URL.createObjectURL(blob);
+      active.captured = captured;
+      $('game-screenshot').src = active.url;
+    }
+    $('game-screenshot').hidden = false;
+    label(`Captured ${clock(captured)} · game PID ${live.sample.game_pid}`);
+  } catch {
+    if (gameView === active && !frozen) label('Game image unavailable. Retrying while the Game view is open.');
+  } finally {
+    active.pending = false;
+  }
 }
 
 const mapChannels = [
@@ -732,6 +812,8 @@ $('stream').onchange = connect;
 $('mode').onchange = () => { options($('stream'), [['', 'Automatic attachment']]); connect(); };
 $('pause').onclick = () => { frozen = frozen ? null : live; syncPause(); render(); };
 $('map-layer').onchange = render;
+$('game-view').ontoggle = refreshGameView;
+document.addEventListener('visibilitychange', refreshGameView);
 for (const id of ['activation-layer', 'feature-group', 'feature-search']) $(id).oninput = () => { page = unit = 0; render(); };
 $('feature-prev').onclick = () => { page--; render(); };
 $('feature-next').onclick = () => { page++; render(); };

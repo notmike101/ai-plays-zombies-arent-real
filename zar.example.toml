@@ -12,3 +12,5 @@ identity_helper = ''
 # Optional public HTTPS hostname allowed to read Learning through a reverse proxy.
 # Enter the hostname only. Update it when a Cloudflare Quick Tunnel changes.
 learning_host = ''
+# Enable window thumbnails on the configured public hostname.
+share_screenshots = false

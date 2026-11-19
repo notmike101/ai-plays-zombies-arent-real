@@ -18,6 +18,35 @@ history after a worker disappears. A stale inference can coexist with an open
 connection. The legacy graph remains available for focused connectivity
 inspection. Its unsigned GRU edges summarize weights across gates.
 
+### Game view
+
+Open **Game view** under the battlefield in the Monitor. It requests a recent
+thumbnail of the selected live worker's game window about every two seconds
+while the panel is open and the tab is visible. The thumbnail shows its own
+capture time. It does not belong to a particular decision or appear in replay.
+Freezing the view freezes the displayed image and pauses requests.
+
+On Windows, install the optional Graphics Capture dependencies into the
+ignored runtime directory. The repository's Python environment supplies
+NumPy and psutil. This command leaves the trainer's environment alone.
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install --only-binary=:all: --no-deps --target visualizer/runtime/screenshot-deps -r visualizer/screenshot-requirements.txt
+```
+
+The helper verifies the process and its window handle against a live stream and
+a repository-owned game copy. A disposable subprocess collects a Windows
+Graphics Capture frame and returns a JPEG limited to 800×600. The observatory
+keeps one image in memory and limits capture to one subprocess globally. The
+helper cannot delay the policy worker. Minimized or unavailable windows show a
+waiting message. There is no desktop or PrintWindow fallback.
+
+Game view is available through localhost and the direct LAN listener. To
+share thumbnails publicly, explicitly set `share_screenshots = true` under
+`[visualizer]` alongside `learning_host` in `zar.local.toml`, then restart
+the observatory. Viewers who can reach that hostname can see the game
+thumbnail whenever they open Game view.
+
 ## Data and access
 
 - The Python observer stays attached to the actual forward pass and publishes

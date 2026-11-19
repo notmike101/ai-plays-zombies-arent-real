@@ -1,0 +1,3 @@
+# Install into visualizer/runtime/screenshot-deps with --no-deps.
+windows-capture==2.0.1
+opencv-python-headless==4.13.0.92

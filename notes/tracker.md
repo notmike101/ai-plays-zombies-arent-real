@@ -1,6 +1,12 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 23:46 Central. Deployed opt-in Game view on observatory PID 28384
+  (create time 1795067149.3525112). The screenshot helper captured actual
+  planning and battle on isolated inst20 (800×519, 57–63 KB), and local
+  Chrome displayed its thumbnail. The named public hostname returned 403
+  for screenshots with sharing disabled. The test game was stopped after
+  verification. Campaign training remained active. Visualizer suite: 46 tests.
 - 23:44 Central. Audited two matched fresh L1 game logs for
   safe-zone defense. inst14 (seed 1918897396) and inst17 (seed 3529359300)
   started with 14.6% civilians inside zones. First logged breach points

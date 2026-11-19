@@ -14,6 +14,7 @@ import tomllib
 from urllib.parse import parse_qs, urlsplit
 import observatory
 from learning import read_results
+from screenshot import Screenshots
 
 ROOT = Path(__file__).resolve().parent
 FRESH_SECONDS = 15
@@ -203,10 +204,12 @@ class Feed:
         return None
 
 
-def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysis', *, learning_host=''):
+def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysis', *,
+                learning_host='', share_screenshots=False, screenshot=None):
     feed = feed or Feed()
     hostname = socket.gethostname().lower()
     learning_host = learning_host.strip().lower()
+    screenshot = screenshot or Screenshots()
     class Handler(BaseHTTPRequestHandler):
         def events(self, args):
             self.connection.settimeout(3)
@@ -270,13 +273,16 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
 
         def do_GET(self):
             url = urlsplit(self.path)
-            if url.path in ('/api/weights', '/api/learning'):
+            response_status = 200
+            captured_at = None
+            if url.path in ('/api/weights', '/api/learning', '/api/screenshot'):
                 hosts = ('localhost', '127.0.0.1')
                 weights = url.path == '/api/weights'
                 if not weights:
                     hosts += (hostname, self.connection.getsockname()[0])
                 allowed = {*hosts, *(f'{name}:{self.server.server_port}' for name in hosts)}
-                if not weights and learning_host:
+                if learning_host and (url.path == '/api/learning' or
+                                      (url.path == '/api/screenshot' and share_screenshots)):
                     allowed.update((learning_host, f'{learning_host}:443'))
                 if ((weights and self.client_address[0] != '127.0.0.1') or
                         self.headers.get('Host', '').lower() not in allowed or
@@ -294,7 +300,25 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
                 finally:
                     self.server.stream_slots.release()
                 return
-            if url.path == '/api/learning':
+            if url.path == '/api/screenshot':
+                args = parse_qs(url.query)
+                streams = args.get('stream', [])
+                if len(streams) != 1 or len(streams[0]) > 128 or args.get('preview') == ['1']:
+                    self.send_error(404)
+                    return
+                state = feed.state(stream=streams[0])
+                frame = state['frame'] or {}
+                pid = frame.get('game_pid')
+                if state['status'] != 'live' or type(pid) is not int or pid <= 0:
+                    self.send_error(404)
+                    return
+                capture = screenshot(streams[0], pid, frame['timestamp'])
+                if capture is None:
+                    response_status, body, mime = 202, b'', 'application/octet-stream'
+                else:
+                    captured_at, body = capture
+                    mime = 'image/jpeg'
+            elif url.path == '/api/learning':
                 run = parse_qs(url.query).get('run', [None])[0]
                 if not self.server.result_slots.acquire(blocking=False):
                     self.send_error(503, 'Results are busy; retry shortly')
@@ -336,12 +360,14 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
             else:
                 self.send_error(404)
                 return
-            self.send_response(200)
-            self.send_header('Content-Type', mime + '; charset=utf-8')
+            self.send_response(response_status)
+            self.send_header('Content-Type', mime if url.path == '/api/screenshot' else mime + '; charset=utf-8')
             self.send_header('Content-Length', str(len(body)))
+            if captured_at is not None:
+                self.send_header('X-Captured-At', str(captured_at))
             self.send_header('Cache-Control', 'no-store')
             self.send_header('X-Content-Type-Options', 'nosniff')
-            self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'")
+            self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data: blob:; frame-ancestors 'none'")
             self.end_headers()
             try:
                 self.wfile.write(body)
@@ -349,7 +375,7 @@ def make_server(host, port, feed=None, learning_directory=ROOT.parent / 'analysi
                 pass
 
         def log_message(self, fmt, *args):
-            if args and str(args[1]) != '200':
+            if args and str(args[1]) not in ('200', '202'):
                 super().log_message(fmt, *args)
     class Server(ThreadingHTTPServer):
         daemon_threads = True
@@ -388,8 +414,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     config_path = ROOT.parent / 'zar.local.toml'
     config = tomllib.loads(config_path.read_text(encoding='utf-8')) if config_path.is_file() else {}
-    server = make_server(args.host, args.port,
-                         learning_host=config.get('visualizer', {}).get('learning_host', ''))
+    options = config.get('visualizer', {})
+    server = make_server(args.host, args.port, learning_host=options.get('learning_host', ''),
+                         share_screenshots=options.get('share_screenshots') is True)
     print(f'Policy visualizer listening on {args.host}:{server.server_port}', flush=True)
     print(f'Open http://localhost:{server.server_port}', flush=True)
     preview_process = None
