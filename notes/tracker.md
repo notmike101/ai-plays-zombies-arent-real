@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-18 — sustained comparison complete, production GRU resumed)
+## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- At 20:06 Central, the first layout search was finishing its held-out games
+  on inst13–16. Both qualifying L1 victories recorded zero battle casts.
+  Follow analysis/coverage-cnn-live.log for the paired targeting comparison
+  and analysis/coverage-stage-layout-live.log for the next population. Both
+  use the existing training lock. Search now records cast availability and
+  stock decreases; the comparison offers the same seeded loadout purchase
+  to both arms. Later-stage training can retry twice; held-out scores are
+  single attempts. All 158 game-free trainer tests passed.
 - Campaign search on four owned copies now uses a frozen GRU plus searched
   preparation sequences and battle target scores (base 8a691469a829158d).
   Normal fresh L1: archive-coordinate candidate 0a661f77aa805b14 won with
