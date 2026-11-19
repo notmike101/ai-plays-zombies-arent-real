@@ -70,6 +70,19 @@ def l1_candidate(parent,rng):
     return child
 
 
+def cast_candidate(trial,rng):
+    levels=trial.get('levels',[])
+    if not levels or not trial.get('team'):return None
+    first=levels[0]
+    if first.get('start_kind')!='fresh' or first['stage']!=1:return None
+    actions=first.get('battle_actions',{})
+    if actions.get('cast_available',0)<10 or actions.get('cast_sampled')!=0:return None
+    child=deepcopy(trial['team'])
+    shift=rng.uniform(2,7)
+    child['cast_bias']=(np.asarray(child['cast_bias'])+shift).tolist()
+    return child
+
+
 def vary_layout(layout,rng):
     if not layout:return
     index=int(rng.integers(len(layout)))
@@ -453,12 +466,14 @@ def main():
             if ledger['base']!=base:raise ValueError('Campaign fitness base mismatch')
             if ledger.get('view_revision')==view_revision:evidence=ledger['evidence']
         prices={}
+        cast_probe=None
         if args.seed_from and not args.compare_forecast and (args.seed_from/'trials.jsonl').is_file():
             best_budget=None
             for line in (args.seed_from/'trials.jsonl').read_text().splitlines():
                 trial=json.loads(line)
                 if trial.get('view_revision')==view_revision:fitness.record(evidence,trial)
                 if not trial.get('levels'):continue
+                if prior and trial.get('team')==prior:cast_probe=cast_candidate(trial,rng) or cast_probe
                 candidate=budget_candidate(trial.get('team'),trial['levels'],prices)
                 if candidate:
                     rank=(max(r['stage'] for r in trial['levels']),team_id(candidate))
@@ -468,6 +483,7 @@ def main():
                 population[i]=budget_candidate(population[i],[],prices) or population[i]
         if prior and not args.compare_forecast:
             population[1]=l1_candidate(prior,rng)
+            if cast_probe:population[-1]=cast_probe
             previous=args.seed_from/'provisional.json'
             if previous.is_file():
                 saved=checkpoint_team(json.loads(previous.read_text()),base)['team']
@@ -507,6 +523,7 @@ def main():
                 require_fresh.clear()
                 practice=[]
                 affordable=[]
+                cast_probes={}
                 valid_candidates=0
                 for job,start_stage,result in completed_rollouts(pool,jobs,starts,args.later_retries,training=True):
                     team=job[2]
@@ -533,6 +550,8 @@ def main():
                         archive[key]=team
                         deepest[key]=max(deepest.get(key,1),levels[-1]['stage'],result.get('failed_stage',1))
                         fitness.record(evidence,result)
+                        probe=cast_candidate(result,rng)
+                        if probe:cast_probes[key]=probe
                     print(generation,key,[(r['stage'],r['end'],r['saved'],round(r['sim'],1)) for r in levels],flush=True)
                 if not valid_candidates:raise RuntimeError('No valid candidates this generation; inspect trials')
                 ranked=sorted(archive,key=lambda k:fitness.ranking(evidence,archive[k]),reverse=True)
@@ -559,7 +578,9 @@ def main():
                 population=[leader,incumbent or leader]
                 require_fresh.update(team_id(t) for t in population)
                 population.append(l1_candidate(leader,rng) if generation%2==0 else offspring(leader,leader,rng,stage=1))
-                if practice:
+                probe=next((cast_probes[k] for k in l1_ranked if k in cast_probes),None)
+                if probe and (generation%2==0 or not practice):population.append(probe)
+                elif practice:
                     specialist=max(practice,key=lambda entry:(entry[0],entry[1],team_id(entry[2])))[2]
                     population.append(specialist)
                     require_fresh.add(team_id(specialist))

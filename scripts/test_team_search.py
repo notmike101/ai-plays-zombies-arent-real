@@ -39,6 +39,20 @@ class SearchTests(unittest.TestCase):
             updates=[json.loads(line) for line in hist.read_text().splitlines()]
             self.assertEqual(updates[1]['checkpoint_id'],updates[2]['checkpoint_id'])
 
+    def test_cast_experiment_uses_first_fresh_l1_and_changes_only_cast_preference(self):
+        rng=np.random.default_rng(7)
+        team=search.random_team(rng)
+        first=dict(stage=1,start_kind='fresh',battle_actions=dict(cast_available=16,cast_sampled=0))
+        trial=dict(team=team,levels=[first])
+        child=search.cast_candidate(trial,rng)
+        self.assertTrue(np.all(np.asarray(child['cast_bias'])>team['cast_bias']))
+        child['cast_bias']=team['cast_bias']
+        self.assertEqual(team,child)
+        first['start_kind']='carry'
+        self.assertIsNone(search.cast_candidate(trial,rng))
+        first.update(start_kind='next_level',stage=2)
+        self.assertIsNone(search.cast_candidate(trial,rng))
+
     def test_refuge_size_trial_keeps_other_decisions_fixed(self):
         parent=dict(refuge=dict(scale=1.,aspect=.8,defense_weight=.16),plan=[1])
         candidate=search.l1_candidate(parent,np.random.default_rng(7))
