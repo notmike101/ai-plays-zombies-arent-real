@@ -2,6 +2,33 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 151952 finished at 01:33 Central with 16 early-retry discovery
+  results, 15 without an explicit READY, and zero wins. Candidate
+  625da8b96c4639f7 paid for two Garrisons (cells 13 and 26) in its
+  discovery trial and on both reserved copies, each on a different outbreak.
+  All three of those battles started without the model's READY and
+  had no legal cast opportunities. Results were 9.89%, 9.95% and 9.96%
+  saved at retry. Both reserved GRU boards reused discovery seeds. No
+  valid comparison or promotion.
+- A read-only trace on inst13–16 in generation three captured the first
+  rectangle clearing its native draft while staying in planning and the
+  second clearing its draft immediately before battle on all four games.
+  Commit 4752be3 waits for consumed corner clicks and checks the draft,
+  active tool and modal before sending Enter. If a game enters battle
+  without explicit policy READY, the episode fails before it can
+  contribute a score or experience. Campaign ledgers now use a new
+  interface revision. All 243 script tests and 59 Observatory tests
+  passed. Actual GRU outputs and observer sampling matched across
+  12 recurrent steps, and graph checks passed.
+- Seed 152952 started at 01:34 Central on D: (PID 57040), a single
+  discovery generation plus frozen evaluation on reserved inst17–20.
+  Discovery uses inst13–16. Prior frozen GRU 8a691469a829158d and
+  provisional policy 625da8b96c4639f7 are inputs. Startup headroom was
+  13.19 GiB RAM and 18.26 GiB free on D:. Output
+  `analysis/coverage-team-e7816b8ec2`, run log
+  `analysis/coverage-layout-free-152952-drive-d.log`. Production checkpoint
+  hash matched. Official 35% consistency remains open.
+
 - At 01:18 Central the first four seed 151952 discovery games ended in
   early retries (9.91%, 10.00%, 9.95%, 9.97%). Extending the Garrison
   preference from two to five decisions produced two actual attempts:
