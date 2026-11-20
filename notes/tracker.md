@@ -2,6 +2,33 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 178952 started at 07:26 Central on D:, trainer PID 62944,
+  output `analysis/coverage-team-f00bffc967`, and log
+  `analysis/coverage-layout-free-178952-drive-d.log`. Launch headroom
+  was 12.84 GiB RAM and 18.94 GiB disk. Commit f58aa1d compares
+  selecting the model's highest-scoring legal ability target with
+  sampling its legal ability targets. Both arms preserve preparation,
+  weights, Firebomb endpoint scoring and stochastic selection of
+  battle tools. Target sampling uses a separate seeded generator, so
+  it does not advance the tool sampler. Each copy runs both arms with
+  the same policy seed. The native outbreak remains game-selected.
+  The trial records the number of non-argmax ability targets. The
+  fixture verified arm rotation and identity. All 279 script tests
+  and 60 Observatory tests passed. Production hash matched.
+- Seed 177952 finished at 07:26 with two native clears below 35%,
+  five scored early retries, one timeout and no reserved evaluation.
+  Endpoint reference 5679a1607b5acf9e scored 9.42%, 18.18%, 9.56%
+  and 21.22%, mean 14.60% across those four distinct scored outbreaks.
+  Line variant ae664d95bac32a1d scored 9.08%, 8.20%, and 9.79%, mean
+  9.02% across three scored outbreaks, plus one battle-clock timeout.
+  All eight started with 21 native Garrisons. On the shared seeds
+  3811417467 and 2374956122 the endpoint scored 9.42% and 9.56%,
+  and line scoring 8.20% and 9.08%. On shared seed 1084437502 the
+  endpoint cleared at 21.22% and the line arm timed out. The
+  18.18% clear credited 1,697 Firebomb kills. The 21.22% clear
+  credited zero despite 30 native impacts. The batch did not
+  support deploying line scoring as a default.
+
 - Seed 177952 started at 07:07 Central on D:, trainer PID 70916,
   output `analysis/coverage-team-051d1d5ded`, and log
   `analysis/coverage-layout-free-177952-drive-d.log`. Launch headroom
