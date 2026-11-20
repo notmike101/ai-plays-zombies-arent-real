@@ -1,6 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 21:24 Central. Four-copy no-replay launch was refused with
+  8.44 GiB idle RAM and 4.32 GiB free disk. Started safe two-copy PPO
+  143952 on inst13/14, handoff PID 64920. Sixteen updates and six frozen
+  rounds per arm. Private output `analysis/coverage-phase-balance-2e887b1d6a`.
+  The handoff will attempt no-replay search if idle RAM recovers to 10.5 GiB,
+  then restore the production supervisor. Frozen verification now has a
+  tested three-block checker in staged commit 2a896a1. Goal remains active.
 - 2026-11-19 20:54 Central. Fixed-1× PPO phase-balance trial 141952
   finished: both frozen arms 0/12 qualifiers, 9.29% standard versus
   9.35% balanced mean saved. Balanced increased training stock spends
