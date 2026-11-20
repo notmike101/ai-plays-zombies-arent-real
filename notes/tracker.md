@@ -2,6 +2,26 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- D: storage audit at 08:40 Central found 18.77 GiB free. The owned game
+  copies account for 3.59 GiB, including 2.70 GiB of game assets and
+  547 MiB of text dumps. Analysis accounts for 1.63 GiB when counting
+  each file once. All 94 frozen search bases are hard links to one
+  11.82 MiB file, so their apparent 1.07 GiB duplication is already
+  avoided. The 655 MiB verified replay archive preserves the prior
+  5.41 GiB reduction. The legacy input DLL debug compiler cache is
+  9.35 MiB. Automatic execution review blocked its removal, so the
+  cache remains present. If more room is required, first inventory idle
+  game copies for retirement, preserve their logs and saves, and keep
+  the four trial and two reserve copies. Archive old text evidence
+  separately only with verified restoration. No source installation
+  or C: worktree access.
+- The active seed 182952 completed its four fitting games at 7.01%,
+  8.76%, 9.33% and 9.99% saved on retries. The first crossed comparison
+  wave reached READY on all four copies at 08:40. PID 40204 and
+  Observatory PID 12628 remained active. The production checkpoint and
+  release input DLL SHA-256 matched. No new experiments were started
+  for the storage audit.
+
 - Seed 182952 started at 08:32 Central on D:, trainer PID 40204,
   output `analysis/coverage-team-5cc246e6ce`, and log
   `analysis/coverage-layout-free-182952-drive-d.log`. Launch headroom
