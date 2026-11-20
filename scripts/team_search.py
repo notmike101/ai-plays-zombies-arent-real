@@ -17,6 +17,7 @@ import torch
 
 import local_agent as operator
 import nn_play2 as tr
+from game_controls import Controls
 from nn_report import records
 from shelter_reward import garrison_perimeter_gain, garrison_reach
 from spatial import project
@@ -348,6 +349,26 @@ def vary_layout(layout,rng):
         item.pop('observed_cost',None)
         if move=='translate':layout[index]=item
         else:layout.insert(index+1,item)
+
+
+def available_placement_neighbors(parent, rosters, rng):
+    equipped = [set(roster) for roster in rosters]
+    common = set.intersection(*equipped)
+    present = set.union(*equipped)
+    preferred = {step['tool'] for step in parent['plan']}
+    alternatives = [tool for tool, name in tr.PLACEMENTS.items()
+                    if name in common and tool not in preferred]
+    slot = next((i for i, step in enumerate(parent['plan'])
+                 if step['tool'] in tr.PLACEMENTS and tr.PLACEMENTS[step['tool']] not in present),
+                None)
+    if slot is None or len(alternatives) < 2:
+        return []
+    children = []
+    for tool in rng.choice(alternatives, size=2, replace=False):
+        child = deepcopy(parent)
+        child['plan'][slot]['tool'] = int(tool)
+        children.append(child)
+    return children
 
 
 def battle_neighbors(parent, rng):
@@ -703,6 +724,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
             env = zar_boot.boot(copy_dir, destination, **boot_options)
         if click_start:
             result['initial_paint_mode'] = False  # Native state was verified by boot.
+            result['initial_planning_roster'] = Controls(env).planning_roster()
         timing['board_ready'] = monotonic()
         layout_receipts=[]
         while stage <= 5:
@@ -1032,7 +1054,10 @@ def main():
                         help='Defer reserved evaluation until a discovery policy qualifies')
     parser.add_argument('--holdout-copies', nargs='+',
                         help='Reserve separate owned copies for the final frozen evaluation')
-    parser.add_argument('--battle-neighbors', action='store_true',
+    neighbors = parser.add_mutually_exclusive_group()
+    neighbors.add_argument('--placement-neighbors', action='store_true',
+                           help='Compare two equipped placement preferences in the same plan slot')
+    neighbors.add_argument('--battle-neighbors', action='store_true',
                         help='Explore paired cast-score mutations while preserving the learned opening')
     parser.add_argument('--goal-margin', action='store_true',
                         help='Rank unsuccessful discovery battles by survival above the 35 percent target')
@@ -1068,8 +1093,10 @@ def main():
         if args.compare_forecast or args.compare_speed or args.compare_shadow:
             parser.error('Reserved holdout copies are for the final campaign evaluation')
     worker_count = max(len(copies), len(holdout_copies))
-    if args.battle_neighbors and (not args.click_start or args.allow_progression or len(copies) != 4):
-        parser.error('Paired battle exploration requires four copies and the controlled fresh L1 start')
+    if (args.battle_neighbors or args.placement_neighbors) and (not args.click_start or len(copies) != 4):
+        parser.error('Paired exploration requires four copies and the controlled fresh L1 start')
+    if args.placement_neighbors and args.generations != 2:
+        parser.error('Paired placement exploration requires two waves')
     if args.goal_margin and not args.click_start:
         parser.error('Goal-margin ranking requires the controlled fresh L1 start')
     if args.click_start and not args.continue_layout_free:
@@ -1268,6 +1295,13 @@ def main():
                         population[index] = candidate
         if args.battle_neighbors:
             population[1], population[-1] = battle_neighbors(proposal, rng)
+        if args.placement_neighbors:
+            rosters = [operator.planning_roster((operator.owned_copy(copy) / 'steam_cloud/settings.ini')
+                                               .read_text(encoding='utf-8-sig')) for copy in copies]
+            pair = available_placement_neighbors(proposal, rosters, rng)
+            if not pair:
+                raise ValueError('Paired placement exploration needs an unequipped preference and two shared alternatives')
+            population[1], population[-1] = pair
         if prior and not (args.compare_forecast or args.compare_speed):
             previous=args.seed_from/'provisional.json'
             if previous.is_file():
@@ -1309,8 +1343,14 @@ def main():
                         print('cnn',result['cnn'],result.get('error'),[(r['end'],r['saved']) for r in result['levels']],flush=True)
                 return
             for generation in range(args.generations):
-                if generation==0:population.append(None)  # Repeat the control in the held-out block.
-                rng.shuffle(population)
+                if args.placement_neighbors and generation:
+                    population = first_wave[1:] + first_wave[:1]
+                else:
+                    if generation == 0:
+                        population.append(None)
+                    rng.shuffle(population)
+                    if args.placement_neighbors:
+                        first_wave = population.copy()
                 jobs=[(copy,weights,team,args.seed+generation*len(copies)+i)
                       for i,(copy,team) in enumerate(zip(copies,population))]
                 starts=[1]*len(jobs)

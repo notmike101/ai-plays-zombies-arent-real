@@ -353,6 +353,21 @@ class SearchTests(unittest.TestCase):
         row.update(advance=True, win=True, saved_frac=.41, trail=[(5, 100)])
         self.assertEqual(search.score(row, goal_margin=True)[:3], [1, 1, .41])
 
+    def test_placement_neighbors_replace_only_a_preference_missing_from_all_rosters(self):
+        rng = np.random.default_rng(28)
+        parent = search.random_team(rng)
+        template = dict(family=0, duration=4, x=3, y=2, dx=0, dy=0, weights=[0.] * 5)
+        original = search.tr.TOOLS.index('place_ChemMine')
+        parent['plan'] = [dict(template, tool=search.GARRISON), dict(template, tool=original)]
+        rosters = [('Garrison', 'Mortar', 'Oil', 'Mine'), ('Garrison', 'Mortar', 'Oil', 'C4')]
+        children = search.available_placement_neighbors(parent, rosters, rng)
+        self.assertEqual({search.tr.PLACEMENTS[c['plan'][1]['tool']] for c in children}, {'Mortar', 'Oil'})
+        for child in children:
+            restored = [child['plan'][0], dict(child['plan'][1], tool=original)]
+            self.assertEqual(dict(child, plan=restored), parent)
+        self.assertEqual(search.available_placement_neighbors(parent, [(*r, 'ChemMine') for r in rosters], rng), [])
+        self.assertEqual(search.available_placement_neighbors(parent, [rosters[0], ('Garrison',)], rng), [])
+
     def test_battle_neighbors_mirror_only_cast_scores(self):
         rng = np.random.default_rng(28)
         parent = search.random_team(rng)
@@ -521,6 +536,17 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(run.call_args.args[0][4]['fixed_speed'], 'speed_2')
         self.assertTrue(run.call_args.args[0][4]['capture_shadow'])
         self.assertEqual(experiment['levels'][0]['shadow'], dict(row['shadow'], copy='inst13', team=None))
+
+    def test_click_start_records_the_game_reported_planning_roster(self):
+        with (patch.object(search.operator, 'owned_copy'),
+              patch.object(search.zar_boot, 'boot') as boot,
+              patch.object(search.zar_boot, 'stop'),
+              patch.object(search, 'Controls') as controls,
+              patch.object(search.tr, 'run_episode', return_value={'err': 'end fixture'})):
+            controls.return_value.planning_roster.return_value = ['Garrison', 'Mortar']
+            result = search.rollout(('inst13', {}, None, 10), click_start=True)
+        controls.assert_called_once_with(boot.return_value)
+        self.assertEqual(result['initial_planning_roster'], ['Garrison', 'Mortar'])
 
     def test_failed_fast_boot_retries_with_the_standard_warmup(self):
         with (patch.object(search.operator, 'owned_copy', return_value='copy'),
