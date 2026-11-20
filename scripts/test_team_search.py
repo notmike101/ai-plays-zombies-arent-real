@@ -534,6 +534,20 @@ class SearchTests(unittest.TestCase):
             original = dict(child, plan=[dict(child['plan'][0], tool=absent)])
             self.assertEqual(original, parent)
 
+    def test_garrison_sampling_preserves_legal_cells_and_policy_identity(self):
+        mask = torch.zeros(search.tr.NC, dtype=torch.bool)
+        mask[[0, 5]] = True
+        ranked = torch.zeros(search.tr.NC)
+        ranked[0] = 1.
+        dist = search.tr.exploration_distribution(ranked, mask, 0.25)
+        self.assertEqual(dist.probs.nonzero().flatten().tolist(), [0, 5])
+        self.assertEqual(float(dist.probs[0]), .875)
+        self.assertEqual(float(dist.probs[5]), .125)
+        parent = search.random_team(np.random.default_rng(11))
+        child = dict(parent, sample_garrison_sites=True)
+        self.assertNotEqual(search.team_id(parent), search.team_id(child))
+        search.checkpoint_team(dict(team=child, team_id=search.team_id(child), base='base'), 'base')
+
     def test_loadout_sampling_is_legal_ranked_and_replayable(self):
         tr = search.tr
         start = tr.BUY_TOOLS.start
@@ -556,7 +570,7 @@ class SearchTests(unittest.TestCase):
         self.assertNotEqual(search.team_id(parent), search.team_id(child))
         search.checkpoint_team(dict(team=child, team_id=search.team_id(child), base='base'), 'base')
         child['sample_loadout'] = False
-        with self.assertRaisesRegex(ValueError, 'Invalid loadout sampling flag'):
+        with self.assertRaisesRegex(ValueError, 'Invalid sampling flag: sample_loadout'):
             search.checkpoint_team(dict(team=child, team_id=search.team_id(child), base='base'), 'base')
 
     def test_cast_target_modes_preserve_tool_sampling_identity(self):

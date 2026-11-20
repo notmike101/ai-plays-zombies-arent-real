@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import numpy as np
 
 from native_state import WALL, EVAC, HELI, VEHICLE, MEDEVAC, PATCH, MOSH
-from policy_mechanics import observation, unit_names, nearest_per_cell, pan_room, extra_masks, SELECTORS, Mechanics
+from policy_mechanics import observation, unit_names, embedded_defenses, nearest_per_cell, pan_room, extra_masks, SELECTORS, Mechanics
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, GLOBAL_LABELS, GRID_CHANNELS
 
 
@@ -30,6 +30,18 @@ def fixture():
 
 
 class MechanicsTests(unittest.TestCase):
+    def test_embedded_defenses_distinguish_payloads_and_occupied_zones(self):
+        zones = [np.array([(x, 0), (x+10, 0), (x+10, 10), (x, 10)]) for x in (0, 1, 20)]
+        units = dict(kind=np.array([0, 5, 5, 5, 6, 8]),
+                     id=np.arange(1, 7), pos=np.array([(3, 3), (4, 4), (24, 4),
+                                                      (5, 5), (12, 5), (3, 3)]))
+        snapshot = dict(units=units, zones=zones,
+                        unit_maps=dict(payload={2: 1, 3: 1, 4: 4}, trap_kind={}))
+        self.assertEqual(embedded_defenses(snapshot),
+                         {'GasMortar': {'total': 2, 'inside_occupied': 1},
+                          'Garrison': {'total': 1, 'inside_occupied': 0},
+                          'MLRS': {'total': 1, 'inside_occupied': 1}})
+
     def test_overview_only_allows_panning_back_toward_center(self):
         overview = np.array([[15, 10], [85, 10], [85, 60], [15, 60]])
         self.assertTrue(all(room <= .018 for room in pan_room(overview, 100, 100).values()))

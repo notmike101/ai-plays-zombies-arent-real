@@ -871,6 +871,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                          sample_battle=bool((active or {}).get('sample_battle')),
                          cast_target_mode=(active or {}).get('cast_target_mode'),
                          sample_loadout=bool((active or {}).get('sample_loadout')),
+                         sample_garrison_sites=bool((active or {}).get('sample_garrison_sites')),
                          sample_zone_geometry=bool((active or {}).get('sample_zone_geometry')))
             if capture_shadow:options['capture_shadow']=True
             if fixed_speed:options['fixed_speed']=fixed_speed
@@ -904,6 +905,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                ready_stats=row.get('ready_stats'),
                                ready_paint_mode=row.get('ready_paint_mode'),
                                ready_paint_tiles=row.get('ready_paint_tiles'),
+                               ready_embedded_defenses=row.get('ready_embedded_defenses'),
                                opening_loadout=row.get('opening_loadout', {}),
                                ready_loadout=row.get('ready_loadout', {}),
                                timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
@@ -990,7 +992,7 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','cast_target_mode','sample_loadout','sample_zone_geometry','firebomb_line_targeting','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','cast_target_mode','sample_loadout','sample_garrison_sites','sample_zone_geometry','firebomb_line_targeting','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
     if 'firebomb_line_targeting' in team and team['firebomb_line_targeting'] is not True:
         raise ValueError('Invalid Firebomb line targeting flag')
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
@@ -1000,8 +1002,9 @@ def checkpoint_team(record,base):
     if 'cast_target_mode' in team and (
             team['cast_target_mode'] not in ('sample', 'greedy') or not team.get('sample_battle')):
         raise ValueError('Cast target mode requires sampled battle tools')
-    if 'sample_loadout' in team and team['sample_loadout'] is not True:
-        raise ValueError('Invalid loadout sampling flag')
+    for flag in ('sample_loadout', 'sample_garrison_sites'):
+        if flag in team and team[flag] is not True:
+            raise ValueError(f'Invalid sampling flag: {flag}')
     if 'sample_zone_geometry' in team and team['sample_zone_geometry'] is not True:
         raise ValueError('Invalid safe-zone geometry sampling flag')
     if 'garrison_coverage' in team:
@@ -1212,6 +1215,8 @@ def main():
                            help='Compare two equipped placement preferences in the same plan slot')
     neighbors.add_argument('--defense-neighbors', action='store_true',
                            help='Compare two equipped building-unit preferences against the same model')
+    neighbors.add_argument('--garrison-site-sampling', action='store_true',
+                           help='Compare greedy and exploratory choices among legal Garrison sites')
     neighbors.add_argument('--loadout-sampling', action='store_true',
                            help='Compare greedy and exploratory choices among legal purchases')
     neighbors.add_argument('--battle-neighbors', nargs='?', const='all',
@@ -1244,7 +1249,9 @@ def main():
     learn_tools = args.battle_neighbors == 'learn-cast-tools'
     learn_targets = args.battle_neighbors in ('learn-targets', 'learn-cast-tools')
     retest_fit = args.battle_neighbors == 'retest-fit'
-    paired_policy = args.defense_neighbors or args.loadout_sampling or args.battle_neighbors in (
+    planning_sampling = ('sample_loadout' if args.loadout_sampling else
+                         'sample_garrison_sites' if args.garrison_site_sampling else None)
+    paired_policy = planning_sampling or args.defense_neighbors or args.battle_neighbors in (
         'firebomb-line', 'cast-sampling', 'retest-fit')
     repeat_pair = args.placement_neighbors or battle_target is not None or paired_policy or learn_targets
     copies=args.copies
@@ -1476,10 +1483,10 @@ def main():
             endpoint = dict(proposal)
             endpoint.pop('firebomb_line_targeting', None)
             policy_arms = (endpoint, dict(endpoint, firebomb_line_targeting=True))
-        elif args.loadout_sampling:
-            greedy_buy = dict(proposal)
-            greedy_buy.pop('sample_loadout', None)
-            policy_arms = (greedy_buy, dict(greedy_buy, sample_loadout=True))
+        elif planning_sampling:
+            greedy_plan = dict(proposal)
+            greedy_plan.pop(planning_sampling, None)
+            policy_arms = (greedy_plan, dict(greedy_plan, **{planning_sampling: True}))
         elif args.defense_neighbors:
             rosters = [operator.planning_roster((operator.owned_copy(copy) / 'steam_cloud/settings.ini')
                                                .read_text(encoding='utf-8-sig')) for copy in copies]

@@ -33,7 +33,7 @@ try:
 except ImportError:
     Observer = None
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, extra_cell_label
-from policy_mechanics import Mechanics, PLACEMENTS, SPEED_TICKS, extra_masks
+from policy_mechanics import Mechanics, PLACEMENTS, SPEED_TICKS, embedded_defenses, extra_masks
 MODEL = os.path.join(ROOT, 'sessions', 'nn_policy4.pt')
 HIST = os.path.join(ROOT, 'analysis', 'nn_hist4.jsonl')
 NOBS, HID = 332+len(EXTRA_LABELS), 128
@@ -393,9 +393,12 @@ def loadout_distribution(logits, legal_tools):
     legal_buys = torch.zeros_like(logits, dtype=torch.bool)
     legal_buys[BUY_TOOLS] = torch.as_tensor(legal_tools[BUY_TOOLS], dtype=torch.bool)
     ranked = logits.masked_fill(~legal_buys, -torch.inf).softmax(dim=0)
-    # A peaked purchase preference otherwise keeps offering the same loadout.
-    exploratory = legal_buys / legal_buys.sum()
-    return torch.distributions.Categorical(probs=0.5 * ranked + 0.5 * exploratory)
+    return exploration_distribution(ranked, legal_buys, 0.5)
+
+
+def exploration_distribution(ranked, legal, fraction):
+    uniform = legal / legal.sum()
+    return torch.distributions.Categorical(probs=(1. - fraction) * ranked + fraction * uniform)
 
 
 def cell_distribution(logits, tool, mask):
@@ -619,6 +622,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         zone_rng = torch.Generator().manual_seed(options['seed'])
     loadout_rng = (torch.Generator().manual_seed(options['seed'] ^ 0x6C6F6164)
                    if options.get('sample_loadout') else None)
+    garrison_rng = (torch.Generator().manual_seed(options['seed'] ^ 0x67617272)
+                    if options.get('sample_garrison_sites') else None)
     cast_target_mode = options.get('cast_target_mode')
     cast_target_rng = (torch.Generator().manual_seed(options['seed'] ^ 0x687A90D5)
                        if cast_target_mode == 'sample' else None)
@@ -668,7 +673,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         opening_loadout = (opening_loadout_options(dict(st, rules={**st['rules'], **initial.get('counts', {})}))
                            if options.get('placement_feedback') else {})
         ready_loadout = {}
-        ready_paint_mode = ready_paint_tiles = None
+        ready_paint_mode = ready_paint_tiles = ready_embedded_defenses = None
         plan = initial
         net = None if eps_rand else (policy_factory or PolicyNet2)().eval()
         if net is not None:
@@ -814,6 +819,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     mc = cell_mask(st, u, mc)
                     dc = cell_distribution(lc, u, mc)
                     cell_rng = zone_rng if st['planning'] and TOOLS[u] == 'zone_rect' else None
+                    if (garrison_rng is not None and greedy and st['planning']
+                            and TOOLS[u] == 'garrison' and mc.sum() > 1):
+                        dc = exploration_distribution(dc.probs, torch.as_tensor(mc, dtype=torch.bool), 0.25)
+                        cell_rng = garrison_rng
                     if cast_target_mode and not st['planning'] and u in U2ABILITY:
                         c = select_policy_cell(dc, cast_target_mode == 'greedy', cast_target_rng)
                         battle_actions['cast_target_non_argmax'] += int(c != int(dc.probs.argmax()))
@@ -901,6 +910,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         paint = st['native']['paint']['kind']
                         ready_paint_tiles = dict(spikes=int(np.count_nonzero(paint == 1)),
                                                  oil=int(np.count_nonzero(paint == 2)))
+                        ready_embedded_defenses = embedded_defenses(st['native'])
                     state = ready_once(env)
                     battle_start = time.monotonic()
                     d = dict(initial)
@@ -1127,6 +1137,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     ready_stats=footer.get('ready_stats') if footer else None,
                     opening_loadout=opening_loadout, ready_loadout=ready_loadout,
                     ready_paint_mode=ready_paint_mode, ready_paint_tiles=ready_paint_tiles,
+                    ready_embedded_defenses=ready_embedded_defenses,
                     special_activations=special_activations,
                     reward_components=rewards, outside_playarea_actions=outside_actions,
                     outside_targets=outside_targets, battle_actions=battle_actions,

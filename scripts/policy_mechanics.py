@@ -146,6 +146,21 @@ def unit_names(units, maps):
     return names
 
 
+def embedded_defenses(snapshot):
+    units = snapshot['units']
+    embedded = np.isin(units['kind'], (4, 5, 6, 7))
+    names = unit_names(units, snapshot['unit_maps'])[embedded]
+    positions = units['pos'][embedded]
+    civilians = units['pos'][units['kind'] == 0]
+    sheltered = np.zeros(len(names), dtype=bool)
+    for zone in snapshot['zones']:
+        if len(zone) >= 3 and inside_polygon(civilians, zone).any():
+            sheltered |= inside_polygon(positions, zone)
+    return {str(name): dict(total=int((names == name).sum()),
+                            inside_occupied=int(((names == name) & sheltered).sum()))
+            for name in np.unique(names) if name}
+
+
 def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, width, height,
                 gesture_anchor=None, armed=(0,0,0), paused=False, speed=2, dialog=False, evac_tool=(False,False,150.)):
     s=snapshot;sel=s['selection'];u=s['units'];maps=s['unit_maps']
