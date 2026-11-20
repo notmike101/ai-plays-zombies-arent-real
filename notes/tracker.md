@@ -6,7 +6,7 @@
   1,616 civilians across multiple distinct outbreaks and had roughly
   56–62 simulated seconds in battle on the reported repeats. Shelter
   breaches followed. It confirmed no battle stock spends. Frozen retries
-  on the candidate saved 9.96% and 9.84%; both GRU reference games timed
+  on the candidate saved 10.00% and 9.99%; both GRU reference games timed
   out on the battle clock while paused. No champion was promoted.
 - Audited native seed reuse. Two of four frozen rows in discovery block
   142952 reused discovery outbreak seeds. In block 144952, one of two
