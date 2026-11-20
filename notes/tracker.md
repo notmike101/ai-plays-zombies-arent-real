@@ -2,6 +2,30 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 169952 started at 05:16 Central on D:, portable trainer PID
+  71392, output `analysis/coverage-team-beed15c93f` and log
+  `analysis/coverage-layout-free-169952-drive-d.log`. Launch headroom
+  12.94 GiB RAM and 18.83 GiB free. Opt-in `--click-start` configures
+  each stopped owned copy to start in native click mode and checks it
+  in the verified fresh planning state. New comparison revision keeps
+  inherited-mode scores out of the fixed-start ledger. If evaluation
+  qualifies, reserved boards use the same start. Model-selected click
+  and paint preference candidates leave all subsequent gameplay actions
+  with the policy. Initial and READY modes are recorded. Commit b193e42,
+  all 267 script tests passed. Production checkpoint hash verified.
+- Audit of 108 historical recorded layout-free candidate starts found
+  all seven openings with at least ten Garrisons on inst13. Current
+  read-only native states confirmed paint on inst13 and click on
+  inst14–16, matching their per-copy settings. The world config and
+  balance files matched. Different persisted modes confound the old
+  cross-copy comparison. Historical starts lack complete mode receipts.
+- Seed 168952 drained at 05:15 with eight early retries and no wins.
+  Matched scales 0.3111077 and 0.5111077 reached 9.58% and 9.90% at
+  retry. The higher-scale candidate entered with 21 Garrisons on the
+  paint-mode copy. The lower-scale variant entered with eight on a
+  click-mode copy. The bracket is inconclusive as a scale comparison.
+  No policy qualified for held-out evaluation or promotion.
+
 - Seed 168952 started at 05:05 Central on D:, portable trainer PID
   70872, output `analysis/coverage-team-61e1c86039` and log
   `analysis/coverage-layout-free-168952-drive-d.log`. Launch headroom
