@@ -240,7 +240,7 @@ class NativeState:
                     ('payload',0x650988,'u1'), ('trap_kind',0x6509a8,'u1'),
                     ('upgrades',0x650968,('u1',4)), ('ai',0x650898,AI),
                     ('boosts',0x650918,('<f4',5)), ('officer_kind',0x650ba0,'u1'),
-                    ('roof',0x650858,'<i8'), ('kills',0x6543f0,'<i4'))}
+                    ('kills',0x6543f0,'<i4'))}
                 walls = e.array(0x656bb0,WALL,limit=10000)
                 wall_pointer = e.scalar(0x656bb0,'<Q')
                 wall_hp = [self.array_at(wall_pointer+i*192+80,'<f4') for i in range(len(walls))]

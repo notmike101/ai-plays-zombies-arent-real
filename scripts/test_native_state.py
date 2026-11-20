@@ -42,6 +42,17 @@ class NativeTests(unittest.TestCase):
         result=state.snapshot()
         self.assertEqual(result['tick'],5);self.assertEqual(reads.count(0x650280),6)
 
+    def test_unused_roof_map_cannot_abort_a_policy_snapshot(self):
+        state, _, _ = self.snapshot_reader()
+        def mapping(rva, dtype):
+            if rva == 0x650858:
+                raise RuntimeError('Native roof map changed during read')
+            return {1: 2} if rva == 0x6543f0 else {}
+        state.mapping.side_effect = mapping
+        maps = state.snapshot()['unit_maps']
+        self.assertEqual(maps['kills'], {1: 2})
+        self.assertNotIn('roof', maps)
+
     def test_batched_unit_headers_preserve_offsets_and_shapes(self):
         state=NativeState(Mock(base=0))
         headers=bytearray(0x1a0)
