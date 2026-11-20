@@ -343,6 +343,16 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(challenger, reference)
         self.assertNotIn('cast_timing', parent)
 
+    def test_goal_margin_prioritizes_survival_above_target_without_rescoring_outcome(self):
+        row = dict(advance=False, win=False, saved_frac=.1, civ0=100)
+        sustained_below = dict(row, trail=[(30, 90), (120, 32)])
+        holds_target = dict(row, trail=[(30, 90), (77, 55), (91, 5)])
+        self.assertGreater(search.score(sustained_below)[3], search.score(holds_target)[3])
+        self.assertGreater(search.score(holds_target, goal_margin=True)[3],
+                           search.score(sustained_below, goal_margin=True)[3])
+        row.update(advance=True, win=True, saved_frac=.41, trail=[(5, 100)])
+        self.assertEqual(search.score(row, goal_margin=True)[:3], [1, 1, .41])
+
     def test_battle_sampling_is_a_distinct_frozen_policy(self):
         parent = search.random_team(np.random.default_rng(4))
         candidate = search.battle_sampling_candidate(parent)

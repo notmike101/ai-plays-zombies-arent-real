@@ -649,21 +649,22 @@ class TeamPolicy(tr.PolicyNet2):
         return tools, cells.reshape(1,1,-1), value, h
 
 
-def score(row):
+def score(row, *, goal_margin=False):
     # Retain official outcomes first. Failed boards get a search gradient from
     # simulated survival time. A paused wall-clock minute adds zero area.
+    floor = .35 if goal_margin else 0.
     last = area = 0.
     for sim, civ, *_ in row['trail']:
         stop = min(120., max(last, sim))
-        area += (stop-last)*min(1., max(0., civ/row['civ0']))
+        area += (stop-last) * max(0., min(1., civ / row['civ0']) - floor)
         last = stop
-    return [int(bool(row['advance'])),int(bool(row['win'])),
-            float(row['saved_frac'] or 0.) if row['win'] else 0.,area/120.]
+    return [int(bool(row['advance'])), int(bool(row['win'])),
+            float(row['saved_frac'] or 0.) if row['win'] else 0., area / (120. * (1. - floor))]
 
 
 def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, observer_interval=.2,
             practice_retry=False, allow_progression=False, capture_shadow=False, fixed_speed=None,
-            fast_boot=False, click_start=False):
+            fast_boot=False, click_start=False, goal_margin=False):
     timing = {'started': monotonic()}
     if start_stage>1 and not allow_progression:
         raise ValueError('Later-stage starts require explicit campaign progression')
@@ -774,7 +775,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                special_objective=row.get('reward_components',{}).get('special_activation',0.)/tr.SAVED_REWARD_SCALE,
                                shelter_objective=sum(row.get('reward_components',{}).get(k,0.)
                                    for k in ('shelter','occupied_breach'))/tr.SAVED_REWARD_SCALE,
-                               score=score(row),sim=row['sim'],board=row['board_id'],
+                               score=score(row, goal_margin=goal_margin),sim=row['sim'],board=row['board_id'],
                                actions=list(zip(row['us'],row['cs'])),log_started=row['log_started']))
             if capture_shadow and 'shadow' in row:
                 levels[-1]['shadow'] = dict(row['shadow'], copy=copy,
@@ -968,7 +969,7 @@ def shadow_variants(champion):
 
 
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False,
-                       capture_shadow=False, speeds=None, fast_boot=False, click_start=False):
+                       capture_shadow=False, speeds=None, fast_boot=False, click_start=False, goal_margin=False):
     if jobs:
         operator.require_resource_headroom(len(jobs))
     if starts is None:starts=[1]*len(jobs)
@@ -978,6 +979,7 @@ def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_
                          observer_interval=.2 if training and job is primary else 1.,
                          practice_retry=job[0]==practice_copy,allow_progression=allow_progression,
                          capture_shadow=capture_shadow, fast_boot=fast_boot, click_start=click_start,
+                         goal_margin=goal_margin,
                          fixed_speed=speeds[job[0]] if speeds else None):(job,stage)
              for job,stage in zip(jobs,starts,strict=True)}
     for future in as_completed(futures):
@@ -1021,6 +1023,8 @@ def main():
                         help='Defer reserved evaluation until a discovery policy qualifies')
     parser.add_argument('--holdout-copies', nargs='+',
                         help='Reserve separate owned copies for the final frozen evaluation')
+    parser.add_argument('--goal-margin', action='store_true',
+                        help='Rank unsuccessful discovery battles by survival above the 35 percent target')
     parser.add_argument('--click-start', action='store_true',
                         help='Use verified click placement at the start of fresh L1 trials')
     parser.add_argument('--fast-boot', action='store_true',
@@ -1053,6 +1057,8 @@ def main():
         if args.compare_forecast or args.compare_speed or args.compare_shadow:
             parser.error('Reserved holdout copies are for the final campaign evaluation')
     worker_count = max(len(copies), len(holdout_copies))
+    if args.goal_margin and not args.click_start:
+        parser.error('Goal-margin ranking requires the controlled fresh L1 start')
     if args.click_start and not args.continue_layout_free:
         parser.error('Click-mode baseline requires layout-free continuation')
     if args.fast_boot and not args.continue_layout_free:
@@ -1142,6 +1148,8 @@ def main():
             view_revision += '-placement-feedback-v3'
         if args.click_start:
             view_revision += '-click-start-v1'
+        if args.goal_margin:
+            view_revision += '-goal-margin-v1'
         evidence={}
         prices={}
         defenders = {}
@@ -1305,7 +1313,7 @@ def main():
                 valid_candidates=0
                 for job,start_stage,result in completed_rollouts(pool,jobs,starts,args.later_retries,training=True,
                         allow_progression=args.allow_progression,capture_shadow=args.capture_shadow,
-                        fast_boot=args.fast_boot, click_start=args.click_start):
+                        fast_boot=args.fast_boot, click_start=args.click_start, goal_margin=args.goal_margin):
                     team=job[2]
                     key=team_id(team) if team else 'control'
                     result.update(view_revision=view_revision,generation=generation,team_id=key,team=team,start_stage=start_stage)
