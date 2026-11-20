@@ -1,6 +1,12 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 Central. D: fell to 0.59 GiB while no games were active,
+  then recovered to 8.72 GiB. Verified a SHA-256-matching C: backup of
+  the private checkpoint and results. Guarded continuation deployed at
+  ced199e and resumed original seed 143952 from update 10 on inst13/14.
+  New output `analysis/coverage-phase-balance-d0d3c3594b`. No C: games
+  were created. Only one trial is active. Production checkpoint unchanged.
 - 2026-11-19 21:49 Central. Two-copy phase-balance seed 143952 stopped
   on a transient native map observation in pair 11. Verified the private
   atomic checkpoint contains ten completed updates and both Adam states.
