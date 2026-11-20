@@ -10,6 +10,19 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_private_ppo_retries_both_arms_after_transient_native_map_change(self):
+        from compare_spatial import collect_pairs
+        from unittest.mock import Mock
+        jobs = [('inst13', 'standard', {}, 123, 'first'),
+                ('inst14', 'balanced', {}, 123, 'second')]
+        pool = Mock()
+        paired = [{'saved_frac': .31}, {'saved_frac': .34}]
+        pool.map.side_effect = [[{'saved_frac': .3}, {'err': 'Native map changed during read'}], paired]
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(collect_pairs(pool, jobs, Path(directory)), paired)
+            self.assertEqual(pool.map.call_args.args[1], jobs)
+            self.assertIn('Native map changed', (Path(directory)/'interface-retries.jsonl').read_text())
+
     def test_private_ppo_preserves_boot_failure_without_returning_a_score(self):
         import compare_spatial
         message = 'inst13 failed at injection: argument 1: OverflowError'

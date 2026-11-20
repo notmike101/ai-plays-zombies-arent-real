@@ -55,11 +55,12 @@ def episode(job):
 
 def collect_pairs(pool, jobs, directory):
     results = list(pool.map(episode, jobs))
+    transient = ('Timed out waiting for UI frames', 'Stale native HUD frame',
+                 'No consistent HUD observer frame', 'Native map changed during read',
+                 'failed at injection: argument 1: OverflowError')
     for start in range(0, len(jobs), 2):
         pair = slice(start, start + 2)
         errors = [r['err'] for r in results[pair] if 'err' in r]
-        transient = ('Timed out waiting for UI frames', 'Stale native HUD frame',
-                     'No consistent HUD observer frame', 'failed at injection: argument 1: OverflowError')
         if errors and all(any(reason in error for reason in transient) for error in errors):
             with (directory/'interface-retries.jsonl').open('a') as f:
                 f.write(json.dumps(dict(pair=[job[4] for job in jobs[pair]], errors=errors))+'\n')
