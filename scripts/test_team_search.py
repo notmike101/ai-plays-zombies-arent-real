@@ -9,6 +9,26 @@ import team_search as search
 
 
 class SearchTests(unittest.TestCase):
+    def test_layout_free_continuations_reuse_local_immutable_base(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        weights = {'weight': torch.tensor([1., 2.])}
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            prior, resumed, fallback = (root / f'coverage-team-{name}'
+                                        for name in ('prior', 'resumed', 'fallback'))
+            for directory in (prior, resumed, fallback):
+                directory.mkdir()
+            search.save_frozen_base(prior, weights, None)
+            search.save_frozen_base(resumed, weights, prior)
+            self.assertTrue((prior / 'base.pt').samefile(resumed / 'base.pt'))
+            with patch.object(search.os, 'link', side_effect=OSError):
+                search.save_frozen_base(fallback, weights, prior)
+            self.assertFalse((prior / 'base.pt').samefile(fallback / 'base.pt'))
+            restored = torch.load(fallback / 'base.pt', weights_only=True)
+            torch.testing.assert_close(restored, weights)
+
     def test_explicit_holdout_copies_must_be_disjoint_and_paired(self):
         from contextlib import redirect_stderr
         from io import StringIO

@@ -757,6 +757,21 @@ def restore_layout_free_proposal(net, directory):
     return team
 
 
+def save_frozen_base(directory, weights, continuation):
+    target = directory / 'base.pt'
+    if continuation is not None:
+        source = (continuation / 'base.pt').resolve()
+        if source.parent.parent == directory.parent.resolve() and source.parent.name.startswith('coverage-team-'):
+            # Completed search bases are immutable. Keep the resume path without another data copy.
+            try:
+                os.link(source, target)
+            except OSError:
+                pass
+            else:
+                return
+    torch.save(weights, target)
+
+
 def holdout_assignments(copies, weights, challenger, incumbent, seed, wave):
     jobs = []
     arms = {}
@@ -889,7 +904,7 @@ def main():
         weights=net.state_dict()
         directory=operator.ROOT/'analysis'/('coverage-team-'+uuid.uuid4().hex[:10])
         directory.mkdir()
-        torch.save(weights,directory/'base.pt')
+        save_frozen_base(directory, weights, args.continue_layout_free)
         print(directory,'base',tr.policy_id(net),flush=True)
         print('Campaign scope:', 'Boston L1 to L5' if args.allow_progression else 'Boston L1 only', flush=True)
         if args.compare_shadow:
