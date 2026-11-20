@@ -2,6 +2,24 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- D: storage audit at 03:25 Central found 71 search copies of the
+  same frozen GRU by SHA-256. Coalesced 60 redundant files across
+  61 completed search directories using D:-local hard links, keeping
+  the bytes and original resume paths. Excluded the active search,
+  ambiguous run directories, and production checkpoints. The shared
+  bases are read-only inputs for the search. This removed 709 MiB of
+  duplicate file content. D: showed 18.56 GiB free after space
+  accounting caught up, with the current experiment writing concurrently.
+  The previous replay archive remains intact and no loose binary dumps
+  were present in inst13–20 during the audit.
+- First-wave live journal check for seed 159952. Inst16 placed both
+  shelters before three Garrisons. Native READY count agreed with the
+  three logged placements. Max-range circles touched 100% and 65.6%
+  of the two shelter perimeters, versus 54.2% and 0% in each of the
+  two other candidate boards. This verifies a placement change. Wait
+  for scored retries/wins and occupied-breach evidence before drawing
+  conclusions about protection or survival.
+
 - Seed 159952 started at 03:24 Central on D:, portable trainer PID
   61072, output `analysis/coverage-team-921a730bca` and log
   `analysis/coverage-layout-free-159952-drive-d.log`. Launch headroom
