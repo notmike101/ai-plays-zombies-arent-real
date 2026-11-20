@@ -29,6 +29,14 @@
   run log `analysis/coverage-layout-free-149952-drive-d.log`.
   Production checkpoint hash matched. The 35% goal remains open.
 
+- Seed 149952 completed generation zero at 00:33 Central. Four real games,
+  no wins, no attempted or paid building placements. Native READY unit
+  counts were captured on all four rows. Scored retries were 9.87% for
+  the GRU and 10.00%, 9.99%, and 9.92% for the candidate policies.
+  Generation one is live; inst15 reported a boot-time pointer overflow
+  and that row is marked failed. Other workers continue. Live target
+  cooldown effectiveness is pending a real placement selection.
+
 ### Equip and placement trial
 - Seed 147952 ended at 00:05 Central. All 16 discovery games had zero
   wins, defensive-unit selections, and confirmed battle stock spends.
