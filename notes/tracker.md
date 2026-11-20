@@ -16,6 +16,17 @@
   No held-out result or promotion yet. The goal requires three consecutive
   blocks of ten distinct scored held-out outbreaks at a mean of at least
   35% per block, with one frozen policy.
+- At 10:44 Central, reserved inst19 was still playing on native outbreak
+  249701763, absent from 1,344 distinct archived outbreak IDs checked across
+  discovery and reserved campaign journals. Its live snapshot is not an
+  official result. The bare GRU reference on inst20 timed out from a
+  continuous pause at 9.17 simulated seconds, with no official score; its
+  outbreak 1067415937 also appeared in a prior reserved run, and the evaluator
+  flagged it as overlap. This rules out promotion from the scheduled six
+  pairs under the current strict complete-pair test. Remaining candidate
+  scores can still establish standalone held-out performance when fresh and
+  complete. Keep the process running. Future opening-bias comparisons need
+  the actual discovery control as their reference if testing the bias alone.
 - Retrospective discovery audit retained the latest scored L1 row per native
   outbreak. All 29 distinct outcomes with detailed READY receipts recorded
   at least one occupied zone breach and opened with Police paratroopers.
