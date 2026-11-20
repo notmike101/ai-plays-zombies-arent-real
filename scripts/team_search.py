@@ -41,6 +41,9 @@ PAN = [tr.TOOLS.index('pan_'+name) for name in ('up','left','down','right')]
 PAUSE = tr.TOOLS.index('pause_toggle')
 PAUSED = tr.INPUT_LABELS.index('Simulation paused (0/1)')
 READY_LEGAL = tr.INPUT_LABELS.index('READY land and budget legal (0/1)')
+GEOMETRY_ANCHOR = tr.INPUT_LABELS.index('Geometry anchor cell (/ 48; -1 absent)')
+GESTURE_ANCHOR = tr.INPUT_LABELS.index('Gesture anchor cell (/ 48; -1 absent)')
+MODAL_DIALOG = tr.INPUT_LABELS.index('Modal dialog open (0/1)')
 REPAIRS=[tr.TOOLS.index(name) for name in ('undo','refund_selection','cancel_tool','zone_back')]
 
 
@@ -70,13 +73,16 @@ def loadout_candidate(parent,rng):
 
 
 def defense_placement_candidate(parent, rng):
-    if len(parent['plan']) >= 64:
+    if len(parent['plan']) > 62:
         return None
     child = deepcopy(parent)
     step = gene(rng)
     step.update(family=0, tool=int(rng.choice(FAMILIES[0])), duration=2)
+    unit = tr.PLACEMENTS[step['tool']]
+    equip = dict(step, family=3, tool=tr.TOOLS.index('equip_' + unit), duration=1)
     index = int(rng.integers(len(child['plan']) + 1))
-    child['plan'].insert(index, step)
+    child['plan'][index:index] = [equip, step]
+    child['keep_plan_through_gestures'] = True
     return child
 
 
@@ -311,7 +317,11 @@ class TeamPolicy(tr.PolicyNet2):
                 px, py = (g['x']+t*g['dx'])%8, (g['y']+t*g['dy'])%5
                 distance = (self.coords%8-px).abs()+(self.coords//8-py).abs()
                 cells = cells + torch.tensor(g['weights']) @ grid - distance
-                self.index += 1
+                if not self.team.get('keep_plan_through_gestures') or (
+                    x[0,0,GEOMETRY_ANCHOR] < 0 and x[0,0,GESTURE_ANCHOR] < 0
+                    and not x[0,0,MODAL_DIALOG]
+                ):
+                    self.index += 1
             else:
                 tools[...,tr.TOOLS.index('ready')] += 15
                 if self.special_tools:
@@ -514,7 +524,9 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures'))
+    if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
+        raise ValueError('Invalid gesture planning flag')
     battle(team)
     numeric(team['idle_bias'],())
     if not isinstance(team['plan'],list) or len(team['plan'])>64:raise ValueError('Invalid campaign plan')

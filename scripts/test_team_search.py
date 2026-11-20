@@ -30,16 +30,50 @@ class SearchTests(unittest.TestCase):
         before = copy.deepcopy(parent)
         child = search.defense_placement_candidate(parent, rng)
         self.assertEqual(parent, before)
-        for index, extra in enumerate(child['plan']):
-            remaining = child['plan'][:index] + child['plan'][index + 1:]
+        self.assertTrue(child['keep_plan_through_gestures'])
+        record = dict(base='base', team_id=search.team_id(child), team=child)
+        self.assertEqual(search.checkpoint_team(record, 'base')['team'], child)
+        for index, extra in enumerate(child['plan'][1:], start=1):
+            remaining = child['plan'][:index-1] + child['plan'][index+1:]
             if remaining == parent['plan'] and extra['family'] == 0:
-                self.assertIn(extra['tool'], search.tr.PLACEMENTS)
+                equip = child['plan'][index-1]
+                self.assertEqual(equip['family'], 3)
+                self.assertEqual(equip['duration'], 1)
+                self.assertEqual(search.tr.TOOLS[equip['tool']], 'equip_' + search.tr.PLACEMENTS[extra['tool']])
                 self.assertEqual(extra['duration'], 2)
                 child['plan'] = remaining
+                child.pop('keep_plan_through_gestures')
                 self.assertEqual(child, parent)
                 break
         else:
-            self.fail('No new defense preference preserved the previous planning sequence')
+            self.fail('The added equip and placement choices changed the previous plan')
+
+    def test_new_defender_policy_preserves_its_next_preference_in_masked_gestures(self):
+        rng = np.random.default_rng(19)
+        parent = search.random_team(rng)
+        defender = search.defense_placement_candidate(parent, rng)
+        current, legacy = search.TeamPolicy(defender), search.TeamPolicy(parent)
+        x = torch.zeros(1, 1, search.tr.NOBS)
+        x[..., search.tr.PLANNING_INDEX] = 1
+        masks = [search.tr.INPUT_LABELS.index(label) for label in (
+            'Geometry anchor cell (/ 48; -1 absent)',
+            'Gesture anchor cell (/ 48; -1 absent)',
+            'Modal dialog open (0/1)',
+        )]
+        x[..., masks[:2]] = -1
+        with torch.no_grad():
+            current(x)
+            self.assertEqual(current.index, 1)
+            for i, mask in enumerate(masks):
+                x[..., mask] = 1 if i == 2 else 0
+                current(x)
+                self.assertEqual(current.index, 1)
+                x[..., mask] = 0 if i == 2 else -1
+            current(x)
+            self.assertEqual(current.index, 2)
+            x[..., masks[0]] = 0
+            legacy(x)
+            self.assertEqual(legacy.index, 1)
 
     def test_pause_variant_preserves_the_plan_that_executed_a_cast(self):
         rng = np.random.default_rng(17)
