@@ -226,11 +226,16 @@ def training_lock(path):
             msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
 
 
-def limit_resources(copy_count=1):
+def require_resource_headroom(copy_count):
     import psutil
     ram_gib = min(12, 4 + 2*(copy_count-1))
     if psutil.virtual_memory().available < ram_gib*2**30 or shutil.disk_usage(ROOT).free < 2*2**30:
         raise ValueError(f'Insufficient headroom: need {ram_gib} GiB available RAM and 2 GiB free disk')
+
+
+def limit_resources(copy_count=1):
+    import psutil
+    require_resource_headroom(copy_count)
     p = psutil.Process()
     cpus = p.cpu_affinity()
     p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)

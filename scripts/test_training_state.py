@@ -10,6 +10,42 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_private_ppo_retries_both_arms_after_transient_native_map_change(self):
+        from compare_spatial import collect_pairs
+        from unittest.mock import Mock
+        jobs = [('inst13', 'standard', {}, 123, 'first'),
+                ('inst14', 'balanced', {}, 123, 'second')]
+        pool = Mock()
+        paired = [{'saved_frac': .31}, {'saved_frac': .34}]
+        pool.map.side_effect = [[{'saved_frac': .3}, {'err': 'Native map changed during read'}], paired]
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(collect_pairs(pool, jobs, Path(directory)), paired)
+            self.assertEqual(pool.map.call_args.args[1], jobs)
+            self.assertIn('Native map changed', (Path(directory)/'interface-retries.jsonl').read_text())
+
+    def test_private_ppo_preserves_boot_failure_without_returning_a_score(self):
+        import compare_spatial
+        message = 'inst13 failed at injection: argument 1: OverflowError'
+        with patch.object(compare_spatial.operator, 'owned_copy'), \
+                patch.object(compare_spatial.zar_boot, 'boot', side_effect=env_zar.ZAREnvError(message)), \
+                patch.object(compare_spatial.zar_boot, 'stop') as stop:
+            self.assertEqual(compare_spatial.episode(('inst13', 'standard', {}, 123, 'test')),
+                             {'err': message})
+            stop.assert_not_called()
+
+    def test_consistency_keeps_incomplete_or_weak_held_out_blocks_visible(self):
+        from compare_spatial import heldout_consistency
+        cohort = [dict(phase='evaluation', policy_id='frozen', start_kind='fresh',
+                       outbreak_seed=i, end='won', win=True, saved_frac=.4) for i in range(30)]
+        self.assertTrue(heldout_consistency(cohort, 'frozen')['passed'])
+        cohort[0]['end'] = 'timeout'
+        self.assertEqual(heldout_consistency(cohort, 'frozen')['incomplete'], 1)
+        self.assertFalse(heldout_consistency(cohort, 'frozen')['passed'])
+        cohort[0]['end'] = 'won'
+        for row in cohort[:10]:
+            row['saved_frac'] = .3
+        self.assertFalse(heldout_consistency(cohort, 'frozen')['passed'])
+
     def test_phase_loss_weighting_keeps_both_phases_visible(self):
         phases = train.torch.tensor([True, False, False, False])
         weights = train.phase_loss_weights(phases)

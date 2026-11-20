@@ -1,6 +1,7 @@
 """Guarded fresh-board PPO comparison. Production weights are read-only."""
 import argparse
 import json
+import math
 import os
 import time
 import uuid
@@ -17,6 +18,7 @@ from torch import nn
 import local_agent as operator
 import nn_play2 as trainer
 import zar_boot
+from env_zar import ZAREnvError
 
 
 class SpatialPolicy(trainer.PolicyNet2):
@@ -36,7 +38,10 @@ class SpatialPolicy(trainer.PolicyNet2):
 
 def episode(job):
     copy, arm, weights, seed, tag = job
-    env = zar_boot.boot(operator.owned_copy(copy), discard_dump_states=True)
+    try:
+        env = zar_boot.boot(operator.owned_copy(copy), discard_dump_states=True)
+    except ZAREnvError as exc:
+        return {'err': str(exc)}
     try:
         policy = SpatialPolicy if arm == 'shared' else trainer.PolicyNet2
         options = dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')
@@ -50,15 +55,44 @@ def episode(job):
 
 def collect_pairs(pool, jobs, directory):
     results = list(pool.map(episode, jobs))
+    transient = ('Timed out waiting for UI frames', 'Stale native HUD frame',
+                 'No consistent HUD observer frame', 'Native map changed during read',
+                 'failed at injection: argument 1: OverflowError')
     for start in range(0, len(jobs), 2):
         pair = slice(start, start + 2)
         errors = [r['err'] for r in results[pair] if 'err' in r]
-        if errors and all('Timed out waiting for UI frames' in e or
-                          'Stale native HUD frame' in e for e in errors):
+        if errors and all(any(reason in error for reason in transient) for error in errors):
             with (directory/'interface-retries.jsonl').open('a') as f:
                 f.write(json.dumps(dict(pair=[job[4] for job in jobs[pair]], errors=errors))+'\n')
             results[pair] = list(pool.map(episode, jobs[pair]))
     return results
+
+
+def heldout_consistency(rows, policy_id):
+    """Measure three chronological blocks of fresh complete results for one frozen policy."""
+    cohort = [r for r in rows if r['phase']=='evaluation' and r['policy_id']==policy_id][:30]
+    seen = set()
+    means = []
+    qualifying = incomplete = 0
+    for start in range(0, len(cohort), 10):
+        block = []
+        for row in cohort[start:start+10]:
+            outbreak = row.get('outbreak_seed')
+            score = row.get('saved_frac')
+            valid = (row.get('start_kind')=='fresh' and type(outbreak) is int and outbreak not in seen
+                     and row.get('end') in ('won', 'lost') and isinstance(score, (int, float))
+                     and math.isfinite(score) and 0 <= score <= 1)
+            if type(outbreak) is int:
+                seen.add(outbreak)
+            if valid:
+                block.append(score)
+                qualifying += bool(row.get('win') and score >= .35)
+            else:
+                incomplete += 1
+        if len(block)==10:
+            means.append(math.fsum(block)/10)
+    return dict(attempts=len(cohort), incomplete=incomplete, qualifying=qualifying, block_means=means,
+                passed=len(means)==3 and min(means)>=.35)
 
 
 def main():
@@ -126,9 +160,11 @@ def main():
         tag = 'coverage-' + experiment + '-' + uuid.uuid4().hex[:10]
         directory = Path(operator.ROOT, 'analysis', tag)
         directory.mkdir()
+        summaries = []
         print(directory, 'source policy', source, 'starting round', first_round, flush=True)
         with ProcessPoolExecutor(len(copies)) as pool:
             for rnd in range(first_round, args.train_rounds + args.eval_rounds):
+                operator.require_resource_headroom(len(copies))
                 training = rnd < args.train_rounds
                 jobs = []
                 for i, copy in enumerate(copies):
@@ -157,6 +193,7 @@ def main():
                         summary['planning_placements_selected'] = row.get('selected_placements', {})
                     with (directory/'results.jsonl').open('a') as f:
                         f.write(json.dumps(summary)+'\n')
+                    summaries.append(summary)
                     print(summary, flush=True)
                 if any(not trainer.valid_trajectory(row) for row in results):
                     raise RuntimeError('Invalid trajectory; see trial results')
@@ -171,6 +208,10 @@ def main():
                                     weights={a:n.state_dict() for a,n in models.items()},
                                     optimizers={a:o.state_dict() for a,o in optimizers.items()}), temp)
                     temp.replace(directory/'paired.pt')
+        results = {arm: heldout_consistency([row for row in summaries if row['arm']==arm],
+                                           trainer.policy_id(net))
+                   for arm, net in models.items()}
+        (directory/'consistency.json').write_text(json.dumps(results, indent=2))
 
 
 if __name__ == '__main__':

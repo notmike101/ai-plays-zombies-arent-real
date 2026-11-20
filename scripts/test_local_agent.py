@@ -143,6 +143,15 @@ class LifecycleTests(unittest.TestCase):
                 ops.train(args)
             launch.assert_not_called()
 
+    def test_point_in_time_headroom_check_does_not_reset_process_affinity(self):
+        with patch('psutil.Process') as proc, \
+                patch('psutil.virtual_memory', return_value=SimpleNamespace(available=8*2**30)), \
+                patch('shutil.disk_usage', return_value=SimpleNamespace(free=3*2**30)):
+            ops.require_resource_headroom(2)
+            with self.assertRaisesRegex(ValueError, '10 GiB'):
+                ops.require_resource_headroom(4)
+            proc.assert_not_called()
+
     def test_foreground_training_passes_explicit_resume_paths_and_limits_before_launch(self):
         args = SimpleNamespace(copy='inst1', extra_copy=['inst2', 'inst3', 'inst4', 'inst5', 'inst6', 'inst7', 'inst8'], episodes_per_copy=1, rounds=2, seed=42, foreground=True)
         with tempfile.TemporaryDirectory() as d, \
