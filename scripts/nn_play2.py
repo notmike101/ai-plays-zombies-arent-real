@@ -640,6 +640,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         opening_loadout = (opening_loadout_options(dict(st, rules={**st['rules'], **initial.get('counts', {})}))
                            if options.get('placement_feedback') else {})
         ready_loadout = {}
+        ready_paint_mode = None
         plan = initial
         net = None if eps_rand else (policy_factory or PolicyNet2)().eval()
         if net is not None:
@@ -839,6 +840,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                             special_credit = SPECIAL_ACTIVATION_CREDIT
             elif st['planning']:
                 if u == 1:
+                    if placement_feedback:
+                        ready_paint_mode = bool(env.scalar(0x665160, '<B'))
                     state = ready_once(env)
                     battle_start = time.monotonic()
                     d = dict(initial)
@@ -1050,6 +1053,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     outbreak=footer.get('outbreak') if footer else None,
                     ready_stats=footer.get('ready_stats') if footer else None,
                     opening_loadout=opening_loadout, ready_loadout=ready_loadout,
+                    ready_paint_mode=ready_paint_mode,
                     special_activations=special_activations,
                     reward_components=rewards, outside_playarea_actions=outside_actions,
                     outside_targets=outside_targets, battle_actions=battle_actions,

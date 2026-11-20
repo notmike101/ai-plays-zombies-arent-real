@@ -285,6 +285,19 @@ class SearchTests(unittest.TestCase):
         evidence[search.fitness.prefix_id(low, 1)] = {}
         self.assertEqual(search.planning_scale_neighbors(parent, evidence), [high])
 
+    def test_placement_mode_preference_precedes_first_build_and_preserves_other_genes(self):
+        rng = np.random.default_rng(4)
+        parent = search.random_team(rng)
+        buy = dict(search.gene(rng), tool=search.tr.TOOLS.index('buy_Demolition'), family=2)
+        build = dict(search.gene(rng), tool=search.GARRISON, family=0)
+        parent['plan'] = [buy, build]
+        for tool in search.PLACEMENT_MODES:
+            child = search.placement_mode_candidate(parent, rng, tool)
+            preference = child['plan'].pop(1)
+            self.assertEqual(preference['tool'], tool)
+            self.assertEqual(preference['duration'], 1)
+            self.assertEqual(child, parent)
+
     def test_battle_sampling_is_a_distinct_frozen_policy(self):
         parent = search.random_team(np.random.default_rng(4))
         candidate = search.battle_sampling_candidate(parent)

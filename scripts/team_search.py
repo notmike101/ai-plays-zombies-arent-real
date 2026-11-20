@@ -31,6 +31,7 @@ def matching(prefix):
 # These groups balance the proposal distribution across differently sized menus.
 FAMILIES = [sorted(tr.PLACEMENTS), [10, 15, 16, 17, 18, 9],
             matching('buy_'), matching('equip_'), matching('perk_'), list(range(tr.NU))]
+PLACEMENT_MODES = tuple(tr.TOOLS.index(name) for name in ('place_click', 'place_paint'))
 CASTS = sorted(tr.U2ABILITY)
 MISSILE = tr.ABILITY_U['Missile']
 GARRISON = tr.TOOLS.index('garrison')
@@ -64,6 +65,20 @@ def random_team(rng):
                 cast_bias=rng.uniform(-1, 7, len(CASTS)).tolist(),
                 idle_bias=float(rng.uniform(-1, 3)),
                 camera_pause=rng.normal(0,2,6).tolist(),blocked_tool=int(rng.choice(REPAIRS)))
+
+
+def placement_mode_candidate(parent, rng, tool):
+    plan = parent['plan']
+    index = next((i for i, step in enumerate(plan)
+                  if step['family'] == 0 or step['tool'] in tr.PLACEMENTS), None)
+    if index is None or sum(step['duration'] for step in plan) >= tr.PLAN_STEPS:
+        return None
+    if any(step['tool'] in PLACEMENT_MODES for step in plan):
+        return None
+    child = deepcopy(parent)
+    preference = dict(gene(rng), family=len(FAMILIES)-1, tool=tool, duration=1)
+    child['plan'].insert(index, preference)
+    return child
 
 
 def loadout_candidate(parent,rng):
@@ -614,7 +629,8 @@ def score(row):
 
 
 def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, observer_interval=.2,
-            practice_retry=False, allow_progression=False, capture_shadow=False, fixed_speed=None, fast_boot=False):
+            practice_retry=False, allow_progression=False, capture_shadow=False, fixed_speed=None,
+            fast_boot=False, click_start=False):
     timing = {'started': monotonic()}
     if start_stage>1 and not allow_progression:
         raise ValueError('Later-stage starts require explicit campaign progression')
@@ -631,14 +647,19 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
     stage,attempt=start_stage,0
     try:
         copy_dir = operator.owned_copy(copy)
+        boot_options = {'discard_dump_states': True}
+        if click_start:
+            boot_options['click_start'] = True
         if fast_boot:
             try:
-                env = zar_boot.boot(copy_dir, destination, discard_dump_states=True, welcome_wait=15)
+                env = zar_boot.boot(copy_dir, destination, welcome_wait=15, **boot_options)
             except zar_boot.ZAREnvError as error:
                 print(f'{copy} fast boot failed: {error}. Retrying with standard warmup.', flush=True)
             timing['fast_boot'] = env is not None
         if env is None:
-            env = zar_boot.boot(copy_dir, destination, discard_dump_states=True)
+            env = zar_boot.boot(copy_dir, destination, **boot_options)
+        if click_start:
+            result['initial_paint_mode'] = False  # Native state was verified by boot.
         timing['board_ready'] = monotonic()
         layout_receipts=[]
         while stage <= 5:
@@ -696,6 +717,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                refuge=refuge,garrison_relocation=relocation,
                                outbreak=row.get('outbreak'),
                                ready_stats=row.get('ready_stats'),
+                               ready_paint_mode=row.get('ready_paint_mode'),
                                opening_loadout=row.get('opening_loadout', {}),
                                ready_loadout=row.get('ready_loadout', {}),
                                timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
@@ -905,7 +927,7 @@ def shadow_variants(champion):
 
 
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False,
-                       capture_shadow=False, speeds=None, fast_boot=False):
+                       capture_shadow=False, speeds=None, fast_boot=False, click_start=False):
     if jobs:
         operator.require_resource_headroom(len(jobs))
     if starts is None:starts=[1]*len(jobs)
@@ -914,7 +936,7 @@ def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_
     futures={pool.submit(rollout,job,retries,stage,training=training,observe=True,
                          observer_interval=.2 if training and job is primary else 1.,
                          practice_retry=job[0]==practice_copy,allow_progression=allow_progression,
-                         capture_shadow=capture_shadow, fast_boot=fast_boot,
+                         capture_shadow=capture_shadow, fast_boot=fast_boot, click_start=click_start,
                          fixed_speed=speeds[job[0]] if speeds else None):(job,stage)
              for job,stage in zip(jobs,starts,strict=True)}
     for future in as_completed(futures):
@@ -958,6 +980,8 @@ def main():
                         help='Defer reserved evaluation until a discovery policy qualifies')
     parser.add_argument('--holdout-copies', nargs='+',
                         help='Reserve separate owned copies for the final frozen evaluation')
+    parser.add_argument('--click-start', action='store_true',
+                        help='Use verified click placement at the start of fresh L1 trials')
     parser.add_argument('--fast-boot', action='store_true',
                         help='Use a shorter warmup on layout-free discovery boards')
     parser.add_argument('--generations',type=int,default=10)
@@ -988,6 +1012,8 @@ def main():
         if args.compare_forecast or args.compare_speed or args.compare_shadow:
             parser.error('Reserved holdout copies are for the final campaign evaluation')
     worker_count = max(len(copies), len(holdout_copies))
+    if args.click_start and not args.continue_layout_free:
+        parser.error('Click-mode baseline requires layout-free continuation')
     if args.fast_boot and not args.continue_layout_free:
         parser.error('Faster boot is available only for layout-free discovery')
     if args.continue_layout_free and (args.demonstration or args.allow_progression):
@@ -1073,6 +1099,8 @@ def main():
         explore_without_layout = not args.demonstration and not (prior or {}).get('layout')
         if explore_without_layout and not args.allow_progression:
             view_revision += '-placement-feedback-v3'
+        if args.click_start:
+            view_revision += '-click-start-v1'
         evidence={}
         prices={}
         defenders = {}
@@ -1161,6 +1189,11 @@ def main():
         if proposal is not None:
             for index, candidate in zip((1, -1), planning_scale_neighbors(proposal, evidence)):
                 population[index] = candidate
+            if args.click_start and not evidence:
+                for index, tool in zip((1, -1), PLACEMENT_MODES):
+                    candidate = placement_mode_candidate(proposal, rng, tool)
+                    if candidate is not None:
+                        population[index] = candidate
         if prior and not (args.compare_forecast or args.compare_speed):
             previous=args.seed_from/'provisional.json'
             if previous.is_file():
@@ -1221,7 +1254,7 @@ def main():
                 valid_candidates=0
                 for job,start_stage,result in completed_rollouts(pool,jobs,starts,args.later_retries,training=True,
                         allow_progression=args.allow_progression,capture_shadow=args.capture_shadow,
-                        fast_boot=args.fast_boot):
+                        fast_boot=args.fast_boot, click_start=args.click_start):
                     team=job[2]
                     key=team_id(team) if team else 'control'
                     result.update(view_revision=view_revision,generation=generation,team_id=key,team=team,start_stage=start_stage)
@@ -1358,7 +1391,7 @@ def main():
             for wave in range(waves):
                 jobs,arms = holdout_assignments(holdout_copies,weights,challenger,prior,seed,wave)
                 for job,_,result in completed_rollouts(pool,jobs,allow_progression=args.allow_progression,
-                                                       capture_shadow=args.capture_shadow):
+                                                       capture_shadow=args.capture_shadow, click_start=args.click_start):
                     result.update(arm=arms[job[0]],team_id=team_id(job[2]) if job[2] else 'control',
                                   holdout_round=wave,
                                   discovery_overlap=fitness.l1_outbreak_seed(result) in discovery_seeds)

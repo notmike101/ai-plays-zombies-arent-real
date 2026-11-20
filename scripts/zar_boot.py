@@ -102,7 +102,13 @@ def placement_bindings(settings):
     return settings
 
 
-def boot(copy_dir, dest=('campaign', 'stage1'), *, discard_dump_states=False, welcome_wait=75):
+def click_start_settings(settings):
+    revised, count = re.subn(r'^place_paint[ \t]*=.*$', 'place_paint = false', settings, flags=re.M)
+    return revised if count else settings + '\nplace_paint = false\n'
+
+
+def boot(copy_dir, dest=('campaign', 'stage1'), *, discard_dump_states=False,
+         welcome_wait=75, click_start=False):
     """Launch, inject once, navigate with client fractions, verify planning.
 
     Busy copies are refused. Boot allows a welcome-service warmup, then
@@ -111,6 +117,8 @@ def boot(copy_dir, dest=('campaign', 'stage1'), *, discard_dump_states=False, we
     path = copy_path(copy_dir)
     if tuple(dest) not in (('campaign', 'stage1'), ('campaign', 'continue')):
         raise ValueError(f'Unsupported destination {dest!r}; use campaign/stage1 or campaign/continue')
+    if click_start and dest[1] != 'stage1':
+        raise ValueError('Click-mode baseline requires fresh stage 1')
     if copy_processes(path):
         raise ZAREnvError(f'{path.name} already has a game; refusing to take ownership')
     if (path / 'steam_appid.txt').read_text().strip() != '5185890':
@@ -119,6 +127,8 @@ def boot(copy_dir, dest=('campaign', 'stage1'), *, discard_dump_states=False, we
     if not re.search(r'^difficulty\s*=\s*normal\s*$', settings, re.M):
         raise ZAREnvError(f'{path.name} must use normal difficulty')
     configured=placement_bindings(settings)
+    if click_start:
+        configured = click_start_settings(configured)
     if configured!=settings:
         (path/'steam_cloud/settings.ini').write_text(configured,encoding='utf-8')
     progress = path / 'steam_cloud/progress/Boston__MA.progress'
@@ -195,6 +205,10 @@ def boot(copy_dir, dest=('campaign', 'stage1'), *, discard_dump_states=False, we
         if dest[1] == 'stage1' and (where.get('stage') != '0 (stage 1 of 5)'
                 or float(dump['economy']['money']) != 3111 or env.obs()['civ'] <= 5000):
             raise ZAREnvError(f'Fresh L1 mismatch: {where}; economy={dump.get("economy")}')
+        if click_start:
+            env.validate_build()
+            if env.scalar(0x665160, '<B') != 0:
+                raise ZAREnvError('Expected native click placement on fresh board')
         vi.close()
         print(f'{path.name} READY pid={process.pid} obs={env.obs()}', flush=True)
         return env

@@ -2,10 +2,18 @@
 import unittest
 from unittest.mock import patch
 
-from zar_boot import COPIES, boot, copy_path, menu_points, campaign_in_progress, campaign_cleared, main, placement_bindings
+from zar_boot import (COPIES, boot, copy_path, menu_points, campaign_in_progress,
+                      campaign_cleared, main, placement_bindings, click_start_settings)
 
 
 class BootBoundary(unittest.TestCase):
+    def test_click_start_resets_only_the_saved_placement_mode(self):
+        original = 'place_paint = true\nroster_plan = Garrison Mortar\n'
+        result = click_start_settings(original)
+        self.assertEqual(result, original.replace('true', 'false'))
+        self.assertEqual(click_start_settings(result), result)
+        self.assertEqual(click_start_settings(''), '\nplace_paint = false\n')
+
     def test_placement_bindings_are_idempotent_and_reject_conflicts(self):
         text=placement_bindings('difficulty = normal\nbind_place_click = NONE\n')
         self.assertIn('bind_place_click = K',text)
