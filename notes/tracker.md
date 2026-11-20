@@ -2,6 +2,35 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 17:27 Central, exact occupancy 215952 checkpointed four
+  paired rounds (16 retries, zero natural finishes). One candidate
+  rollout in round 3 reached READY with 5.33% sheltered and gave
+  the policy a positive new input. Retry 10.00%, first outnumbered
+  14.80 sim seconds, retry floor 71.63 s. No deployments on that
+  episode. Max occupancy input .36955 is share of living civilians
+  and can rise as the unsheltered population falls.
+- Matched 12 real nonzero candidate Observatory frames (six planning,
+  six battle) to the actor b855e72c4c303177 using exact inputs,
+  incoming GRU state and legal mask. Input range .0533-.0606.
+  Actor suffix norm zero and exact-vs-zero distributions identical.
+  After its next PPO batch, paired.pt next_round=4 held candidate
+  905c02ac8be4f818 with suffix norm .11178686; grid control zero.
+  Replaying the same states and mask with the updated candidate gave
+  max total variation .00004044 from the input alone and max READY
+  delta .000001606. This establishes learning through the input and
+  a small single-decision response, with no survival benefit proven.
+  Private artifacts analysis/coverage-portable314/tmp/
+  exact-shelter-215952-{positive,distribution,updated-distribution}.jsonl.
+- Rebased phase loss-weight journal patch on dcf6ad1 inputs.
+  Its test tolerates expected float32 rounding in the weight split.
+  60 focused tests passed with stage paths explicitly verified.
+  Apply check passed for analysis/coverage-portable314/tmp/
+  phase-credit-215952/phase-loss-ledger.patch SHA256
+  BDDF1FB4FDCEB12BB6E62FAE20D2CA8EBFDD6078C7E3FE9144254F1693AF9610.
+  Keep staged until active exact-input comparison reaches idle.
+  No new payload diagnostic failure in the checkpointed rounds.
+  Active operator 75452 and Observatory 21012 preserved.
+
 - At 17:19 Central, split shelter-duration 214952 finished.
   Candidate reward .1331474145 across two of 16 training games;
   baseline also measured two positive occupancy episodes. Seven
