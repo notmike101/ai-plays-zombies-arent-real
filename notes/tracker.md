@@ -2,6 +2,24 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 10:56 Central, the second fresh reserved candidate outbreak
+  (2033973644, inst20) ended at 10.00% officially saved at retry,
+  234.12 simulated seconds, with seven stock-confirmed Police drops.
+  Both occupied shelters were penetrated and 2,362 of 2,365 sheltered
+  civilians were exposed. Frozen bf3fc52369fc3746 now averages 9.96%
+  across two eligible reserved retries, with zero natural completions
+  for the consistency gate. Reserved wave three launched (inst19 PID
+  69796, inst20 PID 57840) with operator 71620 still live.
+- One-time local handoff PID 68120 is waiting for the exact active
+  operator to exit naturally. It verifies the idle machine, at least
+  10.5 GiB RAM and 3 GiB D: space, frozen policy/checkpoint fingerprints,
+  a clean tracked checkout and the staged patch hash before applying
+  and committing the Police path comparison. It then launches seed
+  189952 on discovery inst13-16 with separate reserves inst19-20.
+  Handoff log analysis/coverage-police-line-handoff.log, study
+  analysis/coverage-layout-free-189952-drive-d.log. Current checkpoint
+  hash matched. Handoff confirmed waiting, study launch still pending.
+
 - At 10:54 Central, reserved wave two remained live under operator
   71620 (inst20 PID 68420, outbreak 2033973644). Captured compact native
   deployment trails, shelter placements and wall-cell breach locations
