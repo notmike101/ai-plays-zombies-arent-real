@@ -2,6 +2,28 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:26 Central, planning exploration 197952 exited normally.
+  Eight held-out retries, no natural finishes, no occupied
+  shelters. Six distinct fresh scores after excluding one
+  inherited outbreak per arm. On those fresh scores baseline
+  averaged 7.93% (three) and broader planning 9.44% (three).
+  Consistency remained false for both.
+- Deployed 609c680 and launched private shelter defense study
+  198952 with operator PID 64444 after the idle check. Both
+  arms clone c6096d6b7f2a5f82 with its private optimizer state,
+  chosen because its training produced occupied shelters.
+  Six training rounds on inst13-16, four frozen reserve pairs.
+  Both train at the same broader planning temperature and
+  READY coverage credit; the sole treatment is 0.10 vs 0.30
+  occupied breach cost. Relative to 0.10, the two prior
+  occupied exposures would cost 0.02100 and 0.02515 more.
+  Check actual shelter coverage before attributing a result.
+- New working directory analysis/coverage-shelter-defense-f137abf8b1,
+  log analysis/coverage-shelter-defense-198952-drive-d.log.
+  Read-only first-round model_only=1/protocol 3 verified after
+  READY on inst13 70308, inst14 62256, inst15 72312, inst16
+  62308. Production checkpoint hash and Observatory matched.
+
 - At 13:22 Central, first frozen pair retried at 8.36% and 8.41%.
   Both outbreak IDs are in the inherited exclusion set and
   cannot count toward fresh consistency. Further reserves live.
