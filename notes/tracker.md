@@ -2,6 +2,28 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 164952 started at 04:23 Central on D:, portable trainer PID
+  9476, output `analysis/coverage-team-8469fed87e`, log
+  `analysis/coverage-layout-free-164952-drive-d.log`. Headroom at launch
+  13.06 GiB RAM and 18.84 GiB disk. Two discovery waves compare the
+  endpoint-only parent to one candidate that also scores the model's
+  first corner by its best available legal rectangle. It uses the same
+  learned weight and native action masks. No coordinates are supplied or
+  forced. Commit e5105e9, all 260 script tests passed.
+- Four read-only initial snapshots in the second wave of 163952 showed
+  the same shape limitation. For rectangles up to 2,500 m perimeter,
+  the model's repeated starting corner could enclose at most 1,605 of
+  8,142 civilians (19.71%). Other legal-corner pairs reached 3,174
+  (38.98%) before affordability and land-cap checks. The parent and both
+  opening candidates drew identical two shelters covering 28.95%.
+- Seed 163952 finished at 04:23 Central. First-wave endpoint-only
+  candidate 6a41db6d3b08aef0 recorded a native win at 10.19% and 221.2
+  simulated seconds on outbreak 4137464895 with 21 ready Garrisons.
+  It retried on the second distinct outbreak (975879945) at 9.26%,
+  with eight ready Garrisons. Both sheltered 28.95% at READY. Other
+  rows were early retries. The native win is below the required 35%,
+  so no reserve or promotion. The candidate leads further discovery.
+
 - Seed 163952 started at 04:12 Central on D:, portable trainer PID
   62696, output `analysis/coverage-team-1f2e9bd275`, log
   `analysis/coverage-layout-free-163952-drive-d.log`. Launch headroom
