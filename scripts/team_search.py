@@ -382,6 +382,22 @@ def offspring(parent, donor, rng, stage=1):
     return child
 
 
+def shelter_cast_pair(defenders, evidence, rng):
+    ordered = sorted(defenders.values(),
+                     key=lambda trial: fitness.l1_proposal_rank(evidence, trial['team']),
+                     reverse=True)
+    for trial in ordered:
+        level = trial['levels'][0]
+        if (not level.get('ready_paint_mode') or trial['team'].get('shelter_defense')
+                or not (level.get('battle_actions') or {}).get('cast_sampled')
+                or not (level.get('shelter') or {}).get('exposed_civilians')):
+            continue
+        reference = cast_candidate(trial, rng)
+        if reference is not None:
+            return reference, dict(deepcopy(reference), shelter_defense=float(rng.uniform(1.5, 4.5)))
+    return None
+
+
 class TeamPolicy(tr.PolicyNet2):
     def __init__(self, team, forecast=None):
         super().__init__()
@@ -725,6 +741,10 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
             episode_finished = monotonic()
             if not tr.valid_trajectory(row):
                 result.update(failed_stage=stage,failed_attempt=attempt,error=row.get('err','invalid trajectory'))
+                tool = row.get('last_tool')
+                if isinstance(tool, int) and 0 <= tool < len(tr.TOOLS):
+                    result['failed_action'] = dict(tool=tr.TOOLS[tool], cell=row.get('last_cell'),
+                                                   phase=row.get('phase'))
                 break
             levels.append(dict(stage=row['scenario'],end=row['end'],saved=row['saved_frac'],
                                win=row['win'],advance=row['advance'],campaign=row['campaign'],
@@ -1404,6 +1424,11 @@ def main():
                     key=stage_parent if stage>1 else l1_ranked[int(rng.integers(min(2,len(l1_ranked))))]
                     child=offspring(archive[key],leader,rng,stage=stage)
                     population.append(budget_candidate(child,[],prices) or child)
+                if args.click_start and generation % 2 == 0 and generation + 1 < args.generations:
+                    pair = shelter_cast_pair(defenders, evidence, rng)
+                    if pair is not None:
+                        population[-2:] = pair
+                        require_fresh.update(team_id(team) for team in pair)
             # Frozen arms on fresh boards. The game chooses its own outbreak seeds.
             distinct=[archive[k] for k in ranked if archive[k]!=prior and
                       (args.allow_progression or prior is None or

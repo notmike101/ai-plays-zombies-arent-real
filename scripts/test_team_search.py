@@ -322,6 +322,27 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(int(torch.count_nonzero(difference)), 1)
         self.assertEqual(difference[search.FAST_SPEED].item(), -3.)
 
+    def test_shelter_cast_pair_requires_real_breach_and_a_confirmed_salvo(self):
+        rng = np.random.default_rng(6)
+        parent = search.random_team(rng)
+        battle = dict(cast_available=20, cast_sampled=3, stock_decreased=3,
+                      logged_deployments=['demolition']*3, deploy_sim_seconds=[20., 20.4, 21.])
+        level = dict(stage=1, start_kind='fresh', saved=.09, ready_paint_mode=True,
+                     shelter={'exposed_civilians': 0}, battle_actions=battle)
+        trial = dict(team=parent, levels=[level])
+        defenders = {'example': trial}
+        self.assertIsNone(search.shelter_cast_pair(defenders, {}, rng))
+        level['shelter']['exposed_civilians'] = 50
+        battle['stock_decreased'] = 0
+        self.assertIsNone(search.shelter_cast_pair(defenders, {}, rng))
+        battle['stock_decreased'] = 3
+        reference, challenger = search.shelter_cast_pair(defenders, {}, rng)
+        self.assertIn('cast_timing', reference)
+        self.assertGreater(challenger['shelter_defense'], 0)
+        del challenger['shelter_defense']
+        self.assertEqual(challenger, reference)
+        self.assertNotIn('cast_timing', parent)
+
     def test_battle_sampling_is_a_distinct_frozen_policy(self):
         parent = search.random_team(np.random.default_rng(4))
         candidate = search.battle_sampling_candidate(parent)
@@ -490,6 +511,17 @@ class SearchTests(unittest.TestCase):
             call('copy', ('campaign', 'stage1'), discard_dump_states=True, welcome_wait=15),
             call('copy', ('campaign', 'stage1'), discard_dump_states=True),
         ])
+
+    def test_rollout_preserves_action_context_without_scoring_a_failed_receipt(self):
+        tool = search.tr.TOOLS.index('pause_toggle')
+        row = dict(err='Timed out waiting for UI frames', last_tool=tool, last_cell=0, phase='playing')
+        with (patch.object(search.operator, 'owned_copy', return_value='copy'),
+              patch.object(search.zar_boot, 'boot'), patch.object(search.zar_boot, 'stop'),
+              patch.object(search.tr, 'run_episode', return_value=row)):
+            result = search.rollout(('inst13', {}, None, 10))
+        self.assertEqual(result['levels'], [])
+        self.assertEqual(result['error'], row['err'])
+        self.assertEqual(result['failed_action'], dict(tool='pause_toggle', cell=0, phase='playing'))
 
     def test_failed_boot_still_records_worker_lifetime(self):
         with patch.object(search.operator, 'owned_copy'), patch.object(
