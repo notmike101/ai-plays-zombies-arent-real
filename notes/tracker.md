@@ -2,6 +2,17 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:18 Central, the first model-only planning comparison
+  batch completed and checkpointed both arms (next_round 1).
+  In inst14 outbreak 3661110275, the challenger sheltered
+  10.42% at READY, recorded 857 sheltered and 855 exposed at
+  the first occupied breach (38.60 s), then retried at 9.56%.
+  The native four-corner placement had one matching action
+  window, zone_rect decision 12. Exploration was exercised
+  in 29 and 7 decisions, respectively. All four games retried;
+  no performance effect established. Round two launched with
+  inst13 PID 73608, inst14 68368, inst15 38052, inst16 71652.
+
 - At 13:17 Central, deployed 2caf0a3 plus 263b1c4 at the
   verified idle boundary after operator 53348 exited naturally.
   Both training arms and histories retained. Reserve had eight
