@@ -2,6 +2,30 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 181952 started at 08:12 Central on D:, trainer PID 29440,
+  output `analysis/coverage-team-97205dff9e`, and log
+  `analysis/coverage-layout-free-181952-drive-d.log`. Launch headroom
+  was 12.82 GiB RAM and 18.93 GiB disk. Commit 9988b6a uses the real
+  outcome gradient unchanged, fits two updates on separate copy pairs,
+  and evaluates each on the opposite pair in two swapped waves. Copies
+  inst13/inst16 and inst14/inst15 each provide a two-copy fit and the
+  other fit's comparison. Native seed overlap remains excluded for
+  each fit. The counterfactual rank audit recomputes the other arm's
+  highest-scoring target on the same actual observation and legal
+  mask, without any gameplay input or prediction of action outcomes.
+  Reserved copies inst19/20 remain separate. The fixture verified
+  assignments and matching policy seeds after swapping. All 284 script
+  and 60 Observatory tests passed. Production hash matched.
+- Seed 180952 finished at 08:11 with four scored, fit-independent
+  battles on two native outbreaks and no reserved evaluation.
+  On 2340624381 the candidate retried at 9.87% and the reference at
+  6.84%. On 907435050 the candidate retried at 4.86% and the reference
+  cleared at 28.63%. The candidate averaged 7.37%, reference 17.74%.
+  Both arms started every battle with 21 Garrisons and logged 30
+  Firebomb impacts each. The same-copy, same-seed crossover did not
+  reproduce the candidate's fitting-outbreak peak. The exact reference
+  f0fbb68332c444bb leads the next fit.
+
 - Seed 180952 started at 07:58 Central on D:, trainer PID 35000,
   output `analysis/coverage-team-aa709acd93`, and log
   `analysis/coverage-layout-free-180952-drive-d.log`. Launch headroom
