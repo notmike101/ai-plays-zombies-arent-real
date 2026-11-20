@@ -1,6 +1,32 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-19 — continued search with pause handling)
+## CURRENT STATE (2026-11-19 — placement exploration and READY receipts)
+- Seed 146952 finished at 23:44 Central. There were zero wins in 16
+  discovery games. Proposal 3acb408aecf16f7a spent one Bomber charge and
+  reached early retry on three distinct verified native outbreak seeds
+  (9.90%, 9.94%, 9.96%). Frozen proposal 56671c66268d3b46 had one scored
+  retry (10.00%), two reference pause timeouts and one nonfinite mechanics
+  error. Three rows with outbreak identities reused prior reserved-copy
+  seeds and were marked ineligible. No promotion.
+- Audit of two recent layout-free blocks found no selected defensive unit
+  placements in their inspected discovery episodes. One native READY event
+  showed 1,815 unspent and no defensive units. Commit 6a985ac assigns an
+  exploratory slot to a randomly sampled defense-placement preference
+  while retaining the existing plan and ordinary legal masks. It records
+  native READY money and stock with each campaign result and names up
+  to four invalid mechanics features on an observation failure.
+  The full script suite passed 237 tests after making a same-timestamp
+  dummy dump fixture deterministic. Production checkpoint hash matched.
+- Seed 147952 launched at 23:46 Central, trainer PID 31900. Verified four
+  D: worker processes and discovery copies inst13–16. Reserved copies
+  inst18, inst17, inst20, inst19 swap the preceding block's arm assignments.
+  Older copies inst9–12 failed the full-availability preflight. Launch
+  headroom was 13.11 GiB available RAM and 12.92 GiB D: free.
+  Output `analysis/coverage-team-806b5aa365`, run log
+  `analysis/coverage-layout-free-147952-drive-d.log` and matching error log.
+  The 35% consistency goal remains open.
+
+### Search with pause handling
 - Seed 145952 finished at 23:22 Central with no discovery wins in 16
   games and no promotion. The frozen games ran on reserved inst17–20.
   All four outbreak seeds were distinct and absent from the three blocks
