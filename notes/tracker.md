@@ -2,6 +2,28 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 10:03 Central the retained frozen policy 75de0cafd4052843
+  cleared a third distinct outbreak, 1516456864 on inst13, with
+  31.20% officially saved. It reached READY with one hold, 19
+  Garrisons (nine inside occupied shelter), a Police deck and
+  native layout fingerprint 418150907bbd395c. Live sampled
+  decisions never recorded being outnumbered in this episode.
+  The three frozen results now are 29.17%, 9.33%, and 31.20%,
+  averaging 23.23%. They remain discovery results below 35%.
+  Wave two has started under D: operator PID 17560.
+- Wave-one different candidates scored 9.54% and 9.74%; their
+  shipped layout identities and severe-outcome diagnostics are
+  present. They were first outnumbered at 39.43 and 37.30 simulated
+  seconds, then reached the living-population retry floor at 79.60
+  and 113.50 seconds. Howitzer/hold timed out in planning at
+  native debt $401 after 28 Cancel selections in 60 steps.
+  A game-free episode reproduced the loop and verified a staged
+  cooldown after two consecutive Cancels at unchanged debt with
+  no pending gesture. With normal masks otherwise intact the
+  policy chose Undo in the fixture, cleared the debt, then regained
+  Cancel. No live source edits or automatic layout rollback.
+  The repair fixture and 28 focused script tests passed.
+
 - Seed 187952 launched at 09:57 Central on D:, operator PID 17560,
   output `analysis/coverage-team-5a1475dfe3`, log
   `analysis/coverage-layout-free-187952-drive-d.log`. Four discovery
