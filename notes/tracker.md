@@ -2,6 +2,27 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:00 Central, zone exploration study 195952 finished.
+  Held-out baseline 8177193838922d68 averaged 8.835%, challenger
+  1bfaec4658f51c44 averaged 7.06% (four each). All held-out
+  attempts were distinct, absent from training and ended at
+  retry, with zero coverage. The challenger had one verified
+  Call to Arms deployment; neither policy met consistency.
+- Deployed 69a0a8e and launched warm-start study 196952 under
+  operator 53348 at 12:59:56. Both arms clone the higher-scoring
+  private baseline 8177193838922d68 and its Adam state
+  (10 slots, step 4236). Previous study used in selection;
+  all 24 of its native outbreak seeds are excluded from fresh
+  evaluation, plus all new training seeds. Compare eight more
+  four-copy training rounds using the same READY credit, with
+  broader corner sampling only in the challenger. Then four
+  reserve pairs use normal sampling. No change to production
+  policy or winner thresholds. Data
+  analysis/coverage-zone-exploration-fa682b451e and console
+  analysis/coverage-warm-zone-196952-drive-d.log. All 316 tests
+  passed and both cloned policies matched in a real snapshot
+  load test. Production checkpoint hash still matched.
+
 - At 12:56 Central, the first zone exploration reserve pair retried
   at 9.52% baseline and 8.44% challenger. Both had zero coverage
   and zero tempered choices on fresh, distinct outbreaks.
