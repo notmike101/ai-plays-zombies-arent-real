@@ -2,6 +2,20 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:29 Central, audited native starting coverage in 1,119
+  scored fresh L1 archive entries deduplicated by team, view
+  revision and outbreak. No zones: 39, mean 11.61%, 34 below
+  10%, two wins at or above 35%. Zones with zero initial
+  coverage: 60, mean 16.86%. Positive initial coverage: 1,020,
+  mean 22.52%. Mixed policies, including layout replay, prevent
+  causal attribution. An experimental READY penalty should use
+  verified civilian coverage with a cap, rather than zone count
+  or invalidating the READY action. No reward change deployed.
+- Study 198952 remains live under 64444. A changing native map
+  interrupted one game in round two; its existing pair retry
+  started inst13 19116 and inst14 65532. No partial pair score
+  assigned. Model-only input and production weights preserved.
+
 - At 13:27 Central, shelter defense study 198952 completed its
   first PPO round. Baseline retries saved 9.47% and 5.29%;
   stronger-cost 6.25% and 9.35%. All had 0% inside at READY,
