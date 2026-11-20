@@ -2,6 +2,28 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:05 Central, verified why correcting the opening catalog alone
+  does not restore Missile exploration: starter substitutions require
+  both an earlier effect and no greater cost than the current purchase.
+  The Police-only policy's existing preference costs 1 SP and has an
+  8 s first effect. Staged an evidence-gated alternative in
+  analysis/coverage-portable314/tmp/loadout-before-breach.patch. It
+  records remaining SP from confirmed native purchases at READY,
+  consistently reads Missile/Nuke effect timing, and in the absence
+  of an earlier proposal lets search consider a one-purchase
+  replacement that fits the confirmed budget and can take effect
+  before the previously observed occupied breach. Never forces the
+  purchase or bypasses native legality. This supersedes the isolated
+  timing-only patch. Fixture proposes Missile at 2 SP/32.5 s with a
+  recorded spare SP and 49.9 s breach, and refuses unknown budget,
+  insufficient SP, unknown breach, or arrival at/after breach.
+  All 299 script tests passed against isolated candidate source.
+  Both staged study patches pass joint applicability. Nothing
+  changed in the live operator or the queued Police study.
+- The third reserved candidate battle is still active under 71620.
+  Its latest journal matched prior outbreak 249701763. The native
+  in-battle snapshot is not an official score or a new eligible game.
+
 - At 11:03 Central, preflight passed for all six next-study copies
   inst13-16 and inst19-20. The current candidate is still playing the
   repeated outbreak on inst19 PID 69796. Handoff PID 68120 remains
