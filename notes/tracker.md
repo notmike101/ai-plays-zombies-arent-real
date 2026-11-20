@@ -2,6 +2,31 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:17 Central, deployed 2caf0a3 plus 263b1c4 at the
+  verified idle boundary after operator 53348 exited naturally.
+  Both training arms and histories retained. Reserve had eight
+  retries across three distinct native outbreaks and no coverage
+  or natural clears. Raw means 6.88% baseline / 7.02% challenger;
+  unique-seed-weighted 6.88% / 6.24%. This did not establish a
+  stronger policy or meet the 35% consistency gate.
+- The input hook passed four Rust tests, two identical builds
+  and active deployment preflight. DLL SHA256 starts 71a2d18e.
+  Build artifacts, writable caches and temporary state were on
+  D:. Existing Observatory PID 12628 remained live. New private
+  comparison 197952 operator 19628 is on
+  analysis/coverage-planning-exploration-b5efd2b133, log
+  analysis/coverage-planning-tool-197952-drive-d.log. Both arms
+  clone 6e4dd8f5346064da and Adam from the completed paired
+  snapshot, chosen for the sole prior occupied training shelter.
+  This is a new comparison with a new seed. Prior evidence and
+  previously seen outbreaks are retained outside fresh scoring.
+- Verified protocol 3 and native model_only=1 at offset 0x44
+  on all first-round copies at READY: inst13 PID 48420, inst14
+  61732, inst15 45152, inst16 71840. All were launched under
+  ZAR_MODEL_ONLY_INPUT=1. The planning exploration, zone action
+  receipt matching and checkpoint stop changes passed 321
+  combined script tests. Production checkpoint hash matched.
+
 - At 13:11 Central, all 32 warm training attempts in 196952
   completed across 29 distinct outbreaks. Baseline averaged 3.88%,
   challenger 5.50%. The challenger finally sampled nine shelter
