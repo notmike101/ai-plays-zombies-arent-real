@@ -10,6 +10,13 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_phase_loss_weighting_keeps_both_phases_visible(self):
+        phases = train.torch.tensor([True, False, False, False])
+        weights = train.phase_loss_weights(phases)
+        self.assertAlmostEqual(float(weights[phases].sum()), 2.)
+        self.assertAlmostEqual(float(weights[~phases].sum()), 2.)
+        self.assertEqual(train.phase_loss_weights(phases[1:]).tolist(), [1., 1., 1.])
+
     def test_missile_reward_comparison_uses_same_network_without_layout_override(self):
         import compare_spatial
         with patch.object(compare_spatial.operator, 'owned_copy'), \

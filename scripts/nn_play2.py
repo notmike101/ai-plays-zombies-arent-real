@@ -970,7 +970,16 @@ def valid_trajectory(tr):
             isinstance(saved, (int, float)) and math.isfinite(saved) and 0 <= saved <= 1)
 
 
-def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015):
+def phase_loss_weights(planning):
+    """Give planning and battle equal loss mass when both phases are present."""
+    count = planning.count_nonzero().item()
+    total = planning.numel()
+    if count in (0, total):
+        return torch.ones_like(planning, dtype=torch.float32)
+    return torch.where(planning, total/(2*count), total/(2*(total-count)))
+
+
+def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *, balance_phases=False):
     seqs = []
     for t in trajs:
         X = torch.tensor(np.array(t['obs'], dtype=np.float32)).unsqueeze(0)
@@ -989,7 +998,8 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015):
                        planning=X[0, :, PLANNING_INDEX].bool().tolist(), sim_elapsed=t['sim_elapsed'])
         seqs.append((X, U, C, ULP, CLP, MU,
                      torch.tensor(adv, dtype=torch.float32),
-                     torch.tensor(ret, dtype=torch.float32), MC))
+                            torch.tensor(ret, dtype=torch.float32), MC,
+                     phase_loss_weights(X[0,:,PLANNING_INDEX].bool()) if balance_phases else 1.))
     alladv = np.concatenate([s[6].numpy() for s in seqs])
     mu_a, sd_a = alladv.mean(), alladv.std() + 1e-8
     diagnostics = []
@@ -997,7 +1007,7 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015):
         order = np.random.permutation(len(seqs))
         tot = 0.0
         for k in order:
-            X, U, C, ULP, CLP, MU, ADV, RET, MC = seqs[k]
+            X, U, C, ULP, CLP, MU, ADV, RET, MC, W = seqs[k]
             lu, lc, v, _ = net(X)
             du = torch.distributions.Categorical(
                 logits=lu.squeeze(0).masked_fill_(MU == 0, -1e9))
@@ -1005,10 +1015,10 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015):
             lp = du.log_prob(U) + dc.log_prob(C)
             ratio = torch.exp(lp - (ULP + CLP))
             adv = (ADV - mu_a) / sd_a
-            pg = -torch.min(ratio * adv,
-                            torch.clamp(ratio, 1 - clip, 1 + clip) * adv).mean()
-            vf = ((v.squeeze(0) - RET) ** 2).mean()
-            loss = pg + c1 * vf - ent * (du.entropy() + dc.entropy()).mean()
+            pg = -(W * torch.min(ratio * adv,
+                                 torch.clamp(ratio, 1 - clip, 1 + clip) * adv)).mean()
+            vf = (W * (v.squeeze(0) - RET) ** 2).mean()
+            loss = pg + c1 * vf - ent * (W * (du.entropy() + dc.entropy())).mean()
             if not torch.isfinite(loss):
                 raise ValueError('Non-finite PPO loss; checkpoint not saved')
             opt.zero_grad()

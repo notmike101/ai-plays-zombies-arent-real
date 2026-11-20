@@ -66,8 +66,11 @@ def main():
     parser.add_argument('--train-rounds', type=int, default=1)
     parser.add_argument('--eval-rounds', type=int, default=2)
     parser.add_argument('--resume', type=Path, help='Resume both arms from a paired training snapshot')
-    parser.add_argument('--compare-missile-credit', action='store_true',
+    comparison = parser.add_mutually_exclusive_group()
+    comparison.add_argument('--compare-missile-credit', action='store_true',
                         help='Train two private copies of the same policy with and without the civilian-impact reward')
+    comparison.add_argument('--compare-phase-balance', action='store_true',
+                            help='Compare existing PPO loss with equal planning and battle loss mass')
     args = parser.parse_args()
     copies = args.copies
     if args.train_rounds < 1 or args.eval_rounds < 2 or args.eval_rounds % 2:
@@ -85,15 +88,16 @@ def main():
         torch.manual_seed(args.seed)
         baseline = trainer.PolicyNet2()
         trainer.load_pretrained(baseline, trainer.MODEL)
-        if args.compare_missile_credit:
-            models = {'unshaped': baseline, 'missile_credit': deepcopy(baseline)}
+        if args.compare_missile_credit or args.compare_phase_balance:
+            labels = ('standard', 'balanced') if args.compare_phase_balance else ('unshaped', 'missile_credit')
+            models = {labels[0]: baseline, labels[1]: deepcopy(baseline)}
         else:
             candidate = SpatialPolicy()
             for name in ('gru', 'hu', 'val'):
                 getattr(candidate, name).load_state_dict(getattr(baseline, name).state_dict())
             models = {'dense': baseline, 'shared': candidate}
         optimizers = {arm: torch.optim.Adam(net.parameters(), lr=3e-4) for arm, net in models.items()}
-        if args.compare_missile_credit:
+        if args.compare_missile_credit or args.compare_phase_balance:
             checkpoint = torch.load(trainer.MODEL, weights_only=True)
             for opt in optimizers.values():
                 opt.load_state_dict(deepcopy(checkpoint['optimizer']))
@@ -102,6 +106,8 @@ def main():
                       learning=trainer.learning_config())
         if args.compare_missile_credit:
             config['comparison'] = 'missile_civilian_credit'
+        if args.compare_phase_balance:
+            config['comparison'] = 'phase_balance'
         first_round = 0
         source = trainer.policy_id(baseline)
         if args.resume:
@@ -112,7 +118,9 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        tag = ('coverage-missile-credit-' if args.compare_missile_credit else 'coverage-spatial-') + uuid.uuid4().hex[:10]
+        experiment = 'phase-balance' if args.compare_phase_balance else (
+            'missile-credit' if args.compare_missile_credit else 'spatial')
+        tag = 'coverage-' + experiment + '-' + uuid.uuid4().hex[:10]
         directory = Path(operator.ROOT, 'analysis', tag)
         directory.mkdir()
         print(directory, 'source policy', source, 'starting round', first_round, flush=True)
@@ -146,7 +154,8 @@ def main():
                 if training:
                     for arm, net in models.items():
                         np.random.seed(args.seed + rnd)
-                        trainer.ppo_update(net, [row for job,row in zip(jobs,results) if job[1]==arm], optimizers[arm])
+                        trainer.ppo_update(net, [row for job,row in zip(jobs,results) if job[1]==arm],
+                                           optimizers[arm], balance_phases=arm=='balanced')
                         torch.save(net.state_dict(), directory/(arm+'.pt'))
                     temp = directory/'paired.tmp'
                     torch.save(dict(next_round=rnd+1, source=source, config=config,
