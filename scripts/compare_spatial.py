@@ -5,6 +5,7 @@ import os
 import time
 import uuid
 from collections import Counter
+from copy import deepcopy
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -39,7 +40,7 @@ def episode(job):
     try:
         policy = SpatialPolicy if arm == 'shared' else trainer.PolicyNet2
         return trainer.run_episode((env.pid, weights, False, tag,
-                                   dict(start_kind='fresh', seed=seed)), policy_factory=policy,
+                                   dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')), policy_factory=policy,
                                    telemetry=False)
     finally:
         zar_boot.stop(env)
@@ -65,6 +66,8 @@ def main():
     parser.add_argument('--train-rounds', type=int, default=1)
     parser.add_argument('--eval-rounds', type=int, default=2)
     parser.add_argument('--resume', type=Path, help='Resume both arms from a paired training snapshot')
+    parser.add_argument('--compare-missile-credit', action='store_true',
+                        help='Train two private copies of the same policy with and without the civilian-impact reward')
     args = parser.parse_args()
     copies = args.copies
     if args.train_rounds < 1 or args.eval_rounds < 2 or args.eval_rounds % 2:
@@ -82,14 +85,23 @@ def main():
         torch.manual_seed(args.seed)
         baseline = trainer.PolicyNet2()
         trainer.load_pretrained(baseline, trainer.MODEL)
-        candidate = SpatialPolicy()
-        for name in ('gru', 'hu', 'val'):
-            getattr(candidate, name).load_state_dict(getattr(baseline, name).state_dict())
-        models = {'dense': baseline, 'shared': candidate}
+        if args.compare_missile_credit:
+            models = {'unshaped': baseline, 'missile_credit': deepcopy(baseline)}
+        else:
+            candidate = SpatialPolicy()
+            for name in ('gru', 'hu', 'val'):
+                getattr(candidate, name).load_state_dict(getattr(baseline, name).state_dict())
+            models = {'dense': baseline, 'shared': candidate}
         optimizers = {arm: torch.optim.Adam(net.parameters(), lr=3e-4) for arm, net in models.items()}
+        if args.compare_missile_credit:
+            checkpoint = torch.load(trainer.MODEL, weights_only=True)
+            for opt in optimizers.values():
+                opt.load_state_dict(deepcopy(checkpoint['optimizer']))
         config = dict(seed=args.seed, copies=copies, train_rounds=args.train_rounds,
                       eval_rounds=args.eval_rounds, schema=trainer.checkpoint_schema(),
                       learning=trainer.learning_config())
+        if args.compare_missile_credit:
+            config['comparison'] = 'missile_civilian_credit'
         first_round = 0
         source = trainer.policy_id(baseline)
         if args.resume:
@@ -100,7 +112,7 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        tag = 'coverage-spatial-' + uuid.uuid4().hex[:10]
+        tag = ('coverage-missile-credit-' if args.compare_missile_credit else 'coverage-spatial-') + uuid.uuid4().hex[:10]
         directory = Path(operator.ROOT, 'analysis', tag)
         directory.mkdir()
         print(directory, 'source policy', source, 'starting round', first_round, flush=True)
@@ -109,7 +121,7 @@ def main():
                 training = rnd < args.train_rounds
                 jobs = []
                 for i, copy in enumerate(copies):
-                    arm = ('dense', 'shared')[(i+rnd)%2]
+                    arm = tuple(models)[(i+rnd)%2]
                     jobs.append((copy, arm, models[arm].state_dict(), args.seed+rnd*100+i//2,
                                  f'{tag}/{rnd}/{arm}/{copy}'))
                 start = time.monotonic()
@@ -123,6 +135,9 @@ def main():
                     summary['battle_actions'] = dict(Counter(
                         trainer.TOOLS[u] for u, obs in zip(row.get('us', []), row.get('obs', []))
                         if not obs[trainer.PLANNING_INDEX]))
+                    if args.compare_missile_credit:
+                        summary['missile_civilian_losses'] = row.get('battle_actions', {}).get('missile_civilian_losses')
+                        summary['missile_civilian_reward'] = row.get('reward_components', {}).get('missile_civilian_loss')
                     with (directory/'results.jsonl').open('a') as f:
                         f.write(json.dumps(summary)+'\n')
                     print(summary, flush=True)

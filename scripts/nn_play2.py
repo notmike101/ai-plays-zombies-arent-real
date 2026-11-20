@@ -865,12 +865,13 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                        outside_playarea=outside_reward, shelter=shelter.presence_credit,
                        occupied_breach=shelter.breach_penalty,
                        terminal=outcome_reward(saved, end))
+        missile_rewards = rows['rews'] if options.get('missile_credit', True) else [0.] * len(rows['rews'])
         missile_losses = charge_missile_civilian_loss(
-            footer, [step[0] for step in rows['trail']], rows['rews'], civ0)
+            footer, [step[0] for step in rows['trail']], missile_rewards, civ0)
         battle_actions['missile_civilian_losses'] = missile_losses
         battle_actions.update(legal_cast_tools=legal_casts, selected_cast_tools=selected_casts)
         rewards['missile_civilian_loss'] = (-MISSILE_CIVILIAN_COST * missile_losses['assigned'] / civ0
-                                            if missile_losses is not None else 0.)
+                                            if missile_losses is not None and missile_rewards is rows['rews'] else 0.)
         if rows['rews']:
             rows['rews'][-1] += rewards['terminal']
         advance = end == 'won' and saved is not None and saved >= .35

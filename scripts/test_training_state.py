@@ -10,6 +10,18 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_missile_reward_comparison_uses_same_network_without_layout_override(self):
+        import compare_spatial
+        with patch.object(compare_spatial.operator, 'owned_copy'), \
+                patch.object(compare_spatial.zar_boot, 'boot'), \
+                patch.object(compare_spatial.zar_boot, 'stop'), \
+                patch.object(train, 'run_episode') as run:
+            for arm, enabled in [('unshaped', False), ('missile_credit', True)]:
+                compare_spatial.episode(('inst13', arm, {}, 123, 'test'))
+                self.assertEqual(run.call_args.args[0][4],
+                                 dict(start_kind='fresh', seed=123, missile_credit=enabled))
+                self.assertIs(run.call_args.kwargs['policy_factory'], train.PolicyNet2)
+
     def test_missile_civilian_loss_is_charged_at_native_impact(self):
         events = [
             {'seq': 1, 'ev': 'deploy', 'what': 'cruise_missile', 'sim': 1},
