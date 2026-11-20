@@ -157,6 +157,23 @@ def defense_duration_candidate(trial, rng):
     return child
 
 
+def defense_spacing_candidate(trial, rng):
+    if not trial or not has_defense_evidence(trial):
+        return None
+    level = trial['levels'][0]
+    if (level['ready_stats'].get('garrisons') or 0) < 4 or level['paid_buildings'].get('Garrison', 0) < 2:
+        return None
+    parent = trial['team']
+    candidates = [i for i, gene in enumerate(parent['plan'])
+                  if tr.PLACEMENTS.get(gene['tool']) == 'Garrison']
+    if not candidates:
+        return None
+    child = deepcopy(parent)
+    weights = child['plan'][int(rng.choice(candidates))]['weights']
+    weights[2] -= float(rng.uniform(1., 2.5))
+    return child
+
+
 def best_defense_trial(defenders, evidence):
     return max(defenders.values(), key=lambda trial: fitness.l1_proposal_rank(evidence, trial['team']),
                default=None)
@@ -934,6 +951,10 @@ def main():
             population[1] = battle_sampling_candidate(proposal)
         if resumed_cast_probe is not None:
             population[-1] = resumed_cast_probe
+        if proposal is not None:
+            spacing = defense_spacing_candidate(defenders.get(team_id(proposal)), rng)
+            if spacing is not None:
+                population[-1] = spacing
         if prior and not (args.compare_forecast or args.compare_speed):
             previous=args.seed_from/'provisional.json'
             if previous.is_file():

@@ -58,6 +58,22 @@ class SearchTests(unittest.TestCase):
             self.assertFalse(search.has_defense_evidence(dict(trial, levels=[dict(level, **partial)])))
         self.assertFalse(search.has_defense_evidence(dict(trial, arm='candidate')))
 
+    def test_defense_spacing_changes_only_the_confirmed_garrison_preference(self):
+        rng = np.random.default_rng(29)
+        parent = search.random_team(rng)
+        parent['plan'] = [dict(search.gene(rng), family=0,
+                              tool=search.tr.TOOLS.index('garrison'), duration=2)]
+        level = dict(stage=1, start_kind='fresh', saved=.09, outbreak={'seed': 77},
+                     ready_stats={'garrisons': 4}, paid_buildings={'Garrison': 3})
+        trial = dict(team=parent, levels=[level])
+        variant = search.defense_spacing_candidate(trial, rng)
+        original = parent['plan'][0]['weights'][2]
+        self.assertLess(variant['plan'][0]['weights'][2], original)
+        variant['plan'][0]['weights'][2] = original
+        self.assertEqual(variant, parent)
+        level['paid_buildings']['Garrison'] = 1
+        self.assertIsNone(search.defense_spacing_candidate(trial, rng))
+
     def test_planning_scale_changes_tool_preferences_without_changing_battle(self):
         rng = np.random.default_rng(43)
         parent = search.random_team(rng)
