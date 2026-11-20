@@ -2,6 +2,15 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Input isolation worktree, 2026-11-20: opt-in model-only input for fresh
+  owned copies. Isolated inst91 PID 6528 booted into Boston L1. Untagged
+  keyboard, click and wheel messages left phase, economy, counts and camera
+  unchanged. Tagged virtual input passed dialog, placement, geometry, zoom,
+  battle and retry checks. Test process exited. Four Rust and six Python
+  checks passed, with two identical clean DLL builds. Physical devices and
+  Windows lifecycle controls were outside this verification. No changes
+  deployed to the training checkout.
+
 - At 12:51 Central, zone exploration 195952 completed the first
   training round. Native outbreak 2301536718 in the baseline
   had 9.26% inside at READY and earned 0.02778 coverage credit,
