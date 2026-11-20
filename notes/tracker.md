@@ -2,6 +2,31 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 17:53 Central, phase balance 216952 checkpointed six
+  rounds. All 24 training games reached battle and retried,
+  with zero occupied shelters at READY. The seventh batch
+  is active under 61372. Round 5 had two stock spends, one
+  per arm. No eligible terminal finishes.
+- Passively captured 12 planning decisions across the four
+  round-5 games, matching Observatory game IDs and policy
+  revisions. Rectangle start was legal in 10 of 12 samples,
+  with median probability .653% and median legal-tool rank
+  22. Freeform start median .124% (rank 42) and READY 6.707%
+  (rank 5.5) on those same decisions. The two other decisions
+  offered only continuation or cancellation of an anchored wall.
+  Both arms sampled a rectangle start in one game. Both games
+  had positive native geometry count but zero READY occupancy.
+  The journal needs the staged polygon count to establish the
+  final closed count. Same-mask replay at temperature 1.35
+  gave median rectangle probability 1.062%, freeform .309%
+  and READY 6.046%. These are sampled and same-state replay
+  measurements, not a rollout or a treatment claim. Sparse
+  selection remains evident despite legal starts, and selection
+  alone does not ensure a useful shelter.
+  Evidence analysis/coverage-portable314/tmp/
+  zone-selection-216952.jsonl. 1c3be633f44497fc remains the
+  current candidate warm start for the shelter-duration pilot.
+
 - At 17:49 Central, phase balance 216952 checkpointed four
   rounds. All 16 games entered battle and retried. Both arms
   still had zero occupied shelters at READY. Round 3 standard
