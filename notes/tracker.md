@@ -2,6 +2,31 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 10:11 Central seed 187952 completed wave two. Frozen
+  75de0cafd4052843 cleared outbreak 264985974 at 21.19%; it now
+  averages 22.72% over 29.17%, 9.33%, 31.20%, and 21.19% on
+  four distinct outbreaks. The current 31.20% and 21.19%
+  clears share visible READY layout ID 418150907bbd395c.
+  A different Battleship/hold proposal had the same ID and
+  retried at 7.47% despite its first confirmed deployment at
+  2.43 sim seconds. The other wave-two variants scored 8.65%
+  and 10.00%. No qualifying outcome. Wave three reached READY
+  on four copies under operator PID 17560. Observatory running
+  and production checkpoint hash matched.
+- The retained policy's confirmed first deployments were at 4.07,
+  35.07, 1.63 and 13.53 seconds across those four trials. This
+  makes a timing-only comparison worth testing; repeated poor
+  outcomes after early deployments rule out treating timing
+  alone as success. The staged optional policy preference
+  fades through the first 30 sim seconds and ends after its
+  first native stock spend. Existing masks govern selection
+  and targets. Game-free crossed assignments confirmed that
+  only the opening tool preference differs between arms.
+  The timing and debt-cancel changes passed 109 focused script
+  tests together in memory. The debt version changes the view
+  revision to keep prior official scores separate. No edits to
+  live code, checkpoint, rewards or qualification rules.
+
 - At 10:03 Central the retained frozen policy 75de0cafd4052843
   cleared a third distinct outbreak, 1516456864 on inst13, with
   31.20% officially saved. It reached READY with one hold, 19
