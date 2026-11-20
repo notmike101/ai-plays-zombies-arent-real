@@ -2,6 +2,35 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 15:55 Central, launched matched shelter-defense comparison
+  209952 from archived balanced policy 5f80a288d2c1053a with
+  its private Adam. The preceding READY pilot had six occupied
+  breaches in 32 training battles from this initialization.
+  Both arms keep the same preparation, .30 READY shelter
+  coverage credit, exploration, native masks and 2x speed.
+  Costs are .10 and .30 per exposed fraction. Eight training
+  rounds on inst13-16 and four frozen pairs on inst19/20.
+  Operator 65592 (15:55:12), Observatory 21012. Data
+  analysis/coverage-shelter-defense-1ba4ff6509, console
+  analysis/coverage-defense-archived-209952-drive-d.log.
+  Existing guard retried one matched pair after a UI-frame
+  timeout. Verified protocol3 model-only mappings on 26096
+  and 64480. At 16:02, three rounds checkpointed: all 12
+  started, nine retries, three natural 0% training losses,
+  zero occupied exposures and no differential reward. Advisory
+  unexercised; subsequent rounds remain active. No evaluation
+  evidence or production promotion.
+- Battle timing in the completed 207952 archive: of 32
+  training battles, the seven with positive READY occupancy
+  reached first <=10% live at a mean 61.82 sim seconds vs
+  32.27 for the other 25. This is an observational split.
+  Only four of 32 had a sampled legal cast before zombies
+  outnumbered civilians, with three confirmed early deployments.
+  None of six frozen starts had a legal cast before that point.
+  A stronger breach cost still requires occupied exposures,
+  and simply increasing cast frequency cannot fix unavailable
+  opening abilities. Keep timing and qualification separate.
+
 - At 15:50 Central, 207952 finished the frozen comparison and
   exited normally. Both arms reached all 16 training battles.
   The candidate's applied cost was -0.436 over 218 legal
