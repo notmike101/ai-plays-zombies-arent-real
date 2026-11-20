@@ -2,6 +2,28 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 14:05 Central, observed comparison 200952 had completed
+  all six paired training rounds. Baseline scored 4.83%
+  averaged over ten official scores (two planning timeouts);
+  broader prep 5.24% over twelve. Two occupied starts and one
+  confirmed deployment per arm. Round six's first UI-frame
+  timeout was recovered by the guarded whole-pair retry;
+  only the completed pair entered PPO. Frozen reserve began
+  under PID 40184. At 14:06 its first pair retried at 8.97%
+  and 6.78%, both with zero occupied shelter at READY.
+
+- Staged a preparation entropy comparison at equal rollout
+  temperature 1.35 and unchanged game rewards. The candidate
+  adds 0.045 times mean entropy across legal planning-tool
+  distributions to PPO only. Both arms retain normal frozen
+  sampling. The combined patch carries forward the zombie-kill
+  timing bracket and excludes native seeds found in prior
+  campaign and comparison journals. The full archive scan
+  found 1,684 known seeds during validation. All 329 tests
+  passed and applicability checked. D: analysis/coverage-portable314/tmp/battle-timing/planning-entropy-with-timing.patch,
+  SHA256 712F022E429AD76EE6BB6FF292DA073BAFA2B96BCB5CE80B4EF7B037A7FB8DBC.
+  No live deployment while the frozen reserve is active.
+
 - At 14:00 Central, study 200952 had four completed training
   rounds. Baseline scored 5.64% across seven scored games
   (one planning timeout); broader prep 4.66% across eight.
