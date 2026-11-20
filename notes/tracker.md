@@ -2,6 +2,41 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 183952 started at 08:46 Central on D:, operator PID 67752,
+  output `analysis/coverage-team-6625fd1484` and log
+  `analysis/coverage-layout-free-183952-drive-d.log`. Four discovery copies
+  and two separate reserves. Launch headroom was 13.55 GiB RAM and
+  18.93 GiB free disk. Commit 45304f1 adds one opt-in comparison: once
+  the model decides on a purchase, choose among legal purchases with an
+  equal mixture of model probabilities and uniform exploration. A private
+  generator preserves battle RNG and the usual masks and receipts remain
+  in force. The paired arms differ only by this flag and swap copies in
+  wave two. The scheduling fixture, 286 script tests, 60 Observatory
+  tests, model parity and graph check passed. Production hash matched.
+- Seed 182952 completed eight fit-independent comparisons on four
+  matched native outbreaks. Learned cast-tool biases averaged 8.99%
+  officially saved across four results versus 9.83% for the reference.
+  Both had the same Police and Firebomb loadout. No policy reached 35%
+  and no reserve evaluation ran. The mean tool-probability distance
+  across 4,238 same-state checks was 0.00000466, so this update barely
+  changed the distribution. The best official score was 12.91%, a
+  native clear by the reference.
+- L1 regression audit: the documented 1x/2x benchmark replayed a saved
+  formation before battle on every board. Across 24 trials it had 21
+  scores at or above 30%, and arm means of 32.24% and 35.90%. Of 411
+  fresh native-seeded scores at or above 30% across search ledgers, 410
+  recorded layout replay receipts. The sole exception was the 34.98%
+  fitting-outbreak result from seed 179952. The recent model-led
+  comparison set of 48 scored fresh starts (19 outbreak seeds, excludes
+  flagged fit overlaps and seed 182952) averaged 11.46%, with all 48
+  using Police and Firebomb and no scores at or above 30%.
+  The old 2x layouts recorded a zone, gates, walls, a corridor and
+  Garrisons. The latest model-built boards began with 28.95% sheltered
+  versus 25.30% in the old benchmark, and their first occupied breaches
+  occurred later. Setup and battle conditions both differed, so the
+  results identify a change in evaluation conditions and do not isolate
+  the effect of the layout or prove regression of a fixed policy.
+
 - D: storage audit at 08:40 Central found 18.77 GiB free. The owned game
   copies account for 3.59 GiB, including 2.70 GiB of game assets and
   547 MiB of text dumps. Analysis accounts for 1.63 GiB when counting
