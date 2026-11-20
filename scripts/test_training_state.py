@@ -123,6 +123,35 @@ class StateTests(unittest.TestCase):
             ])
             self.assertEqual(stop.call_args_list, [call(env), call(env)])
 
+    def test_zone_temperature_keeps_masks_and_replays_rollout_log_probabilities(self):
+        torch = train.torch
+        logits = torch.zeros((1, 2, train.NU * train.NC))
+        zone = train.TOOLS.index('zone_rect')
+        logits[0, 0, zone * train.NC] = 3.
+        cells = torch.zeros((2, train.NC), dtype=torch.bool)
+        cells[:, :2] = True
+        single = train.cell_distribution(logits[:, :1], zone, cells[0], temperature=1.5)
+        normal = train.cell_distribution(logits[:, :1], zone, cells[0])
+        replay = train.cell_distribution(logits, [zone, zone], cells, temperature=[1.5, 1.])
+        self.assertGreater(float(single.probs[1]), float(normal.probs[1]))
+        self.assertTrue(torch.equal(single.probs[2:], torch.zeros(train.NC - 2)))
+        self.assertTrue(torch.equal(single.probs, replay.probs[0]))
+        self.assertTrue(torch.equal(replay.probs[1, :2], torch.tensor([.5, .5])))
+
+    def test_frozen_zone_exploration_evaluates_without_temperature(self):
+        import compare_spatial
+        with patch.object(compare_spatial.operator, 'owned_copy'), \
+                patch.object(compare_spatial.zar_boot, 'boot'), \
+                patch.object(compare_spatial.zar_boot, 'stop'), \
+                patch.object(train, 'run_episode') as run:
+            for training in (True, False):
+                for arm in compare_spatial.ZONE_TEMPERATURES:
+                    compare_spatial.episode(('inst13', arm, {}, 123, 'test', training))
+                    options = run.call_args.args[0][4]
+                    self.assertEqual(options['ready_coverage_credit'], .30)
+                    self.assertEqual(options.get('zone_temperature'),
+                                     1.5 if training and arm == 'zone_exploration' else None)
+
     def test_reserved_ppo_copies_refuse_overlap_before_taking_lock(self):
         import compare_spatial
         with patch('sys.argv', ['compare_spatial', '--copies', 'a', 'b', '--eval-copies', 'a', 'c']), \

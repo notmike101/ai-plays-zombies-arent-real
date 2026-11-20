@@ -411,10 +411,15 @@ def exploration_distribution(ranked, legal, fraction):
     return torch.distributions.Categorical(probs=(1. - fraction) * ranked + fraction * uniform)
 
 
-def cell_distribution(logits, tool, mask):
+ZONE_PLACEMENT_TOOLS = {TOOLS.index(name) for name in ('zone_rect', 'zone_begin', 'zone_corner')}
+
+
+def cell_distribution(logits, tool, mask, *, temperature=None):
     logits = logits.reshape(-1, NU, NC)
     tools = torch.as_tensor(tool, dtype=torch.long).reshape(-1)
     selected = logits[torch.arange(len(tools)), tools]
+    if temperature is not None:
+        selected = selected / torch.as_tensor(temperature, dtype=selected.dtype).reshape(-1, 1)
     selected = selected.masked_fill(torch.as_tensor(mask) == 0, -1e9)
     return torch.distributions.Categorical(logits=selected.squeeze(0) if len(tools) == 1 else selected)
 
@@ -737,6 +742,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 observer = Observer(net, pid, tag, interval=options.get('observer_interval', .2), labels={
                     'input': INPUT_LABELS, 'hu': TOOLS, 'hc': CELL_LABELS})
         rows = {k: [] for k in ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'sim_elapsed')}
+        zone_temperature = options.get('zone_temperature')
+        if zone_temperature is not None:
+            rows['cell_temperatures'] = []
         h = None
         prev_u = prev_c = succ = trend = slope = 0.
         start = time.monotonic()
@@ -846,6 +854,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             if options.get('fixed_clock'):
                 mu[TOOLS.index('pause_toggle')] = 0
             x = torch.tensor([[f]], dtype=torch.float32)
+            cell_temperature = 1.
             with torch.no_grad():
                 if net is None:
                     u = int(np.random.choice(np.flatnonzero(mu)))
@@ -879,7 +888,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                             audit['compared'] += 1
                             audit['distance_sum'] += net.alternate_tool_distance(du)
                     mc = cell_mask(st, u, mc)
-                    dc = cell_distribution(lc, u, mc)
+                    if zone_temperature is not None and st['planning'] and u in ZONE_PLACEMENT_TOOLS:
+                        cell_temperature = zone_temperature
+                    dc = cell_distribution(lc, u, mc,
+                                           temperature=cell_temperature if zone_temperature is not None else None)
                     cell_rng = zone_rng if st['planning'] and TOOLS[u] == 'zone_rect' else None
                     if (garrison_rng is not None and greedy and st['planning']
                             and TOOLS[u] == 'garrison' and mc.sum() > 1):
@@ -905,6 +917,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                                          phase='planning' if st['planning'] else 'battle')
             for k, v in dict(obs=f, us=u, cs=c, ulps=ulp, clps=clp, masks=(mu, mc)).items():
                 rows[k].append(v)
+            if zone_temperature is not None:
+                rows['cell_temperatures'].append(cell_temperature)
             if not st['planning']:
                 battle_actions['decisions'] += 1
                 available_casts = [TOOLS[tool] for tool in U2ABILITY if mu[tool]]
@@ -1379,10 +1393,12 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *, balanc
         vals = v.squeeze(0).numpy()
         adv, ret = gae(list(RW), list(vals), bootstrap=t.get('bootstrap', 0.0),
                        planning=X[0, :, PLANNING_INDEX].bool().tolist(), sim_elapsed=t['sim_elapsed'])
+        temperature = t.get('cell_temperatures')
         seqs.append((X, U, C, ULP, CLP, MU,
                      torch.tensor(adv, dtype=torch.float32),
                             torch.tensor(ret, dtype=torch.float32), MC,
-                     phase_loss_weights(X[0,:,PLANNING_INDEX].bool()) if balance_phases else 1.))
+                     phase_loss_weights(X[0,:,PLANNING_INDEX].bool()) if balance_phases else 1.,
+                     temperature))
     alladv = np.concatenate([s[6].numpy() for s in seqs])
     mu_a, sd_a = alladv.mean(), alladv.std() + 1e-8
     diagnostics = []
@@ -1390,11 +1406,11 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *, balanc
         order = np.random.permutation(len(seqs))
         tot = 0.0
         for k in order:
-            X, U, C, ULP, CLP, MU, ADV, RET, MC, W = seqs[k]
+            X, U, C, ULP, CLP, MU, ADV, RET, MC, W, temperature = seqs[k]
             lu, lc, v, _ = net(X)
             du = torch.distributions.Categorical(
                 logits=lu.squeeze(0).masked_fill_(MU == 0, -1e9))
-            dc = cell_distribution(lc, U, MC)
+            dc = cell_distribution(lc, U, MC, temperature=temperature)
             lp = du.log_prob(U) + dc.log_prob(C)
             ratio = torch.exp(lp - (ULP + CLP))
             adv = (ADV - mu_a) / sd_a

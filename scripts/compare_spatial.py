@@ -39,14 +39,15 @@ class SpatialPolicy(trainer.PolicyNet2):
 BREACH_COSTS = {'breach_baseline': trainer.BREACH_COST,
                 'breach_stronger': 3 * trainer.BREACH_COST}
 READY_CREDITS = {'coverage_baseline': 0., 'coverage_credit': .30}
+ZONE_TEMPERATURES = {'zone_baseline': 1., 'zone_exploration': 1.5}
 
 
 def episode(job):
-    copy, arm, weights, seed, tag = job
+    copy, arm, weights, seed, tag, *phase = job
     try:
         copy_dir = operator.owned_copy(copy)
         env = None
-        if arm in BREACH_COSTS or arm in READY_CREDITS:
+        if arm in BREACH_COSTS or arm in READY_CREDITS or arm in ZONE_TEMPERATURES:
             try:
                 env = zar_boot.boot(copy_dir, welcome_wait=15, discard_dump_states=True)
             except ZAREnvError as exc:
@@ -64,6 +65,10 @@ def episode(job):
             options.update(fixed_speed='speed_2', fixed_clock=True, occupied_breach_cost=BREACH_COSTS[arm])
         if arm in READY_CREDITS:
             options.update(fixed_speed='speed_2', fixed_clock=True, ready_coverage_credit=READY_CREDITS[arm])
+        if arm in ZONE_TEMPERATURES:
+            options.update(fixed_speed='speed_2', fixed_clock=True, ready_coverage_credit=.30)
+            if phase == [True] and ZONE_TEMPERATURES[arm] != 1.:
+                options['zone_temperature'] = ZONE_TEMPERATURES[arm]
         return trainer.run_episode((env.pid, weights, False, tag, options), policy_factory=policy,
                                    telemetry=False)
     finally:
@@ -136,6 +141,8 @@ def main():
                             help='Compare current and triple occupied shelter exposure costs in private PPO')
     comparison.add_argument('--compare-ready-coverage', action='store_true',
                             help='Compare private PPO with and without credit for civilians sheltered at READY')
+    comparison.add_argument('--compare-zone-exploration', action='store_true',
+                            help='Broaden model-selected safe-zone cells during private training only')
     args = parser.parse_args()
     copies = args.copies
     if args.train_rounds < 1 or args.eval_rounds < 2 or args.eval_rounds % 2:
@@ -159,10 +166,12 @@ def main():
         torch.manual_seed(args.seed)
         baseline = trainer.PolicyNet2()
         trainer.load_pretrained(baseline, trainer.MODEL)
-        shelter_study = args.compare_breach_cost or args.compare_ready_coverage
+        coverage_study = args.compare_ready_coverage or args.compare_zone_exploration
+        shelter_study = args.compare_breach_cost or coverage_study
         paired_weights = args.compare_missile_credit or args.compare_phase_balance or shelter_study
         if paired_weights:
-            labels = (tuple(READY_CREDITS) if args.compare_ready_coverage else
+            labels = (tuple(ZONE_TEMPERATURES) if args.compare_zone_exploration else
+                      tuple(READY_CREDITS) if args.compare_ready_coverage else
                       tuple(BREACH_COSTS) if args.compare_breach_cost else
                       ('standard', 'balanced') if args.compare_phase_balance else ('unshaped', 'missile_credit'))
             models = {labels[0]: baseline, labels[1]: deepcopy(baseline)}
@@ -192,6 +201,9 @@ def main():
         if args.compare_ready_coverage:
             config.update(comparison='ready_coverage', fixed_speed='speed_2',
                           ready_coverage_credit_by_arm=READY_CREDITS)
+        if args.compare_zone_exploration:
+            config.update(comparison='zone_exploration', fixed_speed='speed_2',
+                          ready_coverage_credit=.30, training_zone_temperature_by_arm=ZONE_TEMPERATURES)
         first_round = 0
         source = trainer.policy_id(baseline)
         discovery_seeds = set()
@@ -208,7 +220,8 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        experiment = ('ready-coverage' if args.compare_ready_coverage else
+        experiment = ('zone-exploration' if args.compare_zone_exploration else
+                      'ready-coverage' if args.compare_ready_coverage else
                       'breach-cost' if args.compare_breach_cost else
                       'phase-balance' if args.compare_phase_balance else
                       'missile-credit' if args.compare_missile_credit else 'spatial')
@@ -226,7 +239,7 @@ def main():
                 for i, copy in enumerate(round_copies):
                     arm = tuple(models)[(i+rnd)%2]
                     jobs.append((copy, arm, models[arm].state_dict(), args.seed+rnd*100+i//2,
-                                 f'{tag}/{rnd}/{arm}/{copy}'))
+                                 f'{tag}/{rnd}/{arm}/{copy}', training))
                 start = time.monotonic()
                 results = collect_pairs(pool, jobs, directory)
                 batch_seconds = time.monotonic() - start
@@ -261,8 +274,11 @@ def main():
                         summary['deploy_sim_seconds'] = battle.get('deploy_sim_seconds')
                         summary['occupied_breach_reward'] = row.get('reward_components', {}).get('occupied_breach')
                         summary['occupied_breach_cost'] = BREACH_COSTS.get(job[1], trainer.BREACH_COST)
-                        if args.compare_ready_coverage:
+                        if coverage_study:
                             summary['ready_coverage_reward'] = row.get('reward_components', {}).get('ready_coverage')
+                    if args.compare_zone_exploration:
+                        summary['tempered_zone_decisions'] = sum(
+                            temp > 1. for temp in row.get('cell_temperatures', ()))
                     with (directory/'results.jsonl').open('a') as f:
                         f.write(json.dumps(summary)+'\n')
                     summaries.append(summary)
