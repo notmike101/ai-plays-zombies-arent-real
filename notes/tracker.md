@@ -2,6 +2,35 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 152952 finished by 01:46 Central. All four discovery episodes
+  recorded explicit model READY, including all three learned candidates.
+  An independent read-only trace showed rectangle drafts clearing while
+  staying in planning. The candidates confirmed 11 native deployments
+  (nine Demolition and two Firebomb) and finished at 5.44%, 5.80% and
+  6.51% saved at early retry. GRU reference timed out from a continuous
+  pause. Each learned policy spent three Demolition charges within three
+  simulated seconds, starting at 20.33–21.27 s.
+- On reserved fresh outbreaks, the frozen 625da8b96c4639f7 reached early
+  retry at 6.26% and 1.69% saved after four confirmed deployments each.
+  The slower result reached 35.1% live at 70 s before falling to 1.69%
+  at 154.77 s. Both GRU references reused discovery outbreak seeds.
+  No qualified comparison or promotion. The held-out results confirm the
+  cast path, with no evidence yet of survival benefit from the rapid casts.
+  The prolonged low-save tail merits a separate retry/evacuation audit.
+- Commit c2f0382 allows search to test a different timing preference when
+  a scored fresh L1 trial uses three confirmed deployments of the same
+  ability within three simulated seconds. It preserves the earlier
+  no-cast experiment. On resume it places a timing-only variant of the
+  frozen proposal in one discovery slot. Legal masks, planning genes,
+  cast targets, weights, and official evaluation retain their semantics.
+  All 244 script tests passed.
+- Seed 153952 started at 01:47 Central, D: portable Python PID 65140.
+  Discovery inst13–16, separate evaluation inst18, inst17, inst19, inst20.
+  Run log `analysis/coverage-layout-free-153952-drive-d.log`; prior
+  `analysis/coverage-team-e7816b8ec2`. Headroom at launch 13.18 GiB RAM
+  and 18.25 GiB free on D:. Production checkpoint hash matched and
+  Observatory listener stayed at PID 12628. The 35% goal remains open.
+
 - Seed 151952 finished at 01:33 Central with 16 early-retry discovery
   results, 15 without an explicit READY, and zero wins. Candidate
   625da8b96c4639f7 paid for two Garrisons (cells 13 and 26) in its
