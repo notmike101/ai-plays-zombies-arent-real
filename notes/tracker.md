@@ -2,6 +2,16 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 09:30:56 Central all four seed 186952 games had reached
+  battle. A read-only native sample at 2.9-5.1 sim seconds verified
+  inst14 had an evacuation corridor and 45 Spikes tiles; inst17
+  had one hold and two Gas Mortars; inst18 had 36 Oil tiles.
+  The reference on inst13 had none of those structures or paint.
+  In-occupied-shelter Garrison counts were 9, 9, 7 and 9 for
+  inst13, 14, 17 and 18 respectively. Both Gas Mortars were
+  outside occupied shelters at the sample. No completed results
+  from the new block yet. No reward change or reserve evaluation.
+
 - Seed 186952 launched at 09:30 Central on D:, operator PID 44548,
   output `analysis/coverage-team-9b44e71750`, log
   `analysis/coverage-layout-free-186952-drive-d.log`. Four waves on
