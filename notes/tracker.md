@@ -2,6 +2,29 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 10:19 Central seed 187952 finished its third wave and
+  opened the fourth with the same operator PID 17560. Retained
+  75de0cafd4052843 retried at 8.65% on outbreak 2949929277;
+  its five scored discovery games now average 19.91%. The
+  READY layout ID 418150907bbd395c repeated. First native
+  Police delivery occurred at 12.30 seconds, close to the
+  13.53 seconds of the 21.19% clear. The new candidates
+  scored 3.11%, 10.37%, and 11.26%; no qualification.
+- Checked launch receipts on the 8.65% run: eight sampled
+  Police decisions resolved into four two-point gestures,
+  four native spray starts and four stock decreases. The
+  recorded deliveries followed spray start by 0.74-1.20 sim
+  seconds. The selected count includes anchors; it does
+  not show four rejected casts. Keep opening-timing reports
+  tied to confirmed native deployment.
+- Scoped the delayed recovery smoke retest to existing inst17,
+  exact frozen candidate b041d52f8070f2b2 and the saved policy
+  RNG seed 187954. The recorded initial planning roster still
+  matches that copy. The game-free runner compiles, checks the
+  established production hash, takes the operator lock, and
+  records the live outcome in an isolated D: report. It is
+  pending the idle boundary, separate from any performance claim.
+
 - At 10:11 Central seed 187952 completed wave two. Frozen
   75de0cafd4052843 cleared outbreak 264985974 at 21.19%; it now
   averages 22.72% over 29.17%, 9.33%, 31.20%, and 21.19% on
