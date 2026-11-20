@@ -2,6 +2,29 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 180952 started at 07:58 Central on D:, trainer PID 35000,
+  output `analysis/coverage-team-aa709acd93`, and log
+  `analysis/coverage-layout-free-180952-drive-d.log`. Launch headroom
+  was 12.78 GiB RAM and 18.94 GiB disk. Commit 1310ca3 restores exact
+  frozen reference f0fbb68332c444bb and candidate 2a29db14a2a96fd9
+  from the saved fit and trial ledger. Both run on each of inst17 and
+  inst18, which the fit did not use. Match the policy seed on both
+  copies and both waves. Exclude all fit outbreaks from comparison
+  fitness even when a fit episode was incomplete. inst19 and inst20
+  are reserved for the promotion gate. No new copies were created.
+  The restore and assignment fixture passed. All 282 script tests
+  passed and the production checkpoint hash matched.
+- Seed 179952 finished at 07:57. The frozen learned candidate cleared
+  with **34.98% officially saved** in 131.9 simulated seconds on
+  outbreak 1723230497 and retried at 7.27% on 3811417467. Both
+  outbreaks were used during fitting. The reference cleared at 25.42%
+  on fit outbreak 2374956122 and retried at 9.97% on independent
+  outbreak 59754920. Three of four comparison battles therefore had
+  fit overlap, leaving zero independent candidate outcomes. The
+  34.98% score counts as an observed real-game peak below the target.
+  Reserved evaluation was deferred. Retest preserves the exact policy
+  underlying the peak while separating the game copies.
+
 - Seed 179952 started at 07:41 Central on D:, trainer PID 67192,
   output `analysis/coverage-team-d6931e4e15`, and log
   `analysis/coverage-layout-free-179952-drive-d.log`. Launch headroom
