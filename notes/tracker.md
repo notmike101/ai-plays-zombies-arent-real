@@ -2,6 +2,31 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 182952 started at 08:32 Central on D:, trainer PID 40204,
+  output `analysis/coverage-team-5cc246e6ce`, and log
+  `analysis/coverage-layout-free-182952-drive-d.log`. Launch headroom
+  was 12.63 GiB RAM and 18.93 GiB disk. Commit d3b08fc applies the
+  same bounded real-outcome update to the cast-tool logit biases
+  only. A sampled wait or other non-cast decision contributes the
+  negative probability of each legal cast, while selected casts
+  contribute their positive score gradient. Preparation and target
+  ranking stay fixed to provisional parent 922f9e1dcd8205c2.
+  Opposite copy pairs again evaluate separate fits. On comparison
+  decisions the same-state audit measures changes in the masked
+  tool distribution. No synthetic simulation or production PPO.
+  Autodiff and assignment fixtures passed. All 285 script and 60
+  Observatory tests passed. Production hash matched.
+- Seed 181952 finished at 08:31 with eight scored fit-independent
+  comparisons across four matched outbreaks and no reserved evaluation.
+  Candidate 922f9e1dcd8205c2 scored 29.75% on 3710795766 versus
+  reference 8.84%, and 8.63% on 59754920 versus reference 11.99%.
+  Candidate 785412d13768986f scored 6.08% versus 8.38% and
+  9.63% versus 9.62%. The two learned target matrices changed the
+  highest-scoring legal target on only 2 of 96 audited decisions.
+  The 29.75% clear had 0 differences among 12 decisions, so the
+  observed high score does not establish a benefit from the target
+  update. The 35% consistency requirement remains open.
+
 - Seed 181952 started at 08:12 Central on D:, trainer PID 29440,
   output `analysis/coverage-team-97205dff9e`, and log
   `analysis/coverage-layout-free-181952-drive-d.log`. Launch headroom
