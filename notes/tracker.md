@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 Central. Status audit: production seed 136851 active on six
+  copies, frozen base 8a691469a829158d. Incumbent 230c8ceb72a1b1a3
+  had 28 qualifying starts of 42 at 37.15% mean in the fresh search ledger.
+  Recent holdout snapshot: incumbent 10/14 at 37.95% mean, challengers
+  8/14 at 33.94%. Across a recent search snapshot, 44/115 qualified;
+  14 timeouts included 11 continuous pauses and three planning caps.
+  Seven separate worker errors were input attachment or HUD-frame failures.
+  Recent evidence is Boston L1 only. No training control changes.
 - 2026-11-19 14:50 Central. Completed seed 129952: 24 jobs, 22 fresh
   outbreaks, 18 official scores, nine qualifiers, four timeouts and two
   failed input attachments. Validated 11,780 transitions with no truncation.
