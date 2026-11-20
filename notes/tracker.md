@@ -2,6 +2,33 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 153952 generation zero finished at 01:53 Central. The timing-only
+  variant 102e05013e10951e confirmed five native Garrisons and reached
+  early retry at 3.76% saved. Its first three Demolition deployments were
+  21.20, 21.97 and 22.77 simulated seconds. Parent 625da8b96c4639f7 used
+  three at 20.30, 20.70 and 21.17 and recorded a native loss at 0.00%.
+  These were different outbreaks. The variant has not demonstrated a
+  break from the early three-cast burst or a survival gain.
+- Variant ad30fce343e4a365 paid for four Garrisons and one Mortar before
+  a planning timeout. 23 of its 60 decisions hit the existing outside
+  guard, nine rectangle selections and fourteen wall/gate selections.
+  Draft optional candidate masks were checked offline against every
+  start/end pair and the existing dispatch guard for four native geometry
+  tools on three shapes. The draft took about 68 microseconds per
+  decision on a triangular boundary. No live trainer code changed.
+- A read-only audit of seed 152952's last reserved copy verified the
+  first native log sample under 10% at 100.03 simulated seconds and
+  9.90% saved. The same episode reached retry at 154.77 simulated
+  seconds and 1.69%, 109.50 wall seconds later. A draft log-bound
+  fallback recognized the fresh low-save snapshot offline and rejected
+  stale, future, wrong-phase, invalid-score and footer records. The
+  normal policy keeps control of evacuation. An alive-count decrease
+  alone still cannot establish the low-save threshold.
+- Copy preflight at 01:55 Central confirmed inst1–12 each fails full
+  availability. Inst12 is missing seven perks, and other copies have
+  broader omissions. Existing four training and four reserved slots
+  remain in use. No new copies or C: files.
+
 - Seed 152952 finished by 01:46 Central. All four discovery episodes
   recorded explicit model READY, including all three learned candidates.
   An independent read-only trace showed rectangle drafts clearing while
