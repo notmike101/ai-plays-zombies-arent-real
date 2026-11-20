@@ -2,6 +2,29 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 09:40 Central, verified the retry guard: a playing board
+  needs at most 10% living civilians and either at least 90% infected
+  or a fresh episode-bound official snapshot at or below 10%.
+  This protects evacuation outcomes. A raw outnumbered cutoff would
+  trigger far earlier: wave-one logs showed ties or more zombies
+  than civilians with 39.14%-48.43% on native live snapshots.
+  An in-memory regression fixture records first outnumbered time,
+  first live retry-floor time, and official scores below 10% as
+  separate diagnostics. Timeouts and unknown scores stay unknown.
+  No retry, reward, or production checkpoint changes are deployed.
+- Seed 186952 completed two waves, eight distinct outbreak seeds.
+  Wave-zero controls cleared at 10.62%; Spikes/corridor, Gas Mortar/hold
+  and Oil scored 8.44%, 9.94%, and 9.74% at retry. All three prepared
+  alternatives entered with Police only; the reference had Firebomb
+  as well. Same battle logits allow different loadout decisions after
+  planning changes. Native pre-breach snapshots on the alternatives
+  already showed 31.50%, 33.28%, and 53.10% saved; losses began before
+  the occupied breaches and continued afterward.
+  Wave one recorded a native gate and six MLRS (two in occupied
+  shelter), two Railguns, and two C4 placements across its three
+  candidates. Scores were 7.80%, 9.99%, and 9.86%, reference 9.00%.
+  Wave two launched with the same operator PID 44548. No 35% result.
+
 - Preparation evaluation clarification at 09:34 Central: the game
   recalculates the outbreak seed when placement changes. A different
   seed in a preparation comparison is part of the full policy's result.
