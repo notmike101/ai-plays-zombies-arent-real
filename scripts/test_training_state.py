@@ -10,6 +10,16 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_private_ppo_preserves_boot_failure_without_returning_a_score(self):
+        import compare_spatial
+        message = 'inst13 failed at injection: argument 1: OverflowError'
+        with patch.object(compare_spatial.operator, 'owned_copy'), \
+                patch.object(compare_spatial.zar_boot, 'boot', side_effect=env_zar.ZAREnvError(message)), \
+                patch.object(compare_spatial.zar_boot, 'stop') as stop:
+            self.assertEqual(compare_spatial.episode(('inst13', 'standard', {}, 123, 'test')),
+                             {'err': message})
+            stop.assert_not_called()
+
     def test_consistency_keeps_incomplete_or_weak_held_out_blocks_visible(self):
         from compare_spatial import heldout_consistency
         cohort = [dict(phase='evaluation', policy_id='frozen', start_kind='fresh',

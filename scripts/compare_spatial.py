@@ -18,6 +18,7 @@ from torch import nn
 import local_agent as operator
 import nn_play2 as trainer
 import zar_boot
+from env_zar import ZAREnvError
 
 
 class SpatialPolicy(trainer.PolicyNet2):
@@ -37,7 +38,10 @@ class SpatialPolicy(trainer.PolicyNet2):
 
 def episode(job):
     copy, arm, weights, seed, tag = job
-    env = zar_boot.boot(operator.owned_copy(copy), discard_dump_states=True)
+    try:
+        env = zar_boot.boot(operator.owned_copy(copy), discard_dump_states=True)
+    except ZAREnvError as exc:
+        return {'err': str(exc)}
     try:
         policy = SpatialPolicy if arm == 'shared' else trainer.PolicyNet2
         options = dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')
@@ -54,8 +58,9 @@ def collect_pairs(pool, jobs, directory):
     for start in range(0, len(jobs), 2):
         pair = slice(start, start + 2)
         errors = [r['err'] for r in results[pair] if 'err' in r]
-        if errors and all('Timed out waiting for UI frames' in e or
-                          'Stale native HUD frame' in e for e in errors):
+        transient = ('Timed out waiting for UI frames', 'Stale native HUD frame',
+                     'No consistent HUD observer frame', 'failed at injection: argument 1: OverflowError')
+        if errors and all(any(reason in error for reason in transient) for error in errors):
             with (directory/'interface-retries.jsonl').open('a') as f:
                 f.write(json.dumps(dict(pair=[job[4] for job in jobs[pair]], errors=errors))+'\n')
             results[pair] = list(pool.map(episode, jobs[pair]))
