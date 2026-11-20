@@ -19,6 +19,20 @@
   No automatic follow-up is armed. Production weights remain read-only
   through this comparison. No frozen evaluation has started.
 
+- The first two resumed paired PPO updates completed on D:. The standard arm
+  early-retried two battles with one confirmed stock spend across both. The
+  balanced arm reached two planning timeouts. Frozen evaluation remains
+  pending. The next comparison snapshot was verified present and the
+  training PID remained live. No production weights were written.
+- Committed e9435aa for the layout-free L1 search. On 12 prior replay-assisted
+  early retries under the current camera revision, official retry scores had a
+  9.30% median while simulated survival area ranged 0.229 to 0.602. This area
+  now ranks failed preparation/battle proposals only in layout-free search.
+  Real wins retain priority and promotion/held-out scores remain official.
+  The regression covers early retry ties, win precedence and legacy duplicate
+  records. All 227 script tests passed on the relocated D: runtime. The change
+  does not alter the running PPO trial and has yet to be tested in live search.
+
 ### Earlier storage pause
 - The user directed all project work away from C:. The D: virtual environment
   resolves its base Python executable to C:, so the private two-copy trial and
