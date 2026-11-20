@@ -47,6 +47,7 @@ ZONE_TEMPERATURES = {'zone_baseline': 1., 'zone_exploration': 1.5}
 PLANNING_TEMPERATURES = {'planning_baseline': 1., 'planning_exploration': 1.35}
 BATTLE_TEMPERATURES = {'battle_baseline': 1., 'battle_exploration': 1.5}
 TARGET_SETTLE = {'target_baseline': False, 'target_settle': True}
+READY_DELAY_COSTS = {'ready_delay_baseline': 0., 'ready_delay_cost': .002}
 PLANNING_ENTROPY_BONUSES = {'entropy_baseline': 0., 'planning_entropy': .045}
 DEFENSE_COSTS = {'defense_baseline': trainer.BREACH_COST,
                  'defense_stronger': 3 * trainer.BREACH_COST}
@@ -57,8 +58,9 @@ def episode(job, *, observe=False, audit_signal=False):
     copy, arm, weights, seed, tag, *phase = job
     battle_study = arm in BATTLE_TEMPERATURES
     target_study = arm in TARGET_SETTLE
+    ready_study = arm in READY_DELAY_COSTS
     planning_study = (arm in PLANNING_TEMPERATURES or arm in PLANNING_ENTROPY_BONUSES
-                      or battle_study or target_study)
+                      or battle_study or target_study or ready_study)
     try:
         copy_dir = operator.owned_copy(copy)
         env = None
@@ -79,8 +81,11 @@ def episode(job, *, observe=False, audit_signal=False):
             options['observer_interval'] = 1.
         if target_study:
             options['settle_cast_target'] = TARGET_SETTLE[arm]
-        if battle_study or target_study or audit_signal:
-            options['experiment_signal'] = ('target_settle' if target_study else
+        if ready_study:
+            options['ready_delay_cost'] = READY_DELAY_COSTS[arm]
+        if battle_study or target_study or ready_study or audit_signal:
+            options['experiment_signal'] = ('ready_delay' if ready_study else
+                                            'target_settle' if target_study else
                                             'battle_tools' if battle_study else
                                             'planning_tools' if arm in PLANNING_TEMPERATURES else
                                             'zone_cells' if arm in ZONE_TEMPERATURES else
@@ -246,6 +251,8 @@ def main():
                             help='Broaden model-selected safe-zone cells during private training only')
     comparison.add_argument('--compare-planning-exploration', action='store_true',
                             help='Broaden legal tool sampling during private preparation training')
+    comparison.add_argument('--compare-ready-delay', action='store_true',
+                            help='Compare a small training cost for deferring a legal READY choice')
     comparison.add_argument('--compare-target-settle', action='store_true',
                             help='Wait one UI frame at the model-selected single-click building target before clicking')
     comparison.add_argument('--compare-battle-exploration', action='store_true',
@@ -270,7 +277,7 @@ def main():
             or set(evaluation_copies).intersection(copies)):
         parser.error('Evaluation copies must be distinct, paired and disjoint from training')
     planning_study = (args.compare_planning_exploration or args.compare_planning_entropy
-                      or args.compare_battle_exploration or args.compare_target_settle)
+                      or args.compare_battle_exploration or args.compare_target_settle or args.compare_ready_delay)
     coverage_study = (args.compare_ready_coverage or args.compare_zone_exploration
                       or planning_study or args.compare_shelter_defense
                       or args.compare_ready_shortfall)
@@ -301,6 +308,7 @@ def main():
         if paired_weights:
             labels = (tuple(READY_SHORTFALL_COSTS) if args.compare_ready_shortfall else
                       tuple(DEFENSE_COSTS) if args.compare_shelter_defense else
+                      tuple(READY_DELAY_COSTS) if args.compare_ready_delay else
                       tuple(TARGET_SETTLE) if args.compare_target_settle else
                       tuple(BATTLE_TEMPERATURES) if args.compare_battle_exploration else
                       tuple(PLANNING_ENTROPY_BONUSES) if args.compare_planning_entropy else
@@ -343,6 +351,10 @@ def main():
         if args.compare_planning_exploration:
             config.update(comparison='planning_exploration', fixed_speed='speed_2',
                           ready_coverage_credit=.30, training_tool_temperature_by_arm=PLANNING_TEMPERATURES)
+        if args.compare_ready_delay:
+            config.update(comparison='ready_delay', fixed_speed='speed_2', ready_coverage_credit=.30,
+                          training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
+                          ready_delay_cost_by_arm=READY_DELAY_COSTS)
         if args.compare_target_settle:
             config.update(comparison='target_settle', fixed_speed='speed_2', ready_coverage_credit=.30,
                           training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
@@ -388,6 +400,7 @@ def main():
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
         experiment = ('ready-shortfall' if args.compare_ready_shortfall else
                       'shelter-defense' if args.compare_shelter_defense else
+                      'ready-delay' if args.compare_ready_delay else
                       'target-settle' if args.compare_target_settle else
                       'battle-exploration' if args.compare_battle_exploration else
                       'planning-entropy' if args.compare_planning_entropy else
@@ -436,7 +449,7 @@ def main():
                                    policy_id=policies[job[1]], start_kind=row.get('start_kind'),
                                    outbreak_seed=(row.get('outbreak') or {}).get('seed'),
                                    decisions=len(row.get('obs', [])), batch_seconds=batch_seconds,
-                                   experiment_signal=row.get('experiment_signal'))
+                                   experiment_signal=row.get('experiment_signal'), ready_choices=row.get('ready_choices'))
                     summary['battle_actions'] = dict(Counter(
                         trainer.TOOLS[u] for u, obs in zip(row.get('us', []), row.get('obs', []))
                         if not obs[trainer.PLANNING_INDEX]))

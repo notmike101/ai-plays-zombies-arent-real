@@ -6,6 +6,7 @@ _DESIGN = {
     'shelter_defense': ('occupied_exposure', 'occupied_breach'),
     'ready_coverage': ('occupied_ready', 'ready_coverage'),
     'ready_shortfall': ('below_ready_target', 'ready_shortfall'),
+    'ready_delay': ('legal_ready_declined', 'ready_delay'),
     'missile_civilian_credit': ('missile_civilian_loss', 'missile_civilian_loss'),
 }
 _SAMPLING = {'zone_exploration': 'zone_cells', 'planning_exploration': 'planning_tools',
@@ -20,7 +21,8 @@ def reward_coefficients(config, component, arms):
         return {arms[0]: 0., arms[1]: config['learning']['missile_civilian_cost']}
     key = {'occupied_breach': 'occupied_breach_cost_by_arm',
            'ready_coverage': 'ready_coverage_credit_by_arm',
-           'ready_shortfall': 'ready_shortfall_cost_by_arm'}[component]
+           'ready_shortfall': 'ready_shortfall_cost_by_arm',
+           'ready_delay': 'ready_delay_cost_by_arm'}[component]
     return config[key]
 
 

@@ -781,6 +781,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         distribution_signal = dict(choices=0, changed=0, variation=0.)
         planning_entropy_observed = False
         spatial_cells_observed = False
+        ready_legal_steps = 0
+        ready_probability_sum = 0.
+        ready_declined_steps = []
+        ready_delay_cost = options.get('ready_delay_cost')
         snapped_cast_attempts = settled_cast_attempts = 0
         planning_zone_audit = options.get('planning_zone_audit', False)
         if planning_zone_audit:
@@ -879,7 +883,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             st['placement_blocked'] = blocked_placement_cells(st, placement_retry_at, len(rows['obs']))
             update_geometry_masks(st, env.cw, env.ch, placement_feedback=placement_feedback,
                                   planning_audit=planning_zone_audit,
-                                  battle_audit=signal_mode in ('battle_tools', 'target_settle'))
+                                  battle_audit=signal_mode in ('battle_tools', 'target_settle', 'ready_delay'))
             mu, mc = masks_for(st)
             if debt_cancel_retry is not None:
                 balance, deadline = debt_cancel_retry
@@ -973,6 +977,11 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         observer.publish(probabilities={'hu': du.probs, 'hc': cp.flatten()},
                                          selected={'hu': u, 'hc': u*NC+c},
                                          phase='planning' if st['planning'] else 'battle')
+            if (signal_mode or ready_delay_cost is not None) and st['planning'] and mu[1]:
+                ready_legal_steps += 1
+                ready_probability_sum += float(du.probs[1]) if net is not None else 1. / np.count_nonzero(mu)
+                if u != 1:
+                    ready_declined_steps.append(len(rows['obs']))
             for k, v in dict(obs=f, us=u, cs=c, ulps=ulp, clps=clp, masks=(mu, mc)).items():
                 rows[k].append(v)
             if zone_temperature is not None:
@@ -1334,7 +1343,12 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         if 'ready_shortfall_cost' in options:
             rewards['ready_shortfall'] = charge_ready_shortfall(
                 footer, ready_step, rows['rews'], options['ready_shortfall_cost'])
+        if ready_delay_cost is not None:
+            rewards['ready_delay'] = charge_ready_delay(rows['rews'], ready_declined_steps, ready_delay_cost)
         if signal_mode:
+            rows['ready_choices'] = dict(
+                legal_steps=ready_legal_steps, declined_steps=len(ready_declined_steps), ready_step=ready_step,
+                mean_probability=ready_probability_sum / ready_legal_steps if ready_legal_steps else None)
             coverage = verified_ready_coverage(footer, ready_step, rows['rews'])
             planning_steps = sum(bool(obs[PLANNING_INDEX]) for obs in rows['obs'])
             battle_steps = len(rows['obs']) - planning_steps
@@ -1348,14 +1362,16 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     phase_balance=planning_steps > 0 and battle_steps > 0 and planning_steps != battle_steps,
                     spatial_cells=spatial_cells_observed,
                     snapped_cast=bool(snapped_cast_attempts),
-                    target_pointer_settled=bool(settled_cast_attempts)),
+                    target_pointer_settled=bool(settled_cast_attempts),
+                    legal_ready_declined=bool(ready_declined_steps)),
                 reward_components=rewards.copy(),
                 reward_bases=dict(
                     occupied_breach=-shelter.breach_exposures / civ0 if shelter.next_sample else None,
                     ready_coverage=coverage,
                     ready_shortfall=-max(1. - coverage / READY_COVERAGE_SHORTFALL_TARGET, 0.)
                     if coverage is not None else None,
-                    missile_civilian_loss=-missile_losses['assigned'] / civ0 if missile_losses is not None else None),
+                    missile_civilian_loss=-missile_losses['assigned'] / civ0 if missile_losses is not None else None,
+                    ready_delay=-len(ready_declined_steps)),
                 distributions={signal_mode: distribution_signal} if signal_mode in ('planning_tools', 'zone_cells', 'battle_tools') else {})
         if rows['rews']:
             rows['rews'][-1] += rewards['terminal']
@@ -1487,6 +1503,12 @@ def charge_ready_shortfall(footer, step, rewards, cost):
     penalty = -cost * (1. - coverage / READY_COVERAGE_SHORTFALL_TARGET)
     rewards[step] += penalty
     return penalty
+
+
+def charge_ready_delay(rewards, declined_steps, cost):
+    for step in declined_steps:
+        rewards[step] -= cost
+    return -cost * len(declined_steps)
 
 
 def severe_outcome(saved_frac, end):

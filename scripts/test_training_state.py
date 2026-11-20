@@ -374,6 +374,26 @@ class StateTests(unittest.TestCase):
             self.assertEqual(actions.mock_calls, [call.arm(49, 2), call.vi.click(120, 300),
                                                   call.controls.frames()])
 
+    def test_ready_delay_pair_keeps_identical_legal_rollout_settings(self):
+        import compare_spatial as comp
+        with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \
+                patch.object(comp.zar_boot, 'stop'), patch.object(train, 'run_episode') as run:
+            for training in (True, False):
+                options = []
+                for arm, cost in comp.READY_DELAY_COSTS.items():
+                    comp.episode(('inst13', arm, {}, 123, 'test', training))
+                    settings = run.call_args.args[0][4].copy()
+                    self.assertEqual(settings.pop('ready_delay_cost'), cost)
+                    self.assertEqual(settings['experiment_signal'], 'ready_delay')
+                    options.append(settings)
+                self.assertEqual(*options)
+
+    def test_ready_delay_credit_changes_only_recorded_declines(self):
+        rews = [.1, .2, .3, .4]
+        self.assertAlmostEqual(train.charge_ready_delay(rews, [0, 2], .002), -.004)
+        self.assertEqual(rews, [.098, .2, .298, .4])
+        self.assertEqual(train.charge_ready_delay(rews, [], .002), 0.)
+
     def test_target_settle_comparison_varies_only_execution_timing(self):
         import compare_spatial as comp
         with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \

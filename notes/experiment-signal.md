@@ -12,7 +12,9 @@ with limited history.
 1. **Did the game or learner exercise the mechanism?** For the breach
    penalty, use civilians exposed at a native occupied breach. For READY
    coverage and shortfall, use the session-bound coverage observation matched
-   to the policy's READY step. A verified zero is distinct from missing data.
+   to the policy's READY step. The READY-delay study instead records each
+   legal READY choice the policy deferred and applies its per-decision cost
+   to that transition. A verified zero is distinct from missing data.
    For missile credit, distinguish native civilian losses from an attempt,
    deployment, or a loss that could not be assigned to a rollout step.
 2. **Did the arms receive different treatment?** Reward studies keep the

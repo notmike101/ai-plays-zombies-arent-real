@@ -10,7 +10,8 @@ class SignalTests(unittest.TestCase):
                     planning_tool_entropy_bonus_by_arm={'reference': 0., 'candidate': .045},
                     occupied_breach_cost_by_arm={'reference': .10, 'candidate': .30},
                     ready_coverage_credit_by_arm={'reference': 0., 'candidate': .30},
-                    ready_shortfall_cost_by_arm={'reference': 0., 'candidate': .15})
+                    ready_shortfall_cost_by_arm={'reference': 0., 'candidate': .15},
+                    ready_delay_cost_by_arm={'reference': 0., 'candidate': .002})
 
     def report(self, kind, rows, *, complete=0):
         arms = ('reference', 'candidate')
@@ -85,6 +86,13 @@ class SignalTests(unittest.TestCase):
         row = dict(arm='candidate', phase='train', start_kind='fresh', outbreak_seed=42,
                    experiment_signal=dict(distributions={'zone_cells': signal}))
         self.assertEqual(self.report('zone_exploration', [row])['advisory'], 'treatment_observed')
+
+    def test_ready_delay_checks_the_reward_against_the_number_of_declines(self):
+        rows = self.rows({'legal_ready_declined': True}, {'ready_delay': -.04})[-1:]
+        rows[0]['experiment_signal']['reward_bases'] = {'ready_delay': -20}
+        report = self.report('ready_delay', rows)
+        self.assertEqual(report['advisory'], 'treatment_observed')
+        self.assertAlmostEqual(report['arms']['candidate']['reward_difference_sum'], -.04)
 
     def test_target_settle_requires_an_executed_snapped_cast_with_the_frame_wait(self):
         rows = self.rows({'snapped_cast': True, 'target_pointer_settled': False}, {})
