@@ -202,6 +202,19 @@ def preparation_counts(snapshot):
                 other_units=dict(Counter(str(name) for name in names if name)))
 
 
+def planning_timeout_preparation(snapshot, money):
+    """Record the final planning board without inventing an outbreak receipt."""
+    units = snapshot['units']
+    civilians = units['pos'][units['kind'] == 0]
+    zones = [zone for zone in snapshot['zones'] if len(zone) >= 3]
+    covered = np.zeros(len(civilians), dtype=bool)
+    for zone in zones:
+        covered |= inside_polygon(civilians, zone)
+    return dict(preparation_counts(snapshot), money=money, closed_zones=len(zones),
+                civilian_zone_fraction=float(covered.mean()) if len(civilians) else None,
+                embedded_defenses=embedded_defenses(snapshot))
+
+
 def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, width, height,
                 gesture_anchor=None, armed=(0,0,0), paused=False, speed=2, dialog=False, evac_tool=(False,False,150.)):
     s=snapshot;sel=s['selection'];u=s['units'];maps=s['unit_maps']

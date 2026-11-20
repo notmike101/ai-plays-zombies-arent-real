@@ -486,7 +486,7 @@ def main():
                             or args.compare_shelter_defense or args.compare_ready_shortfall):
                         summary['planning_zone_receipts'] = row.get('planning_zone_receipts')
                         for key in ('ready_embedded_defenses', 'ready_preparation', 'ready_loadout',
-                                    'first_legal_cast_sim'):
+                                    'first_legal_cast_sim', 'timeout_preparation'):
                             summary[key] = row.get(key)
                     if args.compare_zone_exploration:
                         summary['tempered_zone_decisions'] = sum(

@@ -4,7 +4,9 @@ from unittest.mock import Mock
 import numpy as np
 
 from native_state import WALL, EVAC, HELI, VEHICLE, MEDEVAC, PATCH, MOSH
-from policy_mechanics import observation, unit_names, embedded_defenses, preparation_counts, preparation_fingerprint, nearest_per_cell, pan_room, extra_masks, SELECTORS, Mechanics
+from policy_mechanics import (observation, unit_names, embedded_defenses, planning_timeout_preparation,
+                              preparation_counts, preparation_fingerprint, nearest_per_cell, pan_room,
+                              extra_masks, SELECTORS, Mechanics)
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, GLOBAL_LABELS, GRID_CHANNELS
 
 
@@ -69,6 +71,19 @@ class MechanicsTests(unittest.TestCase):
         self.assertEqual(preparation_counts(snapshot),
                          dict(wall_segments=4, gates=1, corridors=2, holds=1,
                               other_units={'ChemMine': 1, 'Battleship': 1}))
+
+    def test_timeout_board_counts_overlap_once_and_preserves_native_debt(self):
+        snapshot = fixture()
+        zone = np.array([(90, 90), (110, 90), (110, 110), (90, 110)])
+        snapshot.update(zones=[zone, zone + 3], gates=[(95, 100)])
+        snapshot['units']['kind'][:] = 0
+        snapshot['walls'] = np.zeros(2, dtype=WALL)
+        result = planning_timeout_preparation(snapshot, -8.)
+        self.assertEqual(result, dict(wall_segments=2, gates=1, corridors=0, holds=0,
+                                     other_units={}, money=-8., closed_zones=2,
+                                     civilian_zone_fraction=.5, embedded_defenses={}))
+        snapshot['units']['kind'][:] = 1
+        self.assertIsNone(planning_timeout_preparation(snapshot, -8.)['civilian_zone_fraction'])
 
     def test_overview_only_allows_panning_back_toward_center(self):
         overview = np.array([[15, 10], [85, 10], [85, 60], [15, 60]])

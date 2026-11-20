@@ -33,7 +33,8 @@ try:
 except ImportError:
     Observer = None
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, extra_cell_label
-from policy_mechanics import Mechanics, PLACEMENTS, SPEED_TICKS, embedded_defenses, extra_masks, preparation_counts, preparation_fingerprint
+from policy_mechanics import (Mechanics, PLACEMENTS, SPEED_TICKS, embedded_defenses, extra_masks,
+                              planning_timeout_preparation, preparation_counts, preparation_fingerprint)
 MODEL = os.path.join(ROOT, 'sessions', 'nn_policy4.pt')
 HIST = os.path.join(ROOT, 'analysis', 'nn_hist4.jsonl')
 NOBS, HID = 332+len(EXTRA_LABELS), 128
@@ -1309,7 +1310,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             with torch.no_grad():
                 _, _, value, _ = net(torch.tensor([[f]], dtype=torch.float32), h)
                 bootstrap = float(value.item())
-        planning_blockers = None
+        planning_blockers = timeout_preparation = None
         if end == 'timeout' and state['phase'] == 'planning':
             try:
                 planning_blockers = env.geometry_blockers()
@@ -1321,6 +1322,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 planning_blockers.append('modal_dialog')
             if st.get('anchor') or st.get('gesture_anchor'):
                 planning_blockers.append('unfinished_gesture')
+            if planning_zone_audit and net is not None:
+                timeout_preparation = planning_timeout_preparation(st['native'], o['money'])
         outside_reward = -OUTSIDE_PLAYAREA_COST * outside_actions
         shelter = st['shelter']
         special_reward = SPECIAL_ACTIVATION_CREDIT * min(len(special_activations),MAX_CREDITED_SPECIALS)
@@ -1346,11 +1349,12 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         if ready_delay_cost is not None:
             rewards['ready_delay'] = charge_ready_delay(rows['rews'], ready_declined_steps, ready_delay_cost)
         if signal_mode:
+            planning_steps = sum(bool(obs[PLANNING_INDEX]) for obs in rows['obs'])
             rows['ready_choices'] = dict(
                 legal_steps=ready_legal_steps, declined_steps=len(ready_declined_steps), ready_step=ready_step,
+                blocked_steps=planning_steps - ready_legal_steps,
                 mean_probability=ready_probability_sum / ready_legal_steps if ready_legal_steps else None)
             coverage = verified_ready_coverage(footer, ready_step, rows['rews'])
-            planning_steps = sum(bool(obs[PLANNING_INDEX]) for obs in rows['obs'])
             battle_steps = len(rows['obs']) - planning_steps
             rows['experiment_signal'] = dict(
                 receipts=dict(
@@ -1392,7 +1396,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     saved_frac=saved if end != 'timeout' else None,
                     observed_saved_frac=saved, timeout_phase=state['phase'] if end == 'timeout' else None,
                     timeout_reason=timeout_reason if end=='timeout' else None,
-                    planning_blockers=planning_blockers, picker_rejections=picker_rejections,
+                    planning_blockers=planning_blockers, timeout_preparation=timeout_preparation,
+                    picker_rejections=picker_rejections,
                     outbreak=footer.get('outbreak') if footer else None,
                     ready_stats=footer.get('ready_stats') if footer else None,
                     opening_loadout=opening_loadout, ready_loadout=ready_loadout,
