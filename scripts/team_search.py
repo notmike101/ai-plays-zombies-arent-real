@@ -185,6 +185,20 @@ def defense_coverage_candidate(trial, rng):
     return dict(deepcopy(trial['team']), garrison_coverage=float(rng.uniform(7., 12.)))
 
 
+def shelter_order_candidate(parent):
+    if not parent.get('garrison_coverage'):
+        return None
+    plan = parent['plan']
+    placement = next((i for i, gene in enumerate(plan)
+                      if gene['family'] == 0 or gene['tool'] in tr.PLACEMENTS), None)
+    rectangle = next((i for i, gene in enumerate(plan) if gene['tool'] == 10), None)
+    if placement is None or rectangle is None or rectangle <= placement:
+        return None
+    child = deepcopy(parent)
+    child['plan'].insert(placement, child['plan'].pop(rectangle))
+    return child
+
+
 def best_defense_trial(defenders, evidence):
     return max(defenders.values(), key=lambda trial: fitness.l1_proposal_rank(evidence, trial['team']),
                default=None)
@@ -813,6 +827,8 @@ def budget_candidate(team,levels,prices=None):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--copies',nargs='+',required=True)
+    parser.add_argument('--qualified-holdout-only', action='store_true',
+                        help='Defer reserved evaluation until a discovery policy qualifies')
     parser.add_argument('--holdout-copies', nargs='+',
                         help='Reserve separate owned copies for the final frozen evaluation')
     parser.add_argument('--generations',type=int,default=10)
@@ -993,6 +1009,9 @@ def main():
                          or defense_spacing_candidate(matched, rng))
             if placement is not None:
                 population[-1] = placement
+                ordered = shelter_order_candidate(placement)
+                if ordered is not None:
+                    population[1] = ordered
         if prior and not (args.compare_forecast or args.compare_speed):
             previous=args.seed_from/'provisional.json'
             if previous.is_file():
@@ -1176,6 +1195,9 @@ def main():
                       (args.allow_progression or prior is None or
                        fitness.prefix_id(archive[k],1)!=fitness.prefix_id(prior,1))]
             qualified=[t for t in distinct if fitness.promote(evidence,t,prior) is t]
+            if args.qualified_holdout_only and not qualified:
+                print('Reserved evaluation deferred: no discovery policy qualified', flush=True)
+                return
             challenger=next(iter(qualified or distinct),leader)
             stage=next((i for i in range(1,6 if args.allow_progression else 2) if prior is None or
                         fitness.prefix_id(challenger,i)!=fitness.prefix_id(prior,i)),1)

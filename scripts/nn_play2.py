@@ -935,6 +935,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     target = st['build_targets'][c]
                     building_receipts.append(dict(decision=len(rows['obs'])-1, tool=TOOLS[u], cell=c,
                                                   target=target, camera=camera, paid=bool(succ),
+                                                  existing_shelters=len(st['native'].get('zones', ())),
                                                   spend=round(before['money']-o['money'], 2)))
                     if not succ:
                         placement_retry_at[u, c] = (len(rows['obs']) + 5, camera, target)

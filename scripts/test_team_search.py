@@ -74,6 +74,20 @@ class SearchTests(unittest.TestCase):
         level['paid_buildings']['Garrison'] = 1
         self.assertIsNone(search.defense_spacing_candidate(trial, rng))
 
+    def test_shelter_order_mutation_preserves_coverage_weight_and_all_other_preferences(self):
+        rng = np.random.default_rng(12)
+        parent = dict(search.random_team(rng), garrison_coverage=10.)
+        buy = dict(search.gene(rng), family=2, tool=search.tr.TOOLS.index('buy_Demolition'))
+        place = dict(search.gene(rng), family=0, tool=search.tr.TOOLS.index('garrison'))
+        view = dict(search.gene(rng), family=5, tool=search.tr.TOOLS.index('pan_left'))
+        rectangle = dict(search.gene(rng), family=1, tool=10)
+        parent['plan'] = [buy, place, view, rectangle]
+        variant = search.shelter_order_candidate(parent)
+        self.assertEqual(variant, dict(parent, plan=[buy, rectangle, place, view]))
+        self.assertEqual(parent['plan'], [buy, place, view, rectangle])
+        self.assertIsNone(search.shelter_order_candidate(variant))
+        self.assertIsNone(search.shelter_order_candidate(dict(parent, garrison_coverage=0.)))
+
     def test_garrison_coverage_changes_only_its_placement_cell_logits(self):
         rng = np.random.default_rng(17)
         parent = search.random_team(rng)
