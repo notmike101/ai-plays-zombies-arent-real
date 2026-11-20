@@ -25,6 +25,20 @@ class StateTests(unittest.TestCase):
             self.assertIs(pool.map.call_args_list[0].args[0], pool.map.call_args.args[0])
             self.assertIn('Native map changed', (Path(directory)/'interface-retries.jsonl').read_text())
 
+    def test_private_ppo_retries_picker_close_once_from_fresh_games(self):
+        from compare_spatial import collect_pairs
+        from unittest.mock import Mock
+        jobs = [('inst13', 'standard', {}, 123, 'first'),
+                ('inst14', 'balanced', {}, 123, 'second')]
+        pool = Mock()
+        failure = {'err': 'Timed out waiting for picker closed'}
+        pool.map.side_effect = [[{'saved_frac': .3}, failure], [failure, {'saved_frac': .34}]]
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(collect_pairs(pool, jobs, Path(directory)), [failure, {'saved_frac': .34}])
+            self.assertEqual(pool.map.call_count, 2)
+            logged = json.loads((Path(directory)/'interface-retries.jsonl').read_text())
+            self.assertEqual(logged, {'pair': ['first', 'second'], 'errors': [failure['err']]})
+
     def test_private_ppo_preserves_boot_failure_without_returning_a_score(self):
         import compare_spatial
         message = 'inst13 failed at injection: argument 1: OverflowError'

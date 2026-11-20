@@ -114,7 +114,7 @@ def collect_pairs(pool, jobs, directory, *, observe=False):
     results = list(pool.map(worker, jobs))
     transient = ('Timed out waiting for UI frames', 'Stale native HUD frame',
                  'No consistent HUD observer frame', 'Native map changed during read',
-                 'failed at injection: argument 1: OverflowError')
+                 'failed at injection: argument 1: OverflowError', 'Timed out waiting for picker closed')
     for start in range(0, len(jobs), 2):
         pair = slice(start, start + 2)
         errors = [r['err'] for r in results[pair] if 'err' in r]
