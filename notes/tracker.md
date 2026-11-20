@@ -2,6 +2,34 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 175952 started at 06:32 Central on D:, trainer PID 53364,
+  output `analysis/coverage-team-0afbef6ec6`, and log
+  `analysis/coverage-layout-free-175952-drive-d.log`. Launch headroom
+  was 12.88 GiB RAM and 18.94 GiB disk. Commit 3f4040d fixes the
+  layout-free discovery mask so raw placements and gates use playable
+  cell centers, and building placements use their actual snapped target.
+  Rectangle/segment masks and the final outside-action guard are retained.
+  This revision starts a separate fitness comparison while keeping prior
+  outbreak seeds excluded from reserved evaluation. All 276 script
+  tests passed. Production hash matched.
+- All four owned games reached planning and started battle. Two native
+  tool-arm receipts each were followed by 45 Spikes tiles on inst13
+  PID 71200 and 36 Oil tiles on inst14 PID 70580. The unchanged arm
+  on inst16 PID 11340 had an empty native paint map. This was verified
+  through a read-only, executable-checked read of the active games'
+  signed-cell paint map, with no game input sent by the diagnostic.
+  Both challenger boards entered with 19 Garrisons versus 21 for the
+  unchanged arm. Official survival outcomes for 175952 are pending.
+- Seed 174952 finished at 06:32 with two native clears below 35%,
+  five early retries, one timeout, and no reserved evaluation.
+  Reference 0c63192f22089b99 cleared at 12.69% and retried at 7.57%.
+  Oil 1e11f2b8b5082df1 retried at 8.78% and 9.99%. Spikes
+  56afb54bcb73a384 retried at 9.94% and cleared at 11.56%. Each
+  challenger selected the utility twice per board, but all eight
+  utility selections were outside the playable polygon and rejected
+  before game input. The results could not test either utility's effect.
+  Native initial rosters confirmed both tools were equipped.
+
 - Seed 174952 started at 06:20 Central on D:, portable trainer PID
   71516, output `analysis/coverage-team-56e293130a`, and log
   `analysis/coverage-layout-free-174952-drive-d.log`. Headroom was
