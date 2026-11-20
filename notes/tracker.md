@@ -2,6 +2,38 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 155952 finished at 02:41 Central. Two opening discovery games
+  crashed because the new geometry mask treated a pending native
+  gesture name as a numeric tool ID. The GRU timed out, and the
+  completed candidate bought 12 Garrisons, deployed four casts,
+  had zero outside rejects, and ended at 9.26% at retry. The next
+  discovery wave produced four retries (5.05%–9.03%) with 16 confirmed
+  deployments and one outside reject total. New frozen 90ad559785f2b3b6
+  scored 9.06% and 7.03% on fresh outbreaks, four confirmed deployments
+  each. Both reference seeds overlapped discovery. No promotion.
+- Commit 81aa8b9 fixes the gesture-name mismatch. A source-produced
+  pending gesture reproduced the old crash in isolation, then passed
+  the new regression for world drags, shifted drags and selection boxes.
+  The tests use the same action producer as live play and a fake game.
+- Prior fresh sampled-policy battles were at 80.28% and 79.24% saved
+  around 19 simulated seconds, before the first confirmed cast.
+  Both started with 2 SP. Native normal rules put the current
+  Demolition preference at 20 seconds for unlock plus arrival and a
+  same-cost alternative at 8 seconds. Commit bc87ad7 records affordable
+  offers and the actual READY deck, then gives one discovery slot to a
+  faster same-cost preference when a scored fresh failure supports it.
+  Only one purchase preference changes. Normal action masks, policy
+  choices, verified purchase receipts and official outcomes still apply.
+  All 252 trainer tests and 60 Observatory tests passed. Actual GRU
+  parity over 12 steps and graph assertions passed.
+- Seed 156952 began 02:42 Central on D:, trainer PID 16776. Two discovery
+  waves on inst13–16 and evaluation on inst17, inst18, inst20, inst19.
+  Prior `analysis/coverage-team-2ffbd28f2a`; output
+  `analysis/coverage-team-639beb8bda`; log
+  `analysis/coverage-layout-free-156952-drive-d.log`. Startup headroom
+  13.09 GiB RAM and 18.20 GiB disk, with production checkpoint hash
+  matched. The 35% consistency goal remains open.
+
 - Seed 154952 finished at 02:28 Central. The sampled candidate
   3f44400a70a7d7d9 made non-argmax legal choices in 88 of 118
   observed battle decisions and stayed greedy in all 27 planning
