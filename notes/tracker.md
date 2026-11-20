@@ -2,6 +2,31 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 09:48 Central on seed 186952, third-wave candidate 75de0cafd4052843
+  cleared at 29.17% on outbreak 1841216589. It had one native hold
+  and 19 Garrisons, including nine inside occupied shelters, and no
+  confirmed Napalm. Candidate 9b0db969a4f77092 retried at 9.97% on
+  outbreak 2062905415. The two session journals agree on all 24
+  recorded placement events and their world geometry; their policy
+  identities, outbreaks, and battle choices differ. A visible layout
+  signature complements the native seed record and cannot establish
+  seed identity. The Sniper option deployed two, one in occupied
+  shelter, with 137 Sniper kills by 50.5 simulated seconds and 9.96%
+  at retry. No 35% qualification. Operator PID 44548 is still live.
+- A continuation regression fixture covers evolving a frozen parent
+  whose earlier unequipped placement slot has already become a support
+  preference. Tested with actual frozen winner 75de0cafd4052843: twelve
+  more distinct unit/support proposals on existing rosters, preserving
+  all battle weights and excluding the unchanged parent. It remains in
+  memory pending the live trial boundary.
+- On 88 retained sub-10% retry journals with an observed ratio crossing,
+  the first sampled outnumbered observation was a median 11.55 sim
+  seconds before the footer; 24 showed at least 35% saved at that time.
+  A sample selected for known losses cannot measure false-positive rates.
+  On ten logs with a pre-footer native snapshot at or below 10%, the
+  median remaining wall-clock interval was 0.77 seconds. No case for
+  an aggressive ratio-based retry from these data.
+
 - At 09:40 Central, verified the retry guard: a playing board
   needs at most 10% living civilians and either at least 90% infected
   or a fresh episode-bound official snapshot at or below 10%.
