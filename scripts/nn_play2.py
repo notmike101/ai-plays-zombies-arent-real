@@ -678,6 +678,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         battle_actions = dict(decisions=0, cast_available=0, cast_sampled=0, stock_decreased=0)
         if cast_target_mode:
             battle_actions['cast_target_non_argmax'] = 0
+        if options.get('audit_cast_targets'):
+            battle_actions['alternate_target_audit'] = dict(compared=0, different_argmax=0)
         legal_casts = {}
         selected_casts = {}
         selected_placements = {}
@@ -793,6 +795,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                             net.record_cast_gradient(u, c, dc.probs)
                     else:
                         c = select_policy_cell(dc, greedy, cell_rng)
+                    if options.get('audit_cast_targets') and not st['planning'] and u in U2ABILITY:
+                        audit = battle_actions['alternate_target_audit']
+                        audit['compared'] += 1
+                        audit['different_argmax'] += int(net.alternate_cast_argmax(u, dc, mc) != int(dc.probs.argmax()))
                     ulp, clp = float(du.log_prob(torch.tensor(u))), float(dc.log_prob(torch.tensor(c)))
                     if observer:
                         cp = torch.zeros(NU, NC)

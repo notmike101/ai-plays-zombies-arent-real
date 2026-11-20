@@ -401,17 +401,59 @@ class SearchTests(unittest.TestCase):
         fit = dict(candidate=search.team_id(candidate), reference=search.team_id(reference),
                    team=candidate, scored_seeds=[13])
         rows = [dict(generation=1, team=reference, team_id=fit['reference']),
-                dict(generation=0, levels=[dict(stage=1, start_kind='fresh', outbreak=dict(seed=24))])]
+                dict(copy='inst13', generation=0,
+                     levels=[dict(stage=1, start_kind='fresh', outbreak=dict(seed=24))]),
+                dict(copy='inst14', generation=0,
+                     levels=[dict(stage=1, start_kind='fresh', outbreak=dict(seed=35))])]
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root/'target-fit.json').write_text(json.dumps(fit))
             (root/'trials.jsonl').write_text(''.join(json.dumps(row)+'\n' for row in rows))
+            self.assertEqual(search.restore_fitted_pair(root, 'base'), ((reference, candidate), {13, 24, 35}))
+            fit['fit_copies'] = ['inst13']
+            (root/'provisional.json').write_text(json.dumps(dict(team_id=fit['candidate'])))
+            (root/'target-fit.json').write_text(json.dumps(dict(folds=[fit])))
             self.assertEqual(search.restore_fitted_pair(root, 'base'), ((reference, candidate), {13, 24}))
             fit['team']['idle_bias'] += 1.
             fit['candidate'] = search.team_id(fit['team'])
             (root/'target-fit.json').write_text(json.dumps(fit))
             with self.assertRaisesRegex(ValueError, 'differ only'):
                 search.restore_fitted_pair(root, 'base')
+
+    def test_target_comparison_excludes_each_comparison_copy_from_its_fit(self):
+        parent = dict(search.random_team(np.random.default_rng(19)), sample_battle=True, cast_target_mode='sample')
+        copies = dict(inst13=0, inst16=0, inst14=1, inst15=1)
+        trials = [dict(copy=copy, levels=[dict(stage=1, start_kind='fresh', saved=saved, end='aborted',
+                    outbreak=dict(seed=i+10), battle_actions=dict(
+                        cast_target_gradients=[[i, 0, 0, 0, 0]] * len(search.CASTS)))])
+                  for i, (copy, saved) in enumerate(zip(copies, (.10, .12, .13, .09)))]
+        fits = search.target_comparison_fits(parent, trials, copies, 'greedy')
+        for fold, expected in ((0, [12, 13]), (1, [10, 11])):
+            (reference, challenger), report = fits[fold]
+            self.assertEqual(report['scored_seeds'], expected)
+            self.assertEqual(report['exposed_seeds'], expected)
+            self.assertTrue(set(report['fit_copies']).isdisjoint(report['comparison_copies']))
+            self.assertGreater(report['step_norm'], 0.)
+            self.assertEqual(dict(challenger, battle=reference['battle']), reference)
+            self.assertEqual(reference['cast_target_mode'], 'greedy')
+        self.assertNotEqual(fits[0][1]['candidate'], fits[1][1]['candidate'])
+
+    def test_alternate_cast_audit_recomputes_argmax_with_the_same_legal_mask(self):
+        parent = search.random_team(np.random.default_rng(21))
+        row = search.FIREBOMB_ROW
+        parent['battle'][row] = [0.] * 5
+        alternate = copy.deepcopy(parent['battle'])
+        alternate[row][0] = 1.
+        model = search.TeamPolicy(parent, alternate_battle=alternate)
+        model.cast_grid = torch.zeros(5, search.tr.NC)
+        model.cast_grid[0, :3] = torch.tensor([0., 2., 100.])
+        logits = torch.full((search.tr.NC,), -torch.inf)
+        logits[:2] = torch.tensor([1., 0.])
+        dist = torch.distributions.Categorical(logits=logits)
+        legal = np.zeros(search.tr.NC)
+        legal[:2] = 1.
+        self.assertEqual(int(dist.probs.argmax()), 0)
+        self.assertEqual(model.alternate_cast_argmax(search.FIREBOMB, dist, legal), 1)
 
     def test_live_cast_gradient_matches_autodiff_on_legal_cells(self):
         model = search.TeamPolicy(search.random_team(np.random.default_rng(42)), collect_cast_gradients=True)
