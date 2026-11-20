@@ -2,6 +2,25 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:09 Central, reserved wave three completed with a battle-clock
+  timeout on repeated candidate outbreak 249701763. No official score.
+  Wave four is live on inst20 PID 34288 and inst19 PID 69716. Both
+  again emitted the wave-two outbreak IDs. Operator PID 71620 and the
+  queued Police study handoff PID 68120 remain live.
+- Strengthened staged loadout-before-breach.patch to require a
+  session-bound native planning purchase receipt before READY for its
+  remaining skill budget. No reconstruction from local deltas, and
+  missing, invalid, post-READY or cross-session evidence remains
+  unknown. All 300 script tests passed against isolated source,
+  joint applicability passed, and the staged parser read native
+  inst20 session 1795194483119: one SP remains, 20 paratroopers
+  in stock. On an observational dry run using that receipt and the
+  prior same-outbreak 55.43 s occupied breach, the staged mutation
+  could propose CallArms, Demolition, Firebomb, Heli, Missile, Rally,
+  SeekDestroy and Stungas. Bomber's first effect came too late.
+  This check made no trained weights, live input, or changes to
+  reserve eligibility. The live and queued experiments are preserved.
+
 - At 11:05 Central, verified why correcting the opening catalog alone
   does not restore Missile exploration: starter substitutions require
   both an earlier effect and no greater cost than the current purchase.
