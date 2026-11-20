@@ -2,6 +2,33 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:21 Central, the full footprint comparison finished with four
+  fresh or repeated-seed discovery attempts per arm (four native
+  outbreaks crossed between arms). Standard targeting averaged 7.39%
+  saved and footprint targeting averaged 8.49%. All eight were retries,
+  seven strictly below 10%, and reserved evaluation did not open.
+  The zombie count reached at least the live civilian count in all eight;
+  that preceded the retry floor by 35 to 76 simulated seconds in six.
+  All eight had occupied shelter breaches. The forecast receipt audit
+  linked 19 of 24 shots. Overlap during flight and positional mismatch
+  still limit action-effect validation.
+- A retrospective check of 55 local fresh L1 campaign-search attempts
+  with native outbreak, official score and population-pressure receipts
+  found that all 37 severe failures passed the outnumbered marker.
+  Four sub-35% wins passed it too. The marker remains diagnostic and
+  the official below-10% severe-failure flag adds no reward cliff.
+- Deployed 00f3c6f after the footprint operator exited and 311 isolated
+  script tests passed. Private real-game PPO study 193952 is running
+  from frozen base 8a691469a829158d under PID 54556, with results under
+  analysis/coverage-breach-cost-705d104768. Compare existing 0.10 and
+  experimental 0.30 occupied-exposure costs at normal game speed for
+  16 training games on inst13-16 and eight frozen attempts on reserved
+  inst19/20. Both arms use native unlock timing and the same continuous
+  saved-fraction reward. Official evaluation, Observatory and the
+  production checkpoint (SHA256 starts 0B23B6A7) are unchanged.
+  Assess actual occupied exposure, severe failures and official scores
+  before deciding whether the stronger penalty is worth a larger test.
+
 - At 12:15 Central, footprint study 192952 first wave finished.
   Standard 5.51% mean, footprint 9.45% mean (two games each,
   all retries; no 35% result). Direct civilian deaths 217 versus 65.
