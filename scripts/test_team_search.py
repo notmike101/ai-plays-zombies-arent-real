@@ -185,6 +185,24 @@ class SearchTests(unittest.TestCase):
         model.set_zone_population(state, tools, np.ones(search.tr.NC), 1000, 1000)
         self.assertFalse(model.zone_population_cells.any())
 
+    def test_zone_anchor_lookahead_counts_only_complete_legal_rectangles(self):
+        rng = np.random.default_rng(50)
+        team = dict(search.random_team(rng), zone_population=9., zone_anchor_lookahead=True)
+        model = search.TeamPolicy(team)
+        tool = search.ZONE_RECT
+        tools = np.zeros(search.tr.NU)
+        tools[tool] = 1
+        mask = np.zeros(search.tr.NC)
+        mask[[0, 1, 8, 9]] = 1
+        native = dict(camera=[0., 0., 1.], zones=[],
+                      units=dict(kind=np.array([0]), pos=np.array([[-350, 290]])))
+        state = dict(planning=True, geometry_cells={tool: mask}, native=native)
+        model.set_zone_population(state, tools, np.ones(search.tr.NC), 1000, 1000)
+        torch.testing.assert_close(model.zone_population_cells[[0, 1, 8, 9]], torch.ones(4))
+        mask[8] = 0
+        model.set_zone_population(state, tools, np.ones(search.tr.NC), 1000, 1000)
+        self.assertFalse(model.zone_population_cells.any())
+
     def test_planning_scale_changes_tool_preferences_without_changing_battle(self):
         rng = np.random.default_rng(43)
         parent = search.random_team(rng)
