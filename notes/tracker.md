@@ -2,6 +2,35 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 162952 started at 03:59 Central, portable D: PID 6808,
+  output `analysis/coverage-team-3d9cc26e20`, log
+  `analysis/coverage-layout-free-162952-drive-d.log`. Headroom was
+  13.06 GiB RAM and 18.83 GiB disk. Two discovery waves pair the same
+  learned preparation preferences and weight with maximum-range and
+  building-specific Garrison placement scores. Fast startup is enabled
+  for discovery. All 258 script tests and 60 Observatory tests passed.
+- Verified the shipped Garrison rule from the owned build's config and
+  rule dumps. Radius is base plus per-meter reach times square root of
+  the building's native footprint, capped at 262.5 m. Native building
+  radii had 10th/50th/90th percentiles of 48.9/57.8/102.4 m across 6,532
+  Boston buildings. All 15 sampled existing Garrisons matched their
+  building centers exactly. Their derived radii ranged 43.9–196.8 m.
+  Maximum-radius percentages reported earlier are an upper bound.
+  Commit 7b07cef keeps that frozen reference and scores one challenger
+  with building-specific radii. On four read-only world samples, the
+  leading placement cell changed on three, and the coverage update
+  took 180–720 us. This estimates reach without line of sight or combat.
+- Seed 161952 finished at 03:58 Central. All eight discovery boards
+  reached verified fresh planning in 26.94–26.99 seconds without the
+  standard startup fallback. Seven ended in scored early retries and
+  one timed out, zero wins. Ordered proposal 9d506e3b7bc6a4f0 produced
+  eight Garrisons on two distinct seeds, retrying at 9.33% and 9.51%
+  after 108.2 and 102.1 simulated seconds. Its selected mutation,
+  8ee70506ad4ff889, also had eight Garrisons and lasted 148.4 seconds
+  before an 8.99% retry. It is the provisional parent, with first
+  occupied breach at 48.13 seconds on seed 3029904288. No promotion or
+  reserved evaluation. The 35% consistency goal remains open.
+
 - Seed 161952 started at 03:47 Central on D:, portable trainer PID
   49128, output `analysis/coverage-team-f0b57397a0`, log
   `analysis/coverage-layout-free-161952-drive-d.log`. Startup headroom
