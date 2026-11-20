@@ -2,6 +2,26 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 15:21 Central, target-settle study 205952 completed
+  five training rounds under PID 77264. Fourteen of twenty
+  starts timed out in preparation. Six retries scored, no
+  single-click building casts were selected. Five of the
+  timeouts had no listed terminal blocker. Four recent
+  Observatory frames had READY legal with actual probabilities
+  from 0.47% to 0.95%; two other timeout episodes ended with
+  land-cap, debt and unfinished-gesture blockers.
+- Staged READY-choice diagnostics and a matched pilot comparing
+  0 vs 0.002 training cost per deferred legal READY decision.
+  The cap, legal gating, normal evaluation and .30 shelter
+  coverage credit are shared. The model retains start choice.
+  Cost applies to the recorded transition and leaves official
+  scores alone. 347 isolated tests passed. D:
+  analysis/coverage-portable314/tmp/battle-timing/legal-ready-delay.patch,
+  SHA256 EA98D5B05A431FD9E817655FF00C0306E2F4012958F27905442F6D1F65298444.
+  Initial source will be pre-study 96ff6c9a03a9124c, which
+  started all four first-round battles before later timeouts.
+  Do not overwrite the live source during the remaining study.
+
 - At 15:14 Central, 204952 ended with six planning timeouts
   and two distinct fresh retries in frozen evaluation. Baseline
   f31e838adaceee21 retried at 6.06%; exploration 96ff6c9a03a9124c
