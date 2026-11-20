@@ -51,6 +51,30 @@ repeated seeds are not independent evidence of a performance improvement.
 If a run should stop, the existing `stop-after-round` file still takes effect
 only after the paired checkpoint and diagnostics are saved.
 
+## Queued comparison for sustained shelter protection
+
+Compare existing shelter rewards with the same rewards plus bounded credit
+for simulated time civilians spend in intact, occupied shelters. Keep the
+native occupied-breach penalty identical in both arms. Retain the existing
+qualification criteria and official survival score.
+
+Use the share of the starting civilian population observed inside an intact
+shelter at both ends of an interval, counting each civilian once across
+overlapping shelters. Credit only bounded, observed intervals in active battle
+and stop credit at observed penetration. Empty zones, paused time, duplicate
+samples and missing intervals earn zero. Preserve credit for earlier verified
+protection when civilians subsequently leave or a zone is breached. Set an
+episode cap before running the comparison so a prolonged collapse cannot earn
+unbounded reward.
+
+Test duplicate and overlapping zones, departures and relocation, zero clock
+advance, missing samples, a successful occupied interval and a later breach.
+Report occupied civilian-seconds, the exact reward increment, time and number
+of civilians exposed at the first breach, starting coverage, defense choices,
+and fresh official outcomes separately. Trials without intact occupied
+intervals leave the intervention unexercised. A learner that stalls or reduces
+shelter occupancy can improve a single diagnostic while worsening survival.
+
 ## Examples from completed runs
 
 - Shelter-defense study 198952 had no occupied breach in any valid training
