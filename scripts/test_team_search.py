@@ -186,6 +186,27 @@ class SearchTests(unittest.TestCase):
         model.set_garrison_coverage(state, tools, np.ones(search.tr.NC), 1000, 1000)
         torch.testing.assert_close(model.garrison_coverage_cells[:2], torch.tensor([.5, .5]))
 
+    def test_planning_masks_direct_and_snapped_executed_points(self):
+        tr = search.tr
+        boundary = np.array([[200, 100], [800, 100], [800, 600], [200, 600]])
+        targets = [None] * tr.NC
+        targets[8] = (300, 300)  # Cell centre lies outside, snapped target is legal.
+        targets[11] = (100, 300)  # Cell centre is legal, snapped target lies outside.
+        st = dict(planning=True, build_targets=targets, playarea_boundary=boundary)
+        masks = tr.planning_geometry_masks(st, 1000, 1000)
+        for name in ('place_Oil', 'place_Spikes', 'gate', 'garrison', 'place_Railgun'):
+            tool = tr.TOOLS.index(name)
+            for cell in (8, 11):
+                self.assertEqual(bool(masks[tool][cell]),
+                                 not tr.outside_playarea(st, tool, cell, 1000, 1000))
+        oil = tr.TOOLS.index('place_Oil')
+        self.assertFalse(masks[oil][8])
+        self.assertTrue(masks[oil][11])
+        self.assertTrue(masks[search.GARRISON][8])
+        self.assertFalse(masks[search.GARRISON][11])
+        self.assertNotIn(tr.TOOLS.index('ready'), masks)
+        self.assertNotIn(tr.TOOLS.index('place_paint'), masks)
+
     def test_zone_population_counts_only_new_civilians_in_legal_rectangles(self):
         rng = np.random.default_rng(43)
         team = dict(search.random_team(rng), zone_population=9.)

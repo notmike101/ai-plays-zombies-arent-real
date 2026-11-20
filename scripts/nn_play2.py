@@ -214,6 +214,10 @@ BUILDING_PLACEMENTS = {tool for tool, name in PLACEMENTS.items() if name in (
 )}
 
 
+SNAPPED_PLANNING_TOOLS = BUILDING_PLACEMENTS | {9}
+PLANNING_SPATIAL_TOOLS = set(PLANNING_U[2:]) | set(PLACEMENTS)
+
+
 def blocked_placement_cells(st, retries, decision):
     if not st['planning'] or not retries:
         return {}
@@ -244,7 +248,16 @@ def planning_geometry_masks(st, width, height):
     rectangles = (inside[:, None] & inside[None, :] & corners & corners.T
                   & (rows[:, None] != rows[None, :]) & (cols[:, None] != cols[None, :]))
     segments = inside & (inside.sum() >= 2)
-    return {10: rectangles.any(axis=1), 15: segments, 17: segments, 18: segments}
+    targets = st.get('build_targets', ())
+    snapped = np.zeros(NC, dtype=bool)
+    valid = [i for i, target in enumerate(targets) if target is not None]
+    if valid:
+        snapped[valid] = inside_polygon([targets[i] for i in valid], boundary)
+    snapped &= st.get('world_cells', WORLD_CELLS)
+    masks = {tool: snapped if tool in SNAPPED_PLANNING_TOOLS else inside
+             for tool in PLANNING_SPATIAL_TOOLS}
+    masks.update({10: rectangles.any(axis=1), 15: segments, 17: segments, 18: segments})
+    return masks
 
 def battle_geometry_masks(st, width, height):
     boundary = st.get('playarea_boundary')
@@ -333,8 +346,8 @@ def outside_playarea(st, tool, cell, width, height):
     name = TOOLS[tool]
     center = cell_of_px(cell, width, height)
     points = []
-    if st['planning'] and tool in (*PLANNING_U[2:], *PLACEMENTS):
-        if tool in BUILDING_PLACEMENTS or tool in (5, 9):
+    if st['planning'] and tool in PLANNING_SPATIAL_TOOLS:
+        if tool in SNAPPED_PLANNING_TOOLS:
             points = [st['build_targets'][cell]]
         else:
             points = [center]
