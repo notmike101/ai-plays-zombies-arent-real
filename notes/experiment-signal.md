@@ -81,6 +81,26 @@ and fresh official outcomes separately. Trials without intact occupied
 intervals leave the intervention unexercised. A learner that stalls or reduces
 shelter occupancy can improve a single diagnostic while worsening survival.
 
+### Follow-up after the preparation comparison
+
+Queue a repeat on a frozen source checkpoint with recurring native occupied
+shelter exposure in discovery games. Select the source using discovery data
+and reserve new outbreaks for the frozen evaluation. Match the source weights
+and optimizer, decision cadence, exploration, READY coverage credit and
+occupied-breach cost. Vary only the duration credit. The candidate in 214952
+received 0.1331 extra reward across two of 16 training games. Its frozen
+comparison had seven total retries, one timeout and zero eligible natural
+finishes. This verifies reward delivery and leaves the learning effect open.
+
+Compare occupied starts, confirmed defensive placements and deployments, time
+to first occupied breach, occupants exposed at breach, and protected
+civilian-seconds alongside official saved fractions. Report the frequency of
+occupied starts as well as the protection results among occupied starts.
+Continue to count every eligible frozen game in the official comparison.
+Use the existing advisory gate to flag low exposure and retain rare verified
+intervals. A longer intact interval is a mechanism measure. A survival gain
+requires a separate fresh-outbreak result.
+
 ## Exact shelter occupancy input
 
 `--compare-shelter-input` widens both private policies by one input. The
