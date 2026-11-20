@@ -2,6 +2,34 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 170952 started at 05:25 Central on D:, portable trainer PID
+  69072, output `analysis/coverage-team-a4a6da9b94` and log
+  `analysis/coverage-layout-free-170952-drive-d.log`. Launch headroom
+  12.94 GiB RAM and 18.83 GiB free. Keeps the verified click baseline
+  and pairs 10c063b71e9f3043 with a challenger whose maximum-speed
+  battle-tool logit is three lower. All speeds and gameplay choices
+  stay available to the model. Confirmed deployment and official saved
+  fraction are the comparison outcomes. Commit 677632e.
+- Seed 169952 drained at 05:24 with seven scored early retries and an
+  incomplete UI wait, no native wins or reserved evaluation. All starts
+  verified click mode. inst14 policy 10c063b71e9f3043 selected
+  place_paint on its second decision, entered battle in paint mode with
+  21 Garrisons and $82, and retried at 4.21%. Two other candidate
+  boards began with eight. This reproduces the large opening on a
+  different copy via a model choice, without a survival gain yet.
+- At sim 18.83 the paint-mode policy moved from 0.5x to 4x. It started
+  with three Demolition charges and one Firebomb, logged a legal cast
+  choice at one decision, and confirmed no spends across 126 decisions.
+  Native speed and action records identify a timing failure candidate,
+  without proving that speed caused the losses.
+- The incomplete parent rollout lost confirmation during the automatic
+  camera overview, after releasing a pan key. Commit 655a8d4 treats a
+  UI-frame timeout only at camera overview as an unfitted view. The
+  caller refreshes current native geometry. Gameplay receipts and other
+  errors retain their existing behavior. A mocked regression verifies
+  the distinction. All 269 script tests passed and the production
+  checkpoint SHA-256 matched at launch.
+
 - Seed 169952 started at 05:16 Central on D:, portable trainer PID
   71392, output `analysis/coverage-team-beed15c93f` and log
   `analysis/coverage-layout-free-169952-drive-d.log`. Launch headroom
