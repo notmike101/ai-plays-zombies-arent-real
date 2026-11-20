@@ -2,6 +2,34 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:10 Central, timing study 191952 finished: standard
+  ce5b191516c37f99 13.37% mean / 27.00% best, preference
+  15980ab215b7253e 11.08% mean / 15.05% best, four scored
+  games each. Direct civilian deaths 264 versus 24; only
+  two outbreaks matched across arms and neither comparison
+  qualified. Do not infer impact or survival improvement
+  from the aggregate casualty difference.
+- Footprint experiment 192952 deployed at idle in 6e1fa09
+  (308 isolated tests), live D: operator 74284, directory
+  analysis/coverage-team-bdb2b04ae6. Reference ce5b191516c37f99
+  selected by the predeclared highest recorded Missile score,
+  challenger e2955a9ae8ff256d. Timing preference identical.
+  All four copies reached READY (inst13 PID 74476, inst14
+  31920, inst15 66316, inst16 31000). Native logs contain
+  confirmed impacts on three copies so far. Compact capture
+  analysis/coverage-team-bdb2b04ae6/missile-footprint-native-audit.json.
+  No official footprint scores yet. Production hash and
+  Observatory PID 12628 matched.
+- Prepared read-only receipt comparison
+  analysis/coverage-portable314/tmp/report-missile-footprints.py.
+  It requires matching stock/launch counts, a unique impact in
+  both native clock and world coordinates, and a complete log
+  before scoring current-count and zero baselines. Ten native
+  launches in the crossed timing wave were uniquely matched
+  to ten impacts using the exact logged launch coordinates
+  and the same tolerances. Current perception versus impact
+  errors will require the new recorded decision fields.
+
 - At 12:06 Central, crossed timing wave had six official scores.
   Preference cleared at 10.54% on matched outbreak 429480045
   versus 7.59% standard in wave one. Crossed standard retried
