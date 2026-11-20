@@ -2,6 +2,18 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:51 Central, zone exploration 195952 completed the first
+  training round. Native outbreak 2301536718 in the baseline
+  had 9.26% inside at READY and earned 0.02778 coverage credit,
+  the first positive training receipt for this reward. Native
+  shelter sampling credited 803 civilians after battle began;
+  793 were exposed at the 52.70 s breach, and 9.97% were saved
+  at retry. Other baseline saved 3.64%; challenger 8.22% and
+  9.85%, all retries. Neither challenger chose a zone corner
+  and there were zero tempered decisions in both. No exploration
+  effect demonstrated. Round two launched (operator 74460,
+  inst13 74048, inst14 51212, inst15 73312, inst16 3860).
+
 - At 12:50 Central, READY coverage study 194952 exited normally.
   Frozen baseline averaged 3.48% saved and challenger 9.62%,
   four scored retries each on distinct outbreaks disjoint from
