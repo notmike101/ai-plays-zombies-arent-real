@@ -539,6 +539,30 @@ class SearchTests(unittest.TestCase):
                 expected=[(1,0,'fresh'),(2,0,'next_level'),(2,1,'carry'),(3,0,'next_level')]
                 self.assertEqual([(r['stage'],r['attempt'],r['start_kind']) for r in result['levels']],expected[:count])
 
+    def test_early_loadout_changes_only_one_affordable_purchased_preference(self):
+        rng = np.random.default_rng(17)
+        team = search.random_team(rng)
+        team['plan'][0].update(family=2, tool=search.tr.TOOLS.index('buy_Demolition'))
+        options = {
+            'Demolition': {'cost': 1., 'first_effect': 20.},
+            'Police': {'cost': 1., 'first_effect': 8.},
+            'CallArms': {'cost': 2., 'first_effect': 0.},
+            'Firebomb': {'cost': 1., 'first_effect': 42.},
+        }
+        row = dict(stage=1, start_kind='fresh', saved=.0916, outbreak={'seed': 123},
+                   opening_loadout=options, ready_loadout={'Demolition': 20., 'Firebomb': 42.})
+        trial = dict(team=team, levels=[row])
+        variant = search.early_loadout_candidate(trial, rng)
+        self.assertIsNotNone(variant)
+        self.assertEqual(search.tr.TOOLS[variant['plan'][0]['tool']], 'buy_Police')
+        variant['plan'][0]['tool'] = team['plan'][0]['tool']
+        self.assertEqual(variant, team)
+        row['ready_loadout']['Police'] = 8.
+        self.assertIsNone(search.early_loadout_candidate(trial, rng))
+        row['ready_loadout'].pop('Police')
+        row['saved'] = None
+        self.assertIsNone(search.early_loadout_candidate(trial, rng))
+
     def test_loadout_proposal_is_reproducible_and_preserves_champion(self):
         rng=np.random.default_rng(23)
         parent=search.random_team(rng)

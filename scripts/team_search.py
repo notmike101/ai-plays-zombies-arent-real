@@ -72,6 +72,38 @@ def loadout_candidate(parent,rng):
     return candidate
 
 
+def early_loadout_candidate(trial, rng):
+    team = trial.get('team')
+    if not team or team.get('layout') or trial.get('arm') or fitness.l1_outbreak_seed(trial) is None:
+        return None
+    first = trial['levels'][0]
+    saved = first.get('saved')
+    opening = first.get('opening_loadout') or {}
+    ready = first.get('ready_loadout') or {}
+    if not isinstance(saved, (int, float)) or not 0 <= saved < .35 or not ready:
+        return None
+    earliest = min(ready.values())
+    purchases = {tr.TOOLS[g['tool']][4:] for g in team['plan'] if g['tool'] in FAMILIES[2]}
+    alternatives = []
+    for i, step in enumerate(team['plan']):
+        if step['tool'] not in FAMILIES[2]:
+            continue
+        name = tr.TOOLS[step['tool']][4:]
+        if name not in opening or ready.get(name) != earliest:
+            continue
+        cost = opening[name]['cost']
+        for choice, offer in opening.items():
+            if (choice not in purchases and choice not in ready and choice in tr.ABILITY_U
+                    and offer['cost'] <= cost and offer['first_effect'] < earliest):
+                alternatives.append((i, tr.TOOLS.index('buy_' + choice)))
+    if not alternatives:
+        return None
+    index, tool = alternatives[int(rng.integers(len(alternatives)))]
+    child = deepcopy(team)
+    child['plan'][index]['tool'] = tool
+    return child
+
+
 def defense_placement_candidate(parent, rng):
     if len(parent['plan']) > 62:
         return None
@@ -504,6 +536,8 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                refuge=refuge,garrison_relocation=relocation,
                                outbreak=row.get('outbreak'),
                                ready_stats=row.get('ready_stats'),
+                               opening_loadout=row.get('opening_loadout', {}),
+                               ready_loadout=row.get('ready_loadout', {}),
                                timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
                                unmatched_layout=remaining_layout(layout,{'_text':row['layout_text']}) if layout else [],
                                layout_receipts=receipts,battle_actions=row['battle_actions'],
@@ -956,6 +990,7 @@ def main():
                 practice=[]
                 affordable=[]
                 cast_probes={}
+                loadout_probes={}
                 valid_candidates=0
                 for job,start_stage,result in completed_rollouts(pool,jobs,starts,args.later_retries,training=True,
                         allow_progression=args.allow_progression,capture_shadow=args.capture_shadow):
@@ -989,6 +1024,10 @@ def main():
                             defenders[key] = result
                         probe=cast_candidate(result,rng)
                         if probe:cast_probes[key]=probe
+                        if explore_without_layout and not args.allow_progression:
+                            loadout = early_loadout_candidate(result, rng)
+                            if loadout is not None:
+                                loadout_probes[key] = loadout
                     print(generation,key,[(r['stage'],r['end'],r['saved'],round(r['sim'],1)) for r in levels],flush=True)
                 if not valid_candidates:raise RuntimeError('No valid candidates this generation; inspect trials')
                 ranked=sorted(archive,key=lambda k:fitness.ranking(evidence,archive[k]),reverse=True)
@@ -1041,7 +1080,11 @@ def main():
                 probe=next((cast_probes[k] for k in l1_ranked if k in cast_probes),None)
                 nearby = (nearby_plan_candidate(leader, rng)
                           if explore_without_layout and generation % 2 == 0 else None)
-                if nearby is not None:
+                early = next((loadout_probes[k] for k in l1_ranked if k in loadout_probes), None)
+                if early is not None:
+                    population.append(early)
+                    require_fresh.add(team_id(early))
+                elif nearby is not None:
                     population.append(nearby)
                 elif generation%2==0:
                     defender=deepcopy(incumbent or leader)

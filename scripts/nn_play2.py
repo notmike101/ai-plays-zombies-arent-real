@@ -394,7 +394,7 @@ def ready_once(env):
 _CPL_RE = re.compile(r'\.([A-Za-z]+)\s*=\s*([\d.]+)')
 
 
-def _rule(counts, name, suffix):
+def _rule(counts, name, suffix, *, default=0.0):
     """Look up '<key><suffix>' in the dumped rules echo trying the naming
     variants (SeekDestroy -> seek_destroy_*, AC130 -> ac130_*)."""
     snake = re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
@@ -405,7 +405,20 @@ def _rule(counts, name, suffix):
                 return float(v)
             except ValueError:
                 pass
-    return 0.0
+    return default
+
+
+def opening_loadout_options(st):
+    offers = {}
+    for name, cost in st['costs'].items():
+        if name not in st['unlocked'] or not 0 < cost <= st['sp']:
+            continue
+        unlock = _rule(st['rules'], name, '_unlock_seconds', default=math.nan)
+        arrival = _rule(st['rules'], name, '_arrival_seconds', default=math.nan)
+        if (math.isfinite(unlock) and unlock >= 0
+                and math.isfinite(arrival) and arrival >= 0):
+            offers[name] = {'cost': cost, 'first_effect': unlock + arrival}
+    return offers
 
 
 def load_bind_keys(env):
@@ -615,6 +628,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                   unlocked=env.unlocked_abilities(),
                   costs={name: _rule({k.removeprefix('loadout_'): v for k, v in config.items()}, name, '_cost')
                          for name in DECK_ORDER})
+        opening_loadout = (opening_loadout_options(dict(st, rules={**st['rules'], **initial.get('counts', {})}))
+                           if options.get('placement_feedback') else {})
+        ready_loadout = {}
         plan = initial
         net = None if eps_rand else (policy_factory or PolicyNet2)().eval()
         if net is not None:
@@ -818,6 +834,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     stock = env.battle_stock()
                     for slot in st['deck']:
                         slot['charges'] = slot['max_charges'] = stock[slot['name']]
+                    if placement_feedback:
+                        ready_loadout = {slot['name']: slot['unlock'] + slot['arrival'] for slot in st['deck']
+                                         if slot['key'] and slot['charges'] > 0
+                                         and math.isfinite(slot['unlock'] + slot['arrival'])}
                 elif 34 <= u < 72:
                     name = DECK_ORDER[(u-34) % 19]
                     delta = 1 if u < 53 else -1
@@ -1014,6 +1034,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     planning_blockers=planning_blockers, picker_rejections=picker_rejections,
                     outbreak=footer.get('outbreak') if footer else None,
                     ready_stats=footer.get('ready_stats') if footer else None,
+                    opening_loadout=opening_loadout, ready_loadout=ready_loadout,
                     special_activations=special_activations,
                     reward_components=rewards, outside_playarea_actions=outside_actions,
                     outside_targets=outside_targets, battle_actions=battle_actions,

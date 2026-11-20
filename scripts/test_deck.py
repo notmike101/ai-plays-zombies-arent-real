@@ -69,6 +69,15 @@ class BuildDeckTests(unittest.TestCase):
             ['1'])
         self.assertEqual([s['key'] for s in deck2], ['1', None])
 
+    def test_opening_loadout_uses_affordable_native_times_and_explicit_zero(self):
+        rules = dict(COUNTS, callarms_unlock_seconds='0', callarms_arrival_seconds='0')
+        st = dict(rules=rules, sp=2, unlocked={'Police', 'CallArms', 'Heli', 'Demolition', 'Cure'},
+                  costs={'Police': 1, 'CallArms': 2, 'Heli': 3, 'Demolition': 1, 'Cure': 0})
+        self.assertEqual(t()['opening_loadout_options'](st), {
+            'Police': {'cost': 1, 'first_effect': 3.},
+            'CallArms': {'cost': 2, 'first_effect': 0.},
+        })
+
     def test_quick_deploy_reduces_first_unlock_from_actual_equipped_perks(self):
         d=dump(econ={'loadout Heli':'1'},counts=dict(COUNTS,perk_unlock_cut_percent='33'))
         self.assertAlmostEqual(t()['build_deck'](d,KEYS,perks=[{'name':'Quick_Deploy'}])[0]['unlock'],20.1)
