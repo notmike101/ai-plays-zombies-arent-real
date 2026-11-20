@@ -12,6 +12,12 @@
   One also favors legal perimeter targets based on actual occupancy
   and zombies. Exact holdout selection and rewards are unchanged. All
   271 script tests passed. Prior receipts provide an eligible pair.
+- 171952 wave one returned three early retries (5.70%–7.58%) and
+  one continuous-pause timeout. Confirmed wave two started at 05:44
+  with four fresh owned games. Two entered battle with 21 Garrisons
+  and two with eight. Per-arm result receipts are pending. Host checks
+  found 18.77 GiB free on D: and 9.91 GiB RAM with four games active.
+  Observatory PID 12628 remained up and checkpoint bytes matched.
 - Seed 170952 finished at 05:37 with seven scored early retries, one
   incomplete gameplay-key receipt, no native wins or held-out trials.
   The paint reference 10c063b71e9f3043 spent three Demolition charges
