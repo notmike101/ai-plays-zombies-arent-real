@@ -2,6 +2,31 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 08:53 Central seed 183952 completed the first purchase wave. The
+  model sampled Firebomb twice instead of Police then Firebomb on one
+  board and reached battle with Firebomb alone. Its official score was
+  8.95%. The other sampled board kept both abilities and scored 7.82%.
+  The reference boards scored 9.17% and 10.03%. All four native
+  outbreaks differed. The second crossed wave is live under PID 67752.
+- Embedded-defense audit of the same 48 recent scored starts: Garrison
+  began equipped on all 48. Mortar and Sniper each began equipped on 11
+  and neither was selected. Fire Mortar, Gas Mortar, Howitzer and MLRS
+  were also equipped on subsets. The current plan's early Chemical Mine
+  preferences are masked on all four discovery copies, leaving a broad
+  placement bias and its explicit later Garrison preference. Native
+  receipts show two distinct paid Garrison sequences, one repeated
+  45 times. All 285 unconfirmed Garrison gestures in 714 attempts
+  revisited a target already paid for at the same view. This documents
+  repeated decisions, not a validated placement-legality rule.
+- Four idle-or-currently-owned full-availability copies inst15-18
+  share Gas Mortar and MLRS in their existing initial rosters. A
+  game-free fixture on D: verified a proposed two-wave comparison that
+  changes one unequipped preference to each of those shared embedded
+  units. The opposite wave swaps control and candidate within each pair.
+  Existing masks, spends, and official evaluation apply. A fixture also
+  verified the saved-fit retest with the renamed arm variable. These
+  changes are staged in memory until the active purchase trial stops.
+
 - Seed 183952 started at 08:46 Central on D:, operator PID 67752,
   output `analysis/coverage-team-6625fd1484` and log
   `analysis/coverage-layout-free-183952-drive-d.log`. Four discovery copies
