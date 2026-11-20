@@ -348,6 +348,7 @@ class TeamPolicy(tr.PolicyNet2):
         self.cast_timing = team.get('cast_timing')
         self.garrison_coverage_weight = team.get('garrison_coverage', 0.)
         self.garrison_building_range = team.get('garrison_building_range', False)
+        self.garrison_early_coverage = team.get('garrison_early_coverage', False)
         self.garrison_coverage_cells = torch.zeros(tr.NC)
         self.zone_population_weight = team.get('zone_population', 0.)
         self.zone_anchor_lookahead = team.get('zone_anchor_lookahead', False)
@@ -438,6 +439,19 @@ class TeamPolicy(tr.PolicyNet2):
             matches = (defenders[:, None] == buildings['center']).all(axis=-1)
             existing_radius = np.max(np.where(matches, native_radius, 0.), axis=1, initial=0.)
             radius = garrison_reach(np.asarray(st['build_areas'])[legal], base, per_metre, radius)
+        if self.garrison_early_coverage:
+            delay = tr._rule(rules, 'SafeZone', '_outside_first_shot_seconds')
+            if np.isfinite(delay) and delay > 0.:
+                civilians = units['pos'][units['kind'] == 0]
+                occupied = [zone for zone in native['zones'] if len(zone) >= 3
+                            and tr.inside_polygon(civilians, zone).any()]
+                inside_defenders = np.zeros(len(defenders), dtype=bool)
+                inside_targets = np.zeros(len(world), dtype=bool)
+                for zone in occupied:
+                    inside_defenders |= tr.inside_polygon(defenders, zone)
+                    inside_targets |= tr.inside_polygon(world, zone)
+                defenders, existing_radius = defenders[inside_defenders], existing_radius[inside_defenders]
+                radius = np.where(inside_targets, radius, 0.)
         gain = garrison_perimeter_gain(native['zones'], defenders, world, radius, existing_radius)
         self.garrison_coverage_cells[legal] = torch.from_numpy(gain)
 
@@ -751,7 +765,7 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','garrison_coverage','garrison_building_range','zone_population','zone_anchor_lookahead'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead'))
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
         raise ValueError('Invalid gesture planning flag')
     if 'sample_battle' in team and team['sample_battle'] is not True:
@@ -763,6 +777,9 @@ def checkpoint_team(record,base):
     if 'garrison_building_range' in team and (
             team['garrison_building_range'] is not True or not team.get('garrison_coverage')):
         raise ValueError('Building-specific Garrison range requires coverage')
+    if 'garrison_early_coverage' in team and (
+            team['garrison_early_coverage'] is not True or not team.get('garrison_building_range')):
+        raise ValueError('Early Garrison coverage requires building-specific range')
     if 'zone_population' in team:
         weight = team['zone_population']
         if type(weight) not in (int, float) or not 0 <= weight <= 16:
@@ -1099,6 +1116,7 @@ def main():
         if resumed_cast_probe is not None:
             population[-1] = resumed_cast_probe
         if proposal is not None:
+            paired_early_defense = False
             matched = defenders.get(team_id(proposal))
             placement = (defense_coverage_candidate(matched, rng)
                          or defense_spacing_candidate(matched, rng))
@@ -1106,10 +1124,12 @@ def main():
                 population[-1] = placement
                 if placement.get('garrison_coverage'):
                     matched_plan = shelter_order_candidate(placement) or placement
-                    matched_plan.pop('garrison_building_range', None)
+                    matched_plan.pop('garrison_early_coverage', None)
+                    matched_plan['garrison_building_range'] = True
                     population[-1] = matched_plan
-                    population[1] = dict(deepcopy(matched_plan), garrison_building_range=True)
-            if matched is not None:
+                    population[1] = dict(deepcopy(matched_plan), garrison_early_coverage=True)
+                    paired_early_defense = True
+            if matched is not None and not paired_early_defense:
                 sheltered = matched['levels'][0]['outbreak'].get('civilians_inside_pct')
                 if isinstance(sheltered, (int, float)) and 0 < sheltered < 35:
                     if proposal.get('zone_population') and not proposal.get('zone_anchor_lookahead'):

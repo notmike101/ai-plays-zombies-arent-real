@@ -162,6 +162,30 @@ class SearchTests(unittest.TestCase):
         model.set_garrison_coverage(state, tools, np.ones(search.tr.NC), 1000, 1000)
         torch.testing.assert_close(model.garrison_coverage_cells[:2], torch.tensor([.5, 0.]))
 
+    def test_early_garrison_coverage_uses_only_occupied_zones_when_delay_applies(self):
+        rng = np.random.default_rng(44)
+        team = dict(search.random_team(rng), garrison_coverage=10.,
+                    garrison_building_range=True, garrison_early_coverage=True)
+        model = search.TeamPolicy(team)
+        frozen = dict(base='base', team_id=search.team_id(team), team=team)
+        self.assertEqual(search.checkpoint_team(frozen, 'base')['team'], team)
+        tools = np.zeros(search.tr.NU)
+        tools[search.GARRISON] = 1
+        box = np.array([[0, 0], [40, 0], [40, 40], [0, 40]])
+        rules = {'garrison_range_base': '0', 'garrison_range_per_meter': '1',
+                 'garrison_range_max': '50', 'safezone_outside_first_shot_seconds': '12'}
+        state = dict(planning=True, rules=rules,
+                     native=dict(camera=[0., 0., 1.], zones=[box, box + [400, 0]],
+                                 units=dict(kind=np.array([0]), pos=np.array([[20, 20]])),
+                                 buildings=dict(center=np.array([[20, 20]]), area=np.array([1600.]))),
+                     build_targets=[(520, 480), (920, 480)] + [None] * (search.tr.NC - 2),
+                     build_areas=[1600., 1600.] + [0.] * (search.tr.NC - 2))
+        model.set_garrison_coverage(state, tools, np.ones(search.tr.NC), 1000, 1000)
+        torch.testing.assert_close(model.garrison_coverage_cells[:2], torch.tensor([.5, 0.]))
+        rules['safezone_outside_first_shot_seconds'] = '0'
+        model.set_garrison_coverage(state, tools, np.ones(search.tr.NC), 1000, 1000)
+        torch.testing.assert_close(model.garrison_coverage_cells[:2], torch.tensor([.5, .5]))
+
     def test_zone_population_counts_only_new_civilians_in_legal_rectangles(self):
         rng = np.random.default_rng(43)
         team = dict(search.random_team(rng), zone_population=9.)
