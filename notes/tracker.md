@@ -2,6 +2,37 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 154952 finished at 02:28 Central. The sampled candidate
+  3f44400a70a7d7d9 made non-argmax legal choices in 88 of 118
+  observed battle decisions and stayed greedy in all 27 planning
+  observations. It still held 42.54% live at 82.5 simulated seconds
+  and ended at 4.56% saved at retry. The otherwise identical greedy
+  arm ended at 9.75% at 65.87 seconds on a different outbreak. Both
+  spent three Demolition charges near unlock and one Firebomb.
+  The sampled discovery episode rejected 84 outside choices (82
+  pointer gestures and two casts). The greedy arm had 14 Firebomb
+  rejections and no planning geometry rejections. A fourth attempt
+  failed on an incoherent HUD frame, and the GRU control timed out.
+- Fresh reserved-copy results for 3f44400a70a7d7d9 were 9.16% and
+  8.89%, both at early retry, with four deployments in each. Both
+  reference outbreaks overlapped discovery. Native low-save fallback
+  was observed in the greedy and sampled discovery results and in
+  both fresh held-out results. It recorded the trigger separately
+  from each official footer score. No win, valid comparison, or promotion.
+- Commit b2ade7c extends the same exact boundary filtering to known
+  invalid battle clicks, drags, snapped targets and ability endpoints
+  in layout-free discovery and evaluation. Raw dispatch still checks
+  targets. An incoherent HUD read now lets the writer finish between
+  bounded seqlock attempts. The supported build, shared mapping and
+  HUD frame validity checks remain in effect. All 249 script tests
+  passed. The launch still uses the original production weights.
+- Seed 155952 started at 02:29 Central, portable D: trainer PID 61928.
+  Two discovery generations on inst13–16 and separate evaluation on
+  inst18, inst17, inst19, inst20. Prior `analysis/coverage-team-9922b10880`;
+  run log `analysis/coverage-layout-free-155952-drive-d.log`. Headroom
+  13.12 GiB RAM and 18.22 GiB disk. Reconfirm the new masks and HUD
+  retry on live boards. The 35% held-out consistency goal remains open.
+
 - Seed 153952 finished at 02:14 Central. Sixteen discovery results:
   14 early retries, one native loss, one planning timeout, zero wins, and
   54 confirmed stock decreases. Four legacy geometry tools accounted
