@@ -13,6 +13,15 @@ _OTHER = {'planning_entropy': 'planning_entropy',
           'phase_balance': 'phase_balance', 'spatial': 'spatial_cells'}
 
 
+def reward_coefficients(config, component, arms):
+    if component == 'missile_civilian_loss':
+        return {arms[0]: 0., arms[1]: config['learning']['missile_civilian_cost']}
+    key = {'occupied_breach': 'occupied_breach_cost_by_arm',
+           'ready_coverage': 'ready_coverage_credit_by_arm',
+           'ready_shortfall': 'ready_shortfall_cost_by_arm'}[component]
+    return config[key]
+
+
 def signal_state(sampled_seeds, unknown, receipt_games, changed_games, minimum):
     if changed_games:
         return 'treatment_observed'
@@ -27,13 +36,14 @@ def summarize_signal(rows, config, arms, evaluation, *, start_round, minimum=4):
     """Count training receipts separately from frozen official outcomes."""
     design = config.get('comparison', 'spatial')
     arms = tuple(arms)
+    coefficients = reward_coefficients(config, _DESIGN[design][1], arms) if design in _DESIGN else {}
     primary = {}
     for arm in arms:
         samples = [r for r in rows if r['arm'] == arm and r['phase'] == 'train']
         evidence = [r.get('experiment_signal') or {} for r in samples]
         seen = set()
-        eligible = receipts = changed = components = unknown = 0
-        variation = 0.
+        eligible = receipts = changed = components = unknown = unchecked = mismatches = 0
+        variation = delta_sum = 0.
         for row, signal in zip(samples, evidence):
             seed = row.get('outbreak_seed')
             if design in _DESIGN:
@@ -43,7 +53,19 @@ def summarize_signal(rows, config, arms, evaluation, *, start_round, minimum=4):
                 component = (signal.get('reward_components') or {}).get(reward)
                 applied = occurrence and type(component) in (int, float) and math.isfinite(component) and component != 0.
                 components += int(applied)
-                difference = applied and arm != arms[0]
+                basis = (signal.get('reward_bases') or {}).get(reward)
+                difference = False
+                if observed is not None:
+                    if any(type(value) not in (int, float) or not math.isfinite(value)
+                           for value in (basis, component)):
+                        unchecked += 1
+                    elif not math.isclose(component, coefficients[arm] * basis, rel_tol=1e-6, abs_tol=1e-9):
+                        mismatches += 1
+                    else:
+                        reference = coefficients[arms[0]] * basis
+                        difference = occurrence and not math.isclose(component, reference, rel_tol=1e-6, abs_tol=1e-9)
+                        if difference:
+                            delta_sum += component - reference
             elif design in _SAMPLING:
                 distribution = (signal.get('distributions') or {}).get(_SAMPLING[design])
                 observed = None if distribution is None else distribution['choices'] > 0
@@ -68,13 +90,17 @@ def summarize_signal(rows, config, arms, evaluation, *, start_round, minimum=4):
         primary[arm] = dict(episodes=len(samples), observed_episodes=eligible,
                             distinct_observed_outbreaks=len(seen), unknown_episodes=unknown,
                             mechanism_episodes=receipts, reward_component_episodes=components,
-                            treatment_episodes=changed, sampling_variation_sum=variation)
+                            treatment_episodes=changed, sampling_variation_sum=variation,
+                            reward_difference_sum=delta_sum, unchecked_reward_episodes=unchecked,
+                            reward_mismatch_episodes=mismatches)
     # Advisory only. A sparse event can become observable in later rounds.
     has_change = any(a['treatment_episodes'] for a in primary.values())
     has_mechanism = any(a['mechanism_episodes'] for a in primary.values())
     min_seen = min(a['distinct_observed_outbreaks'] for a in primary.values())
-    unknown = sum(a['unknown_episodes'] for a in primary.values())
+    unknown = sum(a['unknown_episodes'] + a['unchecked_reward_episodes'] for a in primary.values())
     state = signal_state(min_seen, unknown, has_mechanism, has_change, minimum)
+    if any(a['reward_mismatch_episodes'] for a in primary.values()):
+        state = 'unexpected_reward_components'
     if design == 'spatial' and has_mechanism:
         state = 'architecture_exercised_distribution_difference_unmeasured'
     natural = [result['complete'] for result in evaluation.values()]

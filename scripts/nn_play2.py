@@ -1320,6 +1320,12 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     phase_balance=planning_steps > 0 and battle_steps > 0 and planning_steps != battle_steps,
                     spatial_cells=spatial_cells_observed),
                 reward_components=rewards.copy(),
+                reward_bases=dict(
+                    occupied_breach=-shelter.breach_exposures / civ0 if shelter.next_sample else None,
+                    ready_coverage=coverage,
+                    ready_shortfall=-max(1. - coverage / READY_COVERAGE_SHORTFALL_TARGET, 0.)
+                    if coverage is not None else None,
+                    missile_civilian_loss=-missile_losses['assigned'] / civ0 if missile_losses is not None else None),
                 distributions={signal_mode: distribution_signal} if signal_mode in ('planning_tools', 'zone_cells') else {})
         if rows['rews']:
             rows['rews'][-1] += rewards['terminal']

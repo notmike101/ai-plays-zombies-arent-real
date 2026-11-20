@@ -16,7 +16,10 @@ preserved. The report covers rows collected by the current invocation.
 2. **Did the arms receive different treatment?** Reward studies keep the
    exact applied reward components per episode. A nonzero reference reward
    shows the underlying mechanism worked. The diagnostic records the
-   experimental arm's nonzero reward separately. Exploration studies compare
+   experimental arm's reward with the reference coefficient applied to the
+   same native measurement. A nonzero candidate reward at the baseline rate
+   is reported as unexpected instead of verified differential treatment.
+   Exploration studies compare
    the sampled masked distribution with the same logits and legal mask at
    temperature 1 and count actual changes. Optimizer comparisons record
    decision conditions that activate the extra planning entropy or phase
