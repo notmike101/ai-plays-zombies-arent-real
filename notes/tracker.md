@@ -2,6 +2,43 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 16:42 Central, shelter-duration comparison 211952 completed.
+  Candidate got .049247355 recorded differential credit across
+  two of 16 training games. Second episode logged 39059.20
+  protected civilian-seconds and .04797248 credit. Baseline and
+  candidate had two occupied starts each in training. Frozen
+  both started 3/4, all six reached retry and had zero shelter
+  occupancy. One reused earlier outbreak, zero natural finishes.
+  No promotion, private model and Adam retained.
+- Full native snapshot replay from five live read-only captures
+  preserved all fields with staged batched map decoder. Boston
+  opening maps held zero or one entries, so that optimization
+  offered no measurable benefit here and stayed isolated.
+  Read-only refresh at matched priority/affinity max 14.04 ms
+  across eight samples, native snapshot max 2.84 ms.
+- Two live matched pairs in 211952 retried on unused native roof
+  map 0x650858. At idle boundary deployed 5deebd5, dropping this
+  read after tracing all snapshot consumers. Existing used-map
+  validation remains. 353 isolated tests passed. No Observatory
+  restart and production checkpoint SHA unchanged.
+- Four-copy timed probe 212952 had two valid retries and two
+  diagnostic-wrapper failures reading the world clock in a menu.
+  Fixed wrapper preserved game actions and four-copy rerun
+  212953 completed four retries. Real in-worker refresh stalled
+  up to 3.073 wall seconds with no measurable process CPU time
+  in that span. Longest native snapshot 1.884 s wall, camera
+  rest 3.328 s wall. These are waits/scheduling candidates, with
+  no isolation of one cause. Output analysis/coverage-portable314/
+  tmp/cadence-frozen-212953.jsonl. All test copies exited.
+- At 16:46 launched four-copy diagnostic crossover 213952 PID
+  20164 (16:46:54), stock 1x, same frozen 5f80a288d2c1053a.
+  Shared 8 logical CPUs versus same 8 split 6 games/2 policy
+  workers, preserving below-normal priority and no higher host
+  budget. Four waves reverse assignment order with two seeds.
+  Output analysis/coverage-portable314/tmp/worker-affinity-
+  213952.jsonl. Use decision gaps and native pace for diagnosis.
+  Official qualification still needs fresh natural finishes.
+
 - At 16:28 Central, 211952 checkpointed four paired rounds.
   Fifteen retries and one baseline timeout, zero natural
   finishes. First-round candidate time credit remains the
