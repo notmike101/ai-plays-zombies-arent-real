@@ -2,6 +2,37 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 177952 started at 07:07 Central on D:, trainer PID 70916,
+  output `analysis/coverage-team-051d1d5ded`, and log
+  `analysis/coverage-layout-free-177952-drive-d.log`. Launch headroom
+  was 12.84 GiB RAM and 18.94 GiB disk. Commit 6ad7d46 compares
+  endpoint-only scoring with scoring 9 samples along the full Firebomb
+  segment once the model selects its first endpoint. It reuses the
+  same learned row weights, live camera grid and legal mask, without
+  a new observation/checkpoint schema. The native ledger retains the
+  requested strike line from the game deployment event and blast count.
+  Compare exact reference 5679a1607b5acf9e and one flag change. Each
+  owned copy runs both arms, with shared policy seeds within pairs
+  and independently selected native outbreaks. No simulation training.
+  All 278 script and 60 Observatory tests passed. Network-output
+  verification and graph checks passed. Production hash matched.
+- Seed 176952 finished at 07:06 with two native clears below 35%,
+  five scored early retries, one timeout and no reserved evaluation.
+  Reference 0c63192f22089b99 peaked at 29.45% on outbreak 1222059323
+  after a 9.25% retry on that same seed. The game credited zero
+  Firebomb kills on the 29.45% clear. Its high score and repeated
+  low score remain distinct live results of the same frozen policy.
+  Discovery selected 5679a1607b5acf9e, with 23.23% and 8.27% on two
+  distinct seeds, mean 15.75%, and 70 and 69 Firebomb kills.
+  The other variant timed out once and retried at 9.74%.
+- Read-only first-wave journals showed three confirmed Firebomb
+  lines of 248.5 to 829.7 metres and 30 logged impacts each, within
+  20.5 metres of their line. First impact occurred 11.96-11.97 sim
+  seconds after the deployment event. The fourth confirmed line
+  had no bomb events before the retry. The native data motivates
+  matching the spatial scores to the geometry, and gives no effect
+  attribution beyond the game receipts.
+
 - Seed 176952 started at 06:49 Central on D:, trainer PID 61696,
   output `analysis/coverage-team-ca003d1e59`, and log
   `analysis/coverage-layout-free-176952-drive-d.log`. Launch headroom
