@@ -2,6 +2,28 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 166952 started at 04:44 Central on D:, portable trainer PID
+  38836, output `analysis/coverage-team-9a5dba2492` and log
+  `analysis/coverage-layout-free-166952-drive-d.log`. Startup headroom
+  13.04 GiB RAM and 18.84 GiB free. Two discovery waves include a
+  candidate with the same learned policy as the provisional parent and
+  seeded samples from its masked rectangle-corner distribution. The
+  policy still selects all tools. The corner draws use a separate RNG,
+  and the sampling flag is part of the frozen policy identity. All 262
+  script tests passed, including mask and seed repeatability. Production
+  checkpoint hash verified at launch. Commit ddb5e58.
+- Audit of 87 recorded fresh layout-free candidate starts under verified
+  READY found 62 at 28.95% and 22 at 19.68% initially sheltered, with
+  three outside those two counts. This is a count of rows, with replayed
+  native seeds possible. It motivates directly sampling legal endpoints.
+- Seed 165952 drained at 04:44 with eight scored early retries and no
+  wins or reserved evaluation. Matched footprint-only and early-fire
+  candidates saved 8.94% and 8.68% on separate outbreaks, with first
+  occupied breaches at 49.87 and 49.67 simulated seconds. Candidate
+  101bae34c9515b9c had 21 Garrisons and 48.11% alive at 66.63 seconds,
+  then retried at 9.99% after 155.6 seconds on seed 1296320277. No
+  candidate qualified for promotion or the 35% consistency test.
+
 - Seed 165952 started at 04:34 Central, portable D: trainer PID 53252,
   output `analysis/coverage-team-c31b6d0999` and log
   `analysis/coverage-layout-free-165952-drive-d.log`. Launch headroom
