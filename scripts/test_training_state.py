@@ -21,7 +21,7 @@ class StateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             self.assertEqual(collect_pairs(pool, jobs, Path(directory), observe=True), paired)
             self.assertEqual(pool.map.call_args.args[1], jobs)
-            self.assertEqual(pool.map.call_args.args[0].keywords, {'observe': True})
+            self.assertEqual(pool.map.call_args.args[0].keywords, {'observe': True, 'audit_signal': True})
             self.assertIs(pool.map.call_args_list[0].args[0], pool.map.call_args.args[0])
             self.assertIn('Native map changed', (Path(directory)/'interface-retries.jsonl').read_text())
 
@@ -285,6 +285,7 @@ class StateTests(unittest.TestCase):
             self.assertEqual(set(saved['optimizers']), {'dense','shared'})
             self.assertFalse((run/'paired.tmp').exists())
             self.assertFalse((run/'consistency.json').exists())
+            self.assertEqual(json.loads((run/'signal-coverage.json').read_text())['advisory'], 'collecting')
             self.assertEqual(len((run/'results.jsonl').read_text().splitlines()), 2)
 
     def test_shelter_defense_arms_differ_only_in_cost_through_training_and_evaluation(self):

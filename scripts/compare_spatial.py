@@ -22,6 +22,7 @@ import nn_play2 as trainer
 import zar_boot
 from env_zar import ZAREnvError
 from nn_report import records
+from experiment_signal import summarize_signal
 
 
 class SpatialPolicy(trainer.PolicyNet2):
@@ -50,7 +51,7 @@ DEFENSE_COSTS = {'defense_baseline': trainer.BREACH_COST,
 READY_SHORTFALL_COSTS = {'shortfall_baseline': 0., 'shortfall_penalty': .15}
 
 
-def episode(job, *, observe=False):
+def episode(job, *, observe=False, audit_signal=False):
     copy, arm, weights, seed, tag, *phase = job
     planning_study = arm in PLANNING_TEMPERATURES or arm in PLANNING_ENTROPY_BONUSES
     try:
@@ -71,6 +72,11 @@ def episode(job, *, observe=False):
         options = dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')
         if observe:
             options['observer_interval'] = 1.
+        if audit_signal:
+            options['experiment_signal'] = ('planning_tools' if arm in PLANNING_TEMPERATURES else
+                                            'zone_cells' if arm in ZONE_TEMPERATURES else
+                                            'planning_entropy' if arm in PLANNING_ENTROPY_BONUSES else
+                                            'spatial_cells' if arm in ('dense', 'shared') else 'receipts')
         if arm in ('standard', 'balanced'):
             options.update(fixed_speed='speed_1', fixed_clock=True)
         if arm in BREACH_COSTS:
@@ -104,7 +110,7 @@ def episode(job, *, observe=False):
 
 
 def collect_pairs(pool, jobs, directory, *, observe=False):
-    worker = partial(episode, observe=observe)
+    worker = partial(episode, observe=observe, audit_signal=True)
     results = list(pool.map(worker, jobs))
     transient = ('Timed out waiting for UI frames', 'Stale native HUD frame',
                  'No consistent HUD observer frame', 'Native map changed during read',
@@ -148,7 +154,7 @@ def heldout_consistency(rows, policy_id, *, discovery_seeds=()):
     training_seeds = training_outbreak_seeds(rows).union(discovery_seeds)
     seen = set(training_seeds)
     means = []
-    qualifying = incomplete = discovery_overlap = 0
+    qualifying = incomplete = discovery_overlap = complete = 0
     for start in range(0, len(cohort), 10):
         block = []
         for row in cohort[start:start+10]:
@@ -162,12 +168,13 @@ def heldout_consistency(rows, policy_id, *, discovery_seeds=()):
                 seen.add(outbreak)
             if valid:
                 block.append(score)
+                complete += 1
                 qualifying += bool(row.get('win') and score >= .35)
             else:
                 incomplete += 1
         if len(block)==10:
             means.append(math.fsum(block)/10)
-    return dict(attempts=len(cohort), incomplete=incomplete, qualifying=qualifying, block_means=means,
+    return dict(attempts=len(cohort), complete=complete, incomplete=incomplete, qualifying=qualifying, block_means=means,
                 discovery_overlap=discovery_overlap, passed=len(means)==3 and min(means)>=.35)
 
 
@@ -349,6 +356,17 @@ def main():
         directory = Path(operator.ROOT, 'analysis', tag)
         directory.mkdir()
         summaries = []
+        def report_signal():
+            evaluation = {arm: heldout_consistency(
+                [row for row in summaries if row['arm'] == arm], trainer.policy_id(net),
+                discovery_seeds=discovery_seeds) for arm, net in models.items()}
+            report = summarize_signal(summaries, config, models, evaluation, start_round=first_round)
+            temporary = directory/'signal-coverage.tmp'
+            temporary.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
+            temporary.replace(directory/'signal-coverage.json')
+            print('experiment signal', report['advisory'], flush=True)
+            return evaluation
+
         print(directory, 'source policy', source, 'starting round', first_round, flush=True)
         with ProcessPoolExecutor(workers) as pool:
             for rnd in range(first_round, args.train_rounds + args.eval_rounds):
@@ -370,7 +388,8 @@ def main():
                                    phase='train' if training else 'evaluation',
                                    policy_id=policies[job[1]], start_kind=row.get('start_kind'),
                                    outbreak_seed=(row.get('outbreak') or {}).get('seed'),
-                                   decisions=len(row.get('obs', [])), batch_seconds=batch_seconds)
+                                   decisions=len(row.get('obs', [])), batch_seconds=batch_seconds,
+                                   experiment_signal=row.get('experiment_signal'))
                     summary['battle_actions'] = dict(Counter(
                         trainer.TOOLS[u] for u, obs in zip(row.get('us', []), row.get('obs', []))
                         if not obs[trainer.PLANNING_INDEX]))
@@ -436,12 +455,11 @@ def main():
                                     weights={a:n.state_dict() for a,n in models.items()},
                                     optimizers={a:o.state_dict() for a,o in optimizers.items()}), temp)
                     temp.replace(directory/'paired.pt')
+                    report_signal()
                     if (directory/'stop-after-round').is_file():
                         print(f'Paused after atomic checkpoint at next_round={rnd + 1}', flush=True)
                         return
-        results = {arm: heldout_consistency([row for row in summaries if row['arm']==arm],
-                                           trainer.policy_id(net), discovery_seeds=discovery_seeds)
-                   for arm, net in models.items()}
+        results = report_signal()
         (directory/'consistency.json').write_text(json.dumps(results, indent=2))
 
 

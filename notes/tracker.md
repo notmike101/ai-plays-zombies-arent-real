@@ -2,6 +2,26 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 14:10 Central, completed 200952 and started private entropy
+  study 201952 from 7753268e22cc7823. All eight 200952 frozen
+  battles were fresh retry outcomes, averaging 7.86% baseline
+  and 7.62% broader prep. No natural finishes. Production
+  checkpoint stayed immutable.
+- Study 201952 finished at 14:21 Central. No occupied shelters.
+  Fresh reserve means were 6.77% baseline (three) and 6.60%
+  planning entropy (four), including one natural 0% loss.
+  Native receipts showed 15 first-kill intervals, 12 observed
+  zero-kill runs and five unknown. Among 26 retries with both
+  timestamps, outnumbering preceded the retry floor by a median
+  11.72 simulated seconds.
+- Commit c6e4ae5 enabled exact planning geometry for audited
+  comparisons. Before it, legal masks could expose rectangle
+  anchors that had no legal second corner. 330 tests passed.
+- The comparison runner now writes advisory signal coverage
+  after valid paired checkpoints and at frozen completion.
+  See notes/experiment-signal.md for receipt, treatment and
+  outcome definitions. No automatic stop based on sparse data.
+
 - At 14:05 Central, observed comparison 200952 had completed
   all six paired training rounds. Baseline scored 4.83%
   averaged over ten official scores (two planning timeouts);

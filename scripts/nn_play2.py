@@ -423,6 +423,15 @@ def exploration_distribution(ranked, legal, fraction):
 ZONE_PLACEMENT_TOOLS = {TOOLS.index(name) for name in ('zone_rect', 'zone_begin', 'zone_corner')}
 
 
+def record_distribution_signal(signal, sampled, reference):
+    signal['choices'] += 1
+    if reference is None:
+        return
+    distance = .5 * float((sampled.probs - reference.probs).abs().sum())
+    signal['variation'] += distance
+    signal['changed'] += int(distance > 1e-7)
+
+
 def tool_distribution(logits, mask, *, temperature=None):
     if temperature is not None:
         logits = logits / torch.as_tensor(temperature, dtype=logits.dtype).reshape(-1, 1)
@@ -761,6 +770,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         planning_tool_temperature = options.get('planning_tool_temperature')
         if planning_tool_temperature is not None:
             rows['tool_temperatures'] = []
+        signal_mode = options.get('experiment_signal')
+        distribution_signal = dict(choices=0, changed=0, variation=0.)
+        planning_entropy_observed = False
+        spatial_cells_observed = False
         planning_zone_audit = options.get('planning_zone_audit', False)
         if planning_zone_audit:
             rows['planning_action_windows'] = []
@@ -910,11 +923,21 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                             audit = battle_actions['alternate_tool_audit']
                             audit['compared'] += 1
                             audit['distance_sum'] += net.alternate_tool_distance(du)
+                    if st['planning'] and signal_mode == 'planning_tools' and np.count_nonzero(mu) > 1:
+                        reference = tool_distribution(lu.flatten(), mu) if tool_temperature else None
+                        record_distribution_signal(distribution_signal, du, reference)
+                    if st['planning'] and signal_mode == 'planning_entropy' and not planning_entropy_observed:
+                        planning_entropy_observed = float(du.entropy()) > 0.
                     mc = cell_mask(st, u, mc)
                     if zone_temperature is not None and st['planning'] and u in ZONE_PLACEMENT_TOOLS:
                         cell_temperature = zone_temperature
                     dc = cell_distribution(lc, u, mc,
                                            temperature=cell_temperature if zone_temperature is not None else None)
+                    if signal_mode == 'zone_cells' and st['planning'] and u in ZONE_PLACEMENT_TOOLS and np.count_nonzero(mc) > 1:
+                        reference = cell_distribution(lc, u, mc) if cell_temperature != 1. else None
+                        record_distribution_signal(distribution_signal, dc, reference)
+                    if signal_mode == 'spatial_cells' and not spatial_cells_observed:
+                        spatial_cells_observed = np.count_nonzero(mc) > 1
                     cell_rng = zone_rng if st['planning'] and TOOLS[u] == 'zone_rect' else None
                     if (garrison_rng is not None and greedy and st['planning']
                             and TOOLS[u] == 'garrison' and mc.sum() > 1):
@@ -1283,6 +1306,21 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         if 'ready_shortfall_cost' in options:
             rewards['ready_shortfall'] = charge_ready_shortfall(
                 footer, ready_step, rows['rews'], options['ready_shortfall_cost'])
+        if signal_mode:
+            coverage = verified_ready_coverage(footer, ready_step, rows['rews'])
+            planning_steps = sum(bool(obs[PLANNING_INDEX]) for obs in rows['obs'])
+            battle_steps = len(rows['obs']) - planning_steps
+            rows['experiment_signal'] = dict(
+                receipts=dict(
+                    occupied_exposure=bool(shelter.breach_exposures) if shelter.next_sample else None,
+                    occupied_ready=coverage > 0 if coverage is not None else None,
+                    below_ready_target=coverage < READY_COVERAGE_SHORTFALL_TARGET if coverage is not None else None,
+                    missile_civilian_loss=missile_losses['confirmed'] > 0 if missile_losses is not None else None,
+                    planning_entropy=planning_entropy_observed,
+                    phase_balance=planning_steps > 0 and battle_steps > 0 and planning_steps != battle_steps,
+                    spatial_cells=spatial_cells_observed),
+                reward_components=rewards.copy(),
+                distributions={signal_mode: distribution_signal} if signal_mode in ('planning_tools', 'zone_cells') else {})
         if rows['rews']:
             rows['rews'][-1] += rewards['terminal']
         advance = end == 'won' and saved is not None and saved >= .35
