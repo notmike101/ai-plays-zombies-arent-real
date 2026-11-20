@@ -389,6 +389,30 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(search.available_placement_neighbors(parent, [(*r, 'ChemMine') for r in rosters], rng), [])
         self.assertEqual(search.available_placement_neighbors(parent, [rosters[0], ('Garrison',)], rng), [])
 
+    def test_fitted_pair_retest_restores_exact_weights_and_all_fit_exposure(self):
+        import json
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        reference = dict(search.random_team(np.random.default_rng(20)), sample_battle=True,
+                         cast_target_mode='greedy')
+        candidate = copy.deepcopy(reference)
+        candidate['battle'][0][0] += .01
+        fit = dict(candidate=search.team_id(candidate), reference=search.team_id(reference),
+                   team=candidate, scored_seeds=[13])
+        rows = [dict(generation=1, team=reference, team_id=fit['reference']),
+                dict(generation=0, levels=[dict(stage=1, start_kind='fresh', outbreak=dict(seed=24))])]
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root/'target-fit.json').write_text(json.dumps(fit))
+            (root/'trials.jsonl').write_text(''.join(json.dumps(row)+'\n' for row in rows))
+            self.assertEqual(search.restore_fitted_pair(root, 'base'), ((reference, candidate), {13, 24}))
+            fit['team']['idle_bias'] += 1.
+            fit['candidate'] = search.team_id(fit['team'])
+            (root/'target-fit.json').write_text(json.dumps(fit))
+            with self.assertRaisesRegex(ValueError, 'differ only'):
+                search.restore_fitted_pair(root, 'base')
+
     def test_live_cast_gradient_matches_autodiff_on_legal_cells(self):
         model = search.TeamPolicy(search.random_team(np.random.default_rng(42)), collect_cast_gradients=True)
         tool = search.FIREBOMB

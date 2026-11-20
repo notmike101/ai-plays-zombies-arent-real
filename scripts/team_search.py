@@ -1029,6 +1029,23 @@ def restore_layout_free_proposal(net, directory):
     return team
 
 
+def restore_fitted_pair(directory, base):
+    fit = json.loads((directory/'target-fit.json').read_text())
+    candidate = checkpoint_team(dict(base=base, team_id=fit['candidate'], team=fit['team']), base)['team']
+    reference = None
+    fit_outbreaks = set(fit['scored_seeds'])
+    for trial in records(directory/'trials.jsonl'):
+        if trial.get('generation') == 0:
+            seed = fitness.l1_outbreak_seed(trial)
+            if seed is not None:
+                fit_outbreaks.add(seed)
+        if trial.get('team_id') == fit['reference']:
+            reference = checkpoint_team(dict(base=base, team_id=fit['reference'], team=trial['team']), base)['team']
+    if reference is None or candidate == reference or dict(candidate, battle=reference['battle']) != reference:
+        raise ValueError('Expected a saved reference and challenger that differ only in learned targeting weights')
+    return (reference, candidate), fit_outbreaks
+
+
 def save_frozen_base(directory, weights, continuation):
     target = directory / 'base.pt'
     if continuation is not None:
@@ -1124,7 +1141,7 @@ def main():
     neighbors.add_argument('--placement-neighbors', action='store_true',
                            help='Compare two equipped placement preferences in the same plan slot')
     neighbors.add_argument('--battle-neighbors', nargs='?', const='all',
-                           choices=('all', 'firebomb', 'firebomb-line', 'cast-sampling', 'learn-targets'),
+                           choices=('all', 'firebomb', 'firebomb-line', 'cast-sampling', 'learn-targets', 'retest-fit'),
                            help='Compare battle targeting or learn cast weights from real scores')
     parser.add_argument('--goal-margin', action='store_true',
                         help='Rank unsuccessful discovery battles by survival above the 35 percent target')
@@ -1151,11 +1168,13 @@ def main():
     battle_target = FIREBOMB_ROW if args.battle_neighbors == 'firebomb' else None
     compare_line = args.battle_neighbors == 'firebomb-line'
     learn_targets = args.battle_neighbors == 'learn-targets'
-    paired_battle = args.battle_neighbors in ('firebomb-line', 'cast-sampling')
+    retest_fit = args.battle_neighbors == 'retest-fit'
+    paired_battle = args.battle_neighbors in ('firebomb-line', 'cast-sampling', 'retest-fit')
     repeat_pair = args.placement_neighbors or battle_target is not None or paired_battle or learn_targets
     copies=args.copies
-    if not 4<=len(copies)<=8 or len(set(copies))!=len(copies) or args.generations<1 or args.later_retries<0:
-        parser.error('Use 4–8 distinct owned copies and positive generations')
+    minimum_copies = 2 if retest_fit else 4
+    if not minimum_copies <= len(copies) <= 8 or len(set(copies))!=len(copies) or args.generations<1 or args.later_retries<0:
+        parser.error(f'Use {minimum_copies}–8 distinct owned copies and positive generations')
     holdout_copies = args.holdout_copies or copies
     if args.holdout_copies:
         if (len(holdout_copies) not in (2, 4, 6, 8)
@@ -1165,8 +1184,10 @@ def main():
         if args.compare_forecast or args.compare_speed or args.compare_shadow:
             parser.error('Reserved holdout copies are for the final campaign evaluation')
     worker_count = max(len(copies), len(holdout_copies))
-    if (args.battle_neighbors or args.placement_neighbors) and (not args.click_start or len(copies) != 4):
-        parser.error('Paired exploration requires four copies and the controlled fresh L1 start')
+    paired_copy_counts = (2, 4) if retest_fit else (4,)
+    if (args.battle_neighbors or args.placement_neighbors) and (
+            not args.click_start or len(copies) not in paired_copy_counts):
+        parser.error('Paired exploration requires the controlled fresh L1 start and a supported copy count')
     if repeat_pair and args.generations != 2:
         parser.error('Fixed paired exploration requires two waves')
     if args.goal_margin and not args.click_start:
@@ -1222,7 +1243,7 @@ def main():
                         with (directory/'shadow-comparison.jsonl').open('a') as f:
                             f.write(json.dumps(result)+'\n')
             return
-        population=[random_team(rng) for _ in copies[1:]]
+        population = [random_team(rng) for _ in range(max(3, len(copies)-1))]
         initial_team = prior or proposal
         if initial_team:
             population[0] = initial_team
@@ -1365,7 +1386,12 @@ def main():
                     candidate = placement_mode_candidate(proposal, rng, tool)
                     if candidate is not None:
                         population[index] = candidate
-        if learn_targets:
+        fit_outbreaks = set()
+        if retest_fit:
+            battle_arms, fit_outbreaks = restore_fitted_pair(args.continue_layout_free, base)
+            print('Frozen target retest:', [team_id(team) for team in battle_arms],
+                  'excluded fit outbreaks:', sorted(fit_outbreaks), flush=True)
+        elif learn_targets:
             training_parent = dict(proposal, sample_battle=True, cast_target_mode='sample')
             battle_arms = (training_parent, training_parent)
         elif compare_line:
@@ -1425,7 +1451,6 @@ def main():
                             f.write(json.dumps(result)+'\n')
                         print('cnn',result['cnn'],result.get('error'),[(r['end'],r['saved']) for r in result['levels']],flush=True)
                 return
-            fit_outbreaks = set()
             for generation in range(args.generations):
                 fit_targets = learn_targets and generation == 0
                 fit_trials = []
@@ -1468,7 +1493,7 @@ def main():
                         discovery_seeds.add(observed_seed)
                         if fit_targets:
                             fit_outbreaks.add(observed_seed)
-                        elif learn_targets:
+                        elif learn_targets or retest_fit:
                             result['target_fit_overlap'] = observed_seed in fit_outbreaks
                     with (directory/'trials.jsonl').open('a') as f:
                         f.write(json.dumps(result)+'\n')
