@@ -21,6 +21,39 @@ class InputContract(unittest.TestCase):
                                     (0x200, 1), (0x200, 1), (0x202, 0)])
         self.assertEqual(struct.unpack_from('<I', vi.buf, OFF['buttons'])[0], 0)
 
+    def test_module_snapshot_retries_transient_invalid_handle_without_truncating(self):
+        vi = VirtualInput.__new__(VirtualInput)
+        vi.pid = 123
+        invalid = ctypes.c_void_p(-1).value
+        handle = 0x100000042
+
+        def read_first(seen, entry):
+            self.assertEqual(seen.value, handle)
+            entry._obj.szModule = 'example.dll'
+            entry._obj.modBaseAddr = 0x140000000
+            return True
+
+        with (patch('zar_input.kernel32') as api,
+              patch('zar_input.ctypes.GetLastError', return_value=24),
+              patch('zar_input.time.sleep')):
+            api.CreateToolhelp32Snapshot.side_effect = [invalid, handle]
+            api.Module32FirstW.side_effect = read_first
+            self.assertEqual(vi._remote_module_base(None, 'example.dll'), 0x140000000)
+            self.assertEqual(api.CreateToolhelp32Snapshot.call_count, 2)
+            self.assertEqual(api.CloseHandle.call_args.args[0].value, handle)
+            api.Module32FirstW.assert_called_once()
+
+    def test_module_snapshot_permanent_failure_never_enumerates_invalid_handle(self):
+        vi = VirtualInput.__new__(VirtualInput)
+        vi.pid = 123
+        with (patch('zar_input.kernel32') as api,
+              patch('zar_input.ctypes.GetLastError', return_value=5)):
+            api.CreateToolhelp32Snapshot.return_value = ctypes.c_void_p(-1).value
+            self.assertIsNone(vi._remote_module_base(None, 'example.dll'))
+            api.CreateToolhelp32Snapshot.assert_called_once()
+            api.Module32FirstW.assert_not_called()
+            api.CloseHandle.assert_not_called()
+
     def test_inject_reuses_an_existing_section(self):
         vi = VirtualInput.__new__(VirtualInput)
         vi.open_section = lambda: None

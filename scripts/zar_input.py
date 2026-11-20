@@ -261,20 +261,26 @@ class VirtualInput:
                         ("szModule", ctypes.c_wchar * 256),
                         ("szExePath", ctypes.c_wchar * 260)]
 
-        snap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32,
-                                                 self.pid)
-        if snap == -1 or snap is None:
-            return None
+        invalid_handle = ctypes.c_void_p(-1).value
+        for attempt in range(4):
+            snap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32,
+                                                      self.pid)
+            if snap not in (None, -1, invalid_handle):
+                break
+            if ctypes.GetLastError() != 24 or attempt == 3:  # ERROR_BAD_LENGTH
+                return None
+            time.sleep(.02)
+        handle = ctypes.c_void_p(snap)
         try:
             me = MODULEENTRY32W()
             me.dwSize = ctypes.sizeof(MODULEENTRY32W)
-            ok = kernel32.Module32FirstW(snap, ctypes.byref(me))
+            ok = kernel32.Module32FirstW(handle, ctypes.byref(me))
             while ok:
                 if me.szModule.lower() == modname.lower():
                     return me.modBaseAddr
-                ok = kernel32.Module32NextW(snap, ctypes.byref(me))
+                ok = kernel32.Module32NextW(handle, ctypes.byref(me))
         finally:
-            kernel32.CloseHandle(snap)
+            kernel32.CloseHandle(handle)
         return None
 
     def open_section(self):
