@@ -2,6 +2,27 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:48 Central, 190952 first wave is scored: Police controls
+  9.89% and 9.86% (mean 9.875%), Missile 9.37% and 9.91% (mean
+  9.64%). All retries. The crossed wave is live under 71708
+  on inst13 PID 29984, inst14 72052, inst15 71764 and inst16
+  71524. Inst13's Missile arm had one native impact killing 21
+  zombies and no civilians as of sim 45.93, rather than a
+  repeated salvo at that check. Do not count a battle snapshot
+  as a score. Handoff 70252 remains waiting.
+- Offline blast-footprint geometry replay on the two finished
+  Missile trials found their first confirmed impact centers
+  37.60 m and 53.20 m from the nearest planned shelter perimeter,
+  within the native 56 m blast radius. Both also had a subsequent
+  native wall-cell break inside that radius. A conservative
+  geometry feature could have flagged the overlap. A bounded
+  NumPy probe for 40 legal-grid footprints, 8,142 fixture
+  entities and 62 segments took 2.09-3.84 ms (median 2.49 ms)
+  on this PC. This measures the feature calculation only.
+  It predicts current geometric overlap, not who will be
+  inside the blast after flight or a causal effect. The live
+  targeting policy and reward remain unchanged.
+
 - At 11:46 Central, wave-one Missile candidate ce5b191516c37f99
   retried at 9.37% (inst14/outbreak 3813848280) and 9.91%
   (inst16/1595816018). Native journals record 3 impacts at the
