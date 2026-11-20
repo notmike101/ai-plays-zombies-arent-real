@@ -2,6 +2,19 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:42 Central, READY coverage study 194952 completed its
+  first PPO round and started the second (inst13 PID 58788,
+  inst14 59216, inst15 33028, inst16 74268). First round baseline
+  retries were 5.69% and 0.12%; challenger 9.52% and 6.42%.
+  Two boards had two zones each, other two had no zones.
+  All four native READY events recorded 0% coverage and the
+  optional reward was zero. Native deployment lists were empty.
+  Short startup brought all four copies to verified planning
+  within 29 seconds of launch, with no fallback. Round wall
+  time was 92.93 s versus 127.01-146.35 s for three preceding
+  no-retry training rounds. This is an operational observation
+  under different boards, not a controlled speed comparison.
+
 - At 12:40 Central, breach-cost study 193952 exited naturally.
   In the reserve, the baseline averaged 9.82% across three
   scored retries and had one planning timeout. Stronger cost
