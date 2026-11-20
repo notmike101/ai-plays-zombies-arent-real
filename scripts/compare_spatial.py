@@ -149,9 +149,12 @@ def main():
                     summary['battle_actions'] = dict(Counter(
                         trainer.TOOLS[u] for u, obs in zip(row.get('us', []), row.get('obs', []))
                         if not obs[trainer.PLANNING_INDEX]))
-                    if args.compare_missile_credit:
+                    if args.compare_missile_credit or args.compare_phase_balance:
                         summary['missile_civilian_losses'] = row.get('battle_actions', {}).get('missile_civilian_losses')
                         summary['missile_civilian_reward'] = row.get('reward_components', {}).get('missile_civilian_loss')
+                        summary['legal_cast_tools'] = row.get('battle_actions', {}).get('legal_cast_tools', {})
+                        summary['confirmed_spends'] = row.get('battle_actions', {}).get('stock_decreased')
+                        summary['planning_placements_selected'] = row.get('selected_placements', {})
                     with (directory/'results.jsonl').open('a') as f:
                         f.write(json.dumps(summary)+'\n')
                     print(summary, flush=True)
