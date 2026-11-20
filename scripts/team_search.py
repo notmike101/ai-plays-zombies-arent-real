@@ -823,10 +823,10 @@ def main():
                 population[1]['refuge']=dict(scale=1.,aspect=float(rng.uniform(.7,1.5)),
                                              defense_weight=float(rng.uniform(.08,.22)))
         base=tr.policy_id(net)
-        view_revision='playable-overview-v3-bounded-targets-shelter-v2-specials-v1-retries-v1-verified-ready-v1'
+        view_revision='playable-overview-v3-bounded-targets-shelter-v2-specials-v1-retries-v2-verified-ready-v1'
         explore_without_layout = not args.demonstration and not (prior or {}).get('layout')
         if explore_without_layout and not args.allow_progression:
-            view_revision += '-placement-feedback-v1'
+            view_revision += '-placement-feedback-v2'
         evidence={}
         prices={}
         defenders = {}

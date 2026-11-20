@@ -213,6 +213,19 @@ class ZAREnv:
             time.sleep(.05)
         raise ZAREnvError('No fresh session-log header')
 
+    def logged_saved_fraction(self, sim):
+        """Read a recent official snapshot from the active battle's own log."""
+        data = read_session(self.log_path, self.log_started, expected_wall=self.log_header_wall)
+        snapshot = data.get('latest') if data else None
+        if not snapshot or snapshot.get('ev') != 'snapshot' or snapshot.get('phase') != 'playing':
+            return None
+        stamp = snapshot.get('sim')
+        pct = (snapshot.get('stats') or {}).get('saved_pct')
+        if (type(stamp) not in (int, float) or not 0 <= sim - stamp <= 3
+                or type(pct) not in (int, float) or not 0 <= pct <= 100):
+            return None
+        return pct / 100
+
     def stop_log(self, *, capture_events=False):
         self.vi.key_press(0x76, sc=65)
         for _ in range(20):

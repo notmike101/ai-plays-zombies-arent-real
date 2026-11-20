@@ -225,9 +225,31 @@ def blocked_placement_cells(st, retries, decision):
     return blocked
 
 
+def planning_geometry_masks(st, width, height):
+    boundary = st.get('playarea_boundary')
+    if not st['planning'] or boundary is None or st.get('dialog') or st.get('gesture_anchor'):
+        return {}
+    indices = np.arange(NC)
+    rows, cols = np.divmod(indices, 8)
+    cells = [cell_of_px(cell, width, height) for cell in indices]
+    inside = inside_polygon(cells, boundary) & st.get('world_cells', WORLD_CELLS)
+    if st.get('anchor'):
+        tool, anchor = st['anchor']
+        candidates = inside & inside[anchor] & (indices != anchor)
+        if tool == 10:
+            candidates &= ((rows != rows[anchor]) & (cols != cols[anchor])
+                           & inside[rows[anchor] * 8 + cols] & inside[rows * 8 + cols[anchor]])
+        return {tool: candidates}
+    corners = inside[rows[:, None] * 8 + cols[None, :]]
+    rectangles = (inside[:, None] & inside[None, :] & corners & corners.T
+                  & (rows[:, None] != rows[None, :]) & (cols[:, None] != cols[None, :]))
+    segments = inside & (inside.sum() >= 2)
+    return {10: rectangles.any(axis=1), 15: segments, 17: segments, 18: segments}
+
 def masks_for(st):
     tools, cells = base_masks(st)
-    blocked_tools = st.get('outside_retries', {}).keys() | st.get('placement_blocked', {}).keys()
+    blocked_tools = (st.get('outside_retries', {}).keys()
+                     | st.get('placement_blocked', {}).keys() | st.get('geometry_cells', {}).keys())
     for tool in blocked_tools:
         if tools[tool] and not cell_mask(st,tool,cells).any():
             tools[tool]=0
@@ -240,6 +262,9 @@ def cell_mask(st, u, mc):
         result[cell] = 0
     for cell in st.get('placement_blocked', {}).get(u, ()):
         result[cell] = 0
+    exact_geometry = st.get('geometry_cells', {}).get(u)
+    if exact_geometry is not None:
+        result *= exact_geometry
     return result
 
 
@@ -605,6 +630,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
 
         state = episode_state()
         next_rest=0.
+        next_retry_check = 0.
         excursion=False
         while end is None:
             if state['phase'] in ('won', 'lost'):
@@ -644,6 +670,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
             update_outside_retries(st,env.cw,env.ch)
             st['placement_blocked'] = blocked_placement_cells(st, placement_retry_at, len(rows['obs']))
+            if placement_feedback:
+                st['geometry_cells'] = planning_geometry_masks(st, env.cw, env.ch)
             mu, mc = masks_for(st)
             base_cells = mc
             if fixed_speed:
@@ -859,11 +887,21 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             for slot in st['deck']:
                 if slot['pending'] and state['sim'] >= slot['ready_t']:
                     slot['pending'] = False
-            timeout_reason,paused_since=battle_timeout(state,time.monotonic(),battle_start,paused_since,options)
+            now = time.monotonic()
+            timeout_reason,paused_since=battle_timeout(state,now,battle_start,paused_since,options)
+            official_retry_saved = None
+            if (state['phase'] == 'playing' and o['civ'] <= .1 * civ0
+                    and o['infections'] < .9 * civ0 and now >= next_retry_check):
+                next_retry_check = now + 1.
+                official_retry_saved = env.logged_saved_fraction(state['sim'])
             if state['phase'] in ('won', 'lost'):
                 end = state['phase']
-            elif state['phase'] == 'playing' and o['civ'] <= .1*civ0 and o['infections'] >= .9*civ0:
+            elif (state['phase'] == 'playing' and o['civ'] <= .1 * civ0
+                  and (o['infections'] >= .9 * civ0
+                       or official_retry_saved is not None and official_retry_saved <= .1)):
                 end = 'aborted'
+                if official_retry_saved is not None:
+                    battle_actions['retry_snapshot_saved_frac'] = official_retry_saved
             elif timeout_reason:
                 end = 'timeout'
             elif (state['phase'] == 'planning' and len(rows['obs']) >= plan_limit

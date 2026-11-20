@@ -325,6 +325,30 @@ class StateTests(unittest.TestCase):
             path.write_text('\n'.join(map(json.dumps, rows[:2] + rows[3:])))
             self.assertIsNone(env_zar.read_session(path, 100)['ready_stats'])
 
+    def test_retry_evidence_requires_a_fresh_official_snapshot(self):
+        env = env_zar.ZAREnv.__new__(env_zar.ZAREnv)
+        env.log_started = env.log_header_wall = 100
+        with tempfile.TemporaryDirectory() as tmp:
+            env.log_path = Path(tmp) / 'episode.jsonl'
+            header = dict(ev='header', wall=100)
+            low = dict(ev='snapshot', phase='playing', sim=100.03, stats=dict(saved_pct=9.9))
+
+            def write(begin, event):
+                env.log_path.write_text('\n'.join(map(json.dumps, (begin, event))))
+
+            write(header, low)
+            self.assertAlmostEqual(env.logged_saved_fraction(100.5), .099)
+            self.assertIsNone(env.logged_saved_fraction(99.0))
+            self.assertIsNone(env.logged_saved_fraction(104.0))
+            write(header, dict(low, stats=dict(saved_pct=39)))
+            self.assertEqual(env.logged_saved_fraction(101), .39)
+            for ignored in (dict(low, ev='footer'), dict(low, phase='planning'),
+                            dict(low, stats=dict(saved_pct=float('nan')))):
+                write(header, ignored)
+                self.assertIsNone(env.logged_saved_fraction(101))
+            write(dict(header, wall=101), low)
+            self.assertIsNone(env.logged_saved_fraction(101))
+
     def test_log_outcome_requires_this_session_footer(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'episode.jsonl'

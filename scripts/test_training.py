@@ -68,6 +68,28 @@ class LearningTests(unittest.TestCase):
             for cell in np.flatnonzero(mask):
                 self.assertLess(train.cell_of_px(cell, 1920, 1200)[1], 840)
 
+    def test_planning_geometry_keeps_only_viable_start_and_end_cells(self):
+        boundary = [(100, 100), (900, 100), (100, 700)]
+        state = dict(planning=True, playarea_boundary=boundary)
+        starts = train.planning_geometry_masks(state, 1000, 1000)
+        for tool in (10, 15, 17, 18):
+            start_cells = []
+            for start in range(train.NC):
+                active = dict(state, anchor=(tool, start))
+                geometry = train.planning_geometry_masks(active, 1000, 1000)
+                active['geometry_cells'] = geometry
+                tools, cells = train.masks_for(active)
+                expected = [train.WORLD_CELLS[start] and train.WORLD_CELLS[end] and end != start
+                            and (tool != 10 or (start // 8 != end // 8 and start % 8 != end % 8))
+                            and not train.outside_playarea(active, tool, end, 1000, 1000)
+                            for end in range(train.NC)]
+                np.testing.assert_array_equal(train.cell_mask(active, tool, cells), expected)
+                self.assertEqual(bool(tools[tool]), any(expected))
+                self.assertTrue(tools[train.TOOLS.index('cancel_tool')])
+                start_cells.append(any(expected))
+            np.testing.assert_array_equal(starts[tool], start_cells)
+        self.assertEqual(train.planning_geometry_masks(dict(state, planning=False), 1000, 1000), {})
+
     def test_unconfirmed_building_retries_apply_only_to_the_same_target_and_camera(self):
         targets = [None] * train.NC
         targets[34], targets[35] = (430, 560), (520, 560)
