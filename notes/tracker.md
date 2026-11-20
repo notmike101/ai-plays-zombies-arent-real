@@ -2,6 +2,25 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:30 Central, all four 189952 boards were actively playing.
+  Native planning receipts on each confirm Police level 1 with one
+  skill point remaining. First Police sprays delivered 12-15 of the
+  20 available officers; native reported first hold durations
+  1.483-2.311 wall seconds at normal speed. The input driver requests
+  nine 50 ms intervals after button-down. These are separate clocks
+  and evidence of variable dose in both arms; cause unverified.
+  Each board had delivered all 20 by sim 67.27 seconds, over 2-4
+  confirmed sprays. Capture includes stock deployment counts, native
+  hold time, actual trails and crowd/recovery snapshots in
+  analysis/coverage-team-0f2ee96984/police-native-audit.json.
+- The inst16 37.43 s trail contains a transient (1189,-35) client
+  position and a 1.8 km world-coordinate jump. Its native drop
+  bounds remained close to the intended line. Preserve actual
+  deployment bounds and count alongside trail; do not use unfiltered
+  cursor-trail length as officer placement evidence. First-wave
+  wall-break recovery ratios are descriptive only. No official
+  first-wave score yet and no changes to active input/runtime.
+
 - At 11:27 Central, Police line comparison 189952 was live on D:
   under operator 70324, directory analysis/coverage-team-0f2ee96984,
   frozen base 8a691469a829158d, with all four copies at verified
