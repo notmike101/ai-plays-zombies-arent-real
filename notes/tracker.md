@@ -2,6 +2,33 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:22 Central, model-only study 197952 finished training
+  (16 attempts, 12 distinct native outbreaks). Baseline averaged
+  4.49%, broader planning arm 6.53%. Baseline sheltered none;
+  broader planning sheltered civilians in two attempts. The
+  second verified zone_rect covered 12.54% at READY on outbreak
+  3896770976; 1,024 were exposed at 47.23 s. No paid building
+  defenses. A confirmed Airstrike was called at 47.23 s, no
+  evidence of an effect before the breach. Final saved 9.84%.
+  No performance established on held-out outbreaks yet. Frozen
+  reserve launched under 19628, inst19 64984 and inst20 64020.
+- Exact live receipts explain four misleading empty zone events
+  in the last training pair: each native place safe_zone event
+  with two recorded points matched only a wall decision, not
+  zone_rect. Three were axis-aligned and one diagonal; zero
+  occupant coverage in all four. Deliberate zone_rect actions
+  had separately verified four-corner placement receipts. Do
+  not mask wall actions on the basis of a safe_zone log label.
+- Next breach-cost comparison staged with the same broader
+  preparation sampling and same READY credit in both training
+  arms. Only the occupied penetration cost differs. Records
+  native building/defense state at READY and first legal cast
+  times. All 322 isolated tests passed, applicability checked.
+  D: analysis/coverage-portable314/tmp/shelter-defense-with-exploration.patch
+  SHA256 54733E542A7F8A33A6403F1CA9BBD2F4ACFFD865FB18F6BF24608C6B6C161EAD.
+  Pending current evaluation and idle boundary. Production
+  checkpoint hash matched.
+
 - At 13:18 Central, the first model-only planning comparison
   batch completed and checkpointed both arms (next_round 1).
   In inst14 outbreak 3661110275, the challenger sheltered
