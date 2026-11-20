@@ -1,6 +1,28 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-19 — placement exploration and READY receipts)
+## CURRENT STATE (2026-11-20 — equip and placement trial)
+- Seed 147952 ended at 00:05 Central. All 16 discovery games had zero
+  wins, defensive-unit selections, and confirmed battle stock spends.
+  All four reserved-copy evaluation seeds were distinct and cleared
+  the known discovery/previous-evaluation seed check. Challenger
+  d0a5f58c8e3a12db early-retried at 10.00% and 9.87%; the GRU early-retried
+  at 9.76% and 9.94%. No promotion.
+- Commit f524195 adds one equip preference before the sampled defense
+  placement preference for the same unit. An explicit genome flag
+  preserves the next preference through pending gestures and dialogs;
+  its presence is included in team identity. Existing genomes retain
+  their original behavior. The ordinary legal-action mask governs every
+  choice. Unit tests verified the paired preferences, round-trip identity
+  and preservation through masked decisions. All 238 script tests passed.
+- Seed 148952 started at 00:06 Central, trainer PID 9916. Verified all
+  four D: Python workers and game copies inst13–16. Evaluation copies
+  inst19, inst20, inst18, inst17 remain separate. Launch headroom was
+  13.18 GiB RAM and 12.91 GiB free on D:. Output
+  `analysis/coverage-team-78ff394d8c`; run log
+  `analysis/coverage-layout-free-148952-drive-d.log` and matching error log.
+  Production checkpoint hash matched. The 35% goal remains open.
+
+### Placement exploration and READY receipts
 - Seed 146952 finished at 23:44 Central. There were zero wins in 16
   discovery games. Proposal 3acb408aecf16f7a spent one Bomber charge and
   reached early retry on three distinct verified native outbreak seeds
