@@ -1,6 +1,15 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 19:10 Central. Controlled shadow comparison 138952 completed
+  all 18 fresh L1 scores and joined 54/54 native missile impacts across
+  6,785 transitions. Control 3/6 qualifying, timing 2/6, targeting 0/6.
+  The targeting arm moved from cell 12 to 20; the timing arm had the
+  same median and produced no legal waits. Frozen held-out context
+  predictor missed the civilian median baseline (45.11 vs 23.94 kills MAE);
+  refit still missed it. Capture and shadow evaluation only. Production
+  139851 resumed on six copies with no comparison operator left. See
+  notes/shadow-simulator.md and analysis/coverage-shadow-arms-report.json.
 - 2026-11-19 18:32 Central. Queued six-copy fixed-plan shadow comparison
   seed 138952 behind active production seed 138851. Handoff PID 55736 holds
   the supervisor marker until production exits normally, checks headroom,

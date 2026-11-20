@@ -156,3 +156,40 @@ timing and targeting preferences for a future collection block. Require
 comparable legal waits, multiple target regions and held-out improvement
 before a predictor ranks live candidates. No synthetic updates or checkpoint
 changes were made. Raw evidence remains local under analysis.
+
+## 2026-11-19 controlled comparison
+
+Seed 138952 ran the three fixed-plan arms in three rotating waves on
+inst13–18. All 18 fresh starts scored. Direct episode capture validated
+6,785 transitions and 54 complete policy/spend/native launch/impact joins
+without the passive native-event polling process. Launches were joined by
+event order, normalized coordinates, and the interval from policy observation
+to stock receipt. A previous fixed difference around the stock read rejected
+valid launches because UI acknowledgement can lag the native event.
+
+| Arm | Qualifying wins | Mean official saved | Selected missile cell |
+| --- | ---: | ---: | ---: |
+| Control | 3/6 | 36.16% | 12 |
+| Lower cast preference | 2/6 | 35.45% | 12 |
+| Perturbed targeting weights | 0/6 | 30.36% | 20 |
+
+Every game fired a three-shot salvo. Lowering the cast preference did not
+shift the median stock receipt time (31.43 simulated seconds in both arms)
+or yield a wait selection while the missile was legal. The targeting arm
+changed the selected cell but exposed no new cells beyond prior support.
+The arm outcomes are fresh-outbreak comparisons, without matched native RNG.
+
+The frozen predictor fit on 18 prior impacts from inst13–16. On 18 new
+impacts in six outbreaks from inst17–18, the median baseline errors were
+23.94 civilian and 17.44 zombie kills. The context predictor errors were
+45.11 and 12.32. An exploratory refit on 54 training-copy labels reduced
+the civilian error to 28.11 against a refit baseline of 23.56. It still
+failed the civilian gate. None of the variants establishes a cast-versus-wait
+effect, a multi-step survival forecast, or better policy outcomes from
+simulator-guided selection. Keep integration at capture and shadow evaluation.
+
+Production resumed at seed 139851 from the preceding production result.
+The six-copy comparison had 9.78 GiB minimum sampled available RAM and
+19.0% median utilization on the reserved CPU group. No benchmark operator
+remained. Raw evidence: analysis/coverage-team-5e773945aa and
+analysis/coverage-shadow-arms-report.json.
