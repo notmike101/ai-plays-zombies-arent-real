@@ -2,6 +2,37 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 161952 started at 03:47 Central on D:, portable trainer PID
+  49128, output `analysis/coverage-team-f0b57397a0`, log
+  `analysis/coverage-layout-free-161952-drive-d.log`. Startup headroom
+  was 13.03 GiB RAM and 18.84 GiB free disk. Two discovery waves carry
+  forward 11b3a3535032048f and use opt-in `--fast-boot` from e9e5514.
+  Fast boot still verifies the full fresh normal Boston board and retries
+  standard startup if the short attempt fails. Reserved evaluation uses
+  standard startup. All 257 script tests passed, including fallback.
+- Isolated four-copy startup probe after seed 160952 drained. Changed the
+  welcome wait in memory from 75 to 15 seconds and kept every other check.
+  Verified each fresh planning board at 27.81–28.94 seconds, versus
+  87.09–87.12 seconds in the previous four-worker discovery wave. The
+  probe stopped all its games and verified no remaining owned processes.
+  The 58–59 second difference is startup only. Campaign timing is logged
+  separately; no game speed, training signal or outcome definition changed.
+- Seed 160952 finished at 03:44 Central with seven scored early retries,
+  one timeout and no wins. The shelter-first arm replicated coverage of
+  both shelters (54.2% and 34.4% nominal range) with two Garrisons. It
+  scored 8.89% at retry, and its first occupied breach was at 45.77 sim
+  seconds versus 48.80 for coverage-only and 43.90 for the old parent.
+  Those were different outbreaks. The placement change replicated, while
+  a repeatable gain in protection and official survival remains open.
+- A separate mutation in wave two, 11b3a3535032048f, paid for seven
+  Garrison actions and reached READY with 12 native Garrisons and $520.
+  Actual survivors were 35.13% at 66.70 sim seconds, then crossed below
+  35%. The official early retry was 9.29% at 142.13 seconds, on outbreak
+  4071147503. The log credited Garrisons with 4,337 kills, and both
+  initially occupied shelters were eventually breached. The learned
+  proposal led discovery by survival area and advanced to another test.
+  No promotion or reserved evaluation. The 35% goal remains open.
+
 - Seed 160952 started at 03:33 Central, portable D: PID 44412,
   output `analysis/coverage-team-5dc8c1774d`, log
   `analysis/coverage-layout-free-160952-drive-d.log`. Headroom was
