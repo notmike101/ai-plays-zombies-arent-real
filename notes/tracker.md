@@ -2,6 +2,33 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 15:14 Central, 204952 ended with six planning timeouts
+  and two distinct fresh retries in frozen evaluation. Baseline
+  f31e838adaceee21 retried at 6.06%; exploration 96ff6c9a03a9124c
+  retried at 9.22% with three native Demolition deployments and
+  one Stun Gas. Zero eligible natural finishes, no promotion.
+  Both final private models and Adam states retained.
+- Deployed 44bb695 with 344 isolated tests after 204952 exited.
+  It adds a one-UI-frame pointer wait for single-click snapped
+  building casts only. Other geometry and the baseline dispatch
+  sequence retain their existing behavior. Patch SHA256
+  D4615B3797D579B6A1FE70795115DD8B9527CD559472A4C1552F5910E5C83055.
+  Launched 205952 PID 77264, source 96ff6c9a03a9124c, data
+  analysis/coverage-target-settle-b691cfa8f1, console
+  analysis/coverage-target-settle-205952-drive-d.log. Verified
+  protocol 3 model-only on inst13 72348, inst14 75652,
+  inst15 69052 and inst16 36088. Production hash matched,
+  Observatory PID 21012 stayed active.
+- At 15:17 Central, 205952 first batch completed. Four retries,
+  no snapped cast selected, so pointer timing was unexercised
+  in this batch and the advisory remained collecting. In
+  baseline outbreak 2892825355, 14.42% sheltered at READY,
+  Stun Gas at 24.53 and Fire Bomb at 48.77. First occupied
+  breach near 48.77, 1,079 exposed across two breaches.
+  Snapshot had 25.40% at 87.07 sim seconds. Official retry was
+  5.66% at about 107 sim seconds. No attribution from the
+  timing coincidence. Round two running under 77264.
+
 - At 15:10 Central, battle experiment 204952 completed six
   training rounds. Baseline had eight official scores averaging
   6.54%, four occupied starts and two native airstrikes. The
