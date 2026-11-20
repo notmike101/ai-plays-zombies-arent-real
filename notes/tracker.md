@@ -2,6 +2,39 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 156952 finished at 02:55 Central. The repaired sampled policy
+  completed two observed pending world drags and cancelled two other
+  pending gestures before its 7.57% retry. The opening wave completed
+  with four scored retries and no gesture failures. Wave two added
+  three scored retries and one continuous-pause timeout. No wins.
+  Frozen f2cdd412763e71b9 scored 8.90% and 8.71% on two fresh
+  reserved outbreaks. Both GRU reference seeds overlapped discovery.
+- Earlier-loadout candidate 7e8d4bab9296a16d bought Police and
+  brought 20 officers plus Firebomb into battle. Native logs
+  recorded paratrooper deployments at 2.70, 11.70, 20.37 and
+  28.87 seconds and Firebomb at 30.53 seconds. It finished at
+  9.16% saved at 67.20 seconds, with its first occupied breach
+  at 44.93 seconds. Parent f2cdd412763e71b9 first deployed at 20.87 s,
+  breached at 44.80 s and ended at 9.73%. The two policies played
+  on different outbreaks and brought different actual Garrison
+  counts. An earlier action opportunity is verified. There is no
+  measured survival advantage.
+- A replay of saved discovery policies found the same defender-cell
+  weight (0.257) across 20 Garrison-heavy trials examined. Commit
+  f23fc6d schedules a variant only when the resumed proposal has
+  confirmed Garrison investment. It changes one Garrison gene's
+  defender-density weight so the search can test less clustered
+  placements. The rest of the learned policy stays paired. The
+  earlier-loadout probe remains available in the next wave.
+  All 253 script tests passed.
+- Seed 157952 started at 02:56 Central, portable D: trainer PID
+  63684. Two discovery waves on inst13–16 and reserved evaluation
+  on inst18, inst17, inst19, inst20. Prior
+  `analysis/coverage-team-639beb8bda`; run log
+  `analysis/coverage-layout-free-157952-drive-d.log`. Headroom
+  13.11 GiB RAM and 18.19 GiB free on D:. Production checkpoint
+  hash matched. The 35% held-out consistency goal remains open.
+
 - Seed 155952 finished at 02:41 Central. Two opening discovery games
   crashed because the new geometry mask treated a pending native
   gesture name as a numeric tool ID. The GRU timed out, and the
