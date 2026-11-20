@@ -523,6 +523,15 @@ def restore_team(net,directory):
     return checkpoint_team(record,tr.policy_id(net))['team']
 
 
+def restore_layout_free_proposal(net, directory):
+    record = json.loads((directory/'provisional.json').read_text())
+    net.load_state_dict(torch.load(directory/'base.pt', weights_only=True))
+    team = checkpoint_team(record, tr.policy_id(net))['team']
+    if team.get('layout') or any(team.get('later_layouts', {}).values()):
+        raise ValueError('Layout-free continuation cannot use layout replay')
+    return team
+
+
 def holdout_assignments(copies, weights, challenger, incumbent, seed, wave):
     jobs = []
     arms = {}
@@ -598,7 +607,10 @@ def main():
     parser.add_argument('--seed',type=int,default=92851)
     parser.add_argument('--stage-retries','--later-retries',dest='later_retries',type=int,default=2,
                         help='Training retries on later stages and below-target first-stage wins')
-    parser.add_argument('--seed-from',type=Path,help='Start with a previous search champion and its frozen GRU')
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument('--seed-from',type=Path,help='Start with a previous search champion and its frozen GRU')
+    source.add_argument('--continue-layout-free', type=Path,
+                        help='Keep a previous layout-free proposal in training without promoting it')
     parser.add_argument('--demonstration',type=Path,help='Seed candidates from a local Boston progress file')
     parser.add_argument('--compare-forecast',type=Path,help='Evaluate the same saved champion with and without its CNN forecast')
     parser.add_argument('--compare-shadow',action='store_true',
@@ -609,6 +621,8 @@ def main():
     copies=args.copies
     if not 4<=len(copies)<=8 or len(set(copies))!=len(copies) or args.generations<1 or args.later_retries<0:
         parser.error('Use 4–8 distinct owned copies and positive generations')
+    if args.continue_layout_free and (args.demonstration or args.allow_progression):
+        parser.error('Layout-free continuation requires Boston L1 without a demonstration')
     if args.compare_forecast and (not args.seed_from or len(copies)%2 or args.demonstration):
         parser.error('Forecast comparison requires a saved champion and paired copies')
     if args.compare_speed and (not args.seed_from or args.generations % 2 or args.demonstration
@@ -627,9 +641,11 @@ def main():
         operator.limit_resources(len(copies))
         rng=np.random.default_rng(args.seed)
         net=tr.PolicyNet2()
-        prior=None
+        prior = proposal = None
         if args.seed_from:
-            prior=restore_team(net,args.seed_from)
+            prior = restore_team(net, args.seed_from)
+        elif args.continue_layout_free:
+            proposal = restore_layout_free_proposal(net, args.continue_layout_free)
         else:
             tr.load_pretrained(net,tr.MODEL)
         weights=net.state_dict()
@@ -653,9 +669,10 @@ def main():
                             f.write(json.dumps(result)+'\n')
             return
         population=[random_team(rng) for _ in copies[1:]]
-        if prior:
-            population[0]=prior
-            population[1]=offspring(prior,prior,rng)
+        initial_team = prior or proposal
+        if initial_team:
+            population[0] = initial_team
+            population[1] = offspring(initial_team, initial_team, rng)
         if args.demonstration:
             from layout_memory import demonstrations
             stages=demonstrations(args.demonstration)
@@ -684,17 +701,18 @@ def main():
         explore_without_layout = not args.demonstration and not (prior or {}).get('layout')
         evidence={}
         prices={}
-        if args.seed_from and (args.seed_from/'fitness.json').exists():
-            ledger=json.loads((args.seed_from/'fitness.json').read_text())
+        resume_directory = args.seed_from or args.continue_layout_free
+        if resume_directory and (resume_directory/'fitness.json').exists():
+            ledger=json.loads((resume_directory/'fitness.json').read_text())
             if ledger['base']!=base:raise ValueError('Campaign fitness base mismatch')
             if ledger.get('view_revision')==view_revision:evidence=ledger['evidence']
             prices=ledger.get('layout_prices',{})
-        if args.seed_from and not (args.compare_forecast or args.compare_speed):
+        if resume_directory and not (args.compare_forecast or args.compare_speed):
             best_budget=None
-            paths=[args.seed_from/name for name in ('trials.jsonl','extra-trials.jsonl')]
+            paths=[resume_directory/name for name in ('trials.jsonl','extra-trials.jsonl')]
             for trial in chain.from_iterable(records(path) for path in paths if path.is_file()):
                 if trial.get('view_revision')==view_revision:fitness.record(evidence,trial)
-                if not trial.get('levels'):continue
+                if not args.seed_from or not trial.get('levels'):continue
                 candidate=budget_candidate(trial.get('team'),trial['levels'],prices)
                 if candidate:
                     rank=(max(r['stage'] for r in trial['levels']),team_id(candidate))

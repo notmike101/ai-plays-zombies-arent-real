@@ -9,6 +9,34 @@ import team_search as search
 
 
 class SearchTests(unittest.TestCase):
+    def test_layout_free_resume_checks_policy_identity_and_rejects_replay(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import Mock
+
+        net = Mock()
+        team = search.random_team(np.random.default_rng(17))
+        with (tempfile.TemporaryDirectory() as temp,
+              patch.object(search.torch, 'load', return_value={'weights': 1}) as load,
+              patch.object(search.tr, 'policy_id', return_value='base')):
+            source = Path(temp)
+            record = source / 'provisional.json'
+
+            def write_proposal(candidate, base='base'):
+                record.write_text(json.dumps(dict(team=candidate, team_id=search.team_id(candidate), base=base)))
+
+            write_proposal(team)
+            self.assertEqual(search.restore_layout_free_proposal(net, source), team)
+            load.assert_called_once_with(source / 'base.pt', weights_only=True)
+            net.load_state_dict.assert_called_once_with({'weights': 1})
+            write_proposal(team, base='wrong')
+            with self.assertRaisesRegex(ValueError, 'identity mismatch'):
+                search.restore_layout_free_proposal(net, source)
+            write_proposal(dict(team, layout=[dict(kind='gate', points=[[10, 10]])]))
+            with self.assertRaisesRegex(ValueError, 'layout replay'):
+                search.restore_layout_free_proposal(net, source)
+
     def test_shadow_arms_vary_only_one_missile_preference(self):
         parent = search.random_team(np.random.default_rng(3))
         arms = search.shadow_variants(parent)
