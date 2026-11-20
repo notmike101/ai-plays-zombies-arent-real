@@ -2,6 +2,24 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 10:54 Central, reserved wave two remained live under operator
+  71620 (inst20 PID 68420, outbreak 2033973644). Captured compact native
+  deployment trails, shelter placements and wall-cell breach locations
+  before the game rotates its journal. D: artifact
+  analysis/coverage-team-c81131e97f/police-native-audit.json is keyed
+  by copy and journal header, and holds events only, with no outcome
+  inferred from snapshots. On this board the fourth Police drag passed
+  within 61 m of the first subsequent native wall-cell breach, while its
+  last recorded trail point was 650 m away. An existing Garrison
+  placement was 72 m from that breach. Geometry alone does not explain
+  damage or confirm where the officers moved after landing.
+- Validated the actual next Police comparison policies against the staged
+  source and resumed base 8a691469a829158d: endpoint bf3fc52369fc3746 and
+  path 847df0f375da30cf differ only in police_line_targeting and share
+  all eight preparation genes. No layout replay. The current reserved
+  candidate is still playing; its snapshot is excluded from official
+  performance. Deploy the tested patch only once the operator is idle.
+
 - At 10:50 Central, the 188952 comparison had nine scored discovery or
   eligible reserved rows for the two frozen policy arms on READY layout
   418150907bbd395c, including repeated outbreaks in the crossed discovery
