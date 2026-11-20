@@ -1,6 +1,16 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 21:49 Central. Two-copy phase-balance seed 143952 stopped
+  on a transient native map observation in pair 11. Verified the private
+  atomic checkpoint contains ten completed updates and both Adam states.
+  Completed scored train means 9.76% standard and 9.55% balanced,
+  zero qualifiers, no frozen evaluation yet. D: had 2.23 GiB free; no
+  training/game processes remained. Guarded continuation PID 65268 waits
+  for two idle samples with at least 3 GiB D: and 6.5 GiB RAM, then
+  resumes the same paired snapshot. Staged 9080182 retries paired native
+  map failures and checks headroom each round. An independent empty-cell
+  mask fix is staged in eacb55d and excluded from this resumed run.
 - 2026-11-19 21:24 Central. Four-copy no-replay launch was refused with
   8.44 GiB idle RAM and 4.32 GiB free disk. Started safe two-copy PPO
   143952 on inst13/14, handoff PID 64920. Sixteen updates and six frozen
