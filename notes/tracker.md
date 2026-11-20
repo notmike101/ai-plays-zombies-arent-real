@@ -22,6 +22,15 @@
   `analysis/coverage-layout-free-148952-drive-d.log` and matching error log.
   Production checkpoint hash matched. The 35% goal remains open.
 
+- Seed 148952 generation zero completed at 00:10 Central. Defender
+  f87873f2814e5ed3 selected Garrison twice on the same cell (zero-index 35).
+  The native log recorded arming Garrison twice and no garrison placement
+  event. READY had 1,674 left and zero garrison stock. It scored 9.99%
+  at early retry. Another child also selected Garrison twice on that cell
+  and had zero garrison stock at READY. This exercises placement selection
+  but identifies a separate unresolved target or input-receipt issue.
+  No wins in the opening generation; generation one is live.
+
 ### Placement exploration and READY receipts
 - Seed 146952 finished at 23:44 Central. There were zero wins in 16
   discovery games. Proposal 3acb408aecf16f7a spent one Bomber charge and
