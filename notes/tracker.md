@@ -2,6 +2,41 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 16:15 Central, shelter-defense 209952 exited normally.
+  Both arms trained 16 games, 29 total battle starts, five
+  natural 0% training losses and 24 retries. Native occupied
+  breaches totaled two baseline and three stronger. Candidate
+  differential reward -0.10504, zero mismatches. First event
+  exposed 2029 civilians at 43.23 sim seconds; applied cost
+  -0.07476. Frozen starts 3/4 baseline and 4/4 stronger, all
+  seven retried below 10%; one reused prior outbreak and zero
+  eligible natural finishes. Both private policies retained.
+- Passive observer/native timing aligned same-copy session and
+  consecutive decisions. In 209952 round 5 on inst13, 24.44
+  wall seconds elapsed between model pan_left and click_world,
+  with native snapshots advancing from 9.73 to 32.8 sim seconds
+  inside that gap. This measures time between decisions and
+  leaves attribution to the timed probe.
+- Frozen timing probe 210952 finished at 16:18 under 75372.
+  Initial launcher 66424 stopped before game launch because
+  its checkpoint guard compared provenance to a policy ID.
+  Corrected guard verifies both archive SHA and policy identity.
+  Frozen 5f80a288d2c1053a, two copies crossed at stock 1x/2x,
+  four distinct outbreaks. 1x had 144 decisions over 60.27 sim
+  seconds (2.39/s); 2x had 58 over 72.90 (0.80/s). All four
+  retried, no promotion evidence. Native observation refresh
+  consumed 57.34 of 133.17 simulated seconds in measured spans
+  and had the largest measured wall maximum (1.64 s), versus
+  1.01 s for camera rest and 0.56 s for selection. The 24 s
+  gap did not recur in this smaller probe. Profile native reads
+  under comparable load before changing observation semantics.
+  Output analysis/coverage-portable314/tmp/cadence-frozen-210952.jsonl.
+  Test games exited. Observatory and production weights preserved.
+- User queued a controlled sustained shelter protection study.
+  See notes/experiment-signal.md for occupied civilian-time,
+  bounded sampling, identical breach costs, and official gate.
+  No current rewards or weights changed.
+
 - At 15:55 Central, launched matched shelter-defense comparison
   209952 from archived balanced policy 5f80a288d2c1053a with
   its private Adam. The preceding READY pilot had six occupied
