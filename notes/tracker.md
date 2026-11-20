@@ -2,6 +2,29 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 16:28 Central, 211952 checkpointed four paired rounds.
+  Fifteen retries and one baseline timeout, zero natural
+  finishes. First-round candidate time credit remains the
+  only observed differential reward (.001274871248). Zero
+  later candidate episodes recorded sustained occupancy through
+  round four. One baseline had no confirmed battle start and
+  another had insufficient sampling for this measurement.
+  PID 41656 still active; fifth batch starting. Preserve its
+  comparison settings and private histories through frozen eval.
+- Staged exact native-map decoding optimization outside deployed
+  source. The current per-record scalar decoder was compared
+  with a batched gather over equivalent input bytes, including
+  unsigned IDs, partial tail lines and all named AI fields.
+  Median large-map decode improved 8.8-33x for 1300 or 8000
+  entries, depending on layout. Timing covers decode only.
+  32 focused native/mechanics tests passed against staged code.
+  Apply check passed for analysis/coverage-portable314/tmp/
+  native-map-211952/batched-native-map.patch, SHA256
+  E2E935E2CDB071B275313503FB94EAF619934149D0A54FCC70017F738801DEF6.
+  Next measure snapshot cost with real native reads, then test
+  end-to-end cadence under matched load. The active worker,
+  checkpoint and Observatory remain untouched.
+
 - At 16:21 Central, 92e55a8 added the opt-in sustained shelter
   reward and guarded paired runner. 352 isolated tests passed.
   The candidate earns .01 per starting-population-equivalent
