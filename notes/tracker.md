@@ -26,6 +26,16 @@
   `analysis/coverage-layout-free-147952-drive-d.log` and matching error log.
   The 35% consistency goal remains open.
 
+- Seed 147952 generation zero completed at 23:50 Central. All four
+  discovery rows recorded native READY money and stock. The learned
+  variants had 1,874 left and no defensive-unit selections or stock.
+  One sampled defense preference was ChemMine, which was absent from
+  inst16's planning roster. Its two allotted actions were both zone
+  geometry, including a pending rectangle endpoint. This establishes
+  two cases to address before interpreting the mutation as a defense
+  experiment: roster availability and progress through masked gestures.
+  No wins. Generation one remains live.
+
 ### Search with pause handling
 - Seed 145952 finished at 23:22 Central with no discovery wins in 16
   games and no promotion. The frozen games ran on reserved inst17–20.
