@@ -2,6 +2,37 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 15:36 Central, archived-parent READY-delay pilot 207952
+  checkpointed its first batch under operator PID 38956
+  (created 15:33:37). All four policies selected READY and
+  started battle. Baseline retry scores were 6.39% and 7.11%,
+  candidate 2.47% and 5.77%. These are interrupted outcomes.
+  Both candidate episodes received the expected total cost
+  (-0.096 across 48 deferrals), baseline zero, no mismatches.
+  No independent natural finishes and no promotion evidence.
+  Private run analysis/coverage-ready-delay-db72956766, console
+  analysis/coverage-ready-delay-older-207952-retry1-drive-d.log.
+  Eight paired training rounds use inst13-16, followed by four
+  frozen pairs on inst19/20. Production checkpoint hash stayed
+  0B23B6A7C3FF1B56CCB26D016A29CAC45209B6E4622B6428D24CD7DA44BC4D0E.
+- Older initialization 5f80a288d2c1053a came from the balanced
+  arm in analysis/coverage-phase-balance-673a887408. Its older
+  frozen sample had 12 battle starts, 10 distinct discovery-clear
+  retry scores averaging 9.35%, and zero natural finishes. The
+  initial 207952 launch stopped before game launch because this
+  paired checkpoint predates embedded outbreak exclusions. Fix
+  2fcf89e restores its model and Adam using the required journal
+  (43 archived outbreaks). The isolated suite passed 347 tests.
+- Newer-parent pilot 206952 finished with 14 planning timeouts
+  and two retries during training (baseline 5.00%, cost 9.11%),
+  followed by eight frozen planning timeouts. On the same 12
+  recorded frozen READY-legal decisions, baseline 980405fb8a4c1f69
+  averaged 0.434% READY probability, cost 5dfb79dc45b5784f 0.678%,
+  parent 96ff6c9a03a9124c 0.517%, and the archived balanced parent
+  5.120%. The same-input comparison is a planning diagnostic.
+  Actual play with the newer frozen arms yielded no battle
+  starts or official survival evidence.
+
 - At 15:25 Central, 205952 completed with 18 planning
   timeouts and six retries across training, and six planning
   timeouts and two fresh retries in reserve. Baseline 6.79%,
