@@ -2,6 +2,19 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:32 Central, all 16 training trials in breach-cost study
+  193952 finished. Eight baseline retries averaged 5.555% and
+  eight stronger-cost retries averaged 6.461%; all were below
+  10%, all had distinct recorded native outbreaks, and the
+  occupied breach penalty was zero in every episode. The final
+  four boards had zero civilians inside safe zones at READY even
+  though two had a native safe zone. Each PPO network and Adam
+  state is saved privately. Frozen evaluation launched with
+  reserved inst19 PID 74728 and inst20 PID 46892 under operator
+  54556. No evaluation score yet and no effect estimate for the
+  breach penalty. Review the reserved results before selecting
+  the next isolated comparison.
+
 - At 12:31 Central, three training rounds in breach-cost study
   193952 completed. All 12 native-outbreak trials ended below
   10% at retry, with zero credited civilians, occupied exposures
