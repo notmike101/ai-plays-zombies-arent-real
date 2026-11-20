@@ -2,6 +2,31 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 184952 started at 08:57 Central on D:, operator PID 24440,
+  output `analysis/coverage-team-858f2e225f`, with log
+  `analysis/coverage-layout-free-184952-drive-d.log`. Full-availability
+  inst15-18 share MLRS and Gas Mortar. Each preference is compared with
+  frozen reference 922f9e1dcd8205c2 on two crossed copies. The policy
+  chooses the actual tools and sites using native masks. inst19/20 remain
+  reserved. Launch headroom 13.84 GiB RAM and 18.93 GiB disk, production hash
+  matched. Commit 5555b89. 287 script tests and crossed scheduling
+  fixtures passed, including the saved-fit retest path.
+- Seed 183952 ended at 08:56. Purchase sampling produced a Firebomb-only
+  deck in two of four games; all four reference games entered with
+  Police and Firebomb. Sampling saved 7.96% on average versus 9.23%
+  across the reference. The two native matched outbreaks both kept the
+  same deck in both arms and had lower sampled-arm scores; the altered
+  decks had no matched reference outbreak. No qualification.
+- The prior 48 model-built scored starts left $82 in 45, $211 in one
+  and $220 in two, out of $3,111. They used 92.93%-97.36% of their money
+  and each had 28.95% initially sheltered. Use defense diversity for
+  choosing experiments first. Raw spend would reward a behavior
+  already common. The owned config specifies a 12-second first-shot
+  delay outside occupied shelter for eligible guns. The earlier
+  first-shot preference comparison produced no survival evidence. Any
+  shelter-defense credit needs verified effective coverage or impact
+  with a bounded ablation before use. No reward change in this run.
+
 - At 08:53 Central seed 183952 completed the first purchase wave. The
   model sampled Firebomb twice instead of Police then Firebomb on one
   board and reached battle with Firebomb alone. Its official score was
