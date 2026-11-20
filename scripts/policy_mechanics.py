@@ -114,15 +114,18 @@ def outside_panel(points, bounds):
              (points[:,1]>=top)&(points[:,1]<=bottom))
 
 
-def nearest_per_cell(points, width, height, bounds=None):
+def nearest_per_cell(points, width, height, bounds=None, *, indices=False):
     points=np.asarray(points).reshape(-1,2)
     visible=((points[:,0]>=0)&(points[:,0]<width)&(points[:,1]>=.07*height)&(points[:,1]<.8*height))
-    points=points[visible & outside_panel(points,bounds)]
+    eligible = visible & outside_panel(points,bounds)
+    if indices:
+        eligible = np.flatnonzero(eligible)
+    points = points[eligible]
     result=[None]*48
     if len(points):
         bins=grid_bins(points,width,height)
         for i in closest_indices(points,bins,centers(width,height)):
-            result[bins[i]]=tuple(map(int,points[i]))
+            result[bins[i]] = int(eligible[i]) if indices else tuple(map(int,points[i]))
     return result
 
 
@@ -285,7 +288,11 @@ class Mechanics:
             medevac=s['medevacs']['pos'][s['medevacs']['alive']!=0])
         st['targets']={key:nearest_per_cell(p(pts),e.cw,e.ch,bounds) for key,pts in targets.items()}
         b=s['buildings'];valid=(b['destroyed']==0)&self.building_in_playarea(b['center'],s['playarea'])
-        st['build_targets']=nearest_per_cell(p(b['center'][valid]),e.cw,e.ch,bounds)
+        screen_buildings = p(b['center'][valid])
+        sites = nearest_per_cell(screen_buildings,e.cw,e.ch,bounds,indices=True)
+        st['build_targets'] = [tuple(map(int, screen_buildings[i])) if i is not None else None for i in sites]
+        site_areas = b['area'][valid]
+        st['build_areas'] = [site_areas[i] if i is not None else 0. for i in sites]
         rules=st.get('rules',{})
         height=(b['height_packed']&65535).astype(float)/10
         height=np.where(height>0,height,float(rules.get('building_unknown_height',9)))

@@ -9,8 +9,18 @@ SAMPLE_SECONDS = .5
 PERIMETER_METRES = 150.
 
 
-def garrison_perimeter_gain(zones, existing, targets, radius):
-    """Estimate additional perimeter within the native maximum firing distance."""
+def garrison_reach(area, base, per_metre, cap):
+    """Derive firing radius from the native building footprint."""
+    area = np.asarray(area)
+    valid = np.isfinite(area) & (area > 0.)
+    radius = base + per_metre * np.sqrt(np.where(valid, area, 0.))
+    if cap > 0.:
+        radius = np.minimum(radius, cap)
+    return np.where(valid, radius, 0.)
+
+
+def garrison_perimeter_gain(zones, existing, targets, radius, existing_radius=None):
+    """Estimate the additional perimeter reached by each placement."""
     polygons = [p for p in zones if len(p) >= 3]
     if not polygons or not len(targets):
         return np.zeros(len(targets), dtype=np.float32)
@@ -24,11 +34,16 @@ def garrison_perimeter_gain(zones, existing, targets, radius):
     bins = np.searchsorted(cumulative, samples, side='right')
     fraction = (samples - cumulative[bins] + lengths[bins]) / lengths[bins]
     points = starts[bins] + fraction[:, None] * edges[bins]
-    radius2 = radius ** 2
+    if existing_radius is None:
+        existing_radius = radius
     if len(existing):
-        covered = ((points[:, None] - existing) ** 2).sum(axis=-1) <= radius2
+        existing_radius2 = np.asarray(existing_radius) ** 2
+        covered = ((points[:, None] - existing) ** 2).sum(axis=-1) <= existing_radius2
+        covered &= existing_radius2 > 0.
         points = points[~covered.any(axis=1)]
-    reached = ((targets[:, None] - points) ** 2).sum(axis=-1) <= radius2
+    radius2 = np.broadcast_to(np.asarray(radius) ** 2, (len(targets),))
+    reached = ((targets[:, None] - points) ** 2).sum(axis=-1) <= radius2[:, None]
+    reached &= radius2[:, None] > 0.
     return (reached.sum(axis=1) / len(samples)).astype(np.float32)
 
 

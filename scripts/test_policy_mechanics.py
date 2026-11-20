@@ -128,6 +128,8 @@ class MechanicsTests(unittest.TestCase):
         points=[(200,200),(210,200),(200,200),(-100,0)]
         targets=nearest_per_cell(points,1920,1200)
         self.assertEqual([p for p in targets if p is not None],[(210,200)])
+        indices=nearest_per_cell(points,1920,1200,indices=True)
+        self.assertEqual([i for i in indices if i is not None],[1])
         targets=nearest_per_cell(points,1920,1200,bounds=(190,190,220,220))
         self.assertFalse(any(p is not None for p in targets))
 

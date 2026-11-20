@@ -142,6 +142,26 @@ class SearchTests(unittest.TestCase):
         self.assertAlmostEqual(diff[tool, 1].item(), variant['garrison_coverage'] * .5, places=5)
         self.assertEqual(int(torch.count_nonzero(diff)), 1)
 
+    def test_garrison_coverage_uses_footprint_for_candidates_and_existing_defenders(self):
+        rng = np.random.default_rng(16)
+        team = dict(search.random_team(rng), garrison_coverage=10., garrison_building_range=True)
+        frozen = dict(base='base', team_id=search.team_id(team), team=team)
+        self.assertEqual(search.checkpoint_team(frozen, 'base')['team'], team)
+        model = search.TeamPolicy(team)
+        tools = np.zeros(search.tr.NU)
+        tools[search.GARRISON] = 1
+        box = np.array([[0, 0], [40, 0], [40, 40], [0, 40]])
+        state = dict(planning=True, rules={'garrison_range_base': '0',
+                                         'garrison_range_per_meter': '1',
+                                         'garrison_range_max': '50'},
+                     native=dict(camera=[0., 0., 1.], zones=[box, box + [400, 0]],
+                                 units=dict(kind=np.array([6]), pos=np.array([[20, 20]])),
+                                 buildings=dict(center=np.array([[20, 20]]), area=np.array([1.]))),
+                     build_targets=[(520, 480), (920, 480)] + [None] * (search.tr.NC - 2),
+                     build_areas=[1600., 1.] + [0.] * (search.tr.NC - 2))
+        model.set_garrison_coverage(state, tools, np.ones(search.tr.NC), 1000, 1000)
+        torch.testing.assert_close(model.garrison_coverage_cells[:2], torch.tensor([.5, 0.]))
+
     def test_planning_scale_changes_tool_preferences_without_changing_battle(self):
         rng = np.random.default_rng(43)
         parent = search.random_team(rng)
