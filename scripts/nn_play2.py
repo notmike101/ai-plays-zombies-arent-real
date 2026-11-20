@@ -755,6 +755,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         planning_zone_audit = options.get('planning_zone_audit', False)
         if planning_zone_audit:
             rows['planning_action_windows'] = []
+            rows['first_legal_cast_sim'] = {}
         zone_temperature = options.get('zone_temperature')
         if zone_temperature is not None:
             rows['cell_temperatures'] = []
@@ -942,6 +943,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 battle_actions['cast_sampled'] += int(u in U2ABILITY)
                 for name in available_casts:
                     legal_casts[name] = legal_casts.get(name, 0) + 1
+                    if planning_zone_audit:
+                        rows['first_legal_cast_sim'].setdefault(name, state['sim'])
                 if u in U2ABILITY:
                     selected_casts[TOOLS[u]] = selected_casts.get(TOOLS[u], 0) + 1
                 if shadow is not None and not capture.truncated and state['phase'] == 'playing':
@@ -1000,7 +1003,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                             special_credit = SPECIAL_ACTIVATION_CREDIT
             elif st['planning']:
                 if u == 1:
-                    if placement_feedback:
+                    if placement_feedback or planning_zone_audit:
                         ready_paint_mode = bool(env.scalar(0x665160, '<B'))
                         paint = st['native']['paint']['kind']
                         ready_paint_tiles = dict(spikes=int(np.count_nonzero(paint == 1)),
@@ -1018,7 +1021,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     stock = env.battle_stock()
                     for slot in st['deck']:
                         slot['charges'] = slot['max_charges'] = stock[slot['name']]
-                    if placement_feedback:
+                    if placement_feedback or planning_zone_audit:
                         for slot in st['deck']:
                             delay = ability_effect_delay(st['rules'], slot['name'], slot['arrival'])
                             first_effect = slot['unlock'] + delay

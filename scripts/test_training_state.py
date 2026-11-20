@@ -266,6 +266,20 @@ class StateTests(unittest.TestCase):
             self.assertFalse((run/'consistency.json').exists())
             self.assertEqual(len((run/'results.jsonl').read_text().splitlines()), 2)
 
+    def test_shelter_defense_arms_differ_only_in_cost_through_training_and_evaluation(self):
+        import compare_spatial as comp
+        with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \
+                patch.object(comp.zar_boot, 'stop'), patch.object(train, 'run_episode') as run:
+            for training in (True, False):
+                for arm, cost in comp.DEFENSE_COSTS.items():
+                    comp.episode(('inst13',arm,{},123,'test',training))
+                    options = run.call_args.args[0][4]
+                    self.assertEqual(options['occupied_breach_cost'], cost)
+                    self.assertEqual(options['ready_coverage_credit'], .30)
+                    self.assertEqual(options['fixed_speed'], 'speed_2')
+                    self.assertTrue(options['planning_zone_audit'])
+                    self.assertEqual(options.get('planning_tool_temperature'), 1.35 if training else None)
+
     def test_reserved_ppo_copies_refuse_overlap_before_taking_lock(self):
         import compare_spatial
         with patch('sys.argv', ['compare_spatial', '--copies', 'a', 'b', '--eval-copies', 'a', 'c']), \

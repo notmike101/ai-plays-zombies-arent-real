@@ -42,6 +42,8 @@ BREACH_COSTS = {'breach_baseline': trainer.BREACH_COST,
 READY_CREDITS = {'coverage_baseline': 0., 'coverage_credit': .30}
 ZONE_TEMPERATURES = {'zone_baseline': 1., 'zone_exploration': 1.5}
 PLANNING_TEMPERATURES = {'planning_baseline': 1., 'planning_exploration': 1.35}
+DEFENSE_COSTS = {'defense_baseline': trainer.BREACH_COST,
+                 'defense_stronger': 3 * trainer.BREACH_COST}
 
 
 def episode(job):
@@ -49,7 +51,8 @@ def episode(job):
     try:
         copy_dir = operator.owned_copy(copy)
         env = None
-        if arm in BREACH_COSTS or arm in READY_CREDITS or arm in ZONE_TEMPERATURES or arm in PLANNING_TEMPERATURES:
+        if (arm in BREACH_COSTS or arm in READY_CREDITS or arm in ZONE_TEMPERATURES
+                or arm in PLANNING_TEMPERATURES or arm in DEFENSE_COSTS):
             try:
                 env = zar_boot.boot(copy_dir, welcome_wait=15, discard_dump_states=True)
             except ZAREnvError as exc:
@@ -77,6 +80,11 @@ def episode(job):
                 options['planning_tool_temperature'] = PLANNING_TEMPERATURES[arm]
         if arm in ZONE_TEMPERATURES or arm in PLANNING_TEMPERATURES:
             options['planning_zone_audit'] = True
+        if arm in DEFENSE_COSTS:
+            options.update(fixed_speed='speed_2', fixed_clock=True, ready_coverage_credit=.30,
+                           occupied_breach_cost=DEFENSE_COSTS[arm], planning_zone_audit=True)
+            if phase == [True]:
+                options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
         return trainer.run_episode((env.pid, weights, False, tag, options), policy_factory=policy,
                                    telemetry=False)
     finally:
@@ -175,6 +183,8 @@ def main():
                             help='Broaden model-selected safe-zone cells during private training only')
     comparison.add_argument('--compare-planning-exploration', action='store_true',
                             help='Broaden legal tool sampling during private preparation training')
+    comparison.add_argument('--compare-shelter-defense', action='store_true',
+                            help='Compare breach costs with broader planning exploration in both training arms')
     args = parser.parse_args()
     copies = args.copies
     if args.train_rounds < 1 or args.eval_rounds < 2 or args.eval_rounds % 2:
@@ -186,7 +196,8 @@ def main():
             or len(set(evaluation_copies)) != len(evaluation_copies)
             or set(evaluation_copies).intersection(copies)):
         parser.error('Evaluation copies must be distinct, paired and disjoint from training')
-    coverage_study = args.compare_ready_coverage or args.compare_zone_exploration or args.compare_planning_exploration
+    coverage_study = (args.compare_ready_coverage or args.compare_zone_exploration
+                      or args.compare_planning_exploration or args.compare_shelter_defense)
     shelter_study = args.compare_breach_cost or coverage_study
     paired_weights = args.compare_missile_credit or args.compare_phase_balance or shelter_study
     if args.warm_start and not paired_weights:
@@ -211,7 +222,8 @@ def main():
         else:
             trainer.load_pretrained(baseline, trainer.MODEL)
         if paired_weights:
-            labels = (tuple(PLANNING_TEMPERATURES) if args.compare_planning_exploration else
+            labels = (tuple(DEFENSE_COSTS) if args.compare_shelter_defense else
+                      tuple(PLANNING_TEMPERATURES) if args.compare_planning_exploration else
                       tuple(ZONE_TEMPERATURES) if args.compare_zone_exploration else
                       tuple(READY_CREDITS) if args.compare_ready_coverage else
                       tuple(BREACH_COSTS) if args.compare_breach_cost else
@@ -250,6 +262,10 @@ def main():
         if args.compare_planning_exploration:
             config.update(comparison='planning_exploration', fixed_speed='speed_2',
                           ready_coverage_credit=.30, training_tool_temperature_by_arm=PLANNING_TEMPERATURES)
+        if args.compare_shelter_defense:
+            config.update(comparison='shelter_defense', fixed_speed='speed_2', ready_coverage_credit=.30,
+                          training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
+                          occupied_breach_cost_by_arm=DEFENSE_COSTS)
         first_round = 0
         source = trainer.policy_id(baseline)
         if warm_source is not None:
@@ -269,7 +285,8 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        experiment = ('planning-exploration' if args.compare_planning_exploration else
+        experiment = ('shelter-defense' if args.compare_shelter_defense else
+                      'planning-exploration' if args.compare_planning_exploration else
                       'zone-exploration' if args.compare_zone_exploration else
                       'ready-coverage' if args.compare_ready_coverage else
                       'breach-cost' if args.compare_breach_cost else
@@ -327,15 +344,19 @@ def main():
                         summary['logged_deployments'] = battle.get('logged_deployments')
                         summary['deploy_sim_seconds'] = battle.get('deploy_sim_seconds')
                         summary['occupied_breach_reward'] = row.get('reward_components', {}).get('occupied_breach')
-                        summary['occupied_breach_cost'] = BREACH_COSTS.get(job[1], trainer.BREACH_COST)
+                        summary['occupied_breach_cost'] = (
+                            DEFENSE_COSTS.get(job[1], BREACH_COSTS.get(job[1], trainer.BREACH_COST)))
                         if coverage_study:
                             summary['ready_coverage_reward'] = row.get('reward_components', {}).get('ready_coverage')
-                    if args.compare_zone_exploration or args.compare_planning_exploration:
+                    if args.compare_zone_exploration or args.compare_planning_exploration or args.compare_shelter_defense:
                         summary['planning_zone_receipts'] = row.get('planning_zone_receipts')
+                        for key in ('ready_embedded_defenses', 'ready_preparation', 'ready_loadout',
+                                    'first_legal_cast_sim'):
+                            summary[key] = row.get(key)
                     if args.compare_zone_exploration:
                         summary['tempered_zone_decisions'] = sum(
                             temp > 1. for temp in row.get('cell_temperatures', ()))
-                    if args.compare_planning_exploration:
+                    if args.compare_planning_exploration or args.compare_shelter_defense:
                         summary['tempered_planning_decisions'] = sum(
                             temp > 1. for temp in row.get('tool_temperatures', ()))
                     with (directory/'results.jsonl').open('a') as f:
