@@ -39,8 +39,10 @@ def episode(job):
     env = zar_boot.boot(operator.owned_copy(copy), discard_dump_states=True)
     try:
         policy = SpatialPolicy if arm == 'shared' else trainer.PolicyNet2
-        return trainer.run_episode((env.pid, weights, False, tag,
-                                   dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')), policy_factory=policy,
+        options = dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')
+        if arm in ('standard', 'balanced'):
+            options.update(fixed_speed='speed_1', fixed_clock=True)
+        return trainer.run_episode((env.pid, weights, False, tag, options), policy_factory=policy,
                                    telemetry=False)
     finally:
         zar_boot.stop(env)
@@ -66,8 +68,11 @@ def main():
     parser.add_argument('--train-rounds', type=int, default=1)
     parser.add_argument('--eval-rounds', type=int, default=2)
     parser.add_argument('--resume', type=Path, help='Resume both arms from a paired training snapshot')
-    parser.add_argument('--compare-missile-credit', action='store_true',
+    comparison = parser.add_mutually_exclusive_group()
+    comparison.add_argument('--compare-missile-credit', action='store_true',
                         help='Train two private copies of the same policy with and without the civilian-impact reward')
+    comparison.add_argument('--compare-phase-balance', action='store_true',
+                            help='Compare existing PPO loss with equal planning and battle loss mass')
     args = parser.parse_args()
     copies = args.copies
     if args.train_rounds < 1 or args.eval_rounds < 2 or args.eval_rounds % 2:
@@ -85,15 +90,16 @@ def main():
         torch.manual_seed(args.seed)
         baseline = trainer.PolicyNet2()
         trainer.load_pretrained(baseline, trainer.MODEL)
-        if args.compare_missile_credit:
-            models = {'unshaped': baseline, 'missile_credit': deepcopy(baseline)}
+        if args.compare_missile_credit or args.compare_phase_balance:
+            labels = ('standard', 'balanced') if args.compare_phase_balance else ('unshaped', 'missile_credit')
+            models = {labels[0]: baseline, labels[1]: deepcopy(baseline)}
         else:
             candidate = SpatialPolicy()
             for name in ('gru', 'hu', 'val'):
                 getattr(candidate, name).load_state_dict(getattr(baseline, name).state_dict())
             models = {'dense': baseline, 'shared': candidate}
         optimizers = {arm: torch.optim.Adam(net.parameters(), lr=3e-4) for arm, net in models.items()}
-        if args.compare_missile_credit:
+        if args.compare_missile_credit or args.compare_phase_balance:
             checkpoint = torch.load(trainer.MODEL, weights_only=True)
             for opt in optimizers.values():
                 opt.load_state_dict(deepcopy(checkpoint['optimizer']))
@@ -102,6 +108,9 @@ def main():
                       learning=trainer.learning_config())
         if args.compare_missile_credit:
             config['comparison'] = 'missile_civilian_credit'
+        if args.compare_phase_balance:
+            config['comparison'] = 'phase_balance'
+            config['fixed_speed'] = 'speed_1'
         first_round = 0
         source = trainer.policy_id(baseline)
         if args.resume:
@@ -112,7 +121,9 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        tag = ('coverage-missile-credit-' if args.compare_missile_credit else 'coverage-spatial-') + uuid.uuid4().hex[:10]
+        experiment = 'phase-balance' if args.compare_phase_balance else (
+            'missile-credit' if args.compare_missile_credit else 'spatial')
+        tag = 'coverage-' + experiment + '-' + uuid.uuid4().hex[:10]
         directory = Path(operator.ROOT, 'analysis', tag)
         directory.mkdir()
         print(directory, 'source policy', source, 'starting round', first_round, flush=True)
@@ -127,17 +138,23 @@ def main():
                 start = time.monotonic()
                 results = collect_pairs(pool, jobs, directory)
                 batch_seconds = time.monotonic() - start
+                policies = {arm: trainer.policy_id(net) for arm, net in models.items()}
                 for job, row in zip(jobs, results):
                     summary = {k: row.get(k) for k in ('end','saved_frac','win','advance','sim','t','err','board_id','timeout_phase','log_started')}
                     summary.update(copy=job[0], arm=job[1], seed=job[3], round=rnd,
                                    phase='train' if training else 'evaluation',
+                                   policy_id=policies[job[1]], start_kind=row.get('start_kind'),
+                                   outbreak_seed=(row.get('outbreak') or {}).get('seed'),
                                    decisions=len(row.get('obs', [])), batch_seconds=batch_seconds)
                     summary['battle_actions'] = dict(Counter(
                         trainer.TOOLS[u] for u, obs in zip(row.get('us', []), row.get('obs', []))
                         if not obs[trainer.PLANNING_INDEX]))
-                    if args.compare_missile_credit:
+                    if args.compare_missile_credit or args.compare_phase_balance:
                         summary['missile_civilian_losses'] = row.get('battle_actions', {}).get('missile_civilian_losses')
                         summary['missile_civilian_reward'] = row.get('reward_components', {}).get('missile_civilian_loss')
+                        summary['legal_cast_tools'] = row.get('battle_actions', {}).get('legal_cast_tools', {})
+                        summary['confirmed_spends'] = row.get('battle_actions', {}).get('stock_decreased')
+                        summary['planning_placements_selected'] = row.get('selected_placements', {})
                     with (directory/'results.jsonl').open('a') as f:
                         f.write(json.dumps(summary)+'\n')
                     print(summary, flush=True)
@@ -146,7 +163,8 @@ def main():
                 if training:
                     for arm, net in models.items():
                         np.random.seed(args.seed + rnd)
-                        trainer.ppo_update(net, [row for job,row in zip(jobs,results) if job[1]==arm], optimizers[arm])
+                        trainer.ppo_update(net, [row for job,row in zip(jobs,results) if job[1]==arm],
+                                           optimizers[arm], balance_phases=arm=='balanced')
                         torch.save(net.state_dict(), directory/(arm+'.pt'))
                     temp = directory/'paired.tmp'
                     torch.save(dict(next_round=rnd+1, source=source, config=config,
