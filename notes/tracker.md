@@ -2,6 +2,32 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 17:44 Central, phase balance 216952 checkpointed two rounds.
+  All eight games entered battle and retried. Neither arm had
+  civilians sheltered at READY. Round 1 had no closed shelter,
+  6-8 planning decisions per game, $3021-$3111 unspent and no
+  confirmed battle spends. The standard arm assigned roughly
+  3% of episode loss weight to planning that round and the
+  balanced arm 50%. This verifies delivered weighting and
+  early sparse preparation. Round 2 live under PID 61372.
+- Audited 32 private comparison journals by exact policy ID
+  and distinct native outbreak. Retained schema-4 policy
+  1c3be633f44497fc had two occupied READY batches across four
+  distinct outbreaks. Both positive games used sampling seed
+  215152 on inst13, with different native outbreaks and layout
+  fingerprints. Both had 10.64% sheltered, 42.1k-42.8k protected
+  civilian-seconds and occupied breach at 49.80-52.07 sim s.
+  Both trials of seed 215153 on inst15 had zero occupancy.
+  Thus evidence is tied to one positive policy sampling seed.
+  Verified exact weights and ten Adam parameter states in
+  analysis/coverage-shelter-duration-0e7fdfc762/paired.pt,
+  duration_baseline, next_round=2. This is the strongest retained
+  checkpoint by repeated native duration exposure in the archive
+  audit. Use it as a pilot source with new sampling seeds if
+  216952 does not furnish stronger exact-checkpoint discovery
+  evidence. Do not reuse the positive seed to manufacture
+  treatment. The warm-start loader excludes archived outbreaks.
+
 - At 17:42 Central, private phase balance 216952 checkpointed its
   first paired round. The standard arm assigned 8.65% and 8.30%
   of within-episode loss weight to planning. The balanced arm
