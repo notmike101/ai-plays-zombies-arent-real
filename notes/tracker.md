@@ -2,6 +2,33 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:15 Central, footprint study 192952 first wave finished.
+  Standard 5.51% mean, footprint 9.45% mean (two games each,
+  all retries; no 35% result). Direct civilian deaths 217 versus 65.
+  Four different outbreaks and 2 games per arm make that
+  descriptive, not causal. Crossed wave is playing under
+  74284 (inst13 PID 69892, inst14 69500, inst15 10284, inst16 63160).
+- The first actual footprint receipt report linked 11 of 12
+  confirmed shots to impacts by game clock and position.
+  One decision center differed by about 6.6 m from its eventual
+  native impact, above the fixed 5 m join limit; left unmatched.
+  Six linked shots had an earlier nearby impact during their
+  flight. Those need separate analysis. Example: 134 civilians
+  observed in the footprint of a follow-up, one directly hit
+  after the previous blast killed 145 at the same point.
+  Without earlier overlap the point-count baseline had lower
+  pilot error than zero for both populations, but there were
+  only five such linked shots, with no held-out validation.
+- Native timed receipts showed twelve pre-unlock selections
+  from 29.5 to 30 s, eleven with no stock spend. The one that
+  spent stock launched after 30 s during input dispatch. The
+  existing mask deliberately led the verified unlock by 0.5 s.
+  Staged stricter native unlock timing with a separate view
+  revision (analysis/coverage-portable314/tmp/native-ability-unlock.patch).
+  All 308 isolated script tests passed, including 29.999 s
+  locked and 30.0 s available. Patch applicability verified;
+  no change to live masks until this experiment is finished.
+
 - At 12:10 Central, timing study 191952 finished: standard
   ce5b191516c37f99 13.37% mean / 27.00% best, preference
   15980ab215b7253e 11.08% mean / 15.05% best, four scored
