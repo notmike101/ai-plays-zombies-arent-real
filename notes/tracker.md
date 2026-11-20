@@ -2,6 +2,29 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:50 Central, READY coverage study 194952 exited normally.
+  Frozen baseline averaged 3.48% saved and challenger 9.62%,
+  four scored retries each on distinct outbreaks disjoint from
+  training. All eight were below 10% and neither arm passed
+  consistency. The sole positive coverage in all 24 attempts
+  occurred in held-out outbreak 1106250354, after weights were
+  frozen. 9.95% sheltered (811 civilians), verified credit
+  0.02985, first occupied breach at 50.90 sim s, all 811 exposed,
+  and 9.94% at retry. The game confirmed two deployments across
+  the eight reserve games, both from one baseline trial.
+- Deployed cbebccc at the idle boundary and launched zone
+  exploration study 195952 under operator 74460. Stage data
+  analysis/coverage-zone-exploration-759d5bd5dc and log
+  analysis/coverage-zone-exploration-195952-drive-d.log.
+  Clones original frozen policy 8a691469a829158d and runs four
+  training rounds on inst13-16 plus four paired reserve rounds
+  on inst19/20. Tempered corner choices only during candidate
+  training. On a six-step forward-only parity check with the
+  frozen production GRU, the maximum deviation from a replay
+  probability ratio of 1 was 5.96e-7. Untempered probabilities
+  were bit-exact, and illegal cells stayed at zero. No model
+  update in that check. Production checkpoint hash matched.
+
 - At 12:46 Central, READY coverage study 194952 completed all
   16 training attempts. All were distinct outbreaks and scored
   below 10% at retry. Baseline averaged 4.92%, challenger 5.89%.
