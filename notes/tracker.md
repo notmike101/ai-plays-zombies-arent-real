@@ -2,6 +2,29 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 15:10 Central, battle experiment 204952 completed six
+  training rounds. Baseline had eight official scores averaging
+  6.54%, four occupied starts and two native airstrikes. The
+  exploration arm had seven official scores averaging 5.61%,
+  three occupied starts, 11 changed legal tool distributions
+  and three SeekDestroy dispatches without stock decrease.
+  No natural training finishes. Nine planning timeouts.
+  Frozen pair started under PID 25136, inst19 42300, inst20 71072.
+- The game requires a garrisoned building for SeekDestroy.
+  The policy already snaps to native kind-6 garrison positions.
+  Five historical native SeekDestroy arming events left the
+  charge unchanged in two completed L1 logs with one garrison.
+  Current cast dispatch posts pointer move and left press with
+  no intervening UI-frame wait. Staged matched comparison with
+  a one-frame pointer wait only for model-selected snapped
+  building casts. It retains the exact tool and point, counts
+  actual waits separately from stock drops and native deploys,
+  and changes neither rewards nor official scoring. All 344
+  isolated tests passed and applicability checked.
+  D: analysis/coverage-portable314/tmp/battle-timing/target-settle-comparison.patch
+  SHA256 DA8425FDAF556D376D8538415D498BCDC27DF7FBF33AF17F39C6506A0C60C3D6.
+  Wait for the live frozen reserve to finish before deployment.
+
 - At 15:01 Central, completed all six 203952 training rounds
   and four frozen reserve pairs. Training scored 4.56% over
   six scores baseline and 4.81% over eight stronger. Ten
