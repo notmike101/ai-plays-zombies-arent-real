@@ -2,6 +2,37 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:46 Central, wave-one Missile candidate ce5b191516c37f99
+  retried at 9.37% (inst14/outbreak 3813848280) and 9.91%
+  (inst16/1595816018). Native journals record 3 impacts at the
+  identical aim point on each board. Inst14 impacts killed 58
+  civilians, 2 officers and 0 zombies; current reward correctly
+  assigned all 58 civilian deaths (-0.00712). Inst16 killed 66
+  zombies and no civilians. On both boards the first native
+  wall-cell break event followed the first impact by 0.03 sim
+  seconds, with all eight reported sample points within its 56 m
+  radius. These observations corroborate wall-damage risk but
+  are not an independently isolated attribution of every wall
+  cell. Details retained in
+  analysis/coverage-team-7ff3782543/loadout-native-audit.json.
+- First Police control scored 9.89%; second control inst15 PID
+  61660 still active under operator 71708. On inst13 all seven
+  dispatch receipts joined stock deltas to native Police drops.
+  Dispatch was 504-543 ms, native holds 0.102-0.490 s including
+  a stock exhaustion event. The earlier 1.48-2.31 s behavior is
+  still unexplained and did not recur in this session.
+- Staged missile-followup-study.patch for a crossed comparison
+  on the same frozen Missile-capable discovery policy. It uses the
+  existing reversible -10 follow-up preference while its last
+  missile is in flight; native masks and target scoring remain
+  available. Readiness, launch evidence, actual score and
+  checkpoint identity are required, and reserved evaluation
+  retains the same control. All 305 script tests passed in
+  isolation. Handoff PID 70252 is waiting for exact operator
+  71708 before deployment and launch of 191952; log
+  analysis/coverage-missile-followup-handoff.log. No changes
+  to the live game, saved metrics or production checkpoint.
+
 - At 11:42 Central, Police path study 189952 had finished all eight
   discovery games. Endpoint was 15.63% average, peak 32.99%;
   path 11.72% average, peak 17.02%. The three outbreaks played by
