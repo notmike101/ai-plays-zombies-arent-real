@@ -24,6 +24,41 @@ class SearchTests(unittest.TestCase):
                 self.assertIn('distinct, paired holdout copies disjoint from training', errors.getvalue())
                 lock.assert_not_called()
 
+    def test_defense_evidence_requires_paid_build_and_native_ready_units(self):
+        rng = np.random.default_rng(39)
+        team = search.random_team(rng)
+        level = dict(stage=1, start_kind='fresh', attempt=0, end='aborted', saved=.09,
+                     outbreak={'seed': 21},
+                     paid_buildings={'Garrison': 1}, ready_stats={'garrisons': 1})
+        trial = dict(team=team, levels=[level])
+        self.assertTrue(search.has_defense_evidence(trial))
+        for partial in ({'ready_stats': {'garrisons': 0}}, {'paid_buildings': {}},
+                        {'saved': None}, {'start_kind': 'carry'}):
+            self.assertFalse(search.has_defense_evidence(dict(trial, levels=[dict(level, **partial)])))
+        self.assertFalse(search.has_defense_evidence(dict(trial, arm='candidate')))
+
+    def test_planning_scale_changes_tool_preferences_without_changing_battle(self):
+        rng = np.random.default_rng(43)
+        parent = search.random_team(rng)
+        garrison, ready = (search.tr.TOOLS.index(tool) for tool in ('garrison', 'ready'))
+        parent['plan'] = [dict(search.gene(rng), family=0, tool=garrison, duration=1)]
+        scaled = dict(parent, planning_logit_scale=.5)
+        record = dict(base='base', team_id=search.team_id(scaled), team=scaled)
+        self.assertEqual(search.checkpoint_team(record, 'base')['team'], scaled)
+        raw = torch.zeros(1, 1, search.tr.NU)
+        raw[..., ready] = 20.
+        cells = torch.zeros(1, 1, search.tr.NU * search.tr.NC)
+        def forward(*args):
+            return raw.clone(), cells.clone(), None, None
+        x = torch.zeros(1, 1, search.tr.NOBS)
+        original, modified = search.TeamPolicy(parent), search.TeamPolicy(scaled)
+        with torch.no_grad(), patch.object(search.tr.PolicyNet2, 'forward', side_effect=forward):
+            x[..., search.tr.PLANNING_INDEX] = 1
+            self.assertEqual(int(original(x)[0].argmax()), ready)
+            self.assertEqual(int(modified(x)[0].argmax()), garrison)
+            x[..., search.tr.PLANNING_INDEX] = 0
+            torch.testing.assert_close(original(x)[0], modified(x)[0])
+
     def test_defense_variant_inserts_a_learned_preference_without_losing_the_plan(self):
         rng = np.random.default_rng(23)
         parent = search.random_team(rng)

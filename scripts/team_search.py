@@ -86,6 +86,26 @@ def defense_placement_candidate(parent, rng):
     return child
 
 
+def has_defense_evidence(trial):
+    team = trial.get('team')
+    if not team or team.get('layout') or trial.get('arm') or fitness.l1_outbreak_seed(trial) is None:
+        return False
+    level = trial['levels'][0]
+    ready = level.get('ready_stats') or {}
+    saved = level.get('saved')
+    return (isinstance(saved, (int, float)) and 0 <= saved <= 1
+            and any(v > 0 for v in (level.get('paid_buildings') or {}).values())
+            and any((ready.get(unit) or 0) > 0 for unit in ('garrisons', 'snipers', 'mortars', 'turrets')))
+
+
+def planning_scale_candidate(parent, rng):
+    return dict(deepcopy(parent), planning_logit_scale=float(rng.uniform(.35, .7)))
+
+
+def best_defense_team(defenders, evidence):
+    return max(defenders.values(), key=lambda team: fitness.l1_proposal_rank(evidence, team), default=None)
+
+
 def nearby_plan_candidate(parent, rng):
     spatial_genes = [i for i, step in enumerate(parent['plan'])
                      if step['family'] in (0, 1) or step['tool'] in FAMILIES[0] + FAMILIES[1]]
@@ -312,6 +332,9 @@ class TeamPolicy(tr.PolicyNet2):
         if x[0,0,tr.PLANNING_INDEX]:
             if self.index < len(self.steps):
                 g, t = self.steps[self.index]
+                scale = self.team.get('planning_logit_scale')
+                if scale is not None:
+                    tools = tools * scale
                 tools[..., FAMILIES[g['family']]] += 5
                 tools[..., g['tool']] += 7
                 px, py = (g['x']+t*g['dx'])%8, (g['y']+t*g['dy'])%5
@@ -527,9 +550,13 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale'))
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
         raise ValueError('Invalid gesture planning flag')
+    if 'planning_logit_scale' in team:
+        scale = team['planning_logit_scale']
+        if type(scale) not in (int, float) or not .2 <= scale <= 1.:
+            raise ValueError('Invalid planning logit scale')
     battle(team)
     numeric(team['idle_bias'],())
     if not isinstance(team['plan'],list) or len(team['plan'])>64:raise ValueError('Invalid campaign plan')
@@ -774,6 +801,7 @@ def main():
             view_revision += '-placement-feedback-v1'
         evidence={}
         prices={}
+        defenders = {}
         discovery_seeds = set()
         resume_directory = args.seed_from or args.continue_layout_free
         if resume_directory and (resume_directory/'fitness.json').exists():
@@ -800,6 +828,10 @@ def main():
                     discovery_seeds.add(observed_seed)
                 if trial.get('view_revision')==view_revision:
                     fitness.record(evidence,trial)
+                    if args.continue_layout_free and has_defense_evidence(trial):
+                        defender = checkpoint_team(dict(base=base, team_id=trial['team_id'],
+                                                        team=trial['team']), base)
+                        defenders[defender['team_id']] = defender['team']
                     if args.continue_layout_free and previous_pause_variant is None:
                         previous_pause_variant = pause_variant(trial, rng)
                         if previous_pause_variant is not None:
@@ -813,6 +845,11 @@ def main():
                         best_budget,population[-1]=rank,candidate
             for i in range(1,len(population)):
                 population[i]=budget_candidate(population[i],[],prices) or population[i]
+        defender = best_defense_team(defenders, evidence)
+        if defender is not None:
+            if defender != proposal:
+                population[1] = defender
+            population[-1] = planning_scale_candidate(defender, rng)
         if prior and not (args.compare_forecast or args.compare_speed):
             previous=args.seed_from/'provisional.json'
             if previous.is_file():
@@ -898,6 +935,8 @@ def main():
                         archive[key]=team
                         deepest[key]=max(deepest.get(key,1),levels[-1]['stage'],result.get('failed_stage',1))
                         fitness.record(evidence,result)
+                        if explore_without_layout and not args.allow_progression and has_defense_evidence(result):
+                            defenders[key] = team
                         probe=cast_candidate(result,rng)
                         if probe:cast_probes[key]=probe
                     print(generation,key,[(r['stage'],r['end'],r['saved'],round(r['sim'],1)) for r in levels],flush=True)
@@ -930,7 +969,12 @@ def main():
                 # Replicate the leader on independent boards and reserve one L1 mutation.
                 alternate = incumbent or leader
                 if explore_without_layout and incumbent is None:
-                    alternate = defense_placement_candidate(leader, rng) or alternate
+                    defender = best_defense_team(defenders, evidence)
+                    if defender is not None:
+                        alternate = (defender if defender != leader and generation % 2 == 0
+                                     else planning_scale_candidate(defender, rng))
+                    else:
+                        alternate = defense_placement_candidate(leader, rng) or alternate
                 population = [leader, alternate]
                 require_fresh.update(team_id(t) for t in population)
                 population.append(l1_candidate(leader,rng) if generation%2==0 else offspring(leader,leader,rng,stage=1))
