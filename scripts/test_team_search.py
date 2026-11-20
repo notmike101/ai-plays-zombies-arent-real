@@ -298,6 +298,30 @@ class SearchTests(unittest.TestCase):
             self.assertEqual(preference['duration'], 1)
             self.assertEqual(child, parent)
 
+    def test_speed_probe_uses_failed_cast_evidence_and_changes_only_max_speed_logit(self):
+        parent = search.random_team(np.random.default_rng(5))
+        trial = dict(team=parent, levels=[dict(stage=1, start_kind='fresh', saved=.04,
+                    outbreak={'seed': 77}, paid_buildings={'Garrison': 2},
+                    ready_stats={'garrisons': 21}, ready_paint_mode=True,
+                    ready_loadout={'Demolition': 20.},
+                    battle_actions={'cast_available': 1, 'stock_decreased': 0},
+                    actions=[(search.FAST_SPEED, 0)])])
+        candidate = search.speed_probe(trial)
+        self.assertEqual(candidate, dict(parent, speed4_penalty=3.))
+        record = dict(base='base', team_id=search.team_id(candidate), team=candidate)
+        self.assertEqual(search.checkpoint_team(record, 'base')['team'], candidate)
+        trial['levels'][0]['battle_actions']['stock_decreased'] = 1
+        self.assertIsNone(search.speed_probe(trial))
+        x = torch.zeros(1, 1, search.tr.NOBS)
+        def base(*args):
+            return torch.zeros(1, 1, search.tr.NU), torch.zeros(search.tr.NU * search.tr.NC), None, None
+        with patch.object(search.tr.PolicyNet2, 'forward', side_effect=base):
+            before = search.TeamPolicy(parent)(x)[0]
+            after = search.TeamPolicy(candidate)(x)[0]
+        difference = (after - before).flatten()
+        self.assertEqual(int(torch.count_nonzero(difference)), 1)
+        self.assertEqual(difference[search.FAST_SPEED].item(), -3.)
+
     def test_battle_sampling_is_a_distinct_frozen_policy(self):
         parent = search.random_team(np.random.default_rng(4))
         candidate = search.battle_sampling_candidate(parent)

@@ -36,6 +36,7 @@ CASTS = sorted(tr.U2ABILITY)
 MISSILE = tr.ABILITY_U['Missile']
 GARRISON = tr.TOOLS.index('garrison')
 ZONE_RECT = tr.TOOLS.index('zone_rect')
+FAST_SPEED = tr.TOOLS.index('speed_4')
 MISSILE_ROW = CASTS.index(MISSILE)
 SELECT_BUILDING = tr.TOOLS.index('select_building')
 BUILDING_SPECIALS = {name.removeprefix('panel_'):i for i,name in enumerate(tr.TOOLS)
@@ -146,6 +147,20 @@ def has_defense_evidence(trial):
     return (isinstance(saved, (int, float)) and 0 <= saved <= 1
             and any(v > 0 for v in (level.get('paid_buildings') or {}).values())
             and any((ready.get(unit) or 0) > 0 for unit in ('garrisons', 'snipers', 'mortars', 'turrets')))
+
+
+def speed_probe(trial):
+    if not has_defense_evidence(trial):
+        return None
+    parent = trial['team']
+    level = trial['levels'][0]
+    actions = level.get('battle_actions') or {}
+    if (parent.get('speed4_penalty') or not level.get('ready_paint_mode')
+            or not level.get('ready_loadout') or not actions.get('cast_available')
+            or actions.get('stock_decreased') != 0 or level['saved'] >= .35
+            or not any(tool == FAST_SPEED for tool, _ in level.get('actions', ()))):
+        return None
+    return dict(deepcopy(parent), speed4_penalty=3.)
 
 
 def battle_sampling_candidate(parent):
@@ -589,6 +604,8 @@ class TeamPolicy(tr.PolicyNet2):
                 if 'blocked_tool' in self.team and not x[0,0,READY_LEGAL]:
                     tools[...,self.team['blocked_tool']]+=12
         else:
+            if self.team.get('speed4_penalty'):
+                tools[..., FAST_SPEED] -= self.team['speed4_penalty']
             tools[...,PAN]+=self.camera_pause[:4]
             tools[...,PAUSE]+=self.camera_pause[4+int(x[0,0,PAUSED].item()!=0)]
             if self.predict is not None:
@@ -804,7 +821,7 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','sample_zone_geometry','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','sample_zone_geometry','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
         raise ValueError('Invalid gesture planning flag')
     if 'sample_battle' in team and team['sample_battle'] is not True:
@@ -828,6 +845,10 @@ def checkpoint_team(record,base):
     if 'zone_anchor_lookahead' in team and (
             team['zone_anchor_lookahead'] is not True or not team.get('zone_population')):
         raise ValueError('Safe-zone anchor lookahead requires population coverage')
+    if 'speed4_penalty' in team:
+        value = team['speed4_penalty']
+        if type(value) not in (int, float) or not 0 < value <= 12:
+            raise ValueError('Invalid maximum battle speed preference')
     if 'planning_logit_scale' in team:
         scale = team['planning_logit_scale']
         if type(scale) not in (int, float) or not .2 <= scale <= 1.:
@@ -1105,6 +1126,7 @@ def main():
         prices={}
         defenders = {}
         resumed_cast_probe = None
+        resumed_speed_pair = None
         discovery_seeds = set()
         resume_directory = args.seed_from or args.continue_layout_free
         if resume_directory and (resume_directory/'fitness.json').exists():
@@ -1138,6 +1160,10 @@ def main():
                         defender = checkpoint_team(dict(base=base, team_id=trial['team_id'],
                                                         team=trial['team']), base)
                         defenders[defender['team_id']] = trial
+                        if args.click_start and resumed_speed_pair is None:
+                            challenger = speed_probe(trial)
+                            if challenger and fitness.prefix_id(challenger, 1) not in evidence:
+                                resumed_speed_pair = (trial['team'], challenger)
                     if args.continue_layout_free and previous_pause_variant is None:
                         previous_pause_variant = pause_variant(trial, rng)
                         if previous_pause_variant is not None:
@@ -1189,6 +1215,11 @@ def main():
         if proposal is not None:
             for index, candidate in zip((1, -1), planning_scale_neighbors(proposal, evidence)):
                 population[index] = candidate
+            if resumed_speed_pair:
+                reference, challenger = resumed_speed_pair
+                population[-1] = challenger
+                if reference != proposal:
+                    population[1] = reference
             if args.click_start and not evidence:
                 for index, tool in zip((1, -1), PLACEMENT_MODES):
                     candidate = placement_mode_candidate(proposal, rng, tool)
