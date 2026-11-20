@@ -1271,6 +1271,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         if 'ready_coverage_credit' in options:
             rewards['ready_coverage'] = credit_ready_coverage(
                 footer, ready_step, rows['rews'], options['ready_coverage_credit'])
+        if 'ready_shortfall_cost' in options:
+            rewards['ready_shortfall'] = charge_ready_shortfall(
+                footer, ready_step, rows['rews'], options['ready_shortfall_cost'])
         if rows['rews']:
             rows['rews'][-1] += rewards['terminal']
         advance = end == 'won' and saved is not None and saved >= .35
@@ -1373,15 +1376,34 @@ def planning_zone_receipts(windows, footer):
     return receipts
 
 
-def credit_ready_coverage(footer, step, rewards, scale):
+def verified_ready_coverage(footer, step, rewards):
     outbreak = (footer or {}).get('outbreak') or {}
     pct = outbreak.get('civilians_inside_pct')
     if (step is None or not 0 <= step < len(rewards)
             or type(pct) not in (int, float) or not 0 <= pct <= 100):
+        return None
+    return pct / 100.
+
+
+def credit_ready_coverage(footer, step, rewards, scale):
+    coverage = verified_ready_coverage(footer, step, rewards)
+    if coverage is None:
         return 0.
-    credit = scale * pct / 100.
+    credit = scale * coverage
     rewards[step] += credit
     return credit
+
+
+READY_COVERAGE_SHORTFALL_TARGET = .05
+
+
+def charge_ready_shortfall(footer, step, rewards, cost):
+    coverage = verified_ready_coverage(footer, step, rewards)
+    if coverage is None or coverage >= READY_COVERAGE_SHORTFALL_TARGET:
+        return 0.
+    penalty = -cost * (1. - coverage / READY_COVERAGE_SHORTFALL_TARGET)
+    rewards[step] += penalty
+    return penalty
 
 
 def severe_outcome(saved_frac, end):

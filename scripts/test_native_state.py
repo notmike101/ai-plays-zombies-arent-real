@@ -121,10 +121,18 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(state.mapping(100,'u1'),{41:5,99:2})
         self.assertEqual(state.read.call_args_list[1].args, (0x10000, len(payload)))
         changed = struct.pack('<Qq',0x20000|3,2)
-        state.read=Mock(side_effect=[memory[100], payload, changed])
-        with self.assertRaisesRegex(RuntimeError,'changed'):state.mapping(100,'u1')
-        state.read=Mock(side_effect=[struct.pack('<Qq',0x10000|3,3), payload])
-        with self.assertRaisesRegex(RuntimeError,'changed'):state.mapping(100,'u1')
+        state.read=Mock(side_effect=[memory[100], payload, changed,
+                                    changed, payload, changed])
+        self.assertEqual(state.mapping(100,'u1'),{41:5,99:2})
+        self.assertEqual(state.read.call_args_list[4].args, (0x20000, len(payload)))
+        state.read=Mock(side_effect=[memory[100], payload, changed] * 3)
+        with self.assertRaisesRegex(RuntimeError,'changed during read at RVA 0x64'):
+            state.mapping(100,'u1')
+        self.assertEqual(state.read.call_count,9)
+        state.read=Mock(side_effect=[struct.pack('<Qq',0x10000|3,3), payload] * 3)
+        with self.assertRaisesRegex(RuntimeError,'changed during read at RVA 0x64'):
+            state.mapping(100,'u1')
+        self.assertEqual(state.read.call_count,6)
 
     def test_map_values_skip_native_cache_line_padding(self):
         for dtype,size,per_line in [(('<f4',5),20,3),(AI,56,1)]:
