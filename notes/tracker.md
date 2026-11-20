@@ -1,6 +1,24 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+## CURRENT STATE (2026-11-19 — training paused for storage constraint)
+- The user directed all project work away from C:. The D: virtual environment
+  resolves its base Python executable to C:, so the private two-copy trial and
+  its queued automatic handoff were stopped. The Observatory was left running.
+  No owned game or trial processes remained on verification. Seed 143952
+  preserved 12 paired updates in
+  `analysis/coverage-phase-balance-d0d3c3594b/paired.pt` (SHA-256
+  `94AF3949AEBF8E0FDB27C05D63890C4F4DB066EDAA29E6664B9CD4E67FA2CEF9`).
+  The in-progress pair was interrupted; frozen evaluation has not started.
+  Production weights were untouched. Resume from that snapshot only through a
+  D:-based Python runtime after verifying preflight uses the owned copies.
+- D: had 13.1 GiB free after the cleanup. The repository had 6.05 GiB of
+  retained native state dumps. Three idle-copy samples compressed to about 11%
+  of their original size and decompressed to the original SHA-256 in memory.
+  Lossless archival is the main option if space becomes tight. It needs a
+  verified restoration path for evidence consumers. Existing dumps, assets and
+  checkpoints were kept. Removed 37 generated repository bytecode files
+  (619,084 bytes). No new project data was written to C: during this cleanup.
+
 - 2026-11-19 Central. D: fell to 0.59 GiB while no games were active,
   then recovered to 8.72 GiB. Verified a SHA-256-matching C: backup of
   the private checkpoint and results. Guarded continuation deployed at
