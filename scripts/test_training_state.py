@@ -38,6 +38,13 @@ class StateTests(unittest.TestCase):
         cohort = [dict(phase='evaluation', policy_id='frozen', start_kind='fresh',
                        outbreak_seed=i, end='won', win=True, saved_frac=.4) for i in range(30)]
         self.assertTrue(heldout_consistency(cohort, 'frozen')['passed'])
+        from_other_arm = dict(phase='train', policy_id='different-policy', outbreak_seed=4)
+        self.assertFalse(heldout_consistency([from_other_arm, *cohort], 'frozen')['passed'])
+        resumed = heldout_consistency(cohort, 'frozen', discovery_seeds={11, 71})
+        self.assertEqual(resumed['discovery_overlap'], 1)
+        self.assertFalse(resumed['passed'])
+        malformed = [dict(cohort[0], outbreak_seed=[]), *cohort[1:]]
+        self.assertEqual(heldout_consistency(malformed, 'frozen')['incomplete'], 1)
         cohort[0]['end'] = 'timeout'
         self.assertEqual(heldout_consistency(cohort, 'frozen')['incomplete'], 1)
         self.assertFalse(heldout_consistency(cohort, 'frozen')['passed'])

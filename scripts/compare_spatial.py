@@ -68,17 +68,24 @@ def collect_pairs(pool, jobs, directory):
     return results
 
 
-def heldout_consistency(rows, policy_id):
+def training_outbreak_seeds(rows):
+    return {seed for row in rows if row.get('phase') == 'train'
+            and type(seed := row.get('outbreak_seed')) is int}
+
+
+def heldout_consistency(rows, policy_id, *, discovery_seeds=()):
     """Measure three chronological blocks of fresh complete results for one frozen policy."""
     cohort = [r for r in rows if r['phase']=='evaluation' and r['policy_id']==policy_id][:30]
-    seen = set()
+    training_seeds = training_outbreak_seeds(rows).union(discovery_seeds)
+    seen = set(training_seeds)
     means = []
-    qualifying = incomplete = 0
+    qualifying = incomplete = discovery_overlap = 0
     for start in range(0, len(cohort), 10):
         block = []
         for row in cohort[start:start+10]:
             outbreak = row.get('outbreak_seed')
             score = row.get('saved_frac')
+            discovery_overlap += type(outbreak) is int and outbreak in training_seeds
             valid = (row.get('start_kind')=='fresh' and type(outbreak) is int and outbreak not in seen
                      and row.get('end') in ('won', 'lost') and isinstance(score, (int, float))
                      and math.isfinite(score) and 0 <= score <= 1)
@@ -92,7 +99,7 @@ def heldout_consistency(rows, policy_id):
         if len(block)==10:
             means.append(math.fsum(block)/10)
     return dict(attempts=len(cohort), incomplete=incomplete, qualifying=qualifying, block_means=means,
-                passed=len(means)==3 and min(means)>=.35)
+                discovery_overlap=discovery_overlap, passed=len(means)==3 and min(means)>=.35)
 
 
 def main():
@@ -147,11 +154,17 @@ def main():
             config['fixed_speed'] = 'speed_1'
         first_round = 0
         source = trainer.policy_id(baseline)
+        discovery_seeds = set()
         if args.resume:
             snapshot = torch.load(args.resume, weights_only=True)
             if snapshot['config'] != config or not 0 < snapshot['next_round'] <= args.train_rounds:
                 parser.error('Trial configuration differs from the paired snapshot')
             first_round, source = snapshot['next_round'], snapshot['source']
+            discovery_seeds.update(snapshot.get('discovery_seeds', ()))
+            previous_results = args.resume.with_name('results.jsonl')
+            if previous_results.is_file():
+                with previous_results.open(encoding='utf-8') as stream:
+                    discovery_seeds.update(training_outbreak_seeds(json.loads(line) for line in stream))
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
@@ -198,6 +211,7 @@ def main():
                 if any(not trainer.valid_trajectory(row) for row in results):
                     raise RuntimeError('Invalid trajectory; see trial results')
                 if training:
+                    discovery_seeds.update(training_outbreak_seeds(summaries[-len(jobs):]))
                     for arm, net in models.items():
                         np.random.seed(args.seed + rnd)
                         trainer.ppo_update(net, [row for job,row in zip(jobs,results) if job[1]==arm],
@@ -205,11 +219,12 @@ def main():
                         torch.save(net.state_dict(), directory/(arm+'.pt'))
                     temp = directory/'paired.tmp'
                     torch.save(dict(next_round=rnd+1, source=source, config=config,
+                                    discovery_seeds=sorted(discovery_seeds),
                                     weights={a:n.state_dict() for a,n in models.items()},
                                     optimizers={a:o.state_dict() for a,o in optimizers.items()}), temp)
                     temp.replace(directory/'paired.pt')
         results = {arm: heldout_consistency([row for row in summaries if row['arm']==arm],
-                                           trainer.policy_id(net))
+                                           trainer.policy_id(net), discovery_seeds=discovery_seeds)
                    for arm, net in models.items()}
         (directory/'consistency.json').write_text(json.dumps(results, indent=2))
 
