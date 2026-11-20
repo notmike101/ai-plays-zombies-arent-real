@@ -2,6 +2,32 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:58 Central, completed the 190952 loadout comparison.
+  All eight fresh discovery starts retried, four per arm across
+  eight distinct observed native seeds. Police averaged 9.92%,
+  Missile 9.44%; the latter confirmed 467 direct civilian
+  deaths across the four games. No reservation or promotion.
+- Missile follow-up 191952 is live on D: operator 70860, frozen base
+  8a691469a829158d, notes from analysis/coverage-team-c1a394012d,
+  deployed 3049ef9. All four games reached READY and independently
+  bought Missile level 1 with zero spare SP (inst13 PID 57940,
+  inst14 14780, inst15 67136, inst16 70408). Comparison standard
+  ce5b191516c37f99 versus in-flight preference 15980ab215b7253e.
+  Native launch/impact capture checks matched the prior discovery
+  outbreak seeds on all four copies. Both arms had spaced first
+  launches at the observation, and the new timing effect still
+  needs final evidence. Raw observations preserved in
+  analysis/coverage-team-c1a394012d/missile-followup-native-audit.json.
+- Verified the footprint patch applies cleanly to the deployed
+  timing source. One-time D: handoff PID 72724 is waiting for exact
+  operator 70860. It will deploy the tested 308-test footprint
+  comparison (192952) at the idle boundary from the strongest
+  scored Missile discovery policy with its timing preference
+  fixed across arms. Handoff log
+  analysis/coverage-missile-footprint-handoff.log. Production hash
+  and Observatory PID 12628 verified. No current official
+  timing-comparison scores or held-out qualification.
+
 - At 11:51 Central, crossed Missile inst13 outbreak 429480045
   finalized at 9.38% at retry. It launched at 43.43, 51.87 and
   74.73 sim seconds, so timing varied without a new rule. Its
