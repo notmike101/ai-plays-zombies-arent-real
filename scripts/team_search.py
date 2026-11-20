@@ -170,6 +170,7 @@ def battle_sampling_candidate(parent):
     candidate = deepcopy(parent)
     if candidate.get('sample_battle'):
         candidate.pop('sample_battle')
+        candidate.pop('cast_target_mode', None)
     else:
         candidate['sample_battle'] = True
     return candidate
@@ -782,6 +783,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                          paused_seconds=45,
                          placement_feedback=not allow_progression and not layout,
                          sample_battle=bool((active or {}).get('sample_battle')),
+                         cast_target_mode=(active or {}).get('cast_target_mode'),
                          sample_zone_geometry=bool((active or {}).get('sample_zone_geometry')))
             if capture_shadow:options['capture_shadow']=True
             if fixed_speed:options['fixed_speed']=fixed_speed
@@ -893,13 +895,16 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','sample_zone_geometry','firebomb_line_targeting','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','cast_target_mode','sample_zone_geometry','firebomb_line_targeting','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
     if 'firebomb_line_targeting' in team and team['firebomb_line_targeting'] is not True:
         raise ValueError('Invalid Firebomb line targeting flag')
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
         raise ValueError('Invalid gesture planning flag')
     if 'sample_battle' in team and team['sample_battle'] is not True:
         raise ValueError('Invalid battle sampling flag')
+    if 'cast_target_mode' in team and (
+            team['cast_target_mode'] not in ('sample', 'greedy') or not team.get('sample_battle')):
+        raise ValueError('Cast target mode requires sampled battle tools')
     if 'sample_zone_geometry' in team and team['sample_zone_geometry'] is not True:
         raise ValueError('Invalid safe-zone geometry sampling flag')
     if 'garrison_coverage' in team:
@@ -1080,8 +1085,8 @@ def main():
     neighbors.add_argument('--placement-neighbors', action='store_true',
                            help='Compare two equipped placement preferences in the same plan slot')
     neighbors.add_argument('--battle-neighbors', nargs='?', const='all',
-                           choices=('all', 'firebomb', 'firebomb-line'),
-                           help='Compare cast-score mutations or score Firebomb by its full line')
+                           choices=('all', 'firebomb', 'firebomb-line', 'cast-sampling'),
+                           help='Compare cast-score mutations, Firebomb line scoring or cast target sampling')
     parser.add_argument('--goal-margin', action='store_true',
                         help='Rank unsuccessful discovery battles by survival above the 35 percent target')
     parser.add_argument('--click-start', action='store_true',
@@ -1106,7 +1111,8 @@ def main():
     args=parser.parse_args()
     battle_target = FIREBOMB_ROW if args.battle_neighbors == 'firebomb' else None
     compare_line = args.battle_neighbors == 'firebomb-line'
-    repeat_pair = args.placement_neighbors or battle_target is not None or compare_line
+    paired_battle = args.battle_neighbors in ('firebomb-line', 'cast-sampling')
+    repeat_pair = args.placement_neighbors or battle_target is not None or paired_battle
     copies=args.copies
     if not 4<=len(copies)<=8 or len(set(copies))!=len(copies) or args.generations<1 or args.later_retries<0:
         parser.error('Use 4–8 distinct owned copies and positive generations')
@@ -1322,7 +1328,11 @@ def main():
         if compare_line:
             endpoint = dict(proposal)
             endpoint.pop('firebomb_line_targeting', None)
-            line_arms = (endpoint, dict(endpoint, firebomb_line_targeting=True))
+            battle_arms = (endpoint, dict(endpoint, firebomb_line_targeting=True))
+        elif paired_battle:
+            if not proposal.get('sample_battle'):
+                raise ValueError('Cast target comparison requires a sampled-battle reference')
+            battle_arms = tuple(dict(proposal, cast_target_mode=mode) for mode in ('sample', 'greedy'))
         elif args.battle_neighbors:
             population[1], population[-1] = battle_neighbors(proposal, rng, battle_target)
         if args.placement_neighbors:
@@ -1373,8 +1383,8 @@ def main():
                         print('cnn',result['cnn'],result.get('error'),[(r['end'],r['saved']) for r in result['levels']],flush=True)
                 return
             for generation in range(args.generations):
-                if compare_line:
-                    population = [line_arms[(i+generation) % 2] for i in range(len(copies))]
+                if paired_battle:
+                    population = [battle_arms[(i+generation) % 2] for i in range(len(copies))]
                 elif repeat_pair and generation:
                     population = first_wave[1:] + first_wave[:1]
                 else:
@@ -1383,7 +1393,7 @@ def main():
                     rng.shuffle(population)
                     if repeat_pair:
                         first_wave = population.copy()
-                jobs=[(copy,weights,team,args.seed+generation*len(copies)+(i//2 if compare_line else i))
+                jobs=[(copy,weights,team,args.seed+(i//2 if paired_battle else generation*len(copies)+i))
                       for i,(copy,team) in enumerate(zip(copies,population))]
                 starts=[1]*len(jobs)
                 for i,(copy,_,team,_) in enumerate(jobs):

@@ -389,6 +389,24 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(search.available_placement_neighbors(parent, [(*r, 'ChemMine') for r in rosters], rng), [])
         self.assertEqual(search.available_placement_neighbors(parent, [rosters[0], ('Garrison',)], rng), [])
 
+    def test_cast_target_modes_preserve_tool_sampling_identity(self):
+        parent = dict(search.random_team(np.random.default_rng(11)), sample_battle=True)
+        teams = [dict(parent, cast_target_mode=mode) for mode in ('sample', 'greedy')]
+        for team in teams:
+            team_id = search.team_id(team)
+            search.checkpoint_team(dict(team=team, team_id=team_id, base='base'), 'base')
+            disabled = search.battle_sampling_candidate(team)
+            self.assertNotIn('cast_target_mode', disabled)
+            self.assertNotIn('sample_battle', disabled)
+        self.assertNotEqual(search.team_id(teams[0]), search.team_id(teams[1]))
+        dist = torch.distributions.Categorical(probs=torch.tensor([0.1, 0., 0.9]))
+        state = torch.random.get_rng_state()
+        self.assertEqual(search.tr.select_policy_cell(dist, True), 2)
+        sampled = [search.tr.select_policy_cell(dist, False, torch.Generator().manual_seed(i))
+                   for i in range(40)]
+        self.assertEqual(set(sampled), {0, 2})
+        torch.testing.assert_close(torch.random.get_rng_state(), state)
+
     def test_firebomb_line_changes_only_firebomb_endpoint_scores(self):
         tr = search.tr
         parent = search.random_team(np.random.default_rng(41))

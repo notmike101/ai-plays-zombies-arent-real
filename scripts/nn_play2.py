@@ -607,6 +607,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
     zone_rng = None
     if options.get('sample_zone_geometry'):
         zone_rng = torch.Generator().manual_seed(options['seed'])
+    cast_target_mode = options.get('cast_target_mode')
+    cast_target_rng = (torch.Generator().manual_seed(options['seed'] ^ 0x687A90D5)
+                       if cast_target_mode == 'sample' else None)
     from env_zar import ZAREnv, ZAREnvError
     env = observer = None
     u = c = None
@@ -673,6 +676,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         end = None
         nbuy = 0
         battle_actions = dict(decisions=0, cast_available=0, cast_sampled=0, stock_decreased=0)
+        if cast_target_mode:
+            battle_actions['cast_target_non_argmax'] = 0
         legal_casts = {}
         selected_casts = {}
         selected_placements = {}
@@ -781,7 +786,11 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     mc = cell_mask(st, u, mc)
                     dc = cell_distribution(lc, u, mc)
                     cell_rng = zone_rng if st['planning'] and TOOLS[u] == 'zone_rect' else None
-                    c = select_policy_cell(dc, greedy, cell_rng)
+                    if cast_target_mode and not st['planning'] and u in U2ABILITY:
+                        c = select_policy_cell(dc, cast_target_mode == 'greedy', cast_target_rng)
+                        battle_actions['cast_target_non_argmax'] += int(c != int(dc.probs.argmax()))
+                    else:
+                        c = select_policy_cell(dc, greedy, cell_rng)
                     ulp, clp = float(du.log_prob(torch.tensor(u))), float(dc.log_prob(torch.tensor(c)))
                     if observer:
                         cp = torch.zeros(NU, NC)
