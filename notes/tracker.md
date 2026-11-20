@@ -2,6 +2,32 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 171952 started at 05:38 Central on D:, portable trainer PID
+  49060, output `analysis/coverage-team-ffb85cf6a7`, log
+  `analysis/coverage-layout-free-171952-drive-d.log`. Headroom 12.89 GiB
+  RAM and 18.83 GiB disk. Preserves click start and production hash.
+  Commit 50da0fd reserves two discovery slots for a matched cast pair
+  after the first wave when a paint-mode parent has a native salvo and
+  occupied-shelter exposure. Both have the same learned timing weights.
+  One also favors legal perimeter targets based on actual occupancy
+  and zombies. Exact holdout selection and rewards are unchanged. All
+  271 script tests passed. Prior receipts provide an eligible pair.
+- Seed 170952 finished at 05:37 with seven scored early retries, one
+  incomplete gameplay-key receipt, no native wins or held-out trials.
+  The paint reference 10c063b71e9f3043 spent three Demolition charges
+  and one Firebomb, breached at 85.10 sim seconds, and retried at 8.95%.
+  The 4x-preference challenger also confirmed four deployments before a
+  gameplay key UI-frame timeout at around sim 53. Its 51.77% at footer
+  is an incomplete observation. This was separate from the earlier
+  automatic-camera failure. The search now carries failed tool, cell,
+  and phase from the rollout, while retaining incomplete classification.
+- Another painted candidate reached READY with 21 Garrisons and spent
+  five charges; only 11 Garrisons remained at its 8.44% retry. A separate
+  8-Garrison candidate with ten deployments scored 7.64%. The first
+  occupied breaches and official losses justify testing action locations
+  alongside timing. Extra placements or successful casts alone do not
+  demonstrate a survival benefit. No policy reached the 35% gate.
+
 - Seed 170952 started at 05:25 Central on D:, portable trainer PID
   69072, output `analysis/coverage-team-a4a6da9b94` and log
   `analysis/coverage-layout-free-170952-drive-d.log`. Launch headroom
