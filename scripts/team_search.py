@@ -354,13 +354,14 @@ def vary_layout(layout,rng):
         else:layout.insert(index+1,item)
 
 
-def available_placement_neighbors(parent, rosters, rng):
+def available_placement_neighbors(parent, rosters, rng, *, buildings_only=False):
     equipped = [set(roster) for roster in rosters]
     common = set.intersection(*equipped)
     present = set.union(*equipped)
     preferred = {step['tool'] for step in parent['plan']}
     alternatives = [tool for tool, name in tr.PLACEMENTS.items()
-                    if name in common and tool not in preferred]
+                    if name in common and tool not in preferred
+                    and (not buildings_only or tool in tr.BUILDING_PLACEMENTS)]
     slot = next((i for i, step in enumerate(parent['plan'])
                  if step['tool'] in tr.PLACEMENTS and tr.PLACEMENTS[step['tool']] not in present),
                 None)
@@ -1209,6 +1210,8 @@ def main():
     neighbors = parser.add_mutually_exclusive_group()
     neighbors.add_argument('--placement-neighbors', action='store_true',
                            help='Compare two equipped placement preferences in the same plan slot')
+    neighbors.add_argument('--defense-neighbors', action='store_true',
+                           help='Compare two equipped building-unit preferences against the same model')
     neighbors.add_argument('--loadout-sampling', action='store_true',
                            help='Compare greedy and exploratory choices among legal purchases')
     neighbors.add_argument('--battle-neighbors', nargs='?', const='all',
@@ -1241,7 +1244,7 @@ def main():
     learn_tools = args.battle_neighbors == 'learn-cast-tools'
     learn_targets = args.battle_neighbors in ('learn-targets', 'learn-cast-tools')
     retest_fit = args.battle_neighbors == 'retest-fit'
-    paired_policy = args.loadout_sampling or args.battle_neighbors in (
+    paired_policy = args.defense_neighbors or args.loadout_sampling or args.battle_neighbors in (
         'firebomb-line', 'cast-sampling', 'retest-fit')
     repeat_pair = args.placement_neighbors or battle_target is not None or paired_policy or learn_targets
     copies=args.copies
@@ -1260,7 +1263,7 @@ def main():
             parser.error('Reserved holdout copies are for the final campaign evaluation')
     worker_count = max(len(copies), len(holdout_copies))
     paired_copy_counts = (2, 4) if retest_fit else (4,)
-    if (args.battle_neighbors or args.placement_neighbors or args.loadout_sampling) and (
+    if (args.battle_neighbors or args.placement_neighbors or paired_policy) and (
             not args.click_start or len(copies) not in paired_copy_counts):
         parser.error('Paired exploration requires the controlled fresh L1 start and a supported copy count')
     if repeat_pair and args.generations != 2 and not cross_fit:
@@ -1477,6 +1480,15 @@ def main():
             greedy_buy = dict(proposal)
             greedy_buy.pop('sample_loadout', None)
             policy_arms = (greedy_buy, dict(greedy_buy, sample_loadout=True))
+        elif args.defense_neighbors:
+            rosters = [operator.planning_roster((operator.owned_copy(copy) / 'steam_cloud/settings.ini')
+                                               .read_text(encoding='utf-8-sig')) for copy in copies]
+            defense_neighbors = available_placement_neighbors(proposal, rosters, rng, buildings_only=True)
+            if not defense_neighbors:
+                raise ValueError('Defense comparison needs an unequipped preference and two shared buildings')
+            print('Embedded building variants:',
+                  [[tr.TOOLS[step['tool']] for step, reference in zip(team['plan'], proposal['plan'])
+                    if step != reference] for team in defense_neighbors], flush=True)
         elif paired_policy:
             if not proposal.get('sample_battle'):
                 raise ValueError('Cast target comparison requires a sampled-battle reference')
@@ -1537,11 +1549,14 @@ def main():
                 if fit_targets:
                     population = [training_parent] * len(copies)
                 elif learn_targets or retest_fit:
-                    pairs = [target_fits[target_folds[copy]][0] if learn_targets else battle_arms
+                    pairs = [target_fits[target_folds[copy]][0] if learn_targets else policy_arms
                              for copy in copies]
                     population = [pair[(i+generation) % 2] for i, pair in enumerate(pairs)]
                     alternate_teams = {copy: pair[1-(i+generation) % 2]
                                        for i, (copy, pair) in enumerate(zip(copies, pairs))}
+                elif args.defense_neighbors:
+                    population = [((proposal, defense_neighbors[i // 2])[(i + generation) % 2])
+                                  for i in range(len(copies))]
                 elif paired_policy:
                     population = [policy_arms[(i+generation) % 2] for i in range(len(copies))]
                 elif repeat_pair and generation:

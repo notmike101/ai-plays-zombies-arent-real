@@ -520,6 +520,20 @@ class SearchTests(unittest.TestCase):
         search.fitness.record(evidence, dict(rows[0], team=child, target_fit_overlap=True))
         self.assertEqual(evidence, {})
 
+    def test_defense_neighbors_only_replace_a_preference_with_shared_buildings(self):
+        rng = np.random.default_rng(73)
+        parent = search.random_team(rng)
+        absent = search.tr.TOOLS.index('place_ChemMine')
+        parent['plan'] = [dict(search.gene(rng), family=0, tool=absent)]
+        rosters = [('Garrison', 'GasMortar', 'MLRS', 'Oil'),
+                   ('Garrison', 'GasMortar', 'MLRS', 'Oil', 'Sniper')]
+        children = search.available_placement_neighbors(parent, rosters, rng, buildings_only=True)
+        self.assertEqual({search.tr.PLACEMENTS[t['plan'][0]['tool']] for t in children},
+                         {'GasMortar', 'MLRS'})
+        for child in children:
+            original = dict(child, plan=[dict(child['plan'][0], tool=absent)])
+            self.assertEqual(original, parent)
+
     def test_loadout_sampling_is_legal_ranked_and_replayable(self):
         tr = search.tr
         start = tr.BUY_TOOLS.start
