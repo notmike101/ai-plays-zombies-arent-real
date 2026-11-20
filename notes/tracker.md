@@ -2,6 +2,33 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 15:50 Central, 207952 finished the frozen comparison and
+  exited normally. Both arms reached all 16 training battles.
+  The candidate's applied cost was -0.436 over 218 legal
+  deferrals, no mismatches. In frozen play both started 3/4
+  battles, mean legal READY probability 7.12% baseline and
+  5.16% cost. All six starts retried below 10%, one reused an
+  earlier outbreak, and zero eligible natural finishes. No
+  policy promoted. Both private weights and Adam preserved.
+- READY investigation: newer-parent 206952 timeouts all passed
+  up legal READY, 806 times across 22 timeouts. Eight had no
+  recorded final blocker and fourteen had debt. Replayed 36
+  actual legal decisions from six frozen 207952 episodes, with
+  the same recorded state, incoming memory and mask. Newer
+  baseline/cost averaged 0.50%/0.68% READY vs archived
+  7.11%/5.63%. Zeroing memory did not erase the difference.
+  Full analysis and limitations: notes/ready-investigation.md.
+- 058cda6 adds blocked-decision counts and final planning board
+  diagnostics. 348 isolated tests passed. Read-only smoke
+  208952 on idle inst19 with 980405fb8a4c1f69 verified 40
+  legal deferrals and 20 blocked decisions. No cap blocker,
+  four closed zones, 14.27% observed coverage, $166.35,
+  two Garrisons and one Gas Mortar; native planning footer
+  cross-checked money and defense counts. No official score.
+  Test game 62296 exited. Observatory PID 21012 preserved.
+  Production checkpoint unchanged. Evidence stays on D: under
+  analysis/coverage-portable314/tmp/ready-audit-208952-result.json.
+
 - At 15:36 Central, archived-parent READY-delay pilot 207952
   checkpointed its first batch under operator PID 38956
   (created 15:33:37). All four policies selected READY and
