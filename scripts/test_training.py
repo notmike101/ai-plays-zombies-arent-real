@@ -5,6 +5,7 @@ import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
@@ -98,9 +99,7 @@ class LearningTests(unittest.TestCase):
         targets[10], targets[15] = (900, 200), (100, 100)
         state['battle_targets'] = {24: targets}
         for current in (
-                state, dict(state, anchor=(24, 10)), dict(state, anchor=(24, 15)),
-                dict(state, gesture_anchor=(train.TOOLS.index('shift_drag_world'), 15)),
-                dict(state, gesture_anchor=(train.TOOLS.index('drag_world'), 8))):
+                state, dict(state, anchor=(24, 10)), dict(state, anchor=(24, 15))):
             masks = train.battle_geometry_masks(current, 1000, 1000)
             self.assertTrue(masks)
             for tool, mask in masks.items():
@@ -112,6 +111,24 @@ class LearningTests(unittest.TestCase):
         tools, _ = train.masks_for(current)
         self.assertFalse(tools[24])
         self.assertTrue(tools[train.TOOLS.index('cancel_tool')])
+
+    def test_battle_geometry_uses_pending_gesture_created_by_live_controls(self):
+        mechanics = train.Mechanics.__new__(train.Mechanics)
+        mechanics.env = SimpleNamespace(cw=1000, ch=1000)
+        mechanics.controls = None
+        for name, start in (('shift_drag_world', 15), ('drag_world', 8), ('select_box', 8)):
+            with self.subTest(tool=name):
+                state = dict(planning=False, playarea_boundary=[(0, 0), (900, 0), (50, 900), (0, 900)])
+                mechanics.execute(state, name, start)
+                self.assertEqual(state['gesture_anchor'], (name, start))
+                masks = train.battle_geometry_masks(state, 1000, 1000)
+                if name == 'select_box':
+                    self.assertEqual(masks, {})
+                    continue
+                tool = train.TOOLS.index(name)
+                np.testing.assert_array_equal(
+                    masks[tool], [not train.outside_playarea(state, tool, cell, 1000, 1000)
+                                  for cell in range(train.NC)])
 
     def test_unconfirmed_building_retries_apply_only_to_the_same_target_and_camera(self):
         targets = [None] * train.NC

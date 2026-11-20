@@ -261,9 +261,9 @@ def battle_geometry_masks(st, width, height):
     world_points = [(round(XF[i % 8] * width), round(YF[i // 8] * height)) for i in range(NC)]
     pointer_cells = inside_polygon(world_points, boundary)
     if st.get('gesture_anchor'):
-        tool, anchor = st['gesture_anchor']
-        if TOOLS[tool] in ('drag_world', 'shift_drag_world'):
-            return {tool: pointer_cells & pointer_cells[anchor]}
+        name, anchor = st['gesture_anchor']
+        if name in ('drag_world', 'shift_drag_world'):
+            return {TOOLS.index(name): pointer_cells & pointer_cells[anchor]}
         return {}
     masks = {TOOLS.index(name): pointer_cells
              for name in ('click_world', 'right_click_world', 'drag_world', 'shift_drag_world')}
