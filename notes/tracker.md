@@ -2,6 +2,40 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 17:19 Central, split shelter-duration 214952 finished.
+  Candidate reward .1331474145 across two of 16 training games;
+  baseline also measured two positive occupancy episodes. Seven
+  frozen retries and one baseline timeout, one discovery overlap,
+  zero eligible natural finishes, no promotion. Both policies
+  and Adam retained in analysis/coverage-shelter-duration-db66164c99.
+- Last frozen pair guard replayed a persistent payload-map
+  failure on inst20 PID 64668. All 18 diagnostic reads saved
+  stable header/table with count two and three nonzero slots;
+  no hash 1/max or zero/max key sentinel. This confirms stable
+  count disagreement for this occurrence, not which entry is
+  authoritative. Reader validation remains. Next private launcher
+  measures how many keys belong to the same-tick live units when
+  the mismatch recurs. Evidence analysis/coverage-portable314/
+  tmp/payload-failure-214952-72468.jsonl.
+- dcf6ad1 adds private exact civilian shelter occupancy input.
+  Schema 4/default policy constructor and production checkpoint
+  preserved. Both experimental arms append one input, migrated
+  with zero weights and Adam moments; candidate observes exact
+  polygon union fraction and control sees zero in that slot.
+  Initial archived logits and recurrent state reproduced within
+  2e-6. At idle deployment, 357 script and 62 Observatory tests,
+  12-step policy replay and graph assertions passed.
+- At 17:20 launched exact input 215952, PID 75452 (17:20:38),
+  archive 5f80a288d2c1053a widened to 1a85a5ce3aeaf220. Both
+  arms stock 1x, split CPUs, same .30 READY credit and planning
+  exploration. Eight training rounds inst13-16 and four frozen
+  pairs inst19/20. Data analysis/coverage-shelter-input-0b9747d801,
+  console analysis/coverage-shelter-input-215952-drive-d.log.
+  Fresh actual Observatory frames from both arms showed 4890
+  inputs and exact last label, no label warning. First checkpoint
+  verified four retries, zero native occupancy on either arm and
+  no feature exposure. Further rounds active; effect unproven.
+
 - First two rounds of split-CPU duration 214952 had eight
   retries, and roughly 7-8% of their decisions were planning.
   Legal casts appeared in three battles; two before first
