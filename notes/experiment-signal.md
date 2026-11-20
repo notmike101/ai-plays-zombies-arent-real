@@ -81,6 +81,23 @@ and fresh official outcomes separately. Trials without intact occupied
 intervals leave the intervention unexercised. A learner that stalls or reduces
 shelter occupancy can improve a single diagnostic while worsening survival.
 
+## Exact shelter occupancy input
+
+`--compare-shelter-input` widens both private policies by one input. The
+control supplies zero and the candidate supplies the fraction of living
+civilians inside the union of closed native safe-zone polygons. This measures
+current occupancy and includes breached polygons whose geometry still exists.
+The fraction can rise when civilians outside shelters die. Read it alongside
+the civilian survival features and the occupied-breach evidence.
+
+The new GRU input weight and its Adam moments start at zero in both arms.
+Schema 5 identifies this private observation contract. Ordinary schema 4
+checkpoints and the official evaluation continue through their existing paths.
+The signal report counts exposure to a positive input. Separately, a
+same-state replay can zero the input while holding the policy, observation,
+incoming memory and mask fixed to measure changes in the action distribution.
+Action distributions and official survival each require their own evidence.
+
 ## Examples from completed runs
 
 - Shelter-defense study 198952 had no occupied breach in any valid training
