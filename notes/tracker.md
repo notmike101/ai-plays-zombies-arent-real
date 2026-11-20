@@ -1,6 +1,14 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 Central. Staged learning revision 9 and a targeted civilian
+  avoidance comparison on `codex/civilian-impact-credit`. A replay of
+  comparison 138952 matched all 1,167 native missile civilian deaths to
+  recorded steps. Missile was the only legal battle cast in the captured
+  mask observations, and no placement was selected after the initial layout.
+  Search now tries an extra legal loadout proposal if a slot remains.
+  Occupied breach and infection coefficients were held fixed. Production
+  search was active; no policy/checkpoint changes or new live run.
 - 2026-11-19 19:10 Central. Controlled shadow comparison 138952 completed
   all 18 fresh L1 scores and joined 54/54 native missile impacts across
   6,785 transitions. Control 3/6 qualifying, timing 2/6, targeting 0/6.
