@@ -2,6 +2,31 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 179952 started at 07:41 Central on D:, trainer PID 67192,
+  output `analysis/coverage-team-d6931e4e15`, and log
+  `analysis/coverage-layout-free-179952-drive-d.log`. Launch headroom
+  was 12.80 GiB RAM and 18.94 GiB disk. Commit cf50c30 fits the cast
+  cell-score rows to official outcomes from sampled real-game targets.
+  It reads the signed score gradient at each chosen legal target,
+  weights each scored episode by its leave-one-out outcome baseline,
+  deduplicates fit outbreaks, and caps the update norm at 0.5.
+  Only the cast cell-score matrix can change. The fit phase samples
+  targets; the following comparison tests both frozen arms with the
+  parent f0fbb68332c444bb's top-ranked-target mode. Repeated fit
+  outbreaks are flagged and excluded from comparison fitness. No
+  synthetic outcomes or changes to production PPO. The gradient
+  matched autodiff and the fixture crossed the fit/evaluation boundary.
+  All 281 script and 60 Observatory tests passed. Production hash matched.
+- Seed 178952 finished at 07:40 with eight scored battles, one native
+  clear at 29.17%, and no reserved evaluation. Sampled target mode
+  averaged 9.33% across four distinct outbreaks and picked 15 of 50
+  ability targets away from the argmax. Top-ranked mode averaged
+  12.03% across four distinct outbreaks and picked all 69 at the
+  argmax. On the three shared outbreaks, sampled versus top-ranked
+  saved fractions were 9.26% vs 4.58%, 9.59% vs 5.47%, and 9.97% vs
+  8.88%. The single 29.17% clear on 953610303 drove the higher
+  top-ranked mean and does not establish consistency.
+
 - Seed 178952 started at 07:26 Central on D:, trainer PID 62944,
   output `analysis/coverage-team-f00bffc967`, and log
   `analysis/coverage-layout-free-178952-drive-d.log`. Launch headroom
