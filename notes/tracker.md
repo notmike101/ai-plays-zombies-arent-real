@@ -2,6 +2,29 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 167952 started at 04:55 Central on D:, portable trainer PID
+  70536, output `analysis/coverage-team-b2e80f522d` and log
+  `analysis/coverage-layout-free-167952-drive-d.log`. Startup headroom
+  12.95 GiB RAM and 18.84 GiB free. Carries forward exact provisional
+  winner cb77350565675243 to test repeatability, with a separate corner
+  sampling probe. Production checkpoint hash verified. Commit 1c29bd0
+  handles pointer-sized invalid game module snapshots and retries the
+  documented transient Windows error, up to four total attempts.
+  Seed 166952 previously needed standard boot fallback for one overflow.
+  Two mocked paths cover transient and terminal snapshot failures.
+  All 264 script tests passed. Causal attribution in live startup unverified.
+- Seed 166952 finished at 04:54 Central, one native win and seven early
+  retries. cb77350565675243 cleared the horde with 24.82% officially
+  saved at 174.1 simulated seconds, outbreak 1296320277. Its only genome
+  change from 6a41db6d3b08aef0 was planning tool logit scale 0.4111077.
+  Native READY showed 21 Garrisons, 28.95% initially sheltered and $82.
+  Three native Demolition deployments had receipts. The result is a
+  provisional discovery win below 35%. Reserved evaluation was deferred.
+- The matched corner-sampling candidate 18c2c42a85d4ada1 chose a new
+  rectangle pair on seed 3798721150. Its starting sheltering was 18.53%,
+  versus 28.95% in the parent, and official retry was 6.39%. This shows
+  policy-driven layout variation, without evidence of higher survival.
+
 - Seed 166952 started at 04:44 Central on D:, portable trainer PID
   38836, output `analysis/coverage-team-9a5dba2492` and log
   `analysis/coverage-layout-free-166952-drive-d.log`. Startup headroom
