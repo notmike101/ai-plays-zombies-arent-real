@@ -34,6 +34,20 @@ class ShelterTests(unittest.TestCase):
         self.assertEqual(shelter.occupied_breaches,1)
         self.assertEqual(shelter.perimeter(np.array([[100.,10.]])).tolist(),[0.])
 
+    def test_stronger_cost_changes_only_the_breach_reward(self):
+        baseline, stronger = Shelter(10), Shelter(10, breach_cost=.30)
+        civilians = [(1, (25, 25)), (2, (30, 30)), (3, (120, 120))]
+        intact = self.snapshot(civilians)
+        breached = self.snapshot(civilians, [(20, 20), (21, 21), (22, 22)])
+        for shelter in (baseline, stronger):
+            self.assertEqual(shelter.observe(intact, 0.), 0.)
+            self.assertAlmostEqual(shelter.observe(intact, .5), .01)
+            self.assertAlmostEqual(shelter.observe(breached, 1.), -shelter.breach_cost * .2)
+            self.assertEqual(shelter.observe(breached, 1.5), 0.)
+            self.assertEqual(shelter.exposed, {1, 2})
+            self.assertEqual(shelter.first_occupied_breach, 1.)
+        self.assertAlmostEqual(stronger.breach_penalty, 3 * baseline.breach_penalty)
+
     def test_overlapping_shelters_do_not_double_charge_the_same_person(self):
         shelter=Shelter(10)
         zone=self.snapshot([])['zones'][0]

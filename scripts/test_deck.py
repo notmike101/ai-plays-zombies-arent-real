@@ -130,8 +130,9 @@ class MaskTests(unittest.TestCase):
     def test_unlock_boundary(self):
         s = slot()
         self.assertFalse(self.sc({'sim': 10}, s))          # locked
-        self.assertFalse(self.sc({'sim': 29.4}, s))        # -0.5 s margin
-        self.assertTrue(self.sc({'sim': 29.5}, s))
+        self.assertFalse(self.sc({'sim': 29.5}, s))
+        self.assertFalse(self.sc({'sim': 29.999}, s))
+        self.assertTrue(self.sc({'sim': 30.0}, s))
         self.assertTrue(self.sc({'sim': 100}, s))
 
     def test_pending_blocks_until_ready(self):

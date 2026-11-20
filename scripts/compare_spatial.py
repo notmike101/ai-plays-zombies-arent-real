@@ -36,6 +36,10 @@ class SpatialPolicy(trainer.PolicyNet2):
         return self.hu(out), scores, self.val(out).squeeze(-1), h
 
 
+BREACH_COSTS = {'breach_baseline': trainer.BREACH_COST,
+                'breach_stronger': 3 * trainer.BREACH_COST}
+
+
 def episode(job):
     copy, arm, weights, seed, tag = job
     try:
@@ -47,6 +51,8 @@ def episode(job):
         options = dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')
         if arm in ('standard', 'balanced'):
             options.update(fixed_speed='speed_1', fixed_clock=True)
+        if arm in BREACH_COSTS:
+            options.update(fixed_speed='speed_2', fixed_clock=True, occupied_breach_cost=BREACH_COSTS[arm])
         return trainer.run_episode((env.pid, weights, False, tag, options), policy_factory=policy,
                                    telemetry=False)
     finally:
@@ -108,31 +114,42 @@ def main():
     parser.add_argument('--seed', type=int, default=81251)
     parser.add_argument('--train-rounds', type=int, default=1)
     parser.add_argument('--eval-rounds', type=int, default=2)
+    parser.add_argument('--eval-copies', nargs='+', help='Separate owned copies for frozen evaluation')
     parser.add_argument('--resume', type=Path, help='Resume both arms from a paired training snapshot')
     comparison = parser.add_mutually_exclusive_group()
     comparison.add_argument('--compare-missile-credit', action='store_true',
                         help='Train two private copies of the same policy with and without the civilian-impact reward')
     comparison.add_argument('--compare-phase-balance', action='store_true',
                             help='Compare existing PPO loss with equal planning and battle loss mass')
+    comparison.add_argument('--compare-breach-cost', action='store_true',
+                            help='Compare current and triple occupied shelter exposure costs in private PPO')
     args = parser.parse_args()
     copies = args.copies
     if args.train_rounds < 1 or args.eval_rounds < 2 or args.eval_rounds % 2:
         parser.error('Use positive training rounds and an even number of evaluation rounds')
     if len(copies) not in (2, 4, 6, 8) or len(set(copies)) != len(copies):
         parser.error('Use two to eight distinct copies in pairs')
+    evaluation_copies = args.eval_copies or copies
+    if args.eval_copies and (len(evaluation_copies) not in (2,4,6,8)
+            or len(set(evaluation_copies)) != len(evaluation_copies)
+            or set(evaluation_copies).intersection(copies)):
+        parser.error('Evaluation copies must be distinct, paired and disjoint from training')
+    workers = max(len(copies), len(evaluation_copies))
     with operator.training_lock(operator.LOCK):
         ancestors = [p.pid for p in psutil.Process().parents()]
-        for copy in copies:
+        for copy in dict.fromkeys(copies + evaluation_copies):
             operator.require_idle(operator.inventory(), copy, os.getpid(), ancestor_pids=ancestors)
             check = operator.preflight(copy)
             if not check['ok']:
                 raise RuntimeError(check['errors'])
-        operator.limit_resources(len(copies))
+        operator.limit_resources(workers)
         torch.manual_seed(args.seed)
         baseline = trainer.PolicyNet2()
         trainer.load_pretrained(baseline, trainer.MODEL)
-        if args.compare_missile_credit or args.compare_phase_balance:
-            labels = ('standard', 'balanced') if args.compare_phase_balance else ('unshaped', 'missile_credit')
+        paired_weights = args.compare_missile_credit or args.compare_phase_balance or args.compare_breach_cost
+        if paired_weights:
+            labels = (tuple(BREACH_COSTS) if args.compare_breach_cost else
+                      ('standard', 'balanced') if args.compare_phase_balance else ('unshaped', 'missile_credit'))
             models = {labels[0]: baseline, labels[1]: deepcopy(baseline)}
         else:
             candidate = SpatialPolicy()
@@ -140,7 +157,7 @@ def main():
                 getattr(candidate, name).load_state_dict(getattr(baseline, name).state_dict())
             models = {'dense': baseline, 'shared': candidate}
         optimizers = {arm: torch.optim.Adam(net.parameters(), lr=3e-4) for arm, net in models.items()}
-        if args.compare_missile_credit or args.compare_phase_balance:
+        if paired_weights:
             checkpoint = torch.load(trainer.MODEL, weights_only=True)
             for opt in optimizers.values():
                 opt.load_state_dict(deepcopy(checkpoint['optimizer']))
@@ -152,6 +169,11 @@ def main():
         if args.compare_phase_balance:
             config['comparison'] = 'phase_balance'
             config['fixed_speed'] = 'speed_1'
+        if args.eval_copies:
+            config['eval_copies'] = evaluation_copies
+        if args.compare_breach_cost:
+            config.update(comparison='occupied_breach_cost', fixed_speed='speed_2',
+                          occupied_breach_cost_by_arm=BREACH_COSTS)
         first_round = 0
         source = trainer.policy_id(baseline)
         discovery_seeds = set()
@@ -168,19 +190,21 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        experiment = 'phase-balance' if args.compare_phase_balance else (
-            'missile-credit' if args.compare_missile_credit else 'spatial')
+        experiment = ('breach-cost' if args.compare_breach_cost else
+                      'phase-balance' if args.compare_phase_balance else
+                      'missile-credit' if args.compare_missile_credit else 'spatial')
         tag = 'coverage-' + experiment + '-' + uuid.uuid4().hex[:10]
         directory = Path(operator.ROOT, 'analysis', tag)
         directory.mkdir()
         summaries = []
         print(directory, 'source policy', source, 'starting round', first_round, flush=True)
-        with ProcessPoolExecutor(len(copies)) as pool:
+        with ProcessPoolExecutor(workers) as pool:
             for rnd in range(first_round, args.train_rounds + args.eval_rounds):
-                operator.require_resource_headroom(len(copies))
                 training = rnd < args.train_rounds
+                round_copies = copies if training else evaluation_copies
+                operator.require_resource_headroom(len(round_copies))
                 jobs = []
-                for i, copy in enumerate(copies):
+                for i, copy in enumerate(round_copies):
                     arm = tuple(models)[(i+rnd)%2]
                     jobs.append((copy, arm, models[arm].state_dict(), args.seed+rnd*100+i//2,
                                  f'{tag}/{rnd}/{arm}/{copy}'))
@@ -204,6 +228,13 @@ def main():
                         summary['legal_cast_tools'] = row.get('battle_actions', {}).get('legal_cast_tools', {})
                         summary['confirmed_spends'] = row.get('battle_actions', {}).get('stock_decreased')
                         summary['planning_placements_selected'] = row.get('selected_placements', {})
+                    if args.compare_breach_cost:
+                        summary['shelter'] = row.get('shelter')
+                        battle = row.get('battle_actions', {})
+                        for key in ('severe_failure', 'first_outnumbered_sim', 'first_live_at_retry_floor_sim'):
+                            summary[key] = battle.get(key)
+                        summary['occupied_breach_reward'] = row.get('reward_components', {}).get('occupied_breach')
+                        summary['occupied_breach_cost'] = BREACH_COSTS[job[1]]
                     with (directory/'results.jsonl').open('a') as f:
                         f.write(json.dumps(summary)+'\n')
                     summaries.append(summary)

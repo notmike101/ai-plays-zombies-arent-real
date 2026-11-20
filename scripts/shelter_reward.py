@@ -48,8 +48,11 @@ def garrison_perimeter_gain(zones, existing, targets, radius, existing_radius=No
 
 
 class Shelter:
-    def __init__(self, population):
+    def __init__(self, population, *, breach_cost=BREACH_COST):
+        if not np.isfinite(breach_cost) or breach_cost < 0:
+            raise ValueError('Invalid occupied shelter exposure cost')
         self.population = population
+        self.breach_cost = breach_cost
         self.next_sample = 0.
         self.previous = {}
         self.breached = set()
@@ -112,7 +115,7 @@ class Shelter:
         self.active_exposure.update(newly_exposed)
         self.exposed.update(newly_exposed)
         self.breach_exposures += len(newly_exposed)
-        penalty = -BREACH_COST*len(newly_exposed)/self.population
+        penalty = -self.breach_cost*len(newly_exposed)/self.population
         self.presence_credit += credit
         self.breach_penalty += penalty
         return credit+penalty

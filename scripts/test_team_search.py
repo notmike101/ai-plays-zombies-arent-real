@@ -1162,7 +1162,7 @@ class SearchTests(unittest.TestCase):
                                  ready_loadout_sp=1., shelter={'first_occupied_breach': 52.},
                                  opening_loadout={'Police': {'cost': 1., 'first_effect': 8.},
                                                   'Missile': {'cost': 2., 'first_effect': 32.5}})
-                revision = ('playable-overview-v3-bounded-targets-shelter-v2-specials-v1-retries-v2-verified-ready-v1'
+                revision = ('playable-overview-v3-bounded-targets-shelter-v2-specials-v1-retries-v2-verified-ready-v1-native-unlock-v1'
                             '-placement-feedback-v4-debt-cancel-v1-click-start-v1')
                 prior = dict(copy='a', team=baseline, team_id=search.team_id(baseline),
                              view_revision=revision, levels=[discovery])

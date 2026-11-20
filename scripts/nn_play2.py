@@ -150,7 +150,7 @@ def slot_castable(st, s):
     a charge remaining (existing aircraft act autonomously)."""
     if not s.get('key'):return False
     t = st['sim']
-    if t + 0.5 < s['unlock']:
+    if t < s['unlock']:
         return False
     if s['pending'] and t < s['ready_t']:
         return False
@@ -714,7 +714,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         o = env.obs()
         civ0 = max(o['civ'], 1)
         m0 = o['money']
-        st = dict(t=0., planning=True, spend_frac=0., deck=[], sim=0., mult=8., shelter=Shelter(civ0))
+        shelter_tracker = Shelter(civ0, breach_cost=options.get('occupied_breach_cost', BREACH_COST))
+        st = dict(t=0., planning=True, spend_frac=0., deck=[], sim=0., mult=8., shelter=shelter_tracker)
         config = initial.get('config', {})
         st['rules']={**config,**initial.get('params',{})}
         st.update(loadout=env.loadout_levels(), sp=session.get('sp_unspent', 0),

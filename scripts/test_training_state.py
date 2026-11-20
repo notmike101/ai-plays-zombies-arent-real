@@ -77,6 +77,25 @@ class StateTests(unittest.TestCase):
                                  dict(start_kind='fresh', seed=123, missile_credit=True,
                                       fixed_speed='speed_1', fixed_clock=True))
 
+    def test_breach_comparison_uses_normal_speed_and_changes_only_penalty(self):
+        import compare_spatial
+        with patch.object(compare_spatial.operator, 'owned_copy'), patch.object(compare_spatial.zar_boot, 'boot'), \
+                patch.object(compare_spatial.zar_boot, 'stop'), patch.object(train, 'run_episode') as run:
+            for arm, cost in compare_spatial.BREACH_COSTS.items():
+                compare_spatial.episode(('inst13', arm, {}, 123, 'test'))
+                self.assertEqual(run.call_args.args[0][4],
+                    dict(start_kind='fresh', seed=123, missile_credit=True, fixed_speed='speed_2',
+                         fixed_clock=True, occupied_breach_cost=cost))
+                self.assertIs(run.call_args.kwargs['policy_factory'], train.PolicyNet2)
+
+    def test_reserved_ppo_copies_refuse_overlap_before_taking_lock(self):
+        import compare_spatial
+        with patch('sys.argv', ['compare_spatial', '--copies', 'a', 'b', '--eval-copies', 'a', 'c']), \
+                patch.object(compare_spatial.operator,'training_lock') as lock:
+            with self.assertRaises(SystemExit):
+                compare_spatial.main()
+            lock.assert_not_called()
+
     def test_missile_civilian_loss_is_charged_at_native_impact(self):
         events = [
             {'seq': 1, 'ev': 'deploy', 'what': 'cruise_missile', 'sim': 1},
