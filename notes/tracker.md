@@ -2,6 +2,19 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 08:59 Central, read-only live native state on seed 184952
+  confirmed three MLRS on inst16 and two Gas Mortars on inst18 at
+  53.17 and 52.23 simulated seconds respectively. None of those units
+  were inside an occupied shelter at the sampled time. The trial
+  recorded two paid gestures for each unit type; a paint gesture can
+  create several entities. MLRS retried at 4.85%, Gas Mortar at 9.75%.
+  The first completed control retried at 4.03%. These scores were
+  on different native outbreaks. The active trial remains PID 24440.
+  A regression-tested in-memory change records payload-resolved
+  embedded unit counts and their occupancy at READY in future ledgers.
+  It distinguishes unit counts from paid gestures and makes no change
+  to observations, rewards or live code during this run.
+
 - Seed 184952 started at 08:57 Central on D:, operator PID 24440,
   output `analysis/coverage-team-858f2e225f`, with log
   `analysis/coverage-layout-free-184952-drive-d.log`. Full-availability
