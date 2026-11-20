@@ -374,8 +374,10 @@ def available_placement_neighbors(parent, rosters, rng):
     return children
 
 
-def live_cast_update(parent, trials):
-    shape = (len(CASTS), 5)
+def live_cast_update(parent, trials, *, learn_tools=False):
+    key = 'cast_bias' if learn_tools else 'battle'
+    gradient_key = 'cast_tool_gradients' if learn_tools else 'cast_target_gradients'
+    shape = (len(CASTS),) if learn_tools else (len(CASTS), 5)
     samples = {}
     for trial in sorted(trials, key=lambda trial: trial['copy']):
         seed = fitness.l1_outbreak_seed(trial)
@@ -385,28 +387,28 @@ def live_cast_update(parent, trials):
         saved = level.get('saved')
         if level['end'] not in ('won', 'lost', 'aborted') or not isinstance(saved, (int, float)) or not 0 <= saved <= 1:
             continue
-        gradient = np.asarray(level['battle_actions'].get('cast_target_gradients'))
+        gradient = np.asarray(level['battle_actions'].get(gradient_key))
         if gradient.shape == shape and gradient.dtype.kind in 'fiu' and np.isfinite(gradient).all():
             samples[seed] = (saved, gradient)
-    report = dict(scored_seeds=sorted(samples), step_norm=0.)
+    report = dict(scored_seeds=sorted(samples), step_norm=0., learned_field=key)
     if len(samples) < 2:
         return parent, report
     scores, gradients = zip(*samples.values())
     centered = np.asarray(scores) - np.mean(scores)
-    gradient = np.einsum('n,nij->ij', centered, gradients) / (len(samples)-1)
+    gradient = np.tensordot(centered, np.asarray(gradients), axes=1) / (len(samples)-1)
     update = .5 * gradient / max(1., np.linalg.norm(gradient))
     report['step_norm'] = float(np.linalg.norm(update))
-    child = dict(parent, battle=(np.asarray(parent['battle']) + update).tolist())
+    child = dict(parent, **{key: (np.asarray(parent[key]) + update).tolist()})
     return (child if report['step_norm'] else parent), report
 
 
-def target_comparison_fits(parent, trials, copy_folds, evaluation_mode):
+def target_comparison_fits(parent, trials, copy_folds, evaluation_mode, *, learn_tools=False):
     reports = {}
     folds = set(copy_folds.values())
     for fold in sorted(folds):
         batch = [trial for trial in trials
                  if len(folds) == 1 or copy_folds[trial['copy']] != fold]
-        candidate, fit = live_cast_update(parent, batch)
+        candidate, fit = live_cast_update(parent, batch, learn_tools=learn_tools)
         reference, challenger = (dict(team, cast_target_mode=evaluation_mode)
                                  for team in (parent, candidate))
         fit.update(parent=team_id(parent), reference=team_id(reference),
@@ -480,7 +482,8 @@ def shelter_cast_pair(defenders, evidence, rng):
 
 
 class TeamPolicy(tr.PolicyNet2):
-    def __init__(self, team, forecast=None, *, collect_cast_gradients=False, alternate_battle=None):
+    def __init__(self, team, forecast=None, *, collect_cast_gradients=False,
+                 collect_cast_tool_gradients=False, alternate_team=None):
         super().__init__()
         self.team = team
         self.steps = [(g, t) for g in team['plan'] for t in range(g['duration'])]
@@ -488,8 +491,14 @@ class TeamPolicy(tr.PolicyNet2):
         self.coords = torch.arange(tr.NC)
         self.battle = torch.tensor(team['battle'])
         self.cast_gradients = torch.zeros_like(self.battle) if collect_cast_gradients else None
-        self.cast_weight_delta = torch.tensor(alternate_battle) - self.battle if alternate_battle is not None else None
         self.bias = torch.tensor(team['cast_bias'])
+        self.cast_tool_gradients = torch.zeros_like(self.bias) if collect_cast_tool_gradients else None
+        self.cast_weight_delta = self.cast_bias_delta = None
+        if alternate_team is not None:
+            if alternate_team['battle'] != team['battle']:
+                self.cast_weight_delta = torch.tensor(alternate_team['battle']) - self.battle
+            if alternate_team['cast_bias'] != team['cast_bias']:
+                self.cast_bias_delta = torch.tensor(alternate_team['cast_bias']) - self.bias
         self.cast_timing = team.get('cast_timing')
         self.firebomb_line_targeting = team.get('firebomb_line_targeting', False)
         self.firebomb_segments = None
@@ -534,6 +543,16 @@ class TeamPolicy(tr.PolicyNet2):
         row = CASTS.index(tool)
         features = self.cast_cell_features(tool)
         self.cast_gradients[row] += features[:, cell] - features @ probabilities
+
+    def record_cast_tool_gradient(self, tool, probabilities):
+        self.cast_tool_gradients -= probabilities[CASTS]
+        if tool in CASTS:
+            self.cast_tool_gradients[CASTS.index(tool)] += 1.
+
+    def alternate_tool_distance(self, distribution):
+        logits = distribution.logits.clone()
+        logits[CASTS] += self.cast_bias_delta
+        return float(.5 * (logits.softmax(dim=0) - distribution.probs).abs().sum())
 
     def alternate_cast_argmax(self, tool, distribution, legal):
         delta = self.cast_weight_delta[CASTS.index(tool)] @ self.cast_cell_features(tool)
@@ -780,7 +799,7 @@ def score(row, *, goal_margin=False):
 def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, observer_interval=.2,
             practice_retry=False, allow_progression=False, capture_shadow=False, fixed_speed=None,
             fast_boot=False, click_start=False, goal_margin=False, collect_cast_gradients=False,
-            alternate_battle=None):
+            collect_cast_tool_gradients=False, alternate_team=None):
     timing = {'started': monotonic()}
     if start_stage>1 and not allow_progression:
         raise ValueError('Later-stage starts require explicit campaign progression')
@@ -854,12 +873,16 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
             if capture_shadow:options['capture_shadow']=True
             if fixed_speed:options['fixed_speed']=fixed_speed
             if collect_cast_gradients:options['collect_cast_gradients']=True
-            if alternate_battle is not None:options['audit_cast_targets']=True
+            if collect_cast_tool_gradients:options['collect_cast_tool_gradients']=True
+            if alternate_team is not None:
+                options['audit_cast_targets'] = alternate_team['battle'] != active['battle']
+                options['audit_cast_tools'] = alternate_team['cast_bias'] != active['cast_bias']
             episode_started = monotonic()
             row = tr.run_episode((env.pid,weights,False,f'search/{seed}/L{stage}/a{attempt}',options),
                                  policy_factory=(lambda:TeamPolicy(active,forecast,
                                      collect_cast_gradients=collect_cast_gradients,
-                                     alternate_battle=alternate_battle)) if active else None,
+                                     collect_cast_tool_gradients=collect_cast_tool_gradients,
+                                     alternate_team=alternate_team)) if active else None,
                                  telemetry=observe)
             episode_finished = monotonic()
             if not tr.valid_trajectory(row):
@@ -1079,8 +1102,11 @@ def restore_fitted_pair(directory, base):
                 fit_outbreaks.add(seed)
         if trial.get('team_id') == fit['reference']:
             reference = checkpoint_team(dict(base=base, team_id=fit['reference'], team=trial['team']), base)['team']
-    if reference is None or candidate == reference or dict(candidate, battle=reference['battle']) != reference:
-        raise ValueError('Expected a saved reference and challenger that differ only in learned targeting weights')
+    field = fit.get('learned_field', 'battle')
+    if field not in ('battle', 'cast_bias') or reference is None or candidate == reference:
+        raise ValueError('Expected distinct saved reference and challenger policies')
+    if dict(candidate, **{field: reference[field]}) != reference:
+        raise ValueError('Expected a saved reference and challenger that differ only in the learned weights')
     return (reference, candidate), fit_outbreaks
 
 
@@ -1121,7 +1147,7 @@ def shadow_variants(champion):
 
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False,
                        capture_shadow=False, speeds=None, fast_boot=False, click_start=False, goal_margin=False,
-                       collect_cast_gradients=False, alternate_battles=None):
+                       collect_cast_gradients=False, collect_cast_tool_gradients=False, alternate_teams=None):
     if jobs:
         operator.require_resource_headroom(len(jobs))
     if starts is None:starts=[1]*len(jobs)
@@ -1132,7 +1158,8 @@ def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_
                          practice_retry=job[0]==practice_copy,allow_progression=allow_progression,
                          capture_shadow=capture_shadow, fast_boot=fast_boot, click_start=click_start,
                          goal_margin=goal_margin, collect_cast_gradients=collect_cast_gradients,
-                         alternate_battle=(alternate_battles or {}).get(job[0]),
+                         collect_cast_tool_gradients=collect_cast_tool_gradients,
+                         alternate_team=(alternate_teams or {}).get(job[0]),
                          fixed_speed=speeds[job[0]] if speeds else None):(job,stage)
              for job,stage in zip(jobs,starts,strict=True)}
     for future in as_completed(futures):
@@ -1180,7 +1207,7 @@ def main():
     neighbors.add_argument('--placement-neighbors', action='store_true',
                            help='Compare two equipped placement preferences in the same plan slot')
     neighbors.add_argument('--battle-neighbors', nargs='?', const='all',
-                           choices=('all', 'firebomb', 'firebomb-line', 'cast-sampling', 'learn-targets', 'retest-fit'),
+                           choices=('all', 'firebomb', 'firebomb-line', 'cast-sampling', 'learn-targets', 'learn-cast-tools', 'retest-fit'),
                            help='Compare battle targeting or learn cast weights from real scores')
     parser.add_argument('--goal-margin', action='store_true',
                         help='Rank unsuccessful discovery battles by survival above the 35 percent target')
@@ -1206,7 +1233,8 @@ def main():
     args=parser.parse_args()
     battle_target = FIREBOMB_ROW if args.battle_neighbors == 'firebomb' else None
     compare_line = args.battle_neighbors == 'firebomb-line'
-    learn_targets = args.battle_neighbors == 'learn-targets'
+    learn_tools = args.battle_neighbors == 'learn-cast-tools'
+    learn_targets = args.battle_neighbors in ('learn-targets', 'learn-cast-tools')
     retest_fit = args.battle_neighbors == 'retest-fit'
     paired_battle = args.battle_neighbors in ('firebomb-line', 'cast-sampling', 'retest-fit')
     repeat_pair = args.placement_neighbors or battle_target is not None or paired_battle or learn_targets
@@ -1433,7 +1461,8 @@ def main():
             print('Frozen target retest:', [team_id(team) for team in battle_arms],
                   'excluded fit outbreaks:', sorted(fit_outbreaks), flush=True)
         elif learn_targets:
-            training_parent = dict(proposal, sample_battle=True, cast_target_mode='sample')
+            train_mode = proposal.get('cast_target_mode', 'sample') if learn_tools else 'sample'
+            training_parent = dict(proposal, sample_battle=True, cast_target_mode=train_mode)
         elif compare_line:
             endpoint = dict(proposal)
             endpoint.pop('firebomb_line_targeting', None)
@@ -1494,15 +1523,15 @@ def main():
             for generation in range(args.generations):
                 fit_targets = learn_targets and generation == 0
                 fit_trials = []
-                alternate_battles = None
+                alternate_teams = None
                 if fit_targets:
                     population = [training_parent] * len(copies)
                 elif learn_targets or retest_fit:
                     pairs = [target_fits[target_folds[copy]][0] if learn_targets else battle_arms
                              for copy in copies]
                     population = [pair[(i+generation) % 2] for i, pair in enumerate(pairs)]
-                    alternate_battles = {copy: pair[1-(i+generation) % 2]['battle']
-                                         for i, (copy, pair) in enumerate(zip(copies, pairs))}
+                    alternate_teams = {copy: pair[1-(i+generation) % 2]
+                                       for i, (copy, pair) in enumerate(zip(copies, pairs))}
                 elif paired_battle:
                     population = [battle_arms[(i+generation) % 2] for i in range(len(copies))]
                 elif repeat_pair and generation:
@@ -1537,7 +1566,8 @@ def main():
                 for job,start_stage,result in completed_rollouts(pool,jobs,starts,args.later_retries,training=True,
                         allow_progression=args.allow_progression,capture_shadow=args.capture_shadow,
                         fast_boot=args.fast_boot, click_start=args.click_start, goal_margin=args.goal_margin,
-                        collect_cast_gradients=fit_targets, alternate_battles=alternate_battles):
+                        collect_cast_gradients=fit_targets and not learn_tools,
+                        collect_cast_tool_gradients=fit_targets and learn_tools, alternate_teams=alternate_teams):
                     team=job[2]
                     key=team_id(team) if team else 'control'
                     result.update(view_revision=view_revision,generation=generation,team_id=key,team=team,start_stage=start_stage)
@@ -1584,7 +1614,8 @@ def main():
                 if not valid_candidates:raise RuntimeError('No valid candidates this generation; inspect trials')
                 if fit_targets:
                     target_fits = target_comparison_fits(
-                        training_parent, fit_trials, target_folds, proposal.get('cast_target_mode', 'sample'))
+                        training_parent, fit_trials, target_folds, proposal.get('cast_target_mode', 'sample'),
+                        learn_tools=learn_tools)
                     reports = [report for _, report in target_fits.values()]
                     for fold, report in enumerate(reports):
                         print('Live target fit:', fold, {k: v for k, v in report.items() if k != 'team'}, flush=True)

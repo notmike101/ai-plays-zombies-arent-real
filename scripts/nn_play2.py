@@ -680,6 +680,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             battle_actions['cast_target_non_argmax'] = 0
         if options.get('audit_cast_targets'):
             battle_actions['alternate_target_audit'] = dict(compared=0, different_argmax=0)
+        if options.get('audit_cast_tools'):
+            battle_actions['alternate_tool_audit'] = dict(compared=0, distance_sum=0.)
         legal_casts = {}
         selected_casts = {}
         selected_placements = {}
@@ -785,6 +787,13 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     lu, lc, _, h = net(x, h)
                     du = torch.distributions.Categorical(logits=lu.flatten().masked_fill(torch.tensor(mu == 0), -1e9))
                     u = int(du.probs.argmax() if greedy else du.sample())
+                    if not st['planning']:
+                        if options.get('collect_cast_tool_gradients'):
+                            net.record_cast_tool_gradient(u, du.probs)
+                        if options.get('audit_cast_tools'):
+                            audit = battle_actions['alternate_tool_audit']
+                            audit['compared'] += 1
+                            audit['distance_sum'] += net.alternate_tool_distance(du)
                     mc = cell_mask(st, u, mc)
                     dc = cell_distribution(lc, u, mc)
                     cell_rng = zone_rng if st['planning'] and TOOLS[u] == 'zone_rect' else None
@@ -1023,6 +1032,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         battle_actions['logged_kills'] = (footer.get('stats') or {}).get('kills') if footer else None
         if options.get('collect_cast_gradients'):
             battle_actions['cast_target_gradients'] = net.cast_gradients.tolist()
+        if options.get('collect_cast_tool_gradients'):
+            battle_actions['cast_tool_gradients'] = net.cast_tool_gradients.tolist()
         if placement_feedback and footer:
             events = footer.get('combat_events') or ()
             battle_actions['firebomb_lines'] = [

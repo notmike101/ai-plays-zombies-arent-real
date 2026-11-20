@@ -438,13 +438,41 @@ class SearchTests(unittest.TestCase):
             self.assertEqual(reference['cast_target_mode'], 'greedy')
         self.assertNotEqual(fits[0][1]['candidate'], fits[1][1]['candidate'])
 
+    def test_live_tool_gradient_learns_cast_vs_wait_without_changing_targets(self):
+        parent = search.random_team(np.random.default_rng(23))
+        tool = search.FIREBOMB
+        row = search.FIREBOMB_ROW
+        alternate = copy.deepcopy(parent)
+        alternate['cast_bias'][row] += .5
+        model = search.TeamPolicy(parent, collect_cast_tool_gradients=True, alternate_team=alternate)
+        mask = torch.zeros(search.tr.NU, dtype=torch.bool)
+        mask[[0, tool]] = True
+        bias = model.bias.clone().requires_grad_()
+        logits = torch.zeros(search.tr.NU)
+        logits[search.CASTS] = bias
+        dist = torch.distributions.Categorical(logits=logits.masked_fill(~mask, -torch.inf))
+        dist.log_prob(torch.tensor(0)).backward()
+        model.record_cast_tool_gradient(0, dist.probs.detach())
+        torch.testing.assert_close(model.cast_tool_gradients, bias.grad)
+        self.assertLess(model.cast_tool_gradients[row], 0.)
+        with torch.no_grad():
+            self.assertGreater(model.alternate_tool_distance(dist), 0.)
+        rows = [dict(copy=f'inst{i}', levels=[dict(stage=1, start_kind='fresh', end='aborted',
+                     saved=.1 + i*.01, outbreak=dict(seed=i), battle_actions=dict(
+                         cast_tool_gradients=(i*model.cast_tool_gradients).tolist()))])
+                for i in (1, 2)]
+        child, report = search.live_cast_update(parent, rows, learn_tools=True)
+        self.assertEqual(report['learned_field'], 'cast_bias')
+        self.assertGreater(report['step_norm'], 0.)
+        self.assertEqual(dict(child, cast_bias=parent['cast_bias']), parent)
+
     def test_alternate_cast_audit_recomputes_argmax_with_the_same_legal_mask(self):
         parent = search.random_team(np.random.default_rng(21))
         row = search.FIREBOMB_ROW
         parent['battle'][row] = [0.] * 5
         alternate = copy.deepcopy(parent['battle'])
         alternate[row][0] = 1.
-        model = search.TeamPolicy(parent, alternate_battle=alternate)
+        model = search.TeamPolicy(parent, alternate_team=dict(parent, battle=alternate))
         model.cast_grid = torch.zeros(5, search.tr.NC)
         model.cast_grid[0, :3] = torch.tensor([0., 2., 100.])
         logits = torch.full((search.tr.NC,), -torch.inf)
