@@ -2,6 +2,28 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 10:39 Central, seed 188952 finished the crossed discovery comparison.
+  Frozen opening-bias bf3fc52369fc3746 posted official clears of 39.89%
+  (outbreak 162782703) and 38.74% (2949929277). Its other official retry
+  scores were 9.96% and 10.00%, for a four-game mean of 24.65%.
+  Reference 75de0cafd4052843 averaged 9.86% across four retries. The eight
+  games covered five distinct native outbreak seeds and used READY layout ID
+  418150907bbd395c. On matched outbreak 2949929277 the challenger first
+  deployed at 11.83 sim seconds versus the reference's 4.80; the result
+  does not establish a benefit from earlier deployments. Both arms used
+  Police paratroopers. The two distinct qualifying clears triggered reserved
+  evaluation on inst19 and inst20 under the same operator PID 71620.
+  No held-out result or promotion yet. The goal requires three consecutive
+  blocks of ten distinct scored held-out outbreaks at a mean of at least
+  35% per block, with one frozen policy.
+- Retrospective discovery audit retained the latest scored L1 row per native
+  outbreak. All 29 distinct outcomes with detailed READY receipts recorded
+  at least one occupied zone breach and opened with Police paratroopers.
+  Older archived builds/layout-replay policies often opened with Cruise
+  Missile, including the best archived runs. This comparison is descriptive:
+  layouts, decks, action policies and runtime revisions differ. The current
+  winner's observed starter offers did not include Cruise Missile.
+
 - At 10:27 Central, verified separate collapse diagnostics and retry gates
   with both PopulationPressureTests passing. A first observed zombie/civilian
   tie is a warning. A native clear in seed 187952 was first outnumbered at
