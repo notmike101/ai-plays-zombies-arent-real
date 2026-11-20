@@ -210,7 +210,8 @@ def base_masks(st):
 
 def masks_for(st):
     tools, cells = base_masks(st)
-    for tool in st.get('outside_retries',{}):
+    spatial_tools = set(np.flatnonzero(tools[2:34]) + 2)
+    for tool in spatial_tools | st.get('outside_retries', {}).keys():
         if tools[tool] and not cell_mask(st,tool,cells).any():
             tools[tool]=0
     return tools,cells
@@ -293,7 +294,10 @@ def cell_distribution(logits, tool, mask):
     logits = logits.reshape(-1, NU, NC)
     tools = torch.as_tensor(tool, dtype=torch.long).reshape(-1)
     selected = logits[torch.arange(len(tools)), tools]
-    selected = selected.masked_fill(torch.as_tensor(mask) == 0, -1e9)
+    legal = torch.as_tensor(mask) != 0
+    if not legal.any(dim=-1).all():
+        raise ValueError('Selected tool has no legal cell')
+    selected = selected.masked_fill(~legal, -1e9)
     return torch.distributions.Categorical(logits=selected.squeeze(0) if len(tools) == 1 else selected)
 
 

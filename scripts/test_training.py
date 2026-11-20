@@ -74,6 +74,19 @@ class LearningTests(unittest.TestCase):
         mu, _ = train.masks_for(dict(planning=True, deck=[], build_targets=targets))
         self.assertTrue(all(mu[u] == 0 for u in (2, 3, 5, 8, 9)))
 
+    def test_gesture_with_no_legal_endpoint_leaves_cancel_available(self):
+        st = dict(planning=True, anchor=(10, 0), world_cells=np.arange(train.NC) < 8)
+        tools, _ = train.masks_for(st)
+        self.assertEqual(np.flatnonzero(tools).tolist(), [train.TOOLS.index('cancel_tool')])
+        st['world_cells'][9] = True
+        tools, cells = train.masks_for(st)
+        self.assertEqual(tools[10], 1)
+        self.assertEqual(np.flatnonzero(train.cell_mask(st, 10, cells)).tolist(), [9])
+
+    def test_cell_distribution_rejects_empty_mask(self):
+        with self.assertRaisesRegex(ValueError, 'legal cell'):
+            train.cell_distribution(torch.zeros(1, train.NU, train.NC), 10, np.zeros(train.NC))
+
     def test_ppo_updates_with_conditional_cell_masks_and_finite_diagnostics(self):
         net = train.PolicyNet2()
         obs = np.zeros((2, train.NOBS), dtype=np.float32)
