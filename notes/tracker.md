@@ -2,6 +2,41 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 153952 finished at 02:14 Central. Sixteen discovery results:
+  14 early retries, one native loss, one planning timeout, zero wins, and
+  54 confirmed stock decreases. Four legacy geometry tools accounted
+  for 50 outside-boundary rejections. The frozen 8dde6252f008a630
+  tried two fresh held-out outbreaks, saving 3.35% at retry and 0.00%
+  at a native loss, with four confirmed deployments in each. Both GRU
+  reference outbreaks reused discovery seeds. No valid comparison or promotion.
+- Native planning logs from the 12-Garrison discovery board showed five
+  Garrisons within 30 meters of one placement. Sampling each zone edge
+  against the documented 262.5 m maximum Garrison range put 56–63% of
+  perimeter samples within that upper-bound distance. This is distance
+  coverage, with no allowance for line of sight, actual height-dependent
+  range or combat behavior. Adding units alone did not establish coverage.
+- Commit 45c2edd filters known outside-boundary geometry starts and
+  endpoints in the layout-free search. The dispatch guard remains active.
+  The same commit adds a low-survivor retry fallback using a recent
+  official snapshot from this episode's active log. A raw alive count
+  without native infection or logged save evidence cannot trigger it.
+  Final scores still use the session footer, and aborted runs cannot
+  qualify. New ledger revision prevents mixing the rollout interfaces.
+- A read-only sample of 234 battle decisions had 145 next-special
+  selections and a median top-action probability of 0.2112. Commit
+  a675cbb gives resumed search one discovery slot with the same learned
+  planning sequence and seeded sampling from the legal battle probability
+  distributions. The sampling flag forms part of frozen policy identity
+  and follows that policy into evaluation. All 247 script tests and 60
+  Observatory tests passed.
+- Seed 154952 began at 02:16 Central, trainer PID 27608 on the D:
+  portable runtime. Discovery inst13–16, reserved evaluation inst17,
+  inst18, inst20, inst19. Prior `analysis/coverage-team-036e35ad98`;
+  output `analysis/coverage-team-9922b10880`; run log
+  `analysis/coverage-layout-free-154952-drive-d.log`. Headroom at launch
+  13.15 GiB RAM and 18.23 GiB free on D:. Production weights hash matched.
+  The 35% holdout goal remains open.
+
 - Seed 153952 generation zero finished at 01:53 Central. The timing-only
   variant 102e05013e10951e confirmed five native Garrisons and reached
   early retry at 3.76% saved. Its first three Demolition deployments were
