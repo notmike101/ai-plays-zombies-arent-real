@@ -34,6 +34,7 @@ FAMILIES = [sorted(tr.PLACEMENTS), [10, 15, 16, 17, 18, 9],
 CASTS = sorted(tr.U2ABILITY)
 MISSILE = tr.ABILITY_U['Missile']
 GARRISON = tr.TOOLS.index('garrison')
+ZONE_RECT = tr.TOOLS.index('zone_rect')
 MISSILE_ROW = CASTS.index(MISSILE)
 SELECT_BUILDING = tr.TOOLS.index('select_building')
 BUILDING_SPECIALS = {name.removeprefix('panel_'):i for i,name in enumerate(tr.TOOLS)
@@ -348,6 +349,8 @@ class TeamPolicy(tr.PolicyNet2):
         self.garrison_coverage_weight = team.get('garrison_coverage', 0.)
         self.garrison_building_range = team.get('garrison_building_range', False)
         self.garrison_coverage_cells = torch.zeros(tr.NC)
+        self.zone_population_weight = team.get('zone_population', 0.)
+        self.zone_population_cells = torch.zeros(tr.NC)
         self.shelter_defense = team.get('shelter_defense',0.)
         self.missile_reserve = team.get('missile_reserve',0.)
         self.missile_followup = team.get('missile_followup',0.)
@@ -437,6 +440,30 @@ class TeamPolicy(tr.PolicyNet2):
         gain = garrison_perimeter_gain(native['zones'], defenders, world, radius, existing_radius)
         self.garrison_coverage_cells[legal] = torch.from_numpy(gain)
 
+    def set_zone_population(self, st, tools, cells, width, height):
+        self.zone_population_cells.zero_()
+        anchor = st.get('anchor')
+        native = st.get('native')
+        if not anchor or anchor[0] != ZONE_RECT or not tools[ZONE_RECT] or not native:
+            return
+        units = native['units']
+        civilians = units['pos'][units['kind'] == 0]
+        if not len(civilians):
+            return
+        points = project(civilians, native['camera'], width, height)
+        sheltered = np.zeros(len(civilians), dtype=bool)
+        for zone in native['zones']:
+            if len(zone) >= 3:
+                sheltered |= tr.inside_polygon(civilians, zone)
+        eligible = points[~sheltered]
+        legal = np.flatnonzero(tr.cell_mask(st, ZONE_RECT, cells))
+        start = np.asarray(tr.cell_of_px(anchor[1], width, height))
+        for cell in legal:
+            end = tr.cell_of_px(cell, width, height)
+            low, high = np.minimum(start, end), np.maximum(start, end)
+            inside = ((eligible >= low) & (eligible <= high)).all(axis=1)
+            self.zone_population_cells[cell] = np.count_nonzero(inside) / len(civilians)
+
     def set_special_probe(self, st, width, height):
         self.special_tools = []
         self.special_cells = []
@@ -474,6 +501,8 @@ class TeamPolicy(tr.PolicyNet2):
         if x[0,0,tr.PLANNING_INDEX]:
             if self.garrison_coverage_weight:
                 cells[GARRISON] += self.garrison_coverage_weight * self.garrison_coverage_cells
+            if self.zone_population_weight:
+                cells[ZONE_RECT] += self.zone_population_weight * self.zone_population_cells
             if self.index < len(self.steps):
                 g, t = self.steps[self.index]
                 scale = self.team.get('planning_logit_scale')
@@ -706,7 +735,7 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','garrison_coverage','garrison_building_range'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','garrison_coverage','garrison_building_range','zone_population'))
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
         raise ValueError('Invalid gesture planning flag')
     if 'sample_battle' in team and team['sample_battle'] is not True:
@@ -718,6 +747,10 @@ def checkpoint_team(record,base):
     if 'garrison_building_range' in team and (
             team['garrison_building_range'] is not True or not team.get('garrison_coverage')):
         raise ValueError('Building-specific Garrison range requires coverage')
+    if 'zone_population' in team:
+        weight = team['zone_population']
+        if type(weight) not in (int, float) or not 0 <= weight <= 16:
+            raise ValueError('Invalid safe-zone population weight')
     if 'planning_logit_scale' in team:
         scale = team['planning_logit_scale']
         if type(scale) not in (int, float) or not .2 <= scale <= 1.:
@@ -1057,6 +1090,10 @@ def main():
                     matched_plan.pop('garrison_building_range', None)
                     population[-1] = matched_plan
                     population[1] = dict(deepcopy(matched_plan), garrison_building_range=True)
+            if matched is not None:
+                sheltered = matched['levels'][0]['outbreak'].get('civilians_inside_pct')
+                if isinstance(sheltered, (int, float)) and 0 < sheltered < 35:
+                    population[-1] = dict(deepcopy(proposal), zone_population=float(rng.uniform(6., 12.)))
         if prior and not (args.compare_forecast or args.compare_speed):
             previous=args.seed_from/'provisional.json'
             if previous.is_file():

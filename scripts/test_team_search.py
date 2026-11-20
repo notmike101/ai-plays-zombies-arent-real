@@ -162,6 +162,29 @@ class SearchTests(unittest.TestCase):
         model.set_garrison_coverage(state, tools, np.ones(search.tr.NC), 1000, 1000)
         torch.testing.assert_close(model.garrison_coverage_cells[:2], torch.tensor([.5, 0.]))
 
+    def test_zone_population_counts_only_new_civilians_in_legal_rectangles(self):
+        rng = np.random.default_rng(43)
+        team = dict(search.random_team(rng), zone_population=9.)
+        frozen = dict(base='base', team_id=search.team_id(team), team=team)
+        self.assertEqual(search.checkpoint_team(frozen, 'base')['team'], team)
+        model = search.TeamPolicy(team)
+        tool = search.ZONE_RECT
+        tools = np.zeros(search.tr.NU)
+        tools[tool] = 1
+        mask = np.zeros(search.tr.NC)
+        mask[9] = 1
+        positions = np.array([[-375, 330], [-315, 270], [-480, 380], [-315, 270]])
+        old_zone = np.array([[-390, 310], [-360, 310], [-360, 350], [-390, 350]])
+        state = dict(planning=True, anchor=(tool, 0), geometry_cells={tool: mask},
+                     native=dict(camera=[0., 0., 1.], zones=[old_zone],
+                                 units=dict(kind=np.array([0, 0, 0, 1]), pos=positions)))
+        model.set_zone_population(state, tools, np.ones(search.tr.NC), 1000, 1000)
+        self.assertAlmostEqual(model.zone_population_cells[9].item(), 1./3)
+        self.assertEqual(int(torch.count_nonzero(model.zone_population_cells)), 1)
+        state['anchor'] = None
+        model.set_zone_population(state, tools, np.ones(search.tr.NC), 1000, 1000)
+        self.assertFalse(model.zone_population_cells.any())
+
     def test_planning_scale_changes_tool_preferences_without_changing_battle(self):
         rng = np.random.default_rng(43)
         parent = search.random_team(rng)

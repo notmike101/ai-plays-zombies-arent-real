@@ -748,6 +748,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         net.set_cast_targets(st, mu, mc, env.cw, env.ch)
                     if st['planning'] and getattr(net, 'garrison_coverage_weight', 0.):
                         net.set_garrison_coverage(st, mu, mc, env.cw, env.ch)
+                    if st['planning'] and getattr(net, 'zone_population_weight', 0.):
+                        net.set_zone_population(st, mu, mc, env.cw, env.ch)
                     if getattr(net,'special_probe',0.):
                         net.set_special_probe(st,env.cw,env.ch)
                     lu, lc, _, h = net(x, h)
