@@ -2,6 +2,37 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 01:18 Central the first four seed 151952 discovery games ended in
+  early retries (9.91%, 10.00%, 9.95%, 9.97%). Extending the Garrison
+  preference from two to five decisions produced two actual attempts:
+  cell 35 at (893,725) had no spend, then cell 13 at (1246,338) cost $144.
+  A different proposal paid $72 at the same cell 35 before a second
+  attempt there went unconfirmed. Both games entered with one Garrison.
+  The receipts show cell 35 can work and the longer preference has not
+  increased confirmed placements or saved civilians.
+- At 01:23 Central, replayed the saved decisions and phase receipts
+  across 66 fresh L1 layout-free candidates with native READY records.
+  In 61 games the model never selected READY; all 61 crossed into battle
+  immediately after a zone_rect decision. All lacked the trainer's
+  battle-start timestamp. Fourteen had native stock at READY and zero
+  legal cast decisions. Of the five candidates with a recorded battle
+  start, four stocked abilities and three saw legal casts. A live,
+  read-only check found three Demolition charges and 10 eligible map
+  buildings on each of the four wave-one boards, at 47.7–48.4 simulated
+  seconds (normal unlock is 20). Five or six modeled cells had eligible
+  targets before HUD exclusion. The current trainer builds the ability
+  deck only after the policy's explicit READY action, so those early
+  battles lack their purchased casts and normal battle timeout.
+- The unsafe legacy rectangle sends four unsynchronized clicks and an
+  unconditional Enter. Enter can also invoke READY without a native
+  polygon draft, as previously observed in boot diagnostics. The exact
+  key/gesture path still needs live before-and-after verification. Test
+  frame-confirmed corners and guard Enter with native draft and dialog
+  state. Reject episodes that reach battle without the model's explicit
+  READY. Run the unchanged learned policy on fresh owned copies before
+  using results from the corrected interface. Seed 151952 is still live
+  on D: and the production checkpoint remains separate.
+
 - D: storage cleanup at 01:14 Central. Archived 862 pre-existing binary
   replays (6,496,505,774 bytes) from the owned inst13–20 debug-dump folders.
   Verified every archived file against its SHA-256 and length before removing
@@ -16,7 +47,7 @@
   active. The existing trainer guard still discards newly generated binary
   companions after consuming their text dumps.
 - Seed 150952 finished at 01:09 Central with 16 discovery games and no wins.
-  Eight paid for one native Garrison and entered battle with $1,554–$1,802.
+  Seven paid for one native Garrison and entered battle with $1,554–$1,802.
   Two fresh reserved-copy candidate outbreaks ended in retries at 9.96%
   and 9.99%. Both reference outbreaks reused seeds (one retry, one pause
   timeout). No valid paired comparison or promotion.
