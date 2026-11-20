@@ -2,6 +2,26 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 10:27 Central, verified separate collapse diagnostics and retry gates
+  with both PopulationPressureTests passing. A first observed zombie/civilian
+  tie is a warning. A native clear in seed 187952 was first outnumbered at
+  63.57 sim seconds and ended at 10.37% saved. In the finished discovery
+  block, 10 of 15 scored games fell below 10% officially saved, four were
+  native clears, and the mean was 11.02%. One planning timeout was unscored.
+  No candidate qualified for reserved evaluation. Across blocks, the retained
+  75de0cafd4052843 averaged 18.25% on six distinct discovery outbreaks.
+- Isolated inst17 debt recovery retest with frozen b041d52f8070f2b2 and
+  seed 187954 reduced Cancel decisions from 28 to 12 after six cooldowns.
+  The policy switched mainly to gates and ability purchases/refunds and
+  still ended $401 over budget. See analysis/coverage-debt-cancel-retest-188952.json.
+- Commit f85e52b passed 297 script tests, 60 Observatory tests, model parity
+  and graph assertions. Opening-cast comparison seed 188952 started at
+  10:25 Central with operator PID 71620, directory analysis/coverage-team-c81131e97f,
+  log analysis/coverage-layout-free-188952-drive-d.log. Verified all four copies
+  reached their planning boards (inst13 PID 67608, inst14 57792, inst17 70268,
+  inst18 37264). Discovery results pending. Production checkpoint hash matched
+  and Observatory PID 12628 remained live.
+
 - At 10:19 Central seed 187952 finished its third wave and
   opened the fourth with the same operator PID 17560. Retained
   75de0cafd4052843 retried at 8.65% on outbreak 2949929277;

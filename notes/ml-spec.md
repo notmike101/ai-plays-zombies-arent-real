@@ -112,6 +112,15 @@ badge or the live civilian fraction. An aborted score is measured at retry, not
 a completed game win. Evacuated civilians are not infections. There are no
 purchase, spending, cast-emission, kill-count or READY bonuses.
 
+The first sampled zombie/civilian tie or worse is a battle-pressure signal.
+The retry gate requires a playing battle, at most 10% of the starting civilians
+still alive on the board, and either infections reaching 90% of the starting
+population or a fresh episode-bound official saved reading at or below 10%.
+Evacuation can lower the live count while preserving the official score. The
+trainer classifies official scores strictly below 10% as severe failures for
+known wins, losses and retries. This label is diagnostic and carries no additional
+reward. Missing scores and timeouts stay unclassified.
+
 Illustration: if35% are actually saved and65% are newly infected, the undiscounted
 reward is1.75-0.65=1.10. A complete wipe with all civilians newly infected scores-1.
 This assumes those infection totals; other deaths/evacuation can change the sum.
