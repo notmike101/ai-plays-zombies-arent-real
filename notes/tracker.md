@@ -2,12 +2,30 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:41 Central, study 198952 completed eight frozen reserve
+  attempts. All hit the retry floor and none counted as a natural
+  finish. One baseline attempt overlapped an inherited outbreak.
+  Fresh retry scores averaged 8.21% baseline (three) and 7.50%
+  stronger (four). One baseline reserve attempt started with
+  19.21% coverage and incurred 0.01925 breach cost. The stronger
+  arm had zero occupied exposures in training and reserve games.
+
+- Deployed 1d315d1 and launched private READY shortfall study
+  199952 under PID 74588. Both arms clone 3ddf829cff3ad28a with
+  private Adam state and inherited outbreak exclusions. Data
+  analysis/coverage-ready-shortfall-83d3f363f6, console
+  analysis/coverage-ready-shortfall-199952-drive-d.log. Four
+  copies inst13 60132, inst14 51452, inst15 69096, inst16 72924
+  verified protocol 3 model-only input. Six training rounds and
+  four frozen reserve pairs. Production checkpoint hash matched
+  and Observatory PID 12628 remained active.
+
 - At 13:37 Central, all valid shelter defense 198952 training
   rounds completed (24 scored attempts, 23 distinct outbreaks,
   excluding the interrupted batch). Baseline averaged 6.36%
   and stronger cost 5.85%. Every board again had zero initial
   coverage and zero breach cost. No penalty effect observed.
-  Half of those attempts had no legal battle cast sampled.
+  Half of those attempts had no recorded legal battle cast.
   Final paired checkpoint is next_round 6. Frozen evaluation
   launched with inst19 69316 and inst20 49472 under PID 1812.
 
