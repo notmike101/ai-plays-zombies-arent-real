@@ -306,6 +306,15 @@ def battle_geometry_masks(st, width, height):
     return masks
 
 
+def update_geometry_masks(st, width, height, *, placement_feedback, planning_audit):
+    if st['planning'] and (placement_feedback or planning_audit):
+        st['geometry_cells'] = planning_geometry_masks(st, width, height)
+    elif placement_feedback:
+        st['geometry_cells'] = battle_geometry_masks(st, width, height)
+    else:
+        st.pop('geometry_cells', None)
+
+
 def masks_for(st):
     tools, cells = base_masks(st)
     blocked_tools = (st.get('outside_retries', {}).keys()
@@ -847,9 +856,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
             update_outside_retries(st,env.cw,env.ch)
             st['placement_blocked'] = blocked_placement_cells(st, placement_retry_at, len(rows['obs']))
-            if placement_feedback:
-                geometry = planning_geometry_masks if st['planning'] else battle_geometry_masks
-                st['geometry_cells'] = geometry(st, env.cw, env.ch)
+            update_geometry_masks(st, env.cw, env.ch, placement_feedback=placement_feedback,
+                                  planning_audit=planning_zone_audit)
             mu, mc = masks_for(st)
             if debt_cancel_retry is not None:
                 balance, deadline = debt_cancel_retry

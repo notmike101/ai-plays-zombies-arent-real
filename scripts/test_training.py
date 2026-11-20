@@ -91,6 +91,24 @@ class LearningTests(unittest.TestCase):
             np.testing.assert_array_equal(starts[tool], start_cells)
         self.assertEqual(train.planning_geometry_masks(dict(state, planning=False), 1000, 1000), {})
 
+    def test_planning_audit_filters_rectangle_corners_without_placement_feedback(self):
+        state = dict(planning=True, playarea_boundary=[(100, 100), (900, 100), (100, 700)])
+        zone = train.TOOLS.index('zone_rect')
+        candidate = dict(state, anchor=(zone, 5))
+        tools, cells = train.masks_for(candidate)
+        self.assertTrue(tools[zone])
+        self.assertTrue(train.cell_mask(candidate, zone, cells).any())
+
+        train.update_geometry_masks(candidate, 1000, 1000, placement_feedback=False, planning_audit=True)
+        tools, cells = train.masks_for(candidate)
+        self.assertFalse(tools[zone])
+        self.assertTrue(tools[train.TOOLS.index('cancel_tool')])
+
+        candidate.pop('anchor')
+        candidate['planning'] = False
+        train.update_geometry_masks(candidate, 1000, 1000, placement_feedback=False, planning_audit=True)
+        self.assertNotIn('geometry_cells', candidate)
+
     def test_battle_geometry_filters_unplayable_clicks_and_cast_endpoints(self):
         state = dict(planning=False, playarea_boundary=[(0, 0), (900, 0), (50, 900), (0, 900)],
                      sim=40, deck=[dict(name=name, key='1', unlock=20, pending=False, charges=1)
