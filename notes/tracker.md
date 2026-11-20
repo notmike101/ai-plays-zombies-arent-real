@@ -2,6 +2,33 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:36 Central, the first four held-out attempts in study
+  193952 were all retries below 10%, all on distinct outbreaks
+  absent from training. Frozen baseline 8d56592a424c5272 scored
+  9.94% and 9.56%; stronger 81ef1c9337c1581d scored 5.72% and
+  5.85%. No occupied exposure or natural finish. The next
+  reserved wave launched under operator 54556, inst19 PID
+  71864 and inst20 PID 68184.
+- Native stock audit tied final training and second reserved
+  journal receipts to the same copy and outbreak in results.
+  Final training four bought Fire Bomb (two) or Cruise Missile
+  (two). All purchased stock was still present on retry and
+  all runs ended before its earliest possible effect
+  (42.0 s Fire Bomb, 32.5 s Missile). Second reserve baseline
+  fired Stun Gas at 30.8 sim seconds and retried at 30.83.
+  The other arm bought no battle ability in that reserve pair.
+  Neither board had a zone at READY. The first reserved native
+  journals had already rotated; its five selected Police drops
+  are unconfirmed by this audit. Compact receipts in
+  analysis/coverage-breach-cost-705d104768/native-shelter-and-stock-audit.jsonl.
+- Extended the staged READY coverage comparison with native
+  stock at READY and executed deployment timestamps so timing
+  can be distinguished from selection. All 313 isolated tests
+  and patch applicability passed again. The updated patch
+  SHA256 is 70B0206FE83A331FDF39F589F79C7CC192B2615277131DC969B5205A933FD1AE.
+  This supersedes the earlier staged hash and is pending idle
+  deployment. Production checkpoint hash matched.
+
 - At 12:32 Central, all 16 training trials in breach-cost study
   193952 finished. Eight baseline retries averaged 5.555% and
   eight stronger-cost retries averaged 6.461%; all were below
