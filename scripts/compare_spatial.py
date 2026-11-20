@@ -21,6 +21,7 @@ import local_agent as operator
 import nn_play2 as trainer
 import zar_boot
 from env_zar import ZAREnvError
+from nn_report import records
 
 
 class SpatialPolicy(trainer.PolicyNet2):
@@ -43,6 +44,7 @@ BREACH_COSTS = {'breach_baseline': trainer.BREACH_COST,
 READY_CREDITS = {'coverage_baseline': 0., 'coverage_credit': .30}
 ZONE_TEMPERATURES = {'zone_baseline': 1., 'zone_exploration': 1.5}
 PLANNING_TEMPERATURES = {'planning_baseline': 1., 'planning_exploration': 1.35}
+PLANNING_ENTROPY_BONUSES = {'entropy_baseline': 0., 'planning_entropy': .045}
 DEFENSE_COSTS = {'defense_baseline': trainer.BREACH_COST,
                  'defense_stronger': 3 * trainer.BREACH_COST}
 READY_SHORTFALL_COSTS = {'shortfall_baseline': 0., 'shortfall_penalty': .15}
@@ -50,11 +52,12 @@ READY_SHORTFALL_COSTS = {'shortfall_baseline': 0., 'shortfall_penalty': .15}
 
 def episode(job, *, observe=False):
     copy, arm, weights, seed, tag, *phase = job
+    planning_study = arm in PLANNING_TEMPERATURES or arm in PLANNING_ENTROPY_BONUSES
     try:
         copy_dir = operator.owned_copy(copy)
         env = None
         if (arm in BREACH_COSTS or arm in READY_CREDITS or arm in ZONE_TEMPERATURES
-                or arm in PLANNING_TEMPERATURES or arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS):
+                or planning_study or arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS):
             try:
                 env = zar_boot.boot(copy_dir, welcome_wait=15, discard_dump_states=True)
             except ZAREnvError as exc:
@@ -78,11 +81,12 @@ def episode(job, *, observe=False):
             options.update(fixed_speed='speed_2', fixed_clock=True, ready_coverage_credit=.30)
             if phase == [True] and ZONE_TEMPERATURES[arm] != 1.:
                 options['zone_temperature'] = ZONE_TEMPERATURES[arm]
-        if arm in PLANNING_TEMPERATURES:
+        if planning_study:
             options.update(fixed_speed='speed_2', fixed_clock=True, ready_coverage_credit=.30)
-            if phase == [True] and PLANNING_TEMPERATURES[arm] != 1.:
-                options['planning_tool_temperature'] = PLANNING_TEMPERATURES[arm]
-        if arm in ZONE_TEMPERATURES or arm in PLANNING_TEMPERATURES:
+            temperature = PLANNING_TEMPERATURES.get(arm, PLANNING_TEMPERATURES['planning_exploration'])
+            if phase == [True] and temperature != 1.:
+                options['planning_tool_temperature'] = temperature
+        if arm in ZONE_TEMPERATURES or planning_study:
             options['planning_zone_audit'] = True
         if arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS:
             options.update(fixed_speed='speed_2', fixed_clock=True, ready_coverage_credit=.30,
@@ -113,6 +117,24 @@ def collect_pairs(pool, jobs, directory, *, observe=False):
                 f.write(json.dumps(dict(pair=[job[4] for job in jobs[pair]], errors=errors))+'\n')
             results[pair] = list(pool.map(worker, jobs[pair]))
     return results
+
+
+def previous_outbreak_seeds(analysis):
+    """Exclude known Boston L1 outbreaks before launching the experiment."""
+    seeds = set()
+    for run in analysis.glob('coverage-*'):
+        paired = run/'results.jsonl'
+        if paired.is_file():
+            seeds.update(seed for row in records(paired)
+                         if type(seed := row.get('outbreak_seed')) is int)
+        for name in ('trials.jsonl', 'holdout.jsonl', 'extra-trials.jsonl',
+                     'forecast-comparison.jsonl', 'speed-comparison.jsonl'):
+            journal = run/name
+            if journal.is_file():
+                seeds.update(seed for row in records(journal) for level in row.get('levels', ())
+                             if level.get('stage') == 1
+                             and type(seed := (level.get('outbreak') or {}).get('seed')) is int)
+    return seeds
 
 
 def training_outbreak_seeds(rows):
@@ -192,6 +214,8 @@ def main():
                             help='Broaden model-selected safe-zone cells during private training only')
     comparison.add_argument('--compare-planning-exploration', action='store_true',
                             help='Broaden legal tool sampling during private preparation training')
+    comparison.add_argument('--compare-planning-entropy', action='store_true',
+                            help='Compare extra planning-tool entropy during PPO at equal rollout temperature')
     comparison.add_argument('--compare-shelter-defense', action='store_true',
                             help='Compare breach costs with broader planning exploration in both training arms')
     comparison.add_argument('--compare-ready-shortfall', action='store_true',
@@ -209,8 +233,9 @@ def main():
             or len(set(evaluation_copies)) != len(evaluation_copies)
             or set(evaluation_copies).intersection(copies)):
         parser.error('Evaluation copies must be distinct, paired and disjoint from training')
+    planning_study = args.compare_planning_exploration or args.compare_planning_entropy
     coverage_study = (args.compare_ready_coverage or args.compare_zone_exploration
-                      or args.compare_planning_exploration or args.compare_shelter_defense
+                      or planning_study or args.compare_shelter_defense
                       or args.compare_ready_shortfall)
     shelter_study = args.compare_breach_cost or coverage_study
     paired_weights = args.compare_missile_credit or args.compare_phase_balance or shelter_study
@@ -227,17 +252,19 @@ def main():
         operator.limit_resources(workers)
         torch.manual_seed(args.seed)
         baseline = trainer.PolicyNet2()
-        discovery_seeds = set()
+        discovery_seeds = previous_outbreak_seeds(Path(operator.ROOT, 'analysis'))
         warm_source = None
         if args.warm_start:
             path, arm = args.warm_start
-            weights, adam, discovery_seeds, warm_source = load_warm_start(Path(path), arm)
+            weights, adam, warm_seeds, warm_source = load_warm_start(Path(path), arm)
+            discovery_seeds.update(warm_seeds)
             baseline.load_state_dict(weights)
         else:
             trainer.load_pretrained(baseline, trainer.MODEL)
         if paired_weights:
             labels = (tuple(READY_SHORTFALL_COSTS) if args.compare_ready_shortfall else
                       tuple(DEFENSE_COSTS) if args.compare_shelter_defense else
+                      tuple(PLANNING_ENTROPY_BONUSES) if args.compare_planning_entropy else
                       tuple(PLANNING_TEMPERATURES) if args.compare_planning_exploration else
                       tuple(ZONE_TEMPERATURES) if args.compare_zone_exploration else
                       tuple(READY_CREDITS) if args.compare_ready_coverage else
@@ -277,6 +304,10 @@ def main():
         if args.compare_planning_exploration:
             config.update(comparison='planning_exploration', fixed_speed='speed_2',
                           ready_coverage_credit=.30, training_tool_temperature_by_arm=PLANNING_TEMPERATURES)
+        if args.compare_planning_entropy:
+            config.update(comparison='planning_entropy', fixed_speed='speed_2', ready_coverage_credit=.30,
+                          training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
+                          planning_tool_entropy_bonus_by_arm=PLANNING_ENTROPY_BONUSES)
         if args.compare_shelter_defense:
             config.update(comparison='shelter_defense', fixed_speed='speed_2', ready_coverage_credit=.30,
                           training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
@@ -307,6 +338,7 @@ def main():
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
         experiment = ('ready-shortfall' if args.compare_ready_shortfall else
                       'shelter-defense' if args.compare_shelter_defense else
+                      'planning-entropy' if args.compare_planning_entropy else
                       'planning-exploration' if args.compare_planning_exploration else
                       'zone-exploration' if args.compare_zone_exploration else
                       'ready-coverage' if args.compare_ready_coverage else
@@ -364,12 +396,13 @@ def main():
                             summary[key] = battle.get(key)
                         summary['logged_deployments'] = battle.get('logged_deployments')
                         summary['deploy_sim_seconds'] = battle.get('deploy_sim_seconds')
+                        summary['zombie_kill_timing'] = battle.get('zombie_kill_timing')
                         summary['occupied_breach_reward'] = row.get('reward_components', {}).get('occupied_breach')
                         summary['occupied_breach_cost'] = (
                             DEFENSE_COSTS.get(job[1], BREACH_COSTS.get(job[1], trainer.BREACH_COST)))
                         if coverage_study:
                             summary['ready_coverage_reward'] = row.get('reward_components', {}).get('ready_coverage')
-                    if (args.compare_zone_exploration or args.compare_planning_exploration
+                    if (args.compare_zone_exploration or planning_study
                             or args.compare_shelter_defense or args.compare_ready_shortfall):
                         summary['planning_zone_receipts'] = row.get('planning_zone_receipts')
                         for key in ('ready_embedded_defenses', 'ready_preparation', 'ready_loadout',
@@ -380,7 +413,7 @@ def main():
                             temp > 1. for temp in row.get('cell_temperatures', ()))
                     if args.compare_ready_shortfall:
                         summary['ready_shortfall_reward'] = row.get('reward_components', {}).get('ready_shortfall')
-                    if args.compare_planning_exploration or args.compare_shelter_defense or args.compare_ready_shortfall:
+                    if planning_study or args.compare_shelter_defense or args.compare_ready_shortfall:
                         summary['tempered_planning_decisions'] = sum(
                             temp > 1. for temp in row.get('tool_temperatures', ()))
                     with (directory/'results.jsonl').open('a') as f:
@@ -394,7 +427,8 @@ def main():
                     for arm, net in models.items():
                         np.random.seed(args.seed + rnd)
                         trainer.ppo_update(net, [row for job,row in zip(jobs,results) if job[1]==arm],
-                                           optimizers[arm], balance_phases=arm=='balanced')
+                                           optimizers[arm], balance_phases=arm=='balanced',
+                                           planning_tool_entropy_bonus=PLANNING_ENTROPY_BONUSES.get(arm, 0.))
                         torch.save(net.state_dict(), directory/(arm+'.pt'))
                     temp = directory/'paired.tmp'
                     torch.save(dict(next_round=rnd+1, source=source, config=config,

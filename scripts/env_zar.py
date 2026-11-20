@@ -40,6 +40,32 @@ class ZAREnvError(RuntimeError):
     pass
 
 
+def first_zombie_kill_timing(rows):
+    """Bracket the first native credited zombie kill with sampled game-clock times."""
+    last_zero = None
+    for row in rows:
+        if row.get('phase') == 'planning':
+            break
+        stats = row.get('stats')
+        kills = stats.get('kills') if isinstance(stats, dict) else None
+        total = kills.get('total') if isinstance(kills, dict) else None
+        sim = row.get('sim')
+        if (row.get('phase') not in ('playing', 'won', 'lost')
+                or type(total) is not int or total < 0
+                or type(sim) not in (int, float) or not math.isfinite(sim) or sim < 0):
+            if row.get('ev') == 'footer':
+                break
+            continue
+        if last_zero is not None and sim < last_zero:
+            return None
+        if total:
+            return dict(last_zero_sim=last_zero, first_positive_sim=sim) if last_zero is not None else None
+        last_zero = sim
+        if row.get('ev') == 'footer':
+            break
+    return dict(last_zero_sim=last_zero, first_positive_sim=None) if last_zero is not None else None
+
+
 def read_session(path, started_ms, *, expected_wall=None, capture_events=False):
     """Only complete records from this logging session; stale files are unknown."""
     try:
@@ -79,6 +105,8 @@ def read_session(path, started_ms, *, expected_wall=None, capture_events=False):
                 'footer': next((r for r in reversed(rows) if r.get('ev') == 'footer'), None),
                 'latest': next((r for r in reversed(rows) if 'stats' in r), None)}
         if capture_events:
+            data['zombie_kill_timing'] = (first_zombie_kill_timing(rows[ready_index:])
+                                         if ready_index is not None else None)
             events = []
             for row in rows[1:]:
                 if row.get('ev') in ('header', 'footer'):
@@ -257,6 +285,7 @@ class ZAREnv:
                 if capture_events:
                     footer.update(combat_events=data['combat_events'],
                                   combat_events_truncated=data['combat_events_truncated'],
+                                  zombie_kill_timing=data['zombie_kill_timing'],
                                   planning_zone_events=data['planning_zone_events'],
                                   planning_zone_events_truncated=data['planning_zone_events_truncated'])
                 return footer

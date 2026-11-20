@@ -35,6 +35,24 @@ class StateTests(unittest.TestCase):
                              {'err': message})
             stop.assert_not_called()
 
+    def test_consistency_excludes_outbreaks_from_earlier_experiments(self):
+        from compare_spatial import heldout_consistency, previous_outbreak_seeds
+        with tempfile.TemporaryDirectory() as directory:
+            analysis = Path(directory)
+            earlier = analysis/'coverage-earlier'
+            earlier.mkdir()
+            (earlier/'results.jsonl').write_text(json.dumps({'outbreak_seed': 4}) + '\n', encoding='utf-8')
+            trial = {'levels': [{'stage': 2, 'outbreak': {'seed': 7}},
+                                {'stage': 1, 'outbreak': {'seed': 11}, 'start_kind': 'carry'}]}
+            (earlier/'holdout.jsonl').write_text(json.dumps(trial) + '\n', encoding='utf-8')
+            known = previous_outbreak_seeds(analysis)
+        self.assertEqual(known, {4, 11})
+        cohort = [dict(phase='evaluation', policy_id='frozen', start_kind='fresh',
+                       outbreak_seed=i, end='won', win=True, saved_frac=.4) for i in range(30)]
+        result = heldout_consistency(cohort, 'frozen', discovery_seeds=known)
+        self.assertEqual(result['discovery_overlap'], 2)
+        self.assertFalse(result['passed'])
+
     def test_consistency_keeps_incomplete_or_weak_held_out_blocks_visible(self):
         from compare_spatial import heldout_consistency
         cohort = [dict(phase='evaluation', policy_id='frozen', start_kind='fresh',
@@ -310,6 +328,19 @@ class StateTests(unittest.TestCase):
                     self.assertNotIn('occupied_breach_cost', options)
                     self.assertTrue(options['planning_zone_audit'])
                     self.assertEqual(options.get('planning_tool_temperature'), 1.35 if training else None)
+
+    def test_planning_entropy_arms_share_the_same_rollout_options(self):
+        import compare_spatial as comp
+        with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \
+                patch.object(comp.zar_boot, 'stop'), patch.object(train, 'run_episode') as run:
+            for training in (True, False):
+                for arm in comp.PLANNING_ENTROPY_BONUSES:
+                    comp.episode(('inst13', arm, {}, 123, 'test', training))
+                    options = run.call_args.args[0][4]
+                    self.assertEqual(options.get('planning_tool_temperature'), 1.35 if training else None)
+                    self.assertEqual(options['ready_coverage_credit'], .30)
+                    self.assertEqual(options['fixed_speed'], 'speed_2')
+                    self.assertTrue(options['planning_zone_audit'])
 
     def test_private_observer_is_opt_in_and_throttled(self):
         import compare_spatial as comp
@@ -620,6 +651,31 @@ class StateTests(unittest.TestCase):
                 self.assertIsNone(env.logged_saved_fraction(101))
             write(dict(header, wall=101), low)
             self.assertIsNone(env.logged_saved_fraction(101))
+
+    def test_zombie_kill_time_is_a_session_bound_observation_window(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'episode.jsonl'
+            def stats(ev, sim, kills, phase='playing'):
+                return dict(ev=ev, sim=sim, phase=phase, stats={'kills': {'total': kills}})
+            def timing(*samples):
+                header = dict(ev='header', wall=100)
+                ready = dict(stats('phase', 0.0, 0), **{'from': 'planning', 'to': 'playing', 'reason': 'ready'})
+                planning = stats('snapshot', 100., 10, 'planning')
+                path.write_text('\n'.join(map(json.dumps, [header, planning, ready, *samples])))
+                data = env_zar.read_session(path, 100, expected_wall=100, capture_events=True)
+                self.assertIsNone(env_zar.read_session(path, 100, expected_wall=101, capture_events=True))
+                return data['zombie_kill_timing']
+
+            self.assertEqual(timing(stats('snapshot', 4., 0), stats('snapshot', 8., 3),
+                                    stats('footer', 12., 50, 'won')),
+                             dict(last_zero_sim=4., first_positive_sim=8.))
+            self.assertEqual(timing(stats('snapshot', 7., 0), stats('footer', 11., 0)),
+                             dict(last_zero_sim=11., first_positive_sim=None))
+            self.assertEqual(timing(stats('footer', 5., 2, 'lost')),
+                             dict(last_zero_sim=0., first_positive_sim=5.))
+            self.assertIsNone(timing(stats('snapshot', 7., 0), stats('footer', 3., 3)))
+            self.assertEqual(timing(stats('snapshot', 5., True), stats('footer', 10., 1)),
+                             dict(last_zero_sim=0., first_positive_sim=10.))
 
     def test_log_outcome_requires_this_session_footer(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -174,6 +174,24 @@ class LearningTests(unittest.TestCase):
         self.assertEqual(diag['entropy'], 0.)
         self.assertTrue(all(v is None or np.isfinite(v) for v in diag.values()))
 
+    def test_extra_tool_entropy_shapes_only_planning_loss(self):
+        net = train.PolicyNet2()
+        obs = np.zeros((2, train.NOBS), dtype=np.float32)
+        mu, mc = np.zeros(train.NU), np.zeros(train.NC)
+        mu[1:3], mc[3] = 1, 1
+        tr = dict(obs=obs, us=[1,2], cs=[3,3], ulps=[-.7,-.7], clps=[0.,0.],
+                  masks=[(mu,mc)]*2, rews=[0.,1.], sim_elapsed=[.1,.1], bootstrap=0.)
+        opt = torch.optim.SGD(net.parameters(), lr=0.)
+        def loss(bonus):
+            return train.ppo_update(net, [tr], opt, epochs=1,
+                                    planning_tool_entropy_bonus=bonus)['loss']
+
+        self.assertEqual(loss(.045), loss(0.))
+        obs[0, train.PLANNING_INDEX] = 1.
+        bonus_delta = loss(0.) - loss(.045)
+        self.assertGreater(bonus_delta, .025)
+        self.assertLess(bonus_delta, .035)
+
     def test_early_loadout_records_native_flight_and_delay_fields(self):
         rules = dict(police_unlock_seconds=0, police_arrival_seconds=8,
                      missile_unlock_seconds=30, missile_flight_seconds=2.5,

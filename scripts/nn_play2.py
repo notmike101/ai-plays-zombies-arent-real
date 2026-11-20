@@ -1194,6 +1194,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             rows['planning_zone_receipts'] = planning_zone_receipts(rows['planning_action_windows'], footer)
         battle_actions['logged_deployments']=footer.get('deployments') if footer else None
         battle_actions['logged_kills'] = (footer.get('stats') or {}).get('kills') if footer else None
+        battle_actions['zombie_kill_timing'] = footer.get('zombie_kill_timing') if footer else None
         if options.get('collect_cast_gradients'):
             battle_actions['cast_target_gradients'] = net.cast_gradients.tolist()
         if options.get('collect_cast_tool_gradients'):
@@ -1437,7 +1438,8 @@ def phase_loss_weights(planning):
     return torch.where(planning, total/(2*count), total/(2*(total-count)))
 
 
-def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *, balance_phases=False):
+def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
+               balance_phases=False, planning_tool_entropy_bonus=0.):
     seqs = []
     for t in trajs:
         X = torch.tensor(np.array(t['obs'], dtype=np.float32)).unsqueeze(0)
@@ -1477,7 +1479,11 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *, balanc
             pg = -(W * torch.min(ratio * adv,
                                  torch.clamp(ratio, 1 - clip, 1 + clip) * adv)).mean()
             vf = (W * (v.squeeze(0) - RET) ** 2).mean()
-            loss = pg + c1 * vf - ent * (W * (du.entropy() + dc.entropy())).mean()
+            tool_entropy = du.entropy()
+            loss = pg + c1 * vf - ent * (W * (tool_entropy + dc.entropy())).mean()
+            if planning_tool_entropy_bonus:
+                planning = X[0, :, PLANNING_INDEX].bool()
+                loss -= planning_tool_entropy_bonus * (planning * tool_entropy).sum() / planning.sum().clamp_min(1)
             if not torch.isfinite(loss):
                 raise ValueError('Non-finite PPO loss; checkpoint not saved')
             opt.zero_grad()
@@ -1490,7 +1496,7 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *, balanc
                 diagnostics.append(dict(epoch=epoch, loss=float(loss),
                     approx_kl=float(((ratio-1)-(lp-(ULP+CLP))).mean()),
                     clip_fraction=float(((ratio-1).abs() > clip).float().mean()),
-                    entropy=float((du.entropy()+dc.entropy()).mean()),
+                    entropy=float((tool_entropy+dc.entropy()).mean()),
                     explained_variance=float(1-(RET-v.squeeze(0)).var(unbiased=False)/variance)
                         if variance > 1e-8 else None))
         print('ppo2 batch loss', round(tot / max(len(seqs), 1), 3), flush=True)
