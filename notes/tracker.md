@@ -2,6 +2,29 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:25 Central, shelter-cost study 193952 completed round zero
+  and atomically saved the two private policies and Adam states.
+  The starting policy was identical and the four native outbreaks
+  were distinct. Baseline scored 1.11% and 7.65% at retry, stronger
+  9.24% and 9.65%. All four had zero credited or exposed civilians
+  and zero occupied-breach cost. These scores cannot measure the
+  effect of the stronger penalty. A UI-frame timeout in inst15
+  triggered the existing pair retry on inst15/16, which completed.
+  PPO diagnostics show two updates. Operator 54556 started round
+  one, inst13 PID 61264, inst14 56492, inst15 68124, inst16 74240.
+  Check the second round for active shelter exposure before judging
+  the reward experiment. Production checkpoint hash matched.
+- Descriptive archive audit, deduplicated by team ID, view revision
+  and native outbreak, across 1,119 scored fresh L1 campaign-search
+  rows with shelter telemetry. In the no-zone subset, 34 of 39
+  attempts scored below 10%, and two cleared 35%. In 1,011 attempts
+  with occupied breach exposure, 359 were below 10% and 209 cleared
+  35%. The archive includes different policy and preparation modes.
+  Policy selection and scenario differences preclude a
+  causal estimate. A stronger breach cost can only teach from
+  rounds that encounter occupied breaches; keep inspecting whether
+  the policy creates and protects meaningful shelter coverage.
+
 - At 12:21 Central, the full footprint comparison finished with four
   fresh or repeated-seed discovery attempts per arm (four native
   outbreaks crossed between arms). Standard targeting averaged 7.39%
