@@ -534,6 +534,15 @@ def holdout_assignments(copies, weights, challenger, incumbent, seed, wave):
     return jobs,arms
 
 
+def shadow_variants(champion, rng):
+    timing = deepcopy(champion)
+    targeting = deepcopy(champion)
+    timing['cast_bias'][MISSILE_ROW] -= 3.
+    targeting['battle'][MISSILE_ROW] = (
+        np.asarray(targeting['battle'][MISSILE_ROW]) + rng.normal(0, 2, 5)).tolist()
+    return {'control': champion, 'timing': timing, 'targeting': targeting}
+
+
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False,
                        capture_shadow=False, speeds=None):
     if starts is None:starts=[1]*len(jobs)
@@ -590,6 +599,8 @@ def main():
     parser.add_argument('--seed-from',type=Path,help='Start with a previous search champion and its frozen GRU')
     parser.add_argument('--demonstration',type=Path,help='Seed candidates from a local Boston progress file')
     parser.add_argument('--compare-forecast',type=Path,help='Evaluate the same saved champion with and without its CNN forecast')
+    parser.add_argument('--compare-shadow',action='store_true',
+                        help='Capture fixed-plan missile preference comparisons without promotion')
     parser.add_argument('--compare-speed',action='store_true',help='Compare fixed stock 1x and 2x on fresh L1 boards')
     parser.add_argument('--capture-shadow',action='store_true',help='Record bounded crowd frames and confirmed stock spends for offline analysis')
     args=parser.parse_args()
@@ -601,6 +612,10 @@ def main():
     if args.compare_speed and (not args.seed_from or args.generations % 2 or args.demonstration
                                or args.allow_progression or args.compare_forecast):
         parser.error('Speed comparison requires a saved champion, an even number of waves and fresh L1 only')
+    if args.compare_shadow and (not args.seed_from or len(copies) != 6 or args.generations % 3
+                                or args.demonstration or args.allow_progression
+                                or args.compare_forecast or args.compare_speed):
+        parser.error('Shadow comparison requires a saved champion, six copies, a multiple of three waves and fresh L1 only')
     with operator.training_lock(operator.LOCK):
         ancestors=[p.pid for p in psutil.Process().parents()]
         for copy in copies:
@@ -621,6 +636,20 @@ def main():
         torch.save(weights,directory/'base.pt')
         print(directory,'base',tr.policy_id(net),flush=True)
         print('Campaign scope:', 'Boston L1 to L5' if args.allow_progression else 'Boston L1 only', flush=True)
+        if args.compare_shadow:
+            variants = shadow_variants(prior, rng)
+            (directory/'comparison-teams.json').write_text(json.dumps(variants))
+            arms = list(variants)
+            with ProcessPoolExecutor(len(copies)) as pool:
+                for wave in range(args.generations):
+                    assignments = {copy: arms[(i + wave) % len(arms)] for i, copy in enumerate(copies)}
+                    jobs = [(copy, weights, variants[assignments[copy]], args.seed + wave*len(copies) + i//3)
+                            for i, copy in enumerate(copies)]
+                    for job, _, result in completed_rollouts(pool, jobs, capture_shadow=True):
+                        result.update(wave=wave, arm=assignments[job[0]], team_id=team_id(job[2]))
+                        with (directory/'shadow-comparison.jsonl').open('a') as f:
+                            f.write(json.dumps(result)+'\n')
+            return
         population=[random_team(rng) for _ in copies[1:]]
         if prior:
             population[0]=prior

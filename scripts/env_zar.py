@@ -40,25 +40,42 @@ class ZAREnvError(RuntimeError):
     pass
 
 
-def read_session(path, started_ms):
+def read_session(path, started_ms, *, expected_wall=None, capture_events=False):
     """Only complete records from this logging session; stale files are unknown."""
     try:
         rows = []
         with open(path, encoding='utf-8') as fh:
             for line in fh:
                 try:
-                    rows.append(json.loads(line))
+                    row = json.loads(line)
                 except json.JSONDecodeError:
                     break
+                if rows and row.get('ev') == 'header':
+                    break
+                rows.append(row)
         if not rows or rows[0].get('ev') != 'header' or rows[0].get('wall', 0) < started_ms:
             return None
+        if expected_wall is not None and rows[0].get('wall') != expected_wall:
+            return None
         outbreak=next((r for r in rows if r.get('ev')=='outbreak'),None)
-        return {'header': rows[0],
+        data = {'header': rows[0],
                 'outbreak': {k:outbreak.get(k) for k in ('seed','safe_zones','civilians_inside_pct')} if outbreak else None,
                 'deployments': [r.get('what') for r in rows if r.get('ev')=='deploy'],
                 'deploy_sim_seconds': [r.get('sim') for r in rows if r.get('ev')=='deploy'],
                 'footer': next((r for r in reversed(rows) if r.get('ev') == 'footer'), None),
                 'latest': next((r for r in reversed(rows) if 'stats' in r), None)}
+        if capture_events:
+            events = []
+            for row in rows[1:]:
+                if row.get('ev') in ('header', 'footer'):
+                    break
+                if row.get('ev') in ('deploy', 'bomb'):
+                    events.append(row)
+                    if len(events) > 1024:
+                        break
+            data['combat_events'] = events[:1024]
+            data['combat_events_truncated'] = len(events) > 1024
+        return data
     except (OSError, ValueError):
         return None
 
@@ -184,17 +201,23 @@ class ZAREnv:
                 data = read_session(path, self.log_started)
                 if data:
                     self.log_path = path
+                    self.log_header_wall = data['header']['wall']
                     return data['header']
             time.sleep(.05)
         raise ZAREnvError('No fresh session-log header')
 
-    def stop_log(self):
+    def stop_log(self, *, capture_events=False):
         self.vi.key_press(0x76, sc=65)
         for _ in range(20):
-            data = read_session(self.log_path, self.log_started)
+            data = read_session(self.log_path, self.log_started,
+                                expected_wall=self.log_header_wall, capture_events=capture_events)
             if data and data['footer']:
-                return dict(data['footer'],deployments=data['deployments'],
+                footer = dict(data['footer'],deployments=data['deployments'],
                             deploy_sim_seconds=data['deploy_sim_seconds'],outbreak=data['outbreak'])
+                if capture_events:
+                    footer.update(combat_events=data['combat_events'],
+                                  combat_events_truncated=data['combat_events_truncated'])
+                return footer
             time.sleep(.05)
         return None
 
