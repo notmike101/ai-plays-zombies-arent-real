@@ -1,6 +1,26 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-19 — trial resumed on D:)
+## CURRENT STATE (2026-11-19 — layout-free search on D:)
+- Completed phase-balance seed 143952 at 22:21 Central from 16 paired
+  learning updates, with 6 fresh frozen attempts per arm. Standard averaged
+  9.59% across 6 scored early retries, with 2 confirmed stock spends.
+  Balanced averaged 9.62% across 4 scored early retries, had 2 planning
+  timeouts and 1 confirmed spend. Neither arm won or qualified. Retry scores
+  are incomplete for the 35% consistency gate. No promotion.
+  Evidence: `analysis/coverage-phase-balance-6b7086fe19/results.jsonl` and
+  `consistency.json` in the same directory.
+- Started Boston L1-only campaign search 142952 at 22:22 Central, four
+  generations, no seed champion, no demonstration, no saved-layout replay.
+  Started with 13.23 GiB RAM and 12.98 GiB disk free and verified trainer
+  PID 65004, four child Python processes and games inst13–16 on D:.
+  Output `analysis/coverage-team-83f9f48958` and
+  `analysis/coverage-layout-free-142952-drive-d.log` with matching errors log.
+  Base GRU 8a691469a829158d is read-only. The population uses e9435aa
+  for proposal ranking and cf9d3b7 to recheck workstation headroom before
+  each game batch. 59 targeted tests passed for the latter change.
+  No background handoff is queued.
+
+### Recovery and completed PPO run
 - Verified the official Python 3.14.4 x64 embeddable archive SHA-256, loaded
   it from memory, and extracted 21.8 MiB to ignored
   `analysis/coverage-portable314` on D:. Reuses the existing D: dependencies
