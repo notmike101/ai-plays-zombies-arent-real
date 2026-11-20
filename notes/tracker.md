@@ -2,6 +2,25 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:03 Central, 191952 first timing wave finished. Standard
+  ce5b191516c37f99 scored 7.59% at retry and 27.00% on a clear
+  (mean 17.30%); in-flight preference 15980ab215b7253e scored
+  9.57% at retry and 15.05% on a clear (mean 12.31%). All native
+  seeds matched the corresponding prior loadout discovery runs;
+  these are comparison samples and not fresh held-out evidence.
+  Joined all twelve missile launches to native impacts within
+  0.12 s of the configured 2.5 s flight. All eight subsequent
+  launches across both arms happened after the previous impact.
+  Direct civilian losses were 130 for the two standard games and
+  18 for the two preference games. Outcomes and damage are still
+  confounded by different outbreaks between arms in one wave,
+  and this wave does not show an in-flight repeat reduction.
+- Crossed timing wave two reached all four boards under 70860
+  (inst13 PID 9792, inst14 69268, inst15 14364, inst16 62572).
+  Fresh native evidence captured in the existing small D: audit.
+  Footprint handoff 72724 remains waiting. No above-35% result
+  in this comparison.
+
 - At 11:58 Central, completed the 190952 loadout comparison.
   All eight fresh discovery starts retried, four per arm across
   eight distinct observed native seeds. Police averaged 9.92%,
