@@ -2,6 +2,25 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:19 Central, verified a change to avoid spending live game
+  time on promotion-only waves after the frozen comparison is already
+  ineligible. After a completed paired wave, the same existing
+  eligibility function checks missing evidence, overlap and repeats.
+  An irreversible failure retains both arms' existing journals and
+  ends additional reserved waves. Complete valid comparisons must
+  still pass the original wins and saved-fraction checks. The actual
+  188952 reference timeout on a known outbreak would have stopped
+  after wave one, avoiding five further scheduled pairs.
+- All 302 script tests passed against combined candidate source,
+  including complete six-wave valid comparison and one-wave invalid
+  reference regression, with clean patch applicability. Replaced
+  only the waiting handoff with PID 41040, still waiting on exact
+  71620. New staged patch analysis/coverage-portable314/tmp/police-study-with-holdout-stop.patch
+  and handoff log analysis/coverage-police-study-handoff.log. The
+  current games and source were left in place. Reserve candidate
+  inst19 PID 35092 remained live on the repeated outbreak. No new
+  official result at this check.
+
 - At 11:17 Central, preserved compact native crowd snapshots for
   reserve wave five in analysis/coverage-team-c81131e97f/police-native-audit.json
   (40,215 bytes total). Candidate inst19 PID 35092 still plays repeated
