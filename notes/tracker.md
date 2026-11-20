@@ -2,6 +2,32 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 172952 started at 05:50 Central on D:, portable trainer PID
+  62676, output `analysis/coverage-team-7bf5ba3e92`, and log
+  `analysis/coverage-layout-free-172952-drive-d.log`. Launch headroom
+  12.88 GiB RAM and 18.83 GiB disk. Commit c9c63c8 adds opt-in
+  `--goal-margin` for controlled L1 discovery. When no official win
+  distinguishes candidates, it integrates the observed civilian fraction
+  above 35% during the same first 120 sim seconds. It keeps real scores,
+  wins, rewards and reserved qualification rules intact. Its comparison
+  revision separates the new ranking from the existing survival-area
+  ledger. All 272 script tests passed. Production hash verified.
+- Seed 171952 finished at 05:49 with seven scored retries, one
+  continuous-pause timeout, zero native wins and no held-out stage.
+  The two painted cast policies each started with 21 Garrisons, used
+  the same cast timing, and confirmed four deployments. Timing plus
+  shelter targeting 3e440a24cbc6bb8f scored 9.26% after 137.4 s on seed
+  87945100, with first occupied breach at 48.17 s. Timing-only
+  23c29cc693c2fe9c scored 9.79% after 100.9 s on seed 1770799578, with
+  first occupied breach at 54.40 s. This single pair does not establish
+  an action effect. No policy qualified or advanced.
+- Native snapshot approximations ranked the same pair differently.
+  Ordinary survival area was 0.4518 versus 0.3765 for targeting and
+  timing-only, respectively. Above-target area was 0.1993 versus
+  0.2137. That exposed the existing score's preference for time spent
+  below the target. New trials compute the metric from decision traces,
+  while official scores always come from the real game footer.
+
 - Seed 171952 started at 05:38 Central on D:, portable trainer PID
   49060, output `analysis/coverage-team-ffb85cf6a7`, log
   `analysis/coverage-layout-free-171952-drive-d.log`. Headroom 12.89 GiB
