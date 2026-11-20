@@ -1,6 +1,35 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-20 — equip and placement trial)
+## CURRENT STATE (2026-11-20 — placement receipts and target feedback)
+- Seed 148952 finished at 00:24 Central. All 16 discovery games had
+  zero wins. All four reserved-copy outcomes reused earlier outbreak
+  seeds and were ineligible. The two candidate retries scored 10.00% and
+  9.95%, the GRU had a 9.76% retry and a continuous-pause timeout.
+- A separate planning-only probe on owned inst19 reproduced the repeated
+  refused click. In the same view, model cell 35 snapped to (893, 725),
+  a 404 m² building; regular and longer clicks left 3,111 money and zero
+  garrisons. Cell 19 snapped to (815, 471), a 612 m² building; money fell
+  to 3,025.80 and the native count rose to one. The center-click control
+  bought a second garrison for 73.20. The probe ended in planning and
+  closed its game. The refusal's precise geometry or hit-test condition
+  remains unresolved. These are interface diagnostics, outside training
+  and scoring.
+- Commit 404773d compares money around building attempts and records
+  paid/unconfirmed counts. Layout-free L1 campaign experiments mask the
+  exact unconfirmed tool/target for five decisions when the view and
+  target still match. Other cells and other units stay available. A view
+  or target change clears that mask. READY results now retain actual unit
+  counts separately from native stock. New view revision prevents old trials
+  from ranking proposals under the changed action mask. All 239 script tests
+  passed. Routine PPO keeps its prior selection behavior.
+- Seed 149952 started at 00:28 Central, trainer PID 63396. Verified four D:
+  worker processes and discovery copies inst13–16. Evaluation copies
+  inst17, inst18, inst20, inst19 remain separate. Launch headroom 13.20 GiB
+  RAM and 12.89 GiB free on D:. Output `analysis/coverage-team-ce0c2d1b9b`;
+  run log `analysis/coverage-layout-free-149952-drive-d.log`.
+  Production checkpoint hash matched. The 35% goal remains open.
+
+### Equip and placement trial
 - Seed 147952 ended at 00:05 Central. All 16 discovery games had zero
   wins, defensive-unit selections, and confirmed battle stock spends.
   All four reserved-copy evaluation seeds were distinct and cleared
