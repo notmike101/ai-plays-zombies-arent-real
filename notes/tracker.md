@@ -27,6 +27,14 @@
   `analysis/coverage-layout-free-146952-drive-d.log` with matching error log.
   The production checkpoint hash is unchanged. The 35% target is pending.
 
+- In live seed 146952 generation zero, pause-bias proposal 3acb408aecf16f7a
+  retained the rest of 046fba76da751f39 exactly. On the same outbreak seed
+  and owned copy it reached the early-retry threshold at 60.33 simulated
+  seconds and 9.90% saved, after one confirmed Bomber spend. Its predecessor
+  timed out at 47.73 simulated seconds. The same-seed comparison is a
+  discovery diagnostic. It gives no held-out survival estimate. The revised
+  proposal led generation zero and generation one is in progress.
+
 ### Isolated holdout and local placement search
 - Layout-free continuation 144952 finished at 22:59 Central. Across
   16 discovery games it had no wins. Proposal 71bdb3116c014319 sheltered
