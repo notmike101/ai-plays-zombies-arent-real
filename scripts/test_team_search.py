@@ -1069,6 +1069,9 @@ class SearchTests(unittest.TestCase):
             with self.subTest(mode=mode):
                 self.check_cast_comparison(mode, change)
 
+    def test_missile_followup_comparison_uses_confirmed_discovery_arm(self):
+        self.check_cast_comparison('missile-followup', {'missile_followup': 10.})
+
     def test_evidenced_loadout_comparison_keeps_its_control_in_reserve(self):
         self.check_cast_comparison('loadout', {})
 
@@ -1107,7 +1110,7 @@ class SearchTests(unittest.TestCase):
             root = Path(temp)
             (root / 'analysis').mkdir()
             resume = root / 'resume'
-            if mode == 'loadout':
+            if mode in ('loadout', 'missile-followup'):
                 resume.mkdir()
                 discovery = dict(stage=1, end='aborted', saved=.099, start_kind='fresh',
                                  outbreak={'seed': 40}, ready_loadout={'Police': 8.},
@@ -1116,7 +1119,11 @@ class SearchTests(unittest.TestCase):
                                                   'Missile': {'cost': 2., 'first_effect': 32.5}})
                 revision = ('playable-overview-v3-bounded-targets-shelter-v2-specials-v1-retries-v2-verified-ready-v1'
                             '-placement-feedback-v4-debt-cancel-v1-click-start-v1')
-                prior = dict(copy='a', team=baseline, view_revision=revision, levels=[discovery])
+                prior = dict(copy='a', team=baseline, team_id=search.team_id(baseline),
+                             view_revision=revision, levels=[discovery])
+                if mode == 'missile-followup':
+                    discovery.update(ready_loadout={'Missile': 32.5},
+                                     battle_actions={'logged_deployments': ['cruise_missile'] * 3})
                 (resume / 'trials.jsonl').write_text(json.dumps(prior) + '\n')
             args = ['team_search.py', '--continue-layout-free', str(resume),
                     *comparison_args, '--click-start',

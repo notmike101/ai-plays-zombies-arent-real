@@ -143,6 +143,22 @@ def early_loadout_candidate(trial, rng, *, ability=None):
     return child
 
 
+def missile_trial_reference(trial):
+    team = trial.get('team')
+    if not team or team.get('layout') or any(team.get('later_layouts', {}).values()):
+        return None
+    if trial.get('arm') or fitness.l1_outbreak_seed(trial) is None:
+        return None
+    level = trial['levels'][0]
+    saved = level.get('saved')
+    deployments = (level.get('battle_actions') or {}).get('logged_deployments') or ()
+    if (level.get('end') not in ('won', 'lost', 'aborted') or type(saved) not in (int, float)
+            or not 0 <= saved <= 1 or 'Missile' not in (level.get('ready_loadout') or {})
+            or deployments.count('cruise_missile') < 2):
+        return None
+    return saved, trial
+
+
 def defense_placement_candidate(parent, rng):
     if len(parent['plan']) > 62:
         return None
@@ -1298,7 +1314,7 @@ def main():
     neighbors.add_argument('--loadout-sampling', action='store_true',
                            help='Compare greedy and exploratory choices among legal purchases')
     neighbors.add_argument('--battle-neighbors', nargs='?', const='all',
-                           choices=('all', 'firebomb', 'firebomb-line', 'police-line', 'cast-sampling', 'early-first-cast', 'learn-targets', 'learn-cast-tools', 'retest-fit'),
+                           choices=('all', 'firebomb', 'firebomb-line', 'police-line', 'missile-followup', 'cast-sampling', 'early-first-cast', 'learn-targets', 'learn-cast-tools', 'retest-fit'),
                            help='Compare battle targeting or learn cast weights from real scores')
     parser.add_argument('--goal-margin', action='store_true',
                         help='Rank unsuccessful discovery battles by survival above the 35 percent target')
@@ -1331,7 +1347,7 @@ def main():
     planning_sampling = ('sample_loadout' if args.loadout_sampling else
                          'sample_garrison_sites' if args.garrison_site_sampling else None)
     paired_policy = planning_sampling or args.loadout_neighbors or args.defense_neighbors or args.battle_neighbors in (
-        'firebomb-line', 'police-line', 'cast-sampling', 'early-first-cast', 'retest-fit')
+        'firebomb-line', 'police-line', 'missile-followup', 'cast-sampling', 'early-first-cast', 'retest-fit')
     repeat_pair = args.placement_neighbors or battle_target is not None or paired_policy or learn_targets
     copies=args.copies
     cross_fit = learn_targets and args.generations == 3
@@ -1454,6 +1470,7 @@ def main():
         defenders = {}
         resumed_cast_probe = None
         loadout_neighbor = None
+        missile_reference = None
         resumed_speed_pair = None
         discovery_seeds = set()
         resume_directory = args.seed_from or args.continue_layout_free
@@ -1489,6 +1506,10 @@ def main():
                         candidate = early_loadout_candidate(trial, rng, ability=args.loadout_neighbors)
                         if candidate is not None:
                             loadout_neighbor = candidate
+                    if args.battle_neighbors == 'missile-followup':
+                        reference = missile_trial_reference(trial)
+                        if reference is not None and (missile_reference is None or reference[0] > missile_reference[0]):
+                            missile_reference = reference
                     if args.continue_layout_free and has_defense_evidence(trial):
                         defender = checkpoint_team(dict(base=base, team_id=trial['team_id'],
                                                         team=trial['team']), base)
@@ -1574,6 +1595,14 @@ def main():
             standard = dict(proposal)
             standard.pop('opening_cast_bias', None)
             policy_arms = (standard, dict(standard, opening_cast_bias=2.))
+        elif args.battle_neighbors == 'missile-followup':
+            if missile_reference is None:
+                raise ValueError('Missile feedback comparison requires a scored fresh discovery game with native launches')
+            trial = missile_reference[1]
+            standard = dict(checkpoint_team(dict(base=base, team=trial['team'],
+                                                  team_id=trial['team_id']), base)['team'])
+            standard.pop('missile_followup', None)
+            policy_arms = (standard, dict(standard, missile_followup=10.))
         elif args.loadout_neighbors:
             if loadout_neighbor is None:
                 raise ValueError('Loadout comparison requires an affordable offer in the selected policy’s discovery receipts')
@@ -1867,7 +1896,8 @@ def main():
                         population[-2:] = pair
                         require_fresh.update(team_id(team) for team in pair)
             # Frozen arms on fresh boards. The game chooses its own outbreak seeds.
-            matched_reference = args.loadout_neighbors or args.battle_neighbors in ('early-first-cast', 'police-line')
+            matched_reference = args.loadout_neighbors or args.battle_neighbors in (
+                'early-first-cast', 'police-line', 'missile-followup')
             reference = policy_arms[0] if matched_reference else prior
             distinct=[archive[k] for k in ranked if archive[k]!=reference and
                       (args.allow_progression or reference is None or
