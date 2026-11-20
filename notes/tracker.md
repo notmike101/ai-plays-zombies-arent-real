@@ -2,6 +2,44 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 17:42 Central, private phase balance 216952 checkpointed its
+  first paired round. The standard arm assigned 8.65% and 8.30%
+  of within-episode loss weight to planning. The balanced arm
+  assigned 50% in both games. All four started battle and
+  retried, with no occupied shelter at READY and five confirmed
+  stock spends total. Treatment observed. No survival inference.
+  Operator PID 61372 (17:39:00), source 5f80a288d2c1053a with
+  private Adam, stock 1x and split CPUs for both arms. Eight
+  training rounds inst13-16 plus four frozen pairs inst19/20.
+  Directory analysis/coverage-phase-balance-039aba7ea7, console
+  analysis/coverage-phase-balance-split-216952-drive-d.log.
+  Fresh Observatory records matched all four first-batch workers.
+  Second batch active. cfe708d records phase weights and shelter
+  receipts in the journal. Full isolated script suite 358 passed.
+- At 17:38 Central, exact occupancy 215952 finished. All 32
+  training games and eight frozen games reached retry. Three
+  candidate training games observed positive exact occupancy and
+  two control training games measured it. None of the frozen
+  games started with occupied shelters. Two exact-arm frozen
+  outbreaks overlapped discovery. Zero eligible natural finishes.
+  Final candidate c16a8b878326e9dd had a learned suffix norm
+  .3290583. Across 12 captured positive states with the same
+  incoming memory and legal mask, zeroing the input changed
+  the frozen tool distribution by at most .00006138 total
+  variation and READY by .00000422 probability. Private weights
+  and Adam retained. No promotion. Observatory PID 21012 and
+  production checkpoint SHA256 verified at the transition.
+- Queued the requested reward for longer intact shelter protection
+  plus occupied-breach cost behind the preparation comparison.
+  Run a matched repeat when discovery shows recurring occupied
+  shelter exposure. 214952 delivered .1331474145 incremental reward
+  in two of 16 candidate training episodes and had zero eligible
+  frozen natural finishes. Compare starting coverage, defensive
+  placements and deployments, first occupied breach time and
+  exposure, protected civilian-seconds, and official saved
+  fractions. Keep the breach penalty and all other settings fixed
+  between arms. See notes/experiment-signal.md and 03a9cf2.
+
 - At 17:27 Central, exact occupancy 215952 checkpointed four
   paired rounds (16 retries, zero natural finishes). One candidate
   rollout in round 3 reached READY with 5.33% sheltered and gave
