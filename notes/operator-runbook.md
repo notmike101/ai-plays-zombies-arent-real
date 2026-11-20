@@ -228,8 +228,14 @@ Each generation reserves fresh slots for repeat evaluation and L1 variation.
 For adaptive refuges, one proposal varies size alone while holding battle
 behavior fixed. A resumed block inherits the prior fitness ledger, incumbent,
 and provisional leader. Finals evaluate a frozen challenger against the
-starting incumbent (greedy GRU on cold start). Copies have paired policy seeds
-and independently drawn native outbreaks. Promotion requires two qualifying
+starting incumbent (greedy GRU on cold start). Copies can share a policy RNG seed for scheduling. In preparation comparisons,
+a placement change recalculates the game's outbreak seed. Treat that outbreak as
+part of the result of the policy's own preparation. Compare official outcomes
+across fresh boards, varied policy RNG seeds, and rotated copies. Do not
+require matched native seeds for preparation comparisons. For battle-only
+comparisons with unchanged preparation, report matches when they occur.
+Keep native seed deduplication and discovery-overlap checks for evaluation.
+Promotion requires two qualifying
 training outbreaks and, on equally sized fresh evaluation arms, at least two
 qualifying outbreaks, more qualifying wins and greater total saved at the first
 stage where policies differ. Earlier failures score zero at that stage.
