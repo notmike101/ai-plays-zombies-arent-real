@@ -2,6 +2,30 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 159952 started at 03:24 Central on D:, portable trainer PID
+  61072, output `analysis/coverage-team-921a730bca` and log
+  `analysis/coverage-layout-free-159952-drive-d.log`. Launch headroom
+  was 13.11 GiB RAM and 18.16 GiB free, with the production checkpoint
+  hash verified. Two discovery waves compare the original parent, its
+  coverage-only variant, the same coverage weight with the shelter
+  preference reordered, and the frozen GRU. Native building receipts
+  now include the number of shelters present before placement. The
+  GRU still owns all action and cell choices. All 255 script tests passed.
+- This run uses `--qualified-holdout-only`. Reserved boards are started
+  when a discovery policy satisfies the existing qualification rules.
+  Four recent reserved waves took 17.2 minutes total, with 10 of 16
+  outbreaks overlapping discovery and no wins. The ordinary default,
+  fresh-outbreak checks, and promotion rules are unchanged.
+- Seed 158952 finished at 03:22 Central with eight scored retries and
+  no wins. The coverage-only variant scored 7.33% and breached at 49.47
+  sim seconds. Its parent scored 6.82% and breached at 47.53 seconds on
+  a different outbreak. Both placed two Garrisons and two shelters in
+  the same locations. First-wave Garrison purchases preceded every
+  shelter, leaving the perimeter coverage signal at zero when selecting
+  those sites. The provisional leader repeated one outbreak at 8.74%
+  and 8.87%. All four reserved rows overlapped discovery and were
+  ineligible. The 35% consistency goal remains open.
+
 - Seed 157952 finished at 03:09 Central. The spacing-only variant
   d67f3ddff7d01e93 reached retry at 8.52% and its first occupied
   breach was at 44.17 sim seconds. The parent retried at 8.59%
