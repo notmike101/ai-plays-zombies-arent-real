@@ -2,6 +2,25 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:35 Central, shelter defense 198952 has four completed
+  rounds and paired next_round 4. Across the original and
+  resumed valid rounds (discarding the bad pair batch), 16
+  training games averaged 7.29% baseline and 4.58% stronger.
+  Every board had zero coverage at READY and zero breach cost.
+  Arm differences still cannot be attributed to the penalty.
+  Round five is live under PID 1812, inst13 21688, inst14 70168,
+  inst15 22312, inst16 70704. No new interface error in the
+  resumed completed rounds. Production hash matched.
+- Tested a three-attempt retry around one changing native map,
+  retaining strict validation of each count and header. It
+  recovers a map rebuilt between reads, bounds retries and
+  identifies the table RVA for a persistent mismatch. Does not
+  accept inconsistent snapshots or turn failures into scores.
+  Verified jointly with the READY shortfall study (324 tests).
+  Combined patch analysis/coverage-portable314/tmp/ready-shortfall-and-native-retry.patch
+  SHA256 7CAA5447E68A4E9952FC19ADEB274748D992391D81F7B0AC0C673FEF87634794.
+  Staged only, no live changes.
+
 - At 13:31 Central, recovered shelter study 198952 after a
   second native map-read error exhausted the pair retry. The
   original process 64444 exited at paired next_round 1. Resume
