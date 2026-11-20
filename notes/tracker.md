@@ -2,6 +2,28 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:46 Central, READY coverage study 194952 completed all
+  16 training attempts. All were distinct outbreaks and scored
+  below 10% at retry. Baseline averaged 4.92%, challenger 5.89%.
+  Nine boards had safe zones at READY (12 zones total), yet all
+  16 had zero civilians sheltered at READY, zero coverage reward,
+  and zero confirmed ability spends. Within the first 12 there
+  were eight boards with zones. Frozen evaluation is live under
+  PID 68152, inst19 PID 29880 and inst20 PID 19224.
+- Staged a training-only zone exploration comparison to address
+  the missing coverage signal. Both arms receive the same native
+  READY credit, legal masks and PvE settings. The candidate samples
+  legal zone-rectangle and polygon corner cells at temperature 1.5;
+  the same per-step temperature is reused for PPO log probabilities.
+  Frozen evaluations use the original sampling distribution for
+  both arms. No placement is forced. All 315 isolated tests passed,
+  including masked probability parity and evaluator options. Patch
+  applies cleanly, not deployed. D: file
+  analysis/coverage-portable314/tmp/zone-exploration-study.patch
+  SHA256 E19E25D0C8958AED3CB6DF04FEBE68F04F34721B03F60C7ACFD5B138A7B0FC04.
+  Judge by actual coverage activation first and official held-out
+  survival before promotion. Production checkpoint hash matched.
+
 - At 12:42 Central, READY coverage study 194952 completed its
   first PPO round and started the second (inst13 PID 58788,
   inst14 59216, inst15 33028, inst16 74268). First round baseline
