@@ -2,6 +2,29 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 187952 launched at 09:57 Central on D:, operator PID 17560,
+  output `analysis/coverage-team-5a1475dfe3`, log
+  `analysis/coverage-layout-free-187952-drive-d.log`. Four discovery
+  copies inst13,14,17,18; reserves inst19/20. Launch headroom 15.16
+  GiB RAM and 18.92 GiB disk. Commit 0bfd827 continues from the actual
+  provisional 75de0cafd4052843. The preparation sampler can evolve
+  earlier unit/support variants and excludes previously scored
+  prefixes from new candidate slots. The exact-source game-free
+  fixture scheduled 12 new combinations, retaining independent
+  reference slots. Native pre-READY records now include a visible
+  layout ID. Battle diagnostics record the first outnumbered and
+  retry-floor times, and mark known scores below 10% separately.
+  All 295 script and 60 Observatory tests, parity and graph assertions
+  passed. Retry criteria, official scores and rewards are preserved.
+- Seed 186952 finished at 09:56. Fifteen scored games across 16
+  attempts on 15 distinct native outbreaks averaged 10.92%, with
+  12 scores below 10% and one timeout outside the mean. There
+  were three native clears, none at 35%. Frozen policy 75de0cafd4052843
+  scored 29.17% and 9.33% on two native outbreaks, mean 19.25%.
+  Fire Mortar/corridor cleared at 15.77%, with five Fire Mortars
+  at READY, two inside occupied shelter. Neither qualified for
+  reserved evaluation or promotion. Production hash unchanged.
+
 - At 09:48 Central on seed 186952, third-wave candidate 75de0cafd4052843
   cleared at 29.17% on outbreak 1841216589. It had one native hold
   and 19 Garrisons, including nine inside occupied shelters, and no
