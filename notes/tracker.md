@@ -2,6 +2,28 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 16:21 Central, 92e55a8 added the opt-in sustained shelter
+  reward and guarded paired runner. 352 isolated tests passed.
+  The candidate earns .01 per starting-population-equivalent
+  protected second, capped at .30. Both measure occupancy in
+  native polygons intact at both ends of intervals <=1.25 sim
+  seconds. Count overlapping occupants once. Default reward and
+  official result unchanged. Both arms use stock 1x, same .10
+  breach cost, .30 READY coverage and training exploration.
+- Launched 211952 under PID 41656 (16:21:53), archived policy
+  5f80a288d2c1053a and private Adam; eight training rounds on
+  inst13-16 and four frozen pairs on inst19/20. Results
+  analysis/coverage-shelter-duration-52969d6cc8, console
+  analysis/coverage-shelter-duration-211952-drive-d.log.
+  All four first-batch games started and retried. Two had
+  12.74% occupied READY coverage: baseline 1280.87 and
+  candidate 1038.00 protected civilian-seconds. Candidate credit
+  .001274871248 from recorded basis, no mismatches. Both
+  recorded native occupied breaches. Second batch active at
+  16:24 Central. Fresh survival qualification unproven.
+  Observatory 21012 delivered current decisions from all four
+  game PIDs. Production checkpoint hash unchanged.
+
 - At 16:15 Central, shelter-defense 209952 exited normally.
   Both arms trained 16 games, 29 total battle starts, five
   natural 0% training losses and 24 retries. Native occupied
