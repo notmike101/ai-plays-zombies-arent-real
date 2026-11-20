@@ -2,6 +2,15 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- D: storage audit at 06:04 Central found about 18.9 GiB free. Consolidated
+  84 identical immutable search bases from 11 physical files to one,
+  removing 123,906,770 bytes of duplicate checkpoint storage. All
+  existing paths still resolve to SHA-256
+  257f0c7b1af2e0209d79686827cd67df06e041a118194e5ac3b4c326c0fd9e44.
+  No staging files or loose binary dumps remain in the discovery copies.
+  The active game's files, production checkpoint and replay archive were
+  left in place. The experiment and all cleanup operations used only D:.
+
 - Seed 172952 started at 05:50 Central on D:, portable trainer PID
   62676, output `analysis/coverage-team-7bf5ba3e92`, and log
   `analysis/coverage-layout-free-172952-drive-d.log`. Launch headroom
