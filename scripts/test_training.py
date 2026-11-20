@@ -332,6 +332,17 @@ class PlanningRecoveryTests(unittest.TestCase):
             self.assertFalse(train.debt_without_draft(dict(st, **blockers), -401))
 
 
+class DragReceiptTests(unittest.TestCase):
+    def test_dispatch_receipt_times_the_existing_drag_without_repeating_it(self):
+        calls = []
+        vi = SimpleNamespace(drag=lambda *points: calls.append(points))
+        with (patch.object(train.time, 'time_ns', side_effect=[1_000_000, 461_000_000]),
+              patch.object(train.time, 'perf_counter_ns', side_effect=[9_000_000, 459_000_000])):
+            receipt = train.timed_drag(vi, (11, 22), (33, 44))
+        self.assertEqual(calls, [(11, 22, 33, 44)])
+        self.assertEqual(receipt, dict(started_wall_ms=1., ended_wall_ms=461., dispatch_ms=450.))
+
+
 class PopulationPressureTests(unittest.TestCase):
     def test_first_outnumbered_and_low_population_are_separate(self):
         events = {}

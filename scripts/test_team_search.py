@@ -1069,6 +1069,9 @@ class SearchTests(unittest.TestCase):
             with self.subTest(mode=mode):
                 self.check_cast_comparison(mode, change)
 
+    def test_evidenced_loadout_comparison_keeps_its_control_in_reserve(self):
+        self.check_cast_comparison('loadout', {})
+
     def test_qualified_holdout_ends_after_an_ineligible_comparison_wave(self):
         self.check_cast_comparison('police-line', {'police_line_targeting': True}, invalid_reference=True)
 
@@ -1080,6 +1083,14 @@ class SearchTests(unittest.TestCase):
 
         baseline = search.random_team(np.random.default_rng(42))
         challenger = dict(baseline, **change)
+        comparison_args = ['--battle-neighbors', mode]
+        if mode == 'loadout':
+            police = search.tr.TOOLS.index('buy_Police')
+            missile = search.tr.TOOLS.index('buy_Missile')
+            purchase = dict(baseline['plan'][0], family=2, tool=police, duration=1)
+            baseline['plan'][0] = purchase
+            challenger['plan'] = [dict(purchase, tool=missile), *baseline['plan'][1:]]
+            comparison_args = ['--loadout-neighbors', 'Missile']
         seed = iter(range(100, 200))
 
         def completed(pool, jobs, *args, **kwargs):
@@ -1095,8 +1106,20 @@ class SearchTests(unittest.TestCase):
         with TemporaryDirectory() as temp, ExitStack() as stack:
             root = Path(temp)
             (root / 'analysis').mkdir()
-            args = ['team_search.py', '--continue-layout-free', str(root / 'resume'),
-                    '--battle-neighbors', mode, '--click-start',
+            resume = root / 'resume'
+            if mode == 'loadout':
+                resume.mkdir()
+                discovery = dict(stage=1, end='aborted', saved=.099, start_kind='fresh',
+                                 outbreak={'seed': 40}, ready_loadout={'Police': 8.},
+                                 ready_loadout_sp=1., shelter={'first_occupied_breach': 52.},
+                                 opening_loadout={'Police': {'cost': 1., 'first_effect': 8.},
+                                                  'Missile': {'cost': 2., 'first_effect': 32.5}})
+                revision = ('playable-overview-v3-bounded-targets-shelter-v2-specials-v1-retries-v2-verified-ready-v1'
+                            '-placement-feedback-v4-debt-cancel-v1-click-start-v1')
+                prior = dict(copy='a', team=baseline, view_revision=revision, levels=[discovery])
+                (resume / 'trials.jsonl').write_text(json.dumps(prior) + '\n')
+            args = ['team_search.py', '--continue-layout-free', str(resume),
+                    *comparison_args, '--click-start',
                     '--generations', '2', '--qualified-holdout-only',
                     '--copies', 'a', 'b', 'c', 'd', '--holdout-copies', 'e', 'f']
             stack.enter_context(patch('sys.argv', args))
@@ -1104,7 +1127,8 @@ class SearchTests(unittest.TestCase):
             for name, result in [('training_lock', nullcontext()), ('preflight', {'ok': True}),
                                  ('inventory', []), ('require_idle', None), ('limit_resources', None)]:
                 stack.enter_context(patch.object(search.operator, name, return_value=result))
-            stack.enter_context(patch.object(search, 'restore_layout_free_proposal', return_value=challenger))
+            restored = baseline if mode == 'loadout' else challenger
+            stack.enter_context(patch.object(search, 'restore_layout_free_proposal', return_value=restored))
             stack.enter_context(patch.object(search, 'save_frozen_base'))
             stack.enter_context(patch.object(search, 'ProcessPoolExecutor'))
             stack.enter_context(patch.object(search, 'completed_rollouts', side_effect=completed))

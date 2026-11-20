@@ -563,6 +563,15 @@ def load_pretrained(net, path):
     net.load_state_dict(data['policy'])
 
 
+def timed_drag(virtual_input, start, end):
+    began_wall = time.time_ns()
+    began = time.perf_counter_ns()
+    virtual_input.drag(*start, *end)
+    return dict(started_wall_ms=began_wall / 1_000_000,
+                ended_wall_ms=time.time_ns() / 1_000_000,
+                dispatch_ms=(time.perf_counter_ns() - began) / 1_000_000)
+
+
 def record_population_pressure(actions, obs, initial, sim):
     if obs['zomb'] > 0 and obs['civ'] <= obs['zomb']:
         actions.setdefault('first_outnumbered_sim', sim)
@@ -995,6 +1004,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         capture.receipt('gesture_started')
                 else:
                     before_stock = env.battle_stock()[slot['name']]
+                    drag_receipt = None
                     if u in BATTLE_GEOMETRY:
                         import ctypes
                         vk = ord(slot['key'].upper())
@@ -1006,6 +1016,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                             env.vi.click(*start_xy)
                             time.sleep(.15)
                             env.vi.click(*end_xy)
+                        elif (placement_feedback and slot['name'] == 'Police'
+                              and len(battle_actions.get('police_drag_attempts', ())) < 64):
+                            drag_receipt = timed_drag(env.vi, start_xy, end_xy)
                         else:
                             env.vi.drag(*start_xy, *end_xy)
                         mechanics.controls.frames()
@@ -1013,6 +1026,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         points = (battle_point(st,u,c,env.cw,env.ch),)
                         env.cast(slot['key'], *points[0])
                     slot['charges'] = env.battle_stock()[slot['name']]
+                    if drag_receipt is not None:
+                        drag_receipt.update(decision_sim=st['sim'], start=list(start_xy), end=list(end_xy),
+                                            stock_before=before_stock, stock_after=slot['charges'])
+                        battle_actions.setdefault('police_drag_attempts', []).append(drag_receipt)
                     if shadow is not None:
                         pixels = [[float(x), float(y)] for x, y in points]
                         capture.receipt('attempted', before=before_stock, after=slot['charges'], pixels=pixels)
@@ -1119,7 +1136,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     trail = event.get('trail') or ()
                     if trail:
                         police_lines.append(dict(sim=event.get('sim'), count=event.get('count'),
-                                                 start=trail[0].get('world'), end=trail[-1].get('world')))
+                                                 start=trail[0].get('world'), end=trail[-1].get('world'),
+                                                 released_wall_ms=event.get('wall'),
+                                                 held_seconds=event.get('held_seconds'),
+                                                 bounds=event.get('bounds')))
             battle_actions['paratrooper_lines'] = police_lines
             battle_actions['firebomb_impacts'] = sum(
                 event.get('ev') == 'bomb' and event.get('what') == 'fire_bomb' for event in events)

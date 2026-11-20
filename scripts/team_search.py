@@ -97,7 +97,7 @@ def loadout_candidate(parent,rng):
     return candidate
 
 
-def early_loadout_candidate(trial, rng):
+def early_loadout_candidate(trial, rng, *, ability=None):
     team = trial.get('team')
     if not team or team.get('layout') or trial.get('arm') or fitness.l1_outbreak_seed(trial) is None:
         return None
@@ -124,6 +124,8 @@ def early_loadout_candidate(trial, rng):
             continue
         cost = opening[name]['cost']
         for choice, offer in opening.items():
+            if ability is not None and choice != ability:
+                continue
             if choice in purchases or choice in ready or choice not in tr.ABILITY_U:
                 continue
             proposal = (i, tr.TOOLS.index('buy_' + choice))
@@ -1291,6 +1293,8 @@ def main():
                            help='Compare two equipped building-unit preferences against the same model')
     neighbors.add_argument('--garrison-site-sampling', action='store_true',
                            help='Compare greedy and exploratory choices among legal Garrison sites')
+    neighbors.add_argument('--loadout-neighbors', choices=tr.DECK_ORDER,
+                           help='Compare one evidenced ability purchase preference on fresh boards')
     neighbors.add_argument('--loadout-sampling', action='store_true',
                            help='Compare greedy and exploratory choices among legal purchases')
     neighbors.add_argument('--battle-neighbors', nargs='?', const='all',
@@ -1326,7 +1330,7 @@ def main():
     retest_fit = args.battle_neighbors == 'retest-fit'
     planning_sampling = ('sample_loadout' if args.loadout_sampling else
                          'sample_garrison_sites' if args.garrison_site_sampling else None)
-    paired_policy = planning_sampling or args.defense_neighbors or args.battle_neighbors in (
+    paired_policy = planning_sampling or args.loadout_neighbors or args.defense_neighbors or args.battle_neighbors in (
         'firebomb-line', 'police-line', 'cast-sampling', 'early-first-cast', 'retest-fit')
     repeat_pair = args.placement_neighbors or battle_target is not None or paired_policy or learn_targets
     copies=args.copies
@@ -1449,6 +1453,7 @@ def main():
         prices={}
         defenders = {}
         resumed_cast_probe = None
+        loadout_neighbor = None
         resumed_speed_pair = None
         discovery_seeds = set()
         resume_directory = args.seed_from or args.continue_layout_free
@@ -1479,6 +1484,11 @@ def main():
                     if (proposal is not None and resumed_cast_probe is None
                             and trial.get('team') == proposal):
                         resumed_cast_probe = cast_candidate(trial, rng)
+                    if (args.loadout_neighbors and loadout_neighbor is None
+                            and trial.get('team') == proposal):
+                        candidate = early_loadout_candidate(trial, rng, ability=args.loadout_neighbors)
+                        if candidate is not None:
+                            loadout_neighbor = candidate
                     if args.continue_layout_free and has_defense_evidence(trial):
                         defender = checkpoint_team(dict(base=base, team_id=trial['team_id'],
                                                         team=trial['team']), base)
@@ -1564,6 +1574,10 @@ def main():
             standard = dict(proposal)
             standard.pop('opening_cast_bias', None)
             policy_arms = (standard, dict(standard, opening_cast_bias=2.))
+        elif args.loadout_neighbors:
+            if loadout_neighbor is None:
+                raise ValueError('Loadout comparison requires an affordable offer in the selected policy’s discovery receipts')
+            policy_arms = (proposal, loadout_neighbor)
         elif planning_sampling:
             greedy_plan = dict(proposal)
             greedy_plan.pop(planning_sampling, None)
@@ -1853,7 +1867,7 @@ def main():
                         population[-2:] = pair
                         require_fresh.update(team_id(team) for team in pair)
             # Frozen arms on fresh boards. The game chooses its own outbreak seeds.
-            matched_reference = args.battle_neighbors in ('early-first-cast', 'police-line')
+            matched_reference = args.loadout_neighbors or args.battle_neighbors in ('early-first-cast', 'police-line')
             reference = policy_arms[0] if matched_reference else prior
             distinct=[archive[k] for k in ranked if archive[k]!=reference and
                       (args.allow_progression or reference is None or
