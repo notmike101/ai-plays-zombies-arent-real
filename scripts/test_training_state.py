@@ -10,6 +10,21 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_phase_loss_ledger_reports_actual_weight_mass_for_uneven_episodes(self):
+        from compare_spatial import phase_loss_ledger
+
+        battle = [0.] * (train.PLANNING_INDEX + 1)
+        planning = battle.copy()
+        planning[train.PLANNING_INDEX] = 1.
+        observations = [planning, *([battle] * 99)]
+        baseline = phase_loss_ledger(observations, balanced=False)
+        candidate = phase_loss_ledger(observations, balanced=True)
+        self.assertEqual((baseline['planning'], baseline['battle']), (1, 99))
+        self.assertAlmostEqual(baseline['planning_loss_weight_share'], .01)
+        self.assertAlmostEqual(candidate['planning_loss_weight_share'], .50, places=6)
+        self.assertEqual(phase_loss_ledger([planning], balanced=True)['planning_loss_weight_share'], 1.)
+        self.assertIsNone(phase_loss_ledger([], balanced=True)['planning_loss_weight_share'])
+
     def test_shelter_input_starts_with_identical_policy_and_adam(self):
         import compare_spatial as comp
         torch = train.torch

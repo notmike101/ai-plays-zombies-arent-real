@@ -196,6 +196,20 @@ def collect_pairs(pool, jobs, directory, *, observe=False, separate_policy_cpus=
     return results
 
 
+def phase_loss_ledger(observations, *, balanced):
+    planning = torch.tensor([bool(obs[trainer.PLANNING_INDEX]) for obs in observations], dtype=torch.bool)
+    count = int(planning.sum())
+    total = planning.numel()
+    if not total:
+        share = None
+    elif balanced:
+        weights = trainer.phase_loss_weights(planning)
+        share = float(weights[planning].sum() / weights.sum())
+    else:
+        share = count / total
+    return dict(planning=count, battle=total-count, planning_loss_weight_share=share)
+
+
 def committed_signal_rows(rows, next_round, copies):
     """Use only training rounds recorded by a completed paired checkpoint."""
     by_round = {}
@@ -533,6 +547,8 @@ def main():
                     summary['battle_actions'] = dict(Counter(
                         trainer.TOOLS[u] for u, obs in zip(row.get('us', []), row.get('obs', []))
                         if not obs[trainer.PLANNING_INDEX]))
+                    if training:
+                        summary['phase_loss'] = phase_loss_ledger(row.get('obs', ()), balanced=job[1]=='balanced')
                     if args.compare_missile_credit or args.compare_phase_balance or shelter_study:
                         summary['missile_civilian_losses'] = row.get('battle_actions', {}).get('missile_civilian_losses')
                         summary['missile_civilian_reward'] = row.get('reward_components', {}).get('missile_civilian_loss')
@@ -540,7 +556,7 @@ def main():
                         summary['confirmed_spends'] = row.get('battle_actions', {}).get('stock_decreased')
                         summary['cast_receipts'] = row.get('battle_actions', {}).get('cast_receipts')
                         summary['planning_placements_selected'] = row.get('selected_placements', {})
-                    if shelter_study:
+                    if shelter_study or args.compare_phase_balance:
                         summary['planning_actions'] = dict(Counter(
                             trainer.TOOLS[u] for u, obs in zip(row.get('us', []), row.get('obs', []))
                             if obs[trainer.PLANNING_INDEX]))
