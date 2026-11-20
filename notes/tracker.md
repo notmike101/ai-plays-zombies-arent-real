@@ -2,6 +2,28 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:27 Central, Police line comparison 189952 was live on D:
+  under operator 70324, directory analysis/coverage-team-0f2ee96984,
+  frozen base 8a691469a829158d, with all four copies at verified
+  planning boards (inst13 PID 44644, inst14 42164, inst15 61072,
+  inst16 68436). Same preparation policy, crossed endpoint versus
+  path scoring. Reserves remain inst19 and inst20. Runtime commit
+  f4ab65d contains the 302-test verified combined source. Log
+  analysis/coverage-layout-free-189952-drive-d.log. Headroom at the
+  idle boundary 14.79 GiB RAM and 18.92 GiB D:. Production hash
+  matched and Observatory PID 12628 remained live.
+- Previous operator 71620 finished normally. The sixth candidate
+  cleared at 11.97% on repeated outbreak 2033973644. All six
+  reserved candidate attempts used two distinct outbreaks; five
+  scores averaged 10.36%, one timeout, and the two first distinct
+  scores were retries averaging 9.96%. No eligible natural finish
+  or promotion. From the actual pair timings there were 39.57
+  minutes after the first ineligible pair. The automatic handoff
+  stopped before applying changes because its PowerShell instance
+  lacked Get-FileHash; the same checked deployment succeeded in the
+  working shell after confirming the operator was idle. No restart
+  of the old operator and no changes to the production checkpoint.
+
 - At 11:19:43 Central, wave five finalized at 9.90% officially
   saved at retry on repeated candidate outbreak 249701763. The exact
   session join confirmed the first occupied breach at 50.10 sim
