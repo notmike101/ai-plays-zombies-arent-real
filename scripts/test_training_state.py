@@ -39,6 +39,25 @@ class StateTests(unittest.TestCase):
             logged = json.loads((Path(directory)/'interface-retries.jsonl').read_text())
             self.assertEqual(logged, {'pair': ['first', 'second'], 'errors': [failure['err']]})
 
+    def test_private_ppo_splits_the_existing_cpu_allowance_and_restores_the_worker(self):
+        import compare_spatial as comp
+        from unittest.mock import Mock, call
+
+        worker, game = Mock(), Mock()
+        cpus = list(range(8))
+        worker.cpu_affinity.return_value = game.cpu_affinity.return_value = cpus
+        candidate = RuntimeError('episode failed')
+        with patch.object(comp.operator, 'owned_copy'), \
+                patch.object(comp.zar_boot, 'boot', return_value=Mock(pid=274)), \
+                patch.object(comp.zar_boot, 'stop') as stop, \
+                patch.object(comp.psutil, 'Process', side_effect=[worker, game]), \
+                patch.object(train, 'run_episode', side_effect=candidate):
+            with self.assertRaisesRegex(RuntimeError, 'episode failed'):
+                comp.episode(('inst13', 'standard', {}, 123, 'test', True), separate_policy_cpus=True)
+        self.assertEqual(game.cpu_affinity.call_args_list, [call(), call(cpus[:-2])])
+        self.assertEqual(worker.cpu_affinity.call_args_list, [call(), call(cpus[-2:]), call(cpus)])
+        stop.assert_called_once()
+
     def test_private_ppo_preserves_boot_failure_without_returning_a_score(self):
         import compare_spatial
         message = 'inst13 failed at injection: argument 1: OverflowError'

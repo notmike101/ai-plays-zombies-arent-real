@@ -56,7 +56,7 @@ READY_SHORTFALL_COSTS = {'shortfall_baseline': 0., 'shortfall_penalty': .15}
 SHELTER_DURATION_RATES = {'duration_baseline': 0., 'duration_credit': .01}
 
 
-def episode(job, *, observe=False, audit_signal=False):
+def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=False):
     copy, arm, weights, seed, tag, *phase = job
     battle_study = arm in BATTLE_TEMPERATURES
     target_study = arm in TARGET_SETTLE
@@ -77,6 +77,7 @@ def episode(job, *, observe=False, audit_signal=False):
             env = zar_boot.boot(copy_dir, discard_dump_states=True)
     except ZAREnvError as exc:
         return {'err': str(exc)}
+    inherited_cpus = None
     try:
         policy = SpatialPolicy if arm == 'shared' else trainer.PolicyNet2
         options = dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')
@@ -128,14 +129,28 @@ def episode(job, *, observe=False, audit_signal=False):
                            shelter_duration_rate=SHELTER_DURATION_RATES[arm])
             if phase == [True]:
                 options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
+        if separate_policy_cpus:
+            worker = psutil.Process()
+            inherited_cpus = worker.cpu_affinity()
+            game = psutil.Process(env.pid)
+            if len(inherited_cpus) < 4 or game.cpu_affinity() != inherited_cpus:
+                raise RuntimeError('Cannot split the inherited game and worker CPU allowance')
+            game.cpu_affinity(inherited_cpus[:-2])
+            worker.cpu_affinity(inherited_cpus[-2:])
         return trainer.run_episode((env.pid, weights, False, tag, options), policy_factory=policy,
                                    telemetry=observe)
     finally:
-        zar_boot.stop(env)
+        try:
+            zar_boot.stop(env)
+        finally:
+            if inherited_cpus is not None:
+                worker.cpu_affinity(inherited_cpus)
 
 
-def collect_pairs(pool, jobs, directory, *, observe=False):
+def collect_pairs(pool, jobs, directory, *, observe=False, separate_policy_cpus=False):
     worker = partial(episode, observe=observe, audit_signal=True)
+    if separate_policy_cpus:
+        worker = partial(worker, separate_policy_cpus=True)
     results = list(pool.map(worker, jobs))
     transient = ('Timed out waiting for UI frames', 'Stale native HUD frame',
                  'No consistent HUD observer frame', 'Native map changed during read',
@@ -276,6 +291,8 @@ def main():
                             help='Compare bounded credit for civilians spending time in intact shelters')
     parser.add_argument('--observe', action='store_true',
                         help='Publish read-only Observatory decisions at up to 1 Hz per worker')
+    parser.add_argument('--separate-policy-cpus', action='store_true',
+                        help='Use the last two CPUs of the existing allowance for policy workers')
     args = parser.parse_args()
     copies = args.copies
     if args.train_rounds < 1 or args.eval_rounds < 2 or args.eval_rounds % 2:
@@ -344,6 +361,10 @@ def main():
         config = dict(seed=args.seed, copies=copies, train_rounds=args.train_rounds,
                       eval_rounds=args.eval_rounds, schema=trainer.checkpoint_schema(),
                       learning=trainer.learning_config())
+        rollout_options = {'observe': args.observe}
+        if args.separate_policy_cpus:
+            rollout_options['separate_policy_cpus'] = True
+            config['separate_policy_cpus'] = True
         if args.compare_missile_credit:
             config['comparison'] = 'missile_civilian_credit'
         if args.compare_phase_balance:
@@ -457,7 +478,7 @@ def main():
                     jobs.append((copy, arm, models[arm].state_dict(), args.seed+rnd*100+i//2,
                                  f'{tag}/{rnd}/{arm}/{copy}', training))
                 start = time.monotonic()
-                results = collect_pairs(pool, jobs, directory, observe=args.observe)
+                results = collect_pairs(pool, jobs, directory, **rollout_options)
                 batch_seconds = time.monotonic() - start
                 policies = {arm: trainer.policy_id(net) for arm, net in models.items()}
                 for job, row in zip(jobs, results):
