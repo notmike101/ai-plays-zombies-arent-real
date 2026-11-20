@@ -2,6 +2,31 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:55 Central, all 16 zone exploration training attempts
+  finished, each on a distinct outbreak. Baseline averaged 4.74%
+  saved and challenger 5.99% (eight each). Three were native
+  0% losses, 13 retries. Challenger sampled six tempered corners
+  across three attempts, with zero native coverage credit. The
+  only positive coverage was the first baseline game. Frozen
+  evaluation launched under 74460, inst19 PID 68388 and inst20
+  PID 73760. Production checkpoint hash matched.
+- Native geometry receipts show repeated empty safe zones with
+  two logged corners on the same horizontal line. In an audit
+  of the retained two-corner placement receipts, four diagonal
+  examples had positive occupancy, while four axis-aligned
+  examples had zero. Five diagonal examples were also empty.
+  The native log can use two corners for a valid shape, so do
+  not infer a collapsed polygon from the vertex count alone.
+  Match receipts by copy, session and outbreak. Active capture:
+  analysis/coverage-zone-exploration-759d5bd5dc/native-zone-creation-audit.jsonl.
+- Staged an isolated comparison log improvement to retain all
+  planning tool counts and actual planning blockers alongside
+  the native occupancy receipts. It changes only reporting.
+  All 315 script tests and patch applicability passed. D: patch
+  analysis/coverage-portable314/tmp/zone-planning-actions-audit.patch
+  SHA256 3760E96F14739B0EFB07F54FD4BA974EC8A33B0EE418D6CEE4CB1A4BCF2B461F.
+  Do not deploy until after the running operator exits.
+
 - At 12:51 Central, zone exploration 195952 completed the first
   training round. Native outbreak 2301536718 in the baseline
   had 9.26% inside at READY and earned 0.02778 coverage credit,
