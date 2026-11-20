@@ -2,6 +2,27 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 160952 started at 03:33 Central, portable D: PID 44412,
+  output `analysis/coverage-team-5dc8c1774d`, log
+  `analysis/coverage-layout-free-160952-drive-d.log`. Headroom was
+  13.07 GiB RAM and 18.85 GiB disk. Rotated discovery copies and
+  continued the placement comparison without replay or synthetic training.
+  Commit 91f74bb shares the completed local run's immutable base for
+  layout-free continuation. Verified both paths refer to the same
+  12,390,677-byte file with SHA-256 beginning `257f0c7b1af2e020`.
+  All 256 script tests passed, including the fallback to a normal saved
+  copy when links are unavailable. Production hash matched and the
+  existing Observatory listener stayed active.
+- Seed 159952 finished at 03:32 Central with eight scored early retries,
+  no wins and no reserved boards launched. The ordered arm's four
+  Garrison attempts followed two shelters. Three Garrisons were present
+  at READY. First occupied breach was at 55.23 sim seconds versus
+  47.60 for coverage-only and 44.13 for the unchanged parent. The
+  respective saved-at-retry scores were 7.28%, 7.38%, and 8.07%.
+  All three faced different outbreak seeds. The parent remained the
+  provisional leader. Geometry and timing evidence justify replication,
+  and survival improvement and the 35% goal remain unverified.
+
 - D: storage audit at 03:25 Central found 71 search copies of the
   same frozen GRU by SHA-256. Coalesced 60 redundant files across
   61 completed search directories using D:-local hard links, keeping
