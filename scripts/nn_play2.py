@@ -751,7 +751,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         o = env.obs()
         civ0 = max(o['civ'], 1)
         m0 = o['money']
-        shelter_tracker = Shelter(civ0, breach_cost=options.get('occupied_breach_cost', BREACH_COST))
+        shelter_tracker = Shelter(civ0, breach_cost=options.get('occupied_breach_cost', BREACH_COST),
+                                  duration_rate=options.get('shelter_duration_rate'))
         st = dict(t=0., planning=True, spend_frac=0., deck=[], sim=0., mult=8., shelter=shelter_tracker)
         config = initial.get('config', {})
         st['rules']={**config,**initial.get('params',{})}
@@ -1327,11 +1328,14 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         outside_reward = -OUTSIDE_PLAYAREA_COST * outside_actions
         shelter = st['shelter']
         special_reward = SPECIAL_ACTIVATION_CREDIT * min(len(special_activations),MAX_CREDITED_SPECIALS)
-        rewards = dict(infections=sum(rows['rews'])-outside_reward-shelter.presence_credit-shelter.breach_penalty-special_reward,
+        rewards = dict(infections=(sum(rows['rews'])-outside_reward-shelter.presence_credit
+                                   -shelter.breach_penalty-shelter.duration_credit-special_reward),
                        special_activation=special_reward,
                        outside_playarea=outside_reward, shelter=shelter.presence_credit,
                        occupied_breach=shelter.breach_penalty,
                        terminal=outcome_reward(saved, end))
+        if shelter.duration_rate is not None:
+            rewards['shelter_duration'] = shelter.duration_credit
         missile_rewards = rows['rews'] if options.get('missile_credit', True) else [0.] * len(rows['rews'])
         missile_losses = charge_missile_civilian_loss(
             footer, [step[0] for step in rows['trail']], missile_rewards, civ0)
@@ -1359,6 +1363,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             rows['experiment_signal'] = dict(
                 receipts=dict(
                     occupied_exposure=bool(shelter.breach_exposures) if shelter.next_sample else None,
+                    occupied_duration=bool(shelter.occupant_seconds) if shelter.duration_intervals else None,
                     occupied_ready=coverage > 0 if coverage is not None else None,
                     below_ready_target=coverage < READY_COVERAGE_SHORTFALL_TARGET if coverage is not None else None,
                     missile_civilian_loss=missile_losses['confirmed'] > 0 if missile_losses is not None else None,
@@ -1371,6 +1376,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 reward_components=rewards.copy(),
                 reward_bases=dict(
                     occupied_breach=-shelter.breach_exposures / civ0 if shelter.next_sample else None,
+                    shelter_duration=shelter.duration_basis if shelter.duration_intervals else None,
                     ready_coverage=coverage,
                     ready_shortfall=-max(1. - coverage / READY_COVERAGE_SHORTFALL_TARGET, 0.)
                     if coverage is not None else None,
@@ -1413,7 +1419,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     shelter=dict(credited_civilians=len(shelter.credited),exposed_civilians=len(shelter.exposed),
                                  breach_exposures=shelter.breach_exposures,
                                  occupied_breaches=shelter.occupied_breaches,
-                                 first_occupied_breach=shelter.first_occupied_breach),
+                                 first_occupied_breach=shelter.first_occupied_breach,
+                                 occupant_seconds=shelter.occupant_seconds if shelter.duration_intervals else None,
+                                 duration_intervals=shelter.duration_intervals),
                     frac=o['civ']/civ0, bootstrap=bootstrap,
                     civ0=civ0, t=time.monotonic()-start, sim=state['sim'],
                     battle_started=battle_start,

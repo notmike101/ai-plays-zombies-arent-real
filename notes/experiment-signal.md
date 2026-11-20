@@ -51,7 +51,7 @@ repeated seeds are not independent evidence of a performance improvement.
 If a run should stop, the existing `stop-after-round` file still takes effect
 only after the paired checkpoint and diagnostics are saved.
 
-## Queued comparison for sustained shelter protection
+## Comparison for sustained shelter protection
 
 Compare existing shelter rewards with the same rewards plus bounded credit
 for simulated time civilians spend in intact, occupied shelters. Keep the
@@ -65,7 +65,13 @@ and stop credit at observed penetration. Empty zones, paused time, duplicate
 samples and missing intervals earn zero. Preserve credit for earlier verified
 protection when civilians subsequently leave or a zone is breached. Set an
 episode cap before running the comparison so a prolonged collapse cannot earn
-unbounded reward.
+unbounded reward. In the first comparison, sample at the shelter tracker's
+existing 0.5-second cadence and omit intervals longer than 1.25 simulated
+seconds. The candidate earns 0.01 per full-starting-population equivalent
+second, capped at 30 equivalent seconds (0.30 reward). The baseline records
+the same exposure and earns zero additional credit. Both use the stock
+normal-speed clock, which gave the frozen policy more decisions per simulated
+second in the cadence probe.
 
 Test duplicate and overlapping zones, departures and relocation, zero clock
 advance, missing samples, a successful occupied interval and a later breach.

@@ -400,6 +400,22 @@ class StateTests(unittest.TestCase):
         self.assertEqual(rews, [.098, .2, .298, .4])
         self.assertEqual(train.charge_ready_delay(rews, [], .002), 0.)
 
+    def test_shelter_duration_pair_changes_only_the_training_reward_rate(self):
+        import compare_spatial as comp
+        with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \
+                patch.object(comp.zar_boot, 'stop'), patch.object(train, 'run_episode') as run:
+            for training in (True, False):
+                options = []
+                for arm, rate in comp.SHELTER_DURATION_RATES.items():
+                    comp.episode(('inst13', arm, {}, 123, 'test', training))
+                    settings = run.call_args.args[0][4].copy()
+                    self.assertEqual(settings.pop('shelter_duration_rate'), rate)
+                    self.assertEqual(settings['fixed_speed'], 'speed_1')
+                    self.assertTrue(settings['fixed_clock'])
+                    self.assertNotIn('occupied_breach_cost', settings)
+                    options.append(settings)
+                self.assertEqual(*options)
+
     def test_target_settle_comparison_varies_only_execution_timing(self):
         import compare_spatial as comp
         with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \

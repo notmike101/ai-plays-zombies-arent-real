@@ -23,6 +23,7 @@ import zar_boot
 from env_zar import ZAREnvError
 from nn_report import records
 from experiment_signal import summarize_signal
+from shelter_reward import DURATION_CAP, DURATION_MAX_INTERVAL
 
 
 class SpatialPolicy(trainer.PolicyNet2):
@@ -52,6 +53,7 @@ PLANNING_ENTROPY_BONUSES = {'entropy_baseline': 0., 'planning_entropy': .045}
 DEFENSE_COSTS = {'defense_baseline': trainer.BREACH_COST,
                  'defense_stronger': 3 * trainer.BREACH_COST}
 READY_SHORTFALL_COSTS = {'shortfall_baseline': 0., 'shortfall_penalty': .15}
+SHELTER_DURATION_RATES = {'duration_baseline': 0., 'duration_credit': .01}
 
 
 def episode(job, *, observe=False, audit_signal=False):
@@ -59,13 +61,14 @@ def episode(job, *, observe=False, audit_signal=False):
     battle_study = arm in BATTLE_TEMPERATURES
     target_study = arm in TARGET_SETTLE
     ready_study = arm in READY_DELAY_COSTS
+    duration_study = arm in SHELTER_DURATION_RATES
     planning_study = (arm in PLANNING_TEMPERATURES or arm in PLANNING_ENTROPY_BONUSES
                       or battle_study or target_study or ready_study)
     try:
         copy_dir = operator.owned_copy(copy)
         env = None
         if (arm in BREACH_COSTS or arm in READY_CREDITS or arm in ZONE_TEMPERATURES
-                or planning_study or arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS):
+                or planning_study or arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS or duration_study):
             try:
                 env = zar_boot.boot(copy_dir, welcome_wait=15, discard_dump_states=True)
             except ZAREnvError as exc:
@@ -117,6 +120,12 @@ def episode(job, *, observe=False, audit_signal=False):
                 options['occupied_breach_cost'] = DEFENSE_COSTS[arm]
             else:
                 options['ready_shortfall_cost'] = READY_SHORTFALL_COSTS[arm]
+            if phase == [True]:
+                options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
+        if duration_study:
+            options.update(fixed_speed='speed_1', fixed_clock=True, ready_coverage_credit=.30,
+                           planning_zone_audit=True, experiment_signal='receipts',
+                           shelter_duration_rate=SHELTER_DURATION_RATES[arm])
             if phase == [True]:
                 options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
         return trainer.run_episode((env.pid, weights, False, tag, options), policy_factory=policy,
@@ -263,6 +272,8 @@ def main():
                             help='Compare breach costs with broader planning exploration in both training arms')
     comparison.add_argument('--compare-ready-shortfall', action='store_true',
                             help='Compare a capped penalty for low verified civilian shelter coverage at READY')
+    comparison.add_argument('--compare-shelter-duration', action='store_true',
+                            help='Compare bounded credit for civilians spending time in intact shelters')
     parser.add_argument('--observe', action='store_true',
                         help='Publish read-only Observatory decisions at up to 1 Hz per worker')
     args = parser.parse_args()
@@ -280,7 +291,7 @@ def main():
                       or args.compare_battle_exploration or args.compare_target_settle or args.compare_ready_delay)
     coverage_study = (args.compare_ready_coverage or args.compare_zone_exploration
                       or planning_study or args.compare_shelter_defense
-                      or args.compare_ready_shortfall)
+                      or args.compare_ready_shortfall or args.compare_shelter_duration)
     shelter_study = args.compare_breach_cost or coverage_study
     paired_weights = args.compare_missile_credit or args.compare_phase_balance or shelter_study
     if args.warm_start and not paired_weights:
@@ -306,7 +317,8 @@ def main():
         else:
             trainer.load_pretrained(baseline, trainer.MODEL)
         if paired_weights:
-            labels = (tuple(READY_SHORTFALL_COSTS) if args.compare_ready_shortfall else
+            labels = (tuple(SHELTER_DURATION_RATES) if args.compare_shelter_duration else
+                      tuple(READY_SHORTFALL_COSTS) if args.compare_ready_shortfall else
                       tuple(DEFENSE_COSTS) if args.compare_shelter_defense else
                       tuple(READY_DELAY_COSTS) if args.compare_ready_delay else
                       tuple(TARGET_SETTLE) if args.compare_target_settle else
@@ -376,6 +388,11 @@ def main():
                           training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
                           ready_shortfall_cost_by_arm=READY_SHORTFALL_COSTS,
                           ready_shortfall_target=trainer.READY_COVERAGE_SHORTFALL_TARGET)
+        if args.compare_shelter_duration:
+            config.update(comparison='shelter_duration', fixed_speed='speed_1', ready_coverage_credit=.30,
+                          training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
+                          shelter_duration_rate_by_arm=SHELTER_DURATION_RATES,
+                          shelter_duration_cap=DURATION_CAP, shelter_duration_max_interval=DURATION_MAX_INTERVAL)
         first_round = 0
         prior_signal_rows = []
         source = trainer.policy_id(baseline)
@@ -398,7 +415,8 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        experiment = ('ready-shortfall' if args.compare_ready_shortfall else
+        experiment = ('shelter-duration' if args.compare_shelter_duration else
+                      'ready-shortfall' if args.compare_ready_shortfall else
                       'shelter-defense' if args.compare_shelter_defense else
                       'ready-delay' if args.compare_ready_delay else
                       'target-settle' if args.compare_target_settle else
@@ -483,7 +501,7 @@ def main():
                         if coverage_study:
                             summary['ready_coverage_reward'] = row.get('reward_components', {}).get('ready_coverage')
                     if (args.compare_zone_exploration or planning_study
-                            or args.compare_shelter_defense or args.compare_ready_shortfall):
+                            or args.compare_shelter_defense or args.compare_ready_shortfall or args.compare_shelter_duration):
                         summary['planning_zone_receipts'] = row.get('planning_zone_receipts')
                         for key in ('ready_embedded_defenses', 'ready_preparation', 'ready_loadout',
                                     'first_legal_cast_sim', 'timeout_preparation'):
@@ -493,7 +511,7 @@ def main():
                             temp > 1. for temp in row.get('cell_temperatures', ()))
                     if args.compare_ready_shortfall:
                         summary['ready_shortfall_reward'] = row.get('reward_components', {}).get('ready_shortfall')
-                    if planning_study or args.compare_shelter_defense or args.compare_ready_shortfall:
+                    if planning_study or args.compare_shelter_defense or args.compare_ready_shortfall or args.compare_shelter_duration:
                         summary['tempered_planning_decisions'] = sum(
                             temp > 1. and obs[trainer.PLANNING_INDEX] > 0
                             for temp, obs in zip(row.get('tool_temperatures', ()), row.get('obs', ())))

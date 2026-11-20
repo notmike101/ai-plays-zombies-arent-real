@@ -6,6 +6,8 @@ from spatial import inside_polygon
 CREDIT = .05
 BREACH_COST = .10
 SAMPLE_SECONDS = .5
+DURATION_MAX_INTERVAL = 1.25
+DURATION_CAP = 30.
 PERIMETER_METRES = 150.
 
 
@@ -48,11 +50,18 @@ def garrison_perimeter_gain(zones, existing, targets, radius, existing_radius=No
 
 
 class Shelter:
-    def __init__(self, population, *, breach_cost=BREACH_COST):
+    def __init__(self, population, *, breach_cost=BREACH_COST, duration_rate=None):
         if not np.isfinite(breach_cost) or breach_cost < 0:
             raise ValueError('Invalid occupied shelter exposure cost')
         self.population = population
         self.breach_cost = breach_cost
+        if duration_rate is not None and (not np.isfinite(duration_rate) or duration_rate < 0):
+            raise ValueError('Invalid shelter duration rate')
+        self.duration_rate = duration_rate
+        self.duration_sample = None
+        self.occupant_seconds = 0.
+        self.duration_intervals = 0
+        self.duration_credit = 0.
         self.next_sample = 0.
         self.previous = {}
         self.breached = set()
@@ -66,8 +75,15 @@ class Shelter:
         self.first_occupied_breach = None
         self.protected = []
 
+    @property
+    def duration_basis(self):
+        return min(self.occupant_seconds / self.population, DURATION_CAP)
+
     def observe(self, native, sim):
-        if not native or sim < self.next_sample:
+        if not native:
+            self.duration_sample = None
+            return 0.
+        if sim < self.next_sample:
             return 0.
         self.next_sample = sim + SAMPLE_SECONDS
         units = native['units']
@@ -118,7 +134,18 @@ class Shelter:
         penalty = -self.breach_cost*len(newly_exposed)/self.population
         self.presence_credit += credit
         self.breach_penalty += penalty
-        return credit+penalty
+        duration = 0.
+        if self.duration_rate is not None:
+            if self.duration_sample is not None:
+                elapsed = sim - self.duration_sample
+                if 0. < elapsed <= DURATION_MAX_INTERVAL:
+                    self.duration_intervals += 1
+                    self.occupant_seconds += elapsed * len(sheltered)
+                    updated = self.duration_rate * self.duration_basis
+                    duration = updated - self.duration_credit
+                    self.duration_credit = updated
+            self.duration_sample = sim
+        return credit+penalty+duration
 
     def perimeter(self, cells, radius=PERIMETER_METRES):
         pressure = np.zeros(len(cells),dtype=np.float32)

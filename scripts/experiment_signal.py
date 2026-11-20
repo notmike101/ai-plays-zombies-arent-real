@@ -4,6 +4,7 @@ import math
 _DESIGN = {
     'occupied_breach_cost': ('occupied_exposure', 'occupied_breach'),
     'shelter_defense': ('occupied_exposure', 'occupied_breach'),
+    'shelter_duration': ('occupied_duration', 'shelter_duration'),
     'ready_coverage': ('occupied_ready', 'ready_coverage'),
     'ready_shortfall': ('below_ready_target', 'ready_shortfall'),
     'ready_delay': ('legal_ready_declined', 'ready_delay'),
@@ -20,6 +21,7 @@ def reward_coefficients(config, component, arms):
     if component == 'missile_civilian_loss':
         return {arms[0]: 0., arms[1]: config['learning']['missile_civilian_cost']}
     key = {'occupied_breach': 'occupied_breach_cost_by_arm',
+           'shelter_duration': 'shelter_duration_rate_by_arm',
            'ready_coverage': 'ready_coverage_credit_by_arm',
            'ready_shortfall': 'ready_shortfall_cost_by_arm',
            'ready_delay': 'ready_delay_cost_by_arm'}[component]

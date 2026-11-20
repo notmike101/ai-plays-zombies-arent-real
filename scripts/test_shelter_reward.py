@@ -87,3 +87,32 @@ class ShelterTests(unittest.TestCase):
         self.assertEqual(shelter.observe(initial,.5),0.)
         self.assertEqual(shelter.observe(self.snapshot([(1,(25,25))],zones=[]),1.),0.)
         self.assertEqual(shelter.occupied_breaches,0)
+
+    def test_duration_counts_unique_occupants_and_stops_at_breach(self):
+        shelter = Shelter(10, duration_rate=.01)
+        zone = self.snapshot([])['zones'][0]
+        zones = [zone, zone+5]
+        full = self.snapshot([(1, (25, 25)), (2, (35, 35))], zones=zones)
+        self.assertEqual(shelter.observe(full, 0.), 0.)
+        self.assertAlmostEqual(shelter.observe(full, .5), .011)
+        self.assertEqual(shelter.observe(full, .5), 0.)
+        partial = self.snapshot([(2, (35, 35))], zones=zones)
+        self.assertAlmostEqual(shelter.observe(partial, 1.), .0005)
+        invaded = self.snapshot([(2, (35, 35))], [(20, 20), (21, 21), (22, 22)], zones=zones)
+        self.assertAlmostEqual(shelter.observe(invaded, 1.5), -.01)
+        self.assertEqual(shelter.occupant_seconds, 1.5)
+        self.assertAlmostEqual(shelter.duration_credit, .0015)
+
+    def test_duration_skips_gaps_missing_samples_and_caps_reward(self):
+        shelter = Shelter(1, duration_rate=.01)
+        full = self.snapshot([(1, (25, 25))])
+        shelter.observe(full, 0.)
+        shelter.observe(full, 2.)
+        shelter.observe(None, 2.25)
+        shelter.observe(full, 2.5)
+        self.assertEqual(shelter.duration_intervals, 0)
+        for step in range(1, 81):
+            shelter.observe(full, 2.5+step*.5)
+        self.assertEqual(shelter.occupant_seconds, 40.)
+        self.assertAlmostEqual(shelter.duration_credit, .30)
+        self.assertEqual(shelter.duration_basis, 30.)

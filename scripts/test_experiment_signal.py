@@ -11,6 +11,7 @@ class SignalTests(unittest.TestCase):
                     occupied_breach_cost_by_arm={'reference': .10, 'candidate': .30},
                     ready_coverage_credit_by_arm={'reference': 0., 'candidate': .30},
                     ready_shortfall_cost_by_arm={'reference': 0., 'candidate': .15},
+                    shelter_duration_rate_by_arm={'reference': 0., 'candidate': .01},
                     ready_delay_cost_by_arm={'reference': 0., 'candidate': .002})
 
     def report(self, kind, rows, *, complete=0):
@@ -93,6 +94,17 @@ class SignalTests(unittest.TestCase):
         report = self.report('ready_delay', rows)
         self.assertEqual(report['advisory'], 'treatment_observed')
         self.assertAlmostEqual(report['arms']['candidate']['reward_difference_sum'], -.04)
+
+    def test_shelter_duration_needs_observed_occupancy_and_the_expected_credit(self):
+        rows = self.rows({'occupied_duration': False}, {'shelter_duration': 0.})
+        self.assertEqual(self.report('shelter_duration', rows)['advisory'], 'unexercised')
+        rows[-1]['experiment_signal'] = dict(receipts={'occupied_duration': True},
+                                             reward_components={'shelter_duration': .04},
+                                             reward_bases={'shelter_duration': 4.})
+        report = self.report('shelter_duration', rows)
+        self.assertEqual(report['advisory'], 'treatment_observed')
+        self.assertAlmostEqual(report['arms']['candidate']['reward_difference_sum'], .04)
+        self.assertEqual(report['outcome_evidence'], 'insufficient_independent_natural_finishes')
 
     def test_target_settle_requires_an_executed_snapped_cast_with_the_frame_wait(self):
         rows = self.rows({'snapped_cast': True, 'target_pointer_settled': False}, {})
