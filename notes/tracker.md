@@ -2,6 +2,16 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:27 Central, shelter defense study 198952 completed its
+  first PPO round. Baseline retries saved 9.47% and 5.29%;
+  stronger-cost 6.25% and 9.35%. All had 0% inside at READY,
+  so the breach cost stayed zero. New native evidence worked:
+  one FireMortar and two Garrison placements across four boards;
+  inst16 had first legal Stun Gas/Fire Bomb at 20.20 s and one
+  native deployment of each. Inst15 bought both but had no
+  legal cast before retry. Round two launched under 64444
+  (inst13 69620, inst14 68344, inst15 57276, inst16 42020).
+
 - At 13:26 Central, planning exploration 197952 exited normally.
   Eight held-out retries, no natural finishes, no occupied
   shelters. Six distinct fresh scores after excluding one
