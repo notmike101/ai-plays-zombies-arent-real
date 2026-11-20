@@ -789,6 +789,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     if cast_target_mode and not st['planning'] and u in U2ABILITY:
                         c = select_policy_cell(dc, cast_target_mode == 'greedy', cast_target_rng)
                         battle_actions['cast_target_non_argmax'] += int(c != int(dc.probs.argmax()))
+                        if options.get('collect_cast_gradients'):
+                            net.record_cast_gradient(u, c, dc.probs)
                     else:
                         c = select_policy_cell(dc, greedy, cell_rng)
                     ulp, clp = float(du.log_prob(torch.tensor(u))), float(dc.log_prob(torch.tensor(c)))
@@ -1013,6 +1015,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         logging = False
         battle_actions['logged_deployments']=footer.get('deployments') if footer else None
         battle_actions['logged_kills'] = (footer.get('stats') or {}).get('kills') if footer else None
+        if options.get('collect_cast_gradients'):
+            battle_actions['cast_target_gradients'] = net.cast_gradients.tolist()
         if placement_feedback and footer:
             events = footer.get('combat_events') or ()
             battle_actions['firebomb_lines'] = [

@@ -389,6 +389,43 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(search.available_placement_neighbors(parent, [(*r, 'ChemMine') for r in rosters], rng), [])
         self.assertEqual(search.available_placement_neighbors(parent, [rosters[0], ('Garrison',)], rng), [])
 
+    def test_live_cast_gradient_matches_autodiff_on_legal_cells(self):
+        model = search.TeamPolicy(search.random_team(np.random.default_rng(42)), collect_cast_gradients=True)
+        tool = search.FIREBOMB
+        row = search.FIREBOMB_ROW
+        model.cast_grid = torch.arange(5 * search.tr.NC).reshape(5, -1).float() / 100.
+        weights = model.battle[row].clone().requires_grad_()
+        mask = torch.arange(search.tr.NC) < 3
+        logits = (weights @ model.cast_grid).masked_fill(~mask, -torch.inf)
+        dist = torch.distributions.Categorical(logits=logits)
+        cell = 1
+        dist.log_prob(torch.tensor(cell)).backward()
+        model.record_cast_gradient(tool, cell, dist.probs.detach())
+        torch.testing.assert_close(model.cast_gradients[row], weights.grad)
+        self.assertEqual(int(torch.count_nonzero(model.cast_gradients[:row])), 0)
+
+    def test_live_cast_update_uses_distinct_scored_real_outcomes(self):
+        parent = search.random_team(np.random.default_rng(42))
+        gradient = np.zeros((len(search.CASTS), 5))
+        gradient[search.FIREBOMB_ROW, 0] = 1.
+        def trial(copy, seed, saved, end, values):
+            return dict(copy=copy, levels=[dict(stage=1, start_kind='fresh', outbreak=dict(seed=seed),
+                saved=saved, end=end, battle_actions=dict(cast_target_gradients=values.tolist()))])
+        rows = [trial('inst13', 1, .4, 'won', gradient),
+                trial('inst14', 2, .1, 'aborted', -gradient),
+                trial('inst15', 1, .9, 'won', -gradient),
+                trial('inst16', 3, None, 'timeout', gradient)]
+        child, report = search.live_cast_update(parent, rows)
+        self.assertEqual(report['scored_seeds'], [1, 2])
+        self.assertAlmostEqual(report['step_norm'], .15)
+        self.assertAlmostEqual(child['battle'][search.FIREBOMB_ROW][0],
+                               parent['battle'][search.FIREBOMB_ROW][0] + .15)
+        self.assertEqual(dict(child, battle=parent['battle']), parent)
+        self.assertIs(search.live_cast_update(parent, rows[:1])[0], parent)
+        evidence = {}
+        search.fitness.record(evidence, dict(rows[0], team=child, target_fit_overlap=True))
+        self.assertEqual(evidence, {})
+
     def test_cast_target_modes_preserve_tool_sampling_identity(self):
         parent = dict(search.random_team(np.random.default_rng(11)), sample_battle=True)
         teams = [dict(parent, cast_target_mode=mode) for mode in ('sample', 'greedy')]

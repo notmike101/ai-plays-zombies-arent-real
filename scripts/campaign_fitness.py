@@ -13,7 +13,7 @@ def prefix_id(team,stage):
 
 def record(evidence,trial):
     team=trial.get('team')
-    if not team or trial.get('arm') or trial.get('start_stage',1)!=1:return
+    if not team or trial.get('arm') or trial.get('target_fit_overlap') or trial.get('start_stage',1)!=1:return
     for stage,row in enumerate(trial.get('levels',[]),1):
         if row['stage']!=stage or row.get('attempt',0) or row.get('start_kind')!=('fresh' if stage==1 else 'next_level'):break
         seed=(row.get('outbreak') or {}).get('seed')
