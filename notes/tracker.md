@@ -2,6 +2,24 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:11 Central, combined the Police path trial, matched reserve
+  reference and native loadout receipt changes in one staged patch,
+  analysis/coverage-portable314/tmp/police-and-loadout-study.patch.
+  Ran all 301 script tests against the combined source and verified
+  applicability. The 189952 crossed experiment still compares the
+  same two frozen policies and prepares no new loadout strategy during
+  its paired waves. Both arms collect opening offers and native
+  remaining SP so a later discovery batch can test one purchase
+  preference with actual budget evidence. The selection and reward
+  of the paired study stay as designed.
+- Replaced only the waiting handoff helper: PID 71480 now waits for
+  the same exact operator PID 71620 to finish. New handoff log
+  analysis/coverage-police-loadout-handoff.log. The prior wait-only
+  PID 68120 is gone. Verified the current campaign operator and
+  inst20 PID 34288 remain live and the tracked runtime files still
+  match HEAD. Fourth-wave reference retried again at 9.94% on
+  previously seen outbreak 694232781. No new eligible candidate score.
+
 - At 11:09 Central, reserved wave three completed with a battle-clock
   timeout on repeated candidate outbreak 249701763. No official score.
   Wave four is live on inst20 PID 34288 and inst19 PID 69716. Both
