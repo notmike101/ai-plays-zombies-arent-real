@@ -382,12 +382,19 @@ def preparation_variants(parent, roster, usage, rng):
                   if step['family'] == 0 and step['tool'] in tr.PLACEMENTS and step['tool'] != GARRISON]
     placements.sort(key=lambda i: tr.PLACEMENTS[plan[i]['tool']] in roster)
     shelter = next((i for i, step in enumerate(plan) if step['tool'] == ZONE_RECT), None)
-    if len(placements) < 2 or shelter is None:
+    if not placements or shelter is None:
         return
-    unit_slot, support_slot = placements[:2]
+    supports = [tr.TOOLS.index(name) for name in ('wall', 'gate', 'corridor', 'hold')]
+    unit_slot = placements[0]
+    if len(placements) > 1:
+        support_slot = placements[1]
+    else:
+        existing = [i for i, step in enumerate(plan) if step['tool'] in supports]
+        if not existing:
+            return
+        support_slot = min(existing, key=lambda i: plan[i]['duration'])
     units = [tool for tool, name in tr.PLACEMENTS.items()
              if name in roster and tool != GARRISON]
-    supports = [tr.TOOLS.index(name) for name in ('wall', 'gate', 'corridor', 'hold')]
     combinations = [(unit, support, after) for unit in units for support in supports
                     for after in (False, True)]
     ordered = rng.permutation(len(combinations))
@@ -398,7 +405,7 @@ def preparation_variants(parent, roster, usage, rng):
         support_step = dict(plan[support_slot], family=1, tool=support)
         changed = []
         for i, step in enumerate(plan):
-            if i == unit_slot and not after:
+            if i == min(unit_slot, shelter) and not after:
                 changed.append(unit_step)
             if i not in (unit_slot, support_slot):
                 changed.append(step)
@@ -406,7 +413,8 @@ def preparation_variants(parent, roster, usage, rng):
                 if after:
                     changed.append(unit_step)
                 changed.append(support_step)
-        yield dict(parent, plan=changed), (unit, support, after)
+        if changed != plan:
+            yield dict(parent, plan=changed), (unit, support, after)
 
 
 def live_cast_update(parent, trials, *, learn_tools=False):
@@ -1606,7 +1614,8 @@ def main():
                         roster = operator.planning_roster(settings.read_text(encoding='utf-8-sig'))
                         candidate = next(((child, combination) for child, combination in
                                           preparation_variants(proposal, roster, prep_usage, rng)
-                                          if team_id(child) not in prep_seen), None)
+                                          if team_id(child) not in prep_seen
+                                          and fitness.prefix_id(child, 1) not in evidence), None)
                         if candidate is None:
                             raise ValueError(f'{copy} has no additional eligible preparation combinations')
                         population[i], combination = candidate

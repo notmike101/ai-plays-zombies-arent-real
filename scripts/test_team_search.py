@@ -534,6 +534,29 @@ class SearchTests(unittest.TestCase):
             original = dict(child, plan=[dict(child['plan'][0], tool=absent)])
             self.assertEqual(original, parent)
 
+    def test_preparation_search_can_continue_from_a_unit_and_support_variant(self):
+        from collections import Counter
+
+        rng = np.random.default_rng(121)
+        parent = search.random_team(rng)
+        step = search.gene(rng)
+        sniper = search.tr.TOOLS.index('place_Sniper')
+        hold = search.tr.TOOLS.index('hold')
+        wall = search.tr.TOOLS.index('wall')
+        parent['plan'] = [dict(step, family=1, tool=search.ZONE_RECT),
+                          dict(step, family=0, tool=sniper),
+                          dict(step, family=1, tool=hold, duration=1),
+                          dict(step, family=1, tool=wall, duration=6)]
+        variants = list(search.preparation_variants(parent, ('Garrison', 'Sniper', 'Oil'), Counter(), rng))
+        self.assertTrue(variants)
+        self.assertTrue(any(not combination[2] for _, combination in variants))
+        for team, (unit, _, after) in variants:
+            self.assertNotEqual(team, parent)
+            self.assertEqual(team['plan'][-1], parent['plan'][-1])
+            tools = [gene['tool'] for gene in team['plan'][:-1]]
+            self.assertEqual(tools.index(unit) > tools.index(search.ZONE_RECT), after)
+            self.assertEqual(dict(team, plan=parent['plan']), parent)
+
     def test_preparation_variants_rotate_role_combinations_and_preserve_battle(self):
         from collections import Counter
 

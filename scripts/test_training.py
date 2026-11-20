@@ -306,5 +306,24 @@ class LearningTests(unittest.TestCase):
             self.assertFalse(train.training_enabled(mode, random))
 
 
+
+class PopulationPressureTests(unittest.TestCase):
+    def test_first_outnumbered_and_low_population_are_separate(self):
+        events = {}
+        train.record_population_pressure(events, {'civ': 60, 'zomb': 40}, 100, 1.0)
+        self.assertEqual(events, {})
+        train.record_population_pressure(events, {'civ': 45, 'zomb': 45}, 100, 2.0)
+        train.record_population_pressure(events, {'civ': 10, 'zomb': 80}, 100, 3.0)
+        train.record_population_pressure(events, {'civ': 3, 'zomb': 90}, 100, 4.0)
+        self.assertEqual(events, {'first_outnumbered_sim': 2.0,
+                                  'first_live_at_retry_floor_sim': 3.0})
+
+    def test_severe_failure_uses_official_completed_or_retry_scores(self):
+        self.assertTrue(train.severe_outcome(.0999, 'aborted'))
+        self.assertTrue(train.severe_outcome(0., 'lost'))
+        self.assertFalse(train.severe_outcome(.10, 'aborted'))
+        self.assertIsNone(train.severe_outcome(.01, 'timeout'))
+        self.assertIsNone(train.severe_outcome(None, 'lost'))
+
 if __name__ == '__main__':
     unittest.main()

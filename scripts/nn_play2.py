@@ -33,13 +33,14 @@ try:
 except ImportError:
     Observer = None
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, extra_cell_label
-from policy_mechanics import Mechanics, PLACEMENTS, SPEED_TICKS, embedded_defenses, extra_masks, preparation_counts
+from policy_mechanics import Mechanics, PLACEMENTS, SPEED_TICKS, embedded_defenses, extra_masks, preparation_counts, preparation_fingerprint
 MODEL = os.path.join(ROOT, 'sessions', 'nn_policy4.pt')
 HIST = os.path.join(ROOT, 'analysis', 'nn_hist4.jsonl')
 NOBS, HID = 332+len(EXTRA_LABELS), 128
 PLANNING_INDEX = INPUT_LABELS.index('Planning phase')
 BATTLE_GAMMA, BATTLE_LAMBDA = .99, .95
 SAVED_REWARD_SCALE = 5.
+RETRY_CIVILIAN_FRACTION = .10
 MISSILE_CIVILIAN_COST = 1.
 OUTSIDE_PLAYAREA_COST = .02
 SPECIAL_ACTIVATION_CREDIT = .01
@@ -548,6 +549,13 @@ def load_pretrained(net, path):
     net.load_state_dict(data['policy'])
 
 
+def record_population_pressure(actions, obs, initial, sim):
+    if obs['zomb'] > 0 and obs['civ'] <= obs['zomb']:
+        actions.setdefault('first_outnumbered_sim', sim)
+    if obs['civ'] <= RETRY_CIVILIAN_FRACTION * initial:
+        actions.setdefault('first_live_at_retry_floor_sim', sim)
+
+
 def transition_reward(before, after, civ0):
     # Infections are losses; evacuation is not. No per-sample clipping.
     return -max(after['infections'] - before['infections'], 0) / civ0
@@ -912,6 +920,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                                                  oil=int(np.count_nonzero(paint == 2)))
                         ready_embedded_defenses = embedded_defenses(st['native'])
                         ready_preparation = preparation_counts(st['native'])
+                        ready_preparation['layout_id'] = preparation_fingerprint(st['native'])
                     state = ready_once(env)
                     battle_start = time.monotonic()
                     d = dict(initial)
@@ -1036,15 +1045,18 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             now = time.monotonic()
             timeout_reason,paused_since=battle_timeout(state,now,battle_start,paused_since,options)
             official_retry_saved = None
-            if (state['phase'] == 'playing' and o['civ'] <= .1 * civ0
-                    and o['infections'] < .9 * civ0 and now >= next_retry_check):
+            playing = state['phase'] == 'playing'
+            live_at_floor = o['civ'] <= RETRY_CIVILIAN_FRACTION * civ0
+            infection_exhausted = o['infections'] >= (1. - RETRY_CIVILIAN_FRACTION) * civ0
+            if playing:
+                record_population_pressure(battle_actions, o, civ0, state['sim'])
+            if playing and live_at_floor and not infection_exhausted and now >= next_retry_check:
                 next_retry_check = now + 1.
                 official_retry_saved = env.logged_saved_fraction(state['sim'])
             if state['phase'] in ('won', 'lost'):
                 end = state['phase']
-            elif (state['phase'] == 'playing' and o['civ'] <= .1 * civ0
-                  and (o['infections'] >= .9 * civ0
-                       or official_retry_saved is not None and official_retry_saved <= .1)):
+            elif (playing and live_at_floor and (infection_exhausted or
+                  (official_retry_saved is not None and official_retry_saved <= RETRY_CIVILIAN_FRACTION))):
                 end = 'aborted'
                 if official_retry_saved is not None:
                     battle_actions['retry_snapshot_saved_frac'] = official_retry_saved
@@ -1111,7 +1123,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         missile_losses = charge_missile_civilian_loss(
             footer, [step[0] for step in rows['trail']], missile_rewards, civ0)
         battle_actions['missile_civilian_losses'] = missile_losses
-        battle_actions.update(legal_cast_tools=legal_casts, selected_cast_tools=selected_casts)
+        battle_actions.update(legal_cast_tools=legal_casts, selected_cast_tools=selected_casts,
+                              severe_failure=severe_outcome(saved, end))
         rewards['missile_civilian_loss'] = (-MISSILE_CIVILIAN_COST * missile_losses['assigned'] / civ0
                                             if missile_losses is not None and missile_rewards is rows['rews'] else 0.)
         if rows['rews']:
@@ -1200,6 +1213,12 @@ def gae(rews, vals, lam=BATTLE_LAMBDA, gamma=BATTLE_GAMMA, bootstrap=0.0,
     adv = list(reversed(adv))
     rets = [a + v for a, v in zip(adv, vals)]
     return adv, rets
+
+
+def severe_outcome(saved_frac, end):
+    if saved_frac is None or end not in ('won', 'lost', 'aborted'):
+        return None
+    return saved_frac < RETRY_CIVILIAN_FRACTION
 
 
 def outcome_reward(saved_frac, end):

@@ -1,4 +1,6 @@
 """Native observations and player gestures for the appended policy actions."""
+import hashlib
+import json
 import math
 from collections import Counter
 
@@ -160,6 +162,34 @@ def embedded_defenses(snapshot):
     return {str(name): dict(total=int((names == name).sum()),
                             inside_occupied=int(((names == name) & sheltered).sum()))
             for name in np.unique(names) if name}
+
+
+def preparation_fingerprint(snapshot):
+    # Native entity IDs and array ordering can change between copies.
+    def point(position):
+        return tuple(float(axis) for axis in position)
+
+    def segment(a, b):
+        return tuple(sorted((point(a), point(b))))
+
+    units = snapshot['units']
+    names = unit_names(units, snapshot['unit_maps'])
+    placed = sorted((str(name), point(pos)) for name, pos in zip(names, units['pos']) if name)
+    zones = sorted(tuple(sorted(segment(a, b) for a, b in zip(z, np.roll(z, -1, axis=0))))
+                   for z in snapshot['zones'])
+    walls = sorted((segment(w['a'], w['b']), int(w['level'])) for w in snapshot['walls'])
+    gates = sorted(map(point, snapshot['gates']))
+    evac = sorted((int(e['kind']), point(e['a']), point(e['b']),
+                   float(e['half_width']), float(e['radius']), int(e['hold_suppressed']))
+                  for e in snapshot['evac'])
+    paint = snapshot['paint']
+    tiles = sorted((point(pos), int(kind)) for pos, kind in zip(paint['pos'], paint['kind']))
+    geometry = (placed, zones, walls, gates, evac, tiles)
+    try:
+        payload = json.dumps(geometry, separators=(',', ':'), allow_nan=False).encode()
+    except ValueError:
+        return None
+    return hashlib.sha256(payload).hexdigest()[:16]
 
 
 def preparation_counts(snapshot):

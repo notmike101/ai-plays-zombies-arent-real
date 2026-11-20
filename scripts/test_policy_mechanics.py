@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import numpy as np
 
 from native_state import WALL, EVAC, HELI, VEHICLE, MEDEVAC, PATCH, MOSH
-from policy_mechanics import observation, unit_names, embedded_defenses, preparation_counts, nearest_per_cell, pan_room, extra_masks, SELECTORS, Mechanics
+from policy_mechanics import observation, unit_names, embedded_defenses, preparation_counts, preparation_fingerprint, nearest_per_cell, pan_room, extra_masks, SELECTORS, Mechanics
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, GLOBAL_LABELS, GRID_CHANNELS
 
 
@@ -41,6 +41,22 @@ class MechanicsTests(unittest.TestCase):
                          {'GasMortar': {'total': 2, 'inside_occupied': 1},
                           'Garrison': {'total': 1, 'inside_occupied': 0},
                           'MLRS': {'total': 1, 'inside_occupied': 1}})
+
+    def test_preparation_fingerprint_tracks_world_geometry(self):
+        snapshot = fixture()
+        snapshot['zones'] = [np.array([(1., 2.), (6., 2.), (6., 5.), (1., 5.)])]
+        snapshot['walls'] = np.zeros(1, dtype=WALL)
+        snapshot['walls']['a'][0], snapshot['walls']['b'][0] = (2, 3), (4, 5)
+        snapshot['gates'] = [(2, 3)]
+        initial = preparation_fingerprint(snapshot)
+        snapshot['zones'][0] = np.roll(snapshot['zones'][0][::-1], 1, axis=0)
+        snapshot['walls']['a'][0], snapshot['walls']['b'][0] = (4, 5), (2, 3)
+        snapshot['units'] = {key: value[::-1] for key, value in snapshot['units'].items()}
+        self.assertEqual(preparation_fingerprint(snapshot), initial)
+        snapshot['gates'] = [(2, 4)]
+        self.assertNotEqual(preparation_fingerprint(snapshot), initial)
+        snapshot['gates'] = [(2, float('nan'))]
+        self.assertIsNone(preparation_fingerprint(snapshot))
 
     def test_ready_preparation_receipts_include_non_building_defenses(self):
         snapshot = fixture()
