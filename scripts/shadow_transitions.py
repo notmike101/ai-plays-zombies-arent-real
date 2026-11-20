@@ -1,8 +1,26 @@
 """Bounded, observation-only battle transition capture."""
 
+import math
+
 import numpy as np
 
 from spatial import NC, grid_bins, project
+
+
+def native_launch_matches(launch, transition, states, viewport):
+    """Corroborate a point cast with its native event on the same episode."""
+    receipt = transition['receipt']
+    pixels = receipt.get('pixels', [])
+    observed = (launch.get('center') or {}).get('uv')
+    if len(pixels) != 1 or observed is None or len(observed) != 2:
+        return False
+    if len(viewport) != 2 or any(size <= 0 for size in viewport):
+        return False
+    expected = [coordinate / size for coordinate, size in zip(pixels[0], viewport)]
+    # The native log rounds simulation time. The stock read can arrive many ticks later.
+    start = states[transition['from']]['sim']
+    return (start - .04 <= launch['sim'] <= receipt['sim'] + .04
+            and math.dist(expected, observed) <= .002)
 
 
 def combat_context(native, width, height):

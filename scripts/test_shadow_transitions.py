@@ -1,12 +1,22 @@
 import unittest
 import numpy as np
 
-from shadow_transitions import TransitionCapture, combat_context
+from shadow_transitions import TransitionCapture, combat_context, native_launch_matches
 from shadow_benchmark import chains, commands
 from test_policy_mechanics import fixture
 
 
 class ShadowTransitionTests(unittest.TestCase):
+    def test_launch_join_uses_action_interval_and_normalized_position(self):
+        event = {'sim': 30.63, 'center': {'uv': [.55, .28]}}
+        transition = {'from': 0, 'receipt': {'sim': 31.1, 'pixels': [[1056., 336.]]}}
+        states = [{'sim': 29.967}]
+        viewport = [1920, 1200]
+        self.assertTrue(native_launch_matches(event, transition, states, viewport))
+        self.assertFalse(native_launch_matches(dict(event, sim=29.5), transition, states, viewport))
+        self.assertFalse(native_launch_matches(dict(event, center={'uv': [.45, .28]}),
+                                               transition, states, viewport))
+
     def test_context_excludes_offscreen_units_and_keeps_conversion_separate(self):
         native = fixture()
         native['units']['pos'] = np.array([[0., 0.], [500., 0.]])
