@@ -163,6 +163,7 @@ def main():
         print(directory, 'source policy', source, 'starting round', first_round, flush=True)
         with ProcessPoolExecutor(len(copies)) as pool:
             for rnd in range(first_round, args.train_rounds + args.eval_rounds):
+                operator.require_resource_headroom(len(copies))
                 training = rnd < args.train_rounds
                 jobs = []
                 for i, copy in enumerate(copies):
