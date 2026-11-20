@@ -674,6 +674,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 st['geometry_cells'] = planning_geometry_masks(st, env.cw, env.ch)
             mu, mc = masks_for(st)
             base_cells = mc
+            greedy = options.get('greedy') and (st['planning'] or not options.get('sample_battle'))
             if fixed_speed:
                 for name in SPEED_TICKS:
                     mu[TOOLS.index(name)] = 0
@@ -696,10 +697,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         net.set_special_probe(st,env.cw,env.ch)
                     lu, lc, _, h = net(x, h)
                     du = torch.distributions.Categorical(logits=lu.flatten().masked_fill(torch.tensor(mu == 0), -1e9))
-                    u = int(du.probs.argmax() if options.get('greedy') else du.sample())
+                    u = int(du.probs.argmax() if greedy else du.sample())
                     mc = cell_mask(st, u, mc)
                     dc = cell_distribution(lc, u, mc)
-                    c = int(dc.probs.argmax() if options.get('greedy') else dc.sample())
+                    c = int(dc.probs.argmax() if greedy else dc.sample())
                     ulp, clp = float(du.log_prob(torch.tensor(u))), float(dc.log_prob(torch.tensor(c)))
                     if observer:
                         cp = torch.zeros(NU, NC)

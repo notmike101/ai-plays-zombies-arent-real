@@ -98,6 +98,15 @@ def has_defense_evidence(trial):
             and any((ready.get(unit) or 0) > 0 for unit in ('garrisons', 'snipers', 'mortars', 'turrets')))
 
 
+def battle_sampling_candidate(parent):
+    candidate = deepcopy(parent)
+    if candidate.get('sample_battle'):
+        candidate.pop('sample_battle')
+    else:
+        candidate['sample_battle'] = True
+    return candidate
+
+
 def planning_scale_candidate(parent, rng):
     return dict(deepcopy(parent), planning_logit_scale=float(rng.uniform(.35, .7)))
 
@@ -475,7 +484,8 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
             options=dict(start_kind=start_kind,seed=seed,record_layout=bool(layout),greedy=True,
                          allow_progression=allow_progression, observer_interval=observer_interval,
                          paused_seconds=45,
-                         placement_feedback=not allow_progression and not layout)
+                         placement_feedback=not allow_progression and not layout,
+                         sample_battle=bool((active or {}).get('sample_battle')))
             if capture_shadow:options['capture_shadow']=True
             if fixed_speed:options['fixed_speed']=fixed_speed
             episode_started = monotonic()
@@ -578,9 +588,11 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle'))
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
         raise ValueError('Invalid gesture planning flag')
+    if 'sample_battle' in team and team['sample_battle'] is not True:
+        raise ValueError('Invalid battle sampling flag')
     if 'planning_logit_scale' in team:
         scale = team['planning_logit_scale']
         if type(scale) not in (int, float) or not .2 <= scale <= 1.:
@@ -884,6 +896,8 @@ def main():
                 population[1] = defender
             population[-1] = (defense_duration_candidate(defense_trial, rng)
                               or planning_scale_candidate(defender, rng))
+        if proposal is not None:
+            population[1] = battle_sampling_candidate(proposal)
         if resumed_cast_probe is not None:
             population[-1] = resumed_cast_probe
         if prior and not (args.compare_forecast or args.compare_speed):

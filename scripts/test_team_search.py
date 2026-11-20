@@ -80,6 +80,19 @@ class SearchTests(unittest.TestCase):
             x[..., search.tr.PLANNING_INDEX] = 0
             torch.testing.assert_close(original(x)[0], modified(x)[0])
 
+    def test_battle_sampling_is_a_distinct_frozen_policy(self):
+        parent = search.random_team(np.random.default_rng(4))
+        candidate = search.battle_sampling_candidate(parent)
+        self.assertEqual(candidate, dict(parent, sample_battle=True))
+        self.assertNotEqual(search.team_id(candidate), search.team_id(parent))
+        self.assertEqual(search.battle_sampling_candidate(candidate), parent)
+        record = dict(base='base', team_id=search.team_id(candidate), team=candidate)
+        self.assertEqual(search.checkpoint_team(record, 'base')['team'], candidate)
+        candidate['sample_battle'] = 1
+        record['team_id'] = search.team_id(candidate)
+        with self.assertRaisesRegex(ValueError, 'battle sampling'):
+            search.checkpoint_team(record, 'base')
+
     def test_defense_variant_inserts_a_learned_preference_without_losing_the_plan(self):
         rng = np.random.default_rng(23)
         parent = search.random_team(rng)

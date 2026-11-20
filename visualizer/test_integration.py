@@ -160,6 +160,27 @@ class IntegrationTests(unittest.TestCase):
         self.assertAlmostEqual(result['reward_components']['special_activation'],.03)
         self.assertEqual(result['rews'][:6],[0.,.01,0.,.01,.01,0.])
 
+    def test_battle_sampling_preserves_greedy_preparation(self):
+        game = FakeGame(-1)
+
+        class GreedyReady(self.globals['PolicyNet2']):
+            def forward(self, x, h=None):
+                tools, cells, value, h = super().forward(x, h)
+                tools[..., 1] = 1000.
+                return tools, cells, value, h
+
+        overrides = dict(Observer=None, Mechanics=FakeMechanics, BATTLE_T=.1,
+                         load_bind_keys=lambda env: [], time=FakeClock(game))
+        with patch.dict(self.globals, overrides), patch.dict(sys.modules, {
+                'env_zar': SimpleNamespace(ZAREnv=lambda pid: game, ZAREnvError=RuntimeError)}):
+            with patch.object(torch.distributions.Categorical, 'sample',
+                              side_effect=[torch.tensor(0), torch.tensor(0)]) as sample:
+                result = self.run_episode((-1, self.model.state_dict(), False, 'battle-sampling',
+                                           dict(greedy=True, sample_battle=True)), policy_factory=GreedyReady)
+        self.assertNotIn('err', result)
+        self.assertEqual(result['us'], [1, 0])
+        self.assertEqual(sample.call_count, 2)
+
     def test_episode_rejects_native_battle_without_model_ready(self):
         game = FakeGame(-1)
 
