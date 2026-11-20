@@ -2,6 +2,40 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 14:55 Central, breach study 203952 had three complete
+  training rounds. The first two completed under PID 6692.
+  Original round index 1, inst15, outbreak 583346097 had 5.16%
+  coverage at READY, 407 native civilian exposures and a
+  stronger-arm penalty of 0.0149963, versus 0.0049988 at the
+  reference rate. The verified extra charge was 0.0099975.
+  Official outcome was a 5.71% retry. This proves treatment
+  delivery on that episode; performance remains unproven.
+- Third batch's original attempt stopped after a UI-frame
+  timeout during perk equip and an ensuing picker-close
+  timeout. Commit a394e38 added that exact failure to the
+  guarded one-pair retry, with a regression proving a second
+  failure does not trigger unbounded retries. 338 tests passed.
+  Original checkpoint next_round 2 was resumed under PID 64096
+  at 14:52. Retained interrupted rows without PPO updates.
+  Resumed round index 2 completed and saved both policies and
+  Adam states. Data analysis/coverage-shelter-defense-5a6cd57795,
+  console analysis/coverage-signal-breach-203952-resume1-drive-d.log.
+- Audited 70 distinct training and 28 distinct reserve outbreaks
+  in five recent private studies, excluding the interrupted
+  batch. Among 31 training battles with a recorded legal cast,
+  eight deployed, 18 selected a cast tool without a logged
+  deployment or stock drop, and five never selected one.
+  Reserves showed eight, five and two respectively across 15
+  recorded legal opportunities. Aggregate counts cannot identify
+  the cause of unconfirmed choices. Staged legal cast geometry
+  filtering for both arms and per-tool receipt counts for
+  out-of-bounds targets, gesture starts and stock changes. Also
+  staged a training-only 1.0 vs 1.5 tool-temperature comparison
+  on legal battle choices, with the same preparation and rewards.
+  All 340 isolated tests passed. D: analysis/coverage-portable314/tmp/battle-timing/battle-opportunity-exploration.patch
+  SHA256 1BE9AA3336AD53886AC195453CB26A2B3E725F195ED2BC9EF469CA0752710302.
+  Live trainer source stays at a394e38 during this run.
+
 - At 14:47 Central, completed the signal-coverage pilot 202952
   in analysis/coverage-ready-shortfall-3c0cb78f9f. Valid READY
   receipts matched the configured reward in all 18 training
