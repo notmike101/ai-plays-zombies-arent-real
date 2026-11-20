@@ -2,6 +2,17 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:11 Central, all 32 warm training attempts in 196952
+  completed across 29 distinct outbreaks. Baseline averaged 3.88%,
+  challenger 5.50%. The challenger finally sampled nine shelter
+  rectangle decisions in the last round. On outbreak 628407931,
+  eight choices yielded 9.26% inside at READY and a 0.02778
+  coverage reward. There were 759 credited civilians, zero
+  observed occupied breach exposures and 9.90% saved at retry.
+  It is the sole positive training coverage in this run.
+  Frozen evaluation began under 53348 with inst19 PID 67188
+  and inst20 PID 62600.
+
 - At 13:10 Central, seven rounds of warm study 196952 completed
   (28 scored games, 25 distinct native outbreaks). Baseline mean
   was 4.33%, challenger 4.97%. Neither received positive READY
