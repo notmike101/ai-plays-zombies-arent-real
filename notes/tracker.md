@@ -2,6 +2,32 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 15:25 Central, 205952 completed with 18 planning
+  timeouts and six retries across training, and six planning
+  timeouts and two fresh retries in reserve. Baseline 6.79%,
+  candidate 8.68% on those reserve retries. Zero eligible
+  natural finishes. SeekDestroy was legal on 23 training
+  decisions, but no single-click target cast was selected in
+  either phase. The intervention was unexercised.
+- At the idle boundary deployed 2e57d3a, 347 isolated tests.
+  Launched READY-delay study 206952 under 73256 using
+  pre-study 96ff6c9a03a9124c and its private Adam. Four
+  training rounds, four reserve pairs. Both use the same
+  preparation, masks, geometry and .30 occupied READY credit.
+  Training-only effect is 0 vs 0.002 reward cost per policy
+  decision that deferred a valid READY choice. Data
+  analysis/coverage-ready-delay-294fc82ba2, console
+  analysis/coverage-ready-delay-206952-drive-d.log.
+- First 206952 batch checkpointed around 15:26. All four
+  games hit the planning cap with zero official scores.
+  READY was legal and deferred 52 and 26 times on baseline,
+  47 and 33 on candidate. Mean actual masked READY probability
+  0.73%, 0.85%, 0.83% and 0.93% respectively. Experimental
+  rewards matched the receipt counts at -0.094 and -0.066,
+  baseline zero, no mismatch. Treatment verified; subsequent
+  policy change and official survival unproven. Second batch live
+  inst13 74952, inst14 73716, inst15 68208, inst16 73704.
+
 - At 15:21 Central, target-settle study 205952 completed
   five training rounds under PID 77264. Fourteen of twenty
   starts timed out in preparation. Six retries scored, no
