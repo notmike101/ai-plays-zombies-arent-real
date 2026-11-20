@@ -2,6 +2,11 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- 2026-11-20: integrated opt-in model-only input. Isolated inst91
+  rejected ordinary key, click and wheel messages while tagged input
+  passed dialog, placement, geometry, zoom, battle and retry checks.
+  Running game processes require a fresh launch to acquire the filter.
+
 - At 13:00 Central, zone exploration study 195952 finished.
   Held-out baseline 8177193838922d68 averaged 8.835%, challenger
   1bfaec4658f51c44 averaged 7.06% (four each). All held-out

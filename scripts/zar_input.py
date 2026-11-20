@@ -39,7 +39,7 @@ INFINITE = 0xFFFFFFFF
 VERSION = 3
 MAGIC = 0x5A415249
 OFF = dict(enabled=0x08, cx=0x0C, cy=0x10, buttons=0x14, keys=0x18,
-           toggles=0x38, heartbeat=0x3C, patches=0x40, raw_hwnd=0x48, raw_sent=0x50, monitor_width=0x54, abs_error=0x58, pump_ticks=0x5C)
+           toggles=0x38, heartbeat=0x3C, patches=0x40, model_only=0x44, raw_hwnd=0x48, raw_sent=0x50, monitor_width=0x54, abs_error=0x58, pump_ticks=0x5C)
 
 VK_LBUTTON, VK_RBUTTON, VK_MBUTTON = 0x01, 0x02, 0x04
 VK_SHIFT, VK_CONTROL, VK_MENU = 0x10, 0x11, 0x12
@@ -230,12 +230,15 @@ class VirtualInput:
             # call zar_init (export) via remote thread: base from module snapshot
             # (GetExitCodeThread truncates the 64-bit HMODULE, so don't trust it)
             base = self._remote_module_base(hproc, "hookdll.dll")
-            rva = _export_rva(DLL_PATH, "zar_init")
+            model_only = os.environ.get("ZAR_MODEL_ONLY_INPUT") == "1"
+            export = "zar_init_model_only" if model_only else "zar_init"
+            rva = _export_rva(DLL_PATH, export)
             if base is None or rva is None:
-                raise OSError(f"hookdll base ({base}) or zar_init RVA ({rva}) not found")
+                raise OSError(f"hookdll base ({base}) or {export} RVA ({rva}) not found")
             init_addr = base + rva
             thread2 = kernel32.CreateRemoteThread(hproc, None, 0, ctypes.c_void_p(init_addr),
-                                                  None, 0, ctypes.byref(tid))
+                                                  ctypes.c_void_p(self.hwnd) if model_only else None,
+                                                  0, ctypes.byref(tid))
             if not thread2:
                 raise OSError(f"CreateRemoteThread(zar_init) failed: {ctypes.GetLastError()}")
             if kernel32.WaitForSingleObject(thread2, 15000) != 0:
@@ -244,6 +247,8 @@ class VirtualInput:
             kernel32.GetExitCodeThread(thread2, ctypes.byref(exit_code))
             kernel32.CloseHandle(thread2)
             self.init_patches = exit_code.value
+            if model_only and self.init_patches != 4:
+                raise RuntimeError("Model-only input initialization failed; restart this copy")
         finally:
             kernel32.CloseHandle(hproc)
         self.open_section()
@@ -309,6 +314,10 @@ class VirtualInput:
         if version != VERSION:
             self.close()
             raise RuntimeError(f"DLL version {version}, expected {VERSION}; restart this copy")
+        self.model_only = bool(struct.unpack_from("<I", self.buf, OFF["model_only"])[0])
+        if os.environ.get("ZAR_MODEL_ONLY_INPUT") == "1" and not self.model_only:
+            self.close()
+            raise RuntimeError("Model-only input requires a fresh game process")
         self._last_cx, self._last_cy = struct.unpack_from('<ii', self.buf, OFF['cx'])
         # raw-input pump: where to post WM_INPUT (DLL v2+; older DLLs ignore it)
         self._w64(OFF["raw_hwnd"], int(self.hwnd))
@@ -363,7 +372,7 @@ class VirtualInput:
             raise OSError("ClientToScreen failed")
         lp = ((point.y & 0xFFFF) << 16) | (point.x & 0xFFFF)
         for _ in range(abs(steps)):
-            user32.PostMessageW(self.hwnd, 0x020A, (120 if steps > 0 else -120) << 16, lp)
+            self._post(0x020A, (120 if steps > 0 else -120) << 16, lp)
             time.sleep(gap)
 
     # ---- virtual mouse ---------------------------------------------------------------
@@ -376,8 +385,13 @@ class VirtualInput:
         self._wi32(OFF["cy"], int(cy))
         if post:
             lp = ((cy & 0xFFFF) << 16) | (cx & 0xFFFF)
-            user32.PostMessageW(self.hwnd, WM_MOUSEMOVE, self._mouse_flags(), lp)
+            self._post(WM_MOUSEMOVE, self._mouse_flags(), lp)
         self._heartbeat()
+
+    def _post(self, message, wparam, lparam):
+        if self.model_only:
+            message += 0x8000  # Private messages decoded by the game's input filter.
+        return user32.PostMessageW(self.hwnd, message, wparam, lparam)
 
     def _mouse_flags(self):
         b = struct.unpack_from("<I", self.buf, OFF["buttons"])[0]
@@ -386,7 +400,7 @@ class VirtualInput:
     def _post_button(self, btn, down):
         message = {1: 0x201, 2: 0x204, 4: 0x207}[btn] + (0 if down else 1)
         lp = ((self._last_cy & 0xFFFF) << 16) | (self._last_cx & 0xFFFF)
-        if not user32.PostMessageW(self.hwnd, message, self._mouse_flags(), lp):
+        if not self._post(message, self._mouse_flags(), lp):
             raise OSError("PostMessage mouse edge failed")
 
     def click(self, cx=None, cy=None, hold=0.08, right=False):
@@ -435,7 +449,7 @@ class VirtualInput:
     # ---- virtual keyboard --------------------------------------------------------------
     def key_down(self, vk, sc=0, post=True, async_bit=True):
         if post:
-            user32.PostMessageW(self.hwnd, WM_KEYDOWN, vk, 1 | (sc << 16))
+            self._post(WM_KEYDOWN, vk, 1 | (sc << 16))
         if async_bit:
             word = OFF["keys"] + (vk >> 5) * 4
             cur = struct.unpack_from("<I", self.buf, word)[0]
@@ -444,7 +458,7 @@ class VirtualInput:
 
     def key_up(self, vk, sc=0, post=True, async_bit=True):
         if post:
-            user32.PostMessageW(self.hwnd, WM_KEYUP, vk,
+            self._post(WM_KEYUP, vk,
                                 1 | (sc << 16) | (1 << 30) | (1 << 31))
         if async_bit:
             word = OFF["keys"] + (vk >> 5) * 4

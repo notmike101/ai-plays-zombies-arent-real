@@ -43,7 +43,7 @@ struct Shared {
     toggles: u32,
     heartbeat: u32,
     patch_count: u32,
-    _pad0: u32,
+    model_only: u32,
     raw_hwnd: u64,
     raw_sent: u32,
     dbg0: u32, // MON_W
@@ -85,6 +85,10 @@ unsafe fn emit_abs(hwnd: u64, bflags: u16, cx: i32, cy: i32) {
 #[link(name = "user32")]
 extern "system" {
     fn PostMessageW(hwnd: *mut c_void, msg: u32, wparam: usize, lparam: *const c_void) -> i32;
+    fn GetWindowLongPtrW(hwnd: *mut c_void, index: i32) -> isize;
+    fn SetWindowLongPtrW(hwnd: *mut c_void, index: i32, value: isize) -> isize;
+    fn CallWindowProcW(previous: isize, hwnd: *mut c_void, msg: u32, wparam: usize, lparam: isize) -> isize;
+    fn DefWindowProcW(hwnd: *mut c_void, msg: u32, wparam: usize, lparam: isize) -> isize;
     fn GetSystemMetrics(index: i32) -> i32;
     fn ClientToScreen(hwnd: *mut c_void, pt: *mut POINT) -> i32;
 }
@@ -301,7 +305,7 @@ unsafe extern "system" fn Hook_GetRawInputData(
 
 unsafe extern "system" fn Hook_GetCursorPos(lpPoint: *mut POINT) -> i32 {
     match shared() {
-        Some(s) if s.enabled != 0 && !lpPoint.is_null() => {
+        Some(s) if (s.enabled != 0 || s.model_only != 0) && !lpPoint.is_null() => {
             (*lpPoint).x = s.cursor_x;
             (*lpPoint).y = s.cursor_y;
             ClientToScreen(s.raw_hwnd as *mut c_void, lpPoint)
@@ -315,7 +319,7 @@ unsafe extern "system" fn Hook_GetCursorPos(lpPoint: *mut POINT) -> i32 {
 
 unsafe extern "system" fn Hook_GetAsyncKeyState(vKey: i32) -> i16 {
     match shared() {
-        Some(s) if s.enabled != 0 => {
+        Some(s) if s.enabled != 0 || s.model_only != 0 => {
             if key_down(&s, vKey) {
                 -32768i16
             } else {
@@ -331,7 +335,7 @@ unsafe extern "system" fn Hook_GetAsyncKeyState(vKey: i32) -> i16 {
 
 unsafe extern "system" fn Hook_GetKeyState(vKey: i32) -> i16 {
     match shared() {
-        Some(s) if s.enabled != 0 => {
+        Some(s) if s.enabled != 0 || s.model_only != 0 => {
             let mut r: i16 = 0;
             if key_down(&s, vKey) {
                 r |= -32768i16;
@@ -358,7 +362,7 @@ unsafe extern "system" fn Hook_GetKeyState(vKey: i32) -> i16 {
 
 unsafe extern "system" fn Hook_GetKeyboardState(lpKeyState: *mut u8) -> i32 {
     match shared() {
-        Some(s) if s.enabled != 0 && !lpKeyState.is_null() => {
+        Some(s) if (s.enabled != 0 || s.model_only != 0) && !lpKeyState.is_null() => {
             core::ptr::write_bytes(lpKeyState, 0, 256);
             for vk in 0..256i32 {
                 if key_down(&s, vk) {
@@ -538,6 +542,65 @@ fn make_section_name(pid: u32) -> [u8; 24] {
     buf
 }
 
+const MODEL_MESSAGE_BASE: u32 = 0x8000;
+const GWLP_WNDPROC: i32 = -4;
+static PREVIOUS_WNDPROC: core::sync::atomic::AtomicIsize =
+    core::sync::atomic::AtomicIsize::new(0);
+
+fn model_message(message: u32) -> Option<u32> {
+    match message {
+        0x0100..=0x0109 | 0x0200..=0x020E | 0x0240..=0x024F | 0x02A0..=0x02A3 => None,
+        0x8100 | 0x8101 | 0x8200..=0x8208 | 0x820A => Some(message - MODEL_MESSAGE_BASE),
+        0x8102..=0x8109 | 0x8209 | 0x820B..=0x820E => None,
+        _ => Some(message),
+    }
+}
+
+unsafe extern "system" fn model_wndproc(
+    hwnd: *mut c_void, message: u32, wparam: usize, lparam: isize,
+) -> isize {
+    if message == 0x00FF {
+        let base = core::ptr::addr_of!(RING).cast::<u8>() as usize;
+        let raw = lparam as usize;
+        if raw < base || raw >= base + RAW_SIZE * 64 || (raw - base) % RAW_SIZE != 0 {
+            // Windows still owns cleanup of physical foreground raw input.
+            return DefWindowProcW(hwnd, message, wparam, lparam);
+        }
+    }
+    match model_message(message) {
+        Some(message) => CallWindowProcW(
+            PREVIOUS_WNDPROC.load(core::sync::atomic::Ordering::Acquire),
+            hwnd, message, wparam, lparam,
+        ),
+        None => 0,
+    }
+}
+
+/// Opt-in initializer for a freshly launched owned copy.
+#[no_mangle]
+pub extern "system" fn zar_init_model_only(hwnd: *mut c_void) -> u32 {
+    unsafe {
+        if hwnd.is_null() || !SHARED.is_null() {
+            return 0;
+        }
+        let previous = GetWindowLongPtrW(hwnd, GWLP_WNDPROC);
+        if previous == 0 {
+            return 0;
+        }
+        PREVIOUS_WNDPROC.store(previous, core::sync::atomic::Ordering::Release);
+        if SetWindowLongPtrW(hwnd, GWLP_WNDPROC, model_wndproc as *const () as isize) == 0 {
+            return 0;
+        }
+        init();
+        if SHARED.is_null() {
+            return 0;
+        }
+        (*SHARED).raw_hwnd = hwnd as usize as u64;
+        (*SHARED).model_only = 1;
+        (*SHARED).patch_count
+    }
+}
+
 // --- entry ---------------------------------------------------------------------------
 
 /// Exported initializer: the driver resolves this in the loaded module and calls it via
@@ -604,6 +667,17 @@ unsafe fn init() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn model_only_message_routing() {
+        for message in [0x100, 0x101, 0x200, 0x201, 0x202, 0x208, 0x20A] {
+            assert_eq!(model_message(message), None);
+            assert_eq!(model_message(0x8000 + message), Some(message));
+        }
+        assert_eq!(model_message(0x104), None);
+        assert_eq!(model_message(0x8102), None);
+        assert_eq!(model_message(0x000F), Some(0x000F));
+    }
+
     #[test]
     fn raw_input_matches_win32_x64() {
         unsafe {

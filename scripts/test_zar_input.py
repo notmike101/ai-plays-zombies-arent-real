@@ -13,6 +13,7 @@ class InputContract(unittest.TestCase):
         vi.buf = (ctypes.c_char * 256)()
         vi._hb = 0
         vi.hwnd = 1
+        vi.model_only = False
         vi._origin = lambda: (0, 0, 0, 0, 1920, 1200)
         with patch('zar_input.user32.PostMessageW') as post, patch('zar_input.time.sleep'):
             vi.drag(10, 20, 30, 40, steps=2)
@@ -20,6 +21,14 @@ class InputContract(unittest.TestCase):
         self.assertEqual(messages, [(0x200, 0), (0x201, 1),
                                     (0x200, 1), (0x200, 1), (0x202, 0)])
         self.assertEqual(struct.unpack_from('<I', vi.buf, OFF['buttons'])[0], 0)
+
+    def test_model_only_posts_private_messages_with_original_parameters(self):
+        vi = VirtualInput.__new__(VirtualInput)
+        vi.hwnd = 1
+        vi.model_only = True
+        with patch('zar_input.user32.PostMessageW') as post:
+            vi._post(0x100, 0x20, 0x00390001)
+        post.assert_called_once_with(1, 0x8100, 0x20, 0x00390001)
 
     def test_module_snapshot_retries_transient_invalid_handle_without_truncating(self):
         vi = VirtualInput.__new__(VirtualInput)
@@ -66,6 +75,7 @@ class InputContract(unittest.TestCase):
         vi.buf = (ctypes.c_char * 256)()
         vi._hb = 0
         vi.hwnd = 1
+        vi.model_only = False
         vi._origin = lambda: (76, 72, 11, 49, 1920, 1200)
         with patch('zar_input.user32.PostMessageW') as post:
             vi.move_to(np.int64(960), np.int64(600))
