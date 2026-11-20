@@ -11,6 +11,29 @@
   The active game's files, production checkpoint and replay archive were
   left in place. The experiment and all cleanup operations used only D:.
 
+- Seed 173952 started at 06:05 Central on D:, trainer PID 46724,
+  output `analysis/coverage-team-01e3c233bd`, and log
+  `analysis/coverage-layout-free-173952-drive-d.log`. Launch headroom
+  was 12.73 GiB RAM and 18.94 GiB disk. Commit 27c1190 adds a paired
+  discovery experiment. Both variants keep the frozen GRU, learned
+  planning preferences, timing preferences, camera controls, and legal
+  masks fixed. Only the battle tool and target score arrays receive
+  mirrored perturbations. Wave one includes the unchanged learned
+  policy and frozen GRU. Wave two includes two runs of the learned
+  reference and its two neighboring variants. The game chooses fresh
+  outbreaks. Scores below 35% remain ineligible for held-out evaluation.
+  All 273 script tests passed. Production checkpoint hash matched.
+- Seed 172952 finished with seven early retries at 7.74% to 9.95%
+  saved and one native win at 10.76%, below the 35% gate. Discovery
+  selected 11f57118209db8fe, which built 21 native Garrisons and confirmed
+  eight Paratrooper deployments and one Firebomb on outbreak 2188676306.
+  There was no reserved evaluation. Among the three learned first-wave
+  retries, the new metric put 8123d9518f39d948 first with 0.2201
+  above-target area. It scored 9.10% versus 9.63% for 3e440a24cbc6bb8f,
+  which lasted longer but had lower above-target area (0.1923). The
+  earlier sustained population has not translated to 35% official saves.
+  The 8123 policy repeated at 9.16% on a distinct outbreak in wave two.
+
 - Seed 172952 started at 05:50 Central on D:, portable trainer PID
   62676, output `analysis/coverage-team-7bf5ba3e92`, and log
   `analysis/coverage-layout-free-172952-drive-d.log`. Launch headroom
