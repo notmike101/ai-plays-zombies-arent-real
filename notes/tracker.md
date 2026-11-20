@@ -2,6 +2,14 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- A game-free private PPO comparison fixture at 09:23 varied the
+  occupied breach charge from 0.10 to 0.30 per exposure fraction and
+  verified exactly threefold penalties with the same occupants and
+  first-breach time, no double charges, and unchanged shelter credit.
+  The opt-in comparison is in memory only. Test it after diversified
+  preparation provides enough variation in actual defense and exposure.
+  Neither active rewards nor the production checkpoint changed.
+
 - Shelter-penalty audit at 09:22 Central. All eight seed 184952
   boards had an occupied penetration at 53.40-62.77 simulated seconds.
   They recorded 1,872-2,361 exposed civilians over the episode. The
