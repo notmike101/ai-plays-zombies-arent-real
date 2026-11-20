@@ -350,6 +350,15 @@ def vary_layout(layout,rng):
         else:layout.insert(index+1,item)
 
 
+def battle_neighbors(parent, rng):
+    keys = ('battle', 'cast_bias')
+    weights = {key: np.asarray(parent[key]) for key in keys}
+    offsets = {key: rng.normal(0., .35, weights[key].shape) for key in keys}
+    return tuple(dict(deepcopy(parent),
+                      **{key: (weights[key] + sign * offsets[key]).tolist() for key in keys})
+                 for sign in (-1, 1))
+
+
 def offspring(parent, donor, rng, stage=1):
     child = deepcopy(parent)
     if stage>1:
@@ -1023,6 +1032,8 @@ def main():
                         help='Defer reserved evaluation until a discovery policy qualifies')
     parser.add_argument('--holdout-copies', nargs='+',
                         help='Reserve separate owned copies for the final frozen evaluation')
+    parser.add_argument('--battle-neighbors', action='store_true',
+                        help='Explore paired cast-score mutations while preserving the learned opening')
     parser.add_argument('--goal-margin', action='store_true',
                         help='Rank unsuccessful discovery battles by survival above the 35 percent target')
     parser.add_argument('--click-start', action='store_true',
@@ -1057,6 +1068,8 @@ def main():
         if args.compare_forecast or args.compare_speed or args.compare_shadow:
             parser.error('Reserved holdout copies are for the final campaign evaluation')
     worker_count = max(len(copies), len(holdout_copies))
+    if args.battle_neighbors and (not args.click_start or args.allow_progression or len(copies) != 4):
+        parser.error('Paired battle exploration requires four copies and the controlled fresh L1 start')
     if args.goal_margin and not args.click_start:
         parser.error('Goal-margin ranking requires the controlled fresh L1 start')
     if args.click_start and not args.continue_layout_free:
@@ -1253,6 +1266,8 @@ def main():
                     candidate = placement_mode_candidate(proposal, rng, tool)
                     if candidate is not None:
                         population[index] = candidate
+        if args.battle_neighbors:
+            population[1], population[-1] = battle_neighbors(proposal, rng)
         if prior and not (args.compare_forecast or args.compare_speed):
             previous=args.seed_from/'provisional.json'
             if previous.is_file():
@@ -1432,7 +1447,11 @@ def main():
                     key=stage_parent if stage>1 else l1_ranked[int(rng.integers(min(2,len(l1_ranked))))]
                     child=offspring(archive[key],leader,rng,stage=stage)
                     population.append(budget_candidate(child,[],prices) or child)
-                if args.click_start and generation % 2 == 0 and generation + 1 < args.generations:
+                if args.battle_neighbors and generation + 1 < args.generations:
+                    pair = battle_neighbors(leader, rng)
+                    population = [leader, deepcopy(leader), *pair]
+                    require_fresh.update(team_id(team) for team in pair)
+                elif args.click_start and generation % 2 == 0 and generation + 1 < args.generations:
                     pair = shelter_cast_pair(defenders, evidence, rng)
                     if pair is not None:
                         population[-2:] = pair

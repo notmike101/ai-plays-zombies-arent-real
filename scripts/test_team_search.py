@@ -353,6 +353,19 @@ class SearchTests(unittest.TestCase):
         row.update(advance=True, win=True, saved_frac=.41, trail=[(5, 100)])
         self.assertEqual(search.score(row, goal_margin=True)[:3], [1, 1, .41])
 
+    def test_battle_neighbors_mirror_only_cast_scores(self):
+        rng = np.random.default_rng(28)
+        parent = search.random_team(rng)
+        lower, upper = search.battle_neighbors(parent, rng)
+        for key in ('battle', 'cast_bias'):
+            low, high = np.asarray(lower[key]), np.asarray(upper[key])
+            np.testing.assert_allclose((low + high) / 2., parent[key], atol=1e-12)
+            self.assertTrue(np.any(low != high))
+        self.assertNotEqual(search.team_id(lower), search.team_id(upper))
+        for child in (lower, upper):
+            unchanged = dict(child, battle=parent['battle'], cast_bias=parent['cast_bias'])
+            self.assertEqual(unchanged, parent)
+
     def test_battle_sampling_is_a_distinct_frozen_policy(self):
         parent = search.random_team(np.random.default_rng(4))
         candidate = search.battle_sampling_candidate(parent)
