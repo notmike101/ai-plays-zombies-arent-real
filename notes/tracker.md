@@ -1,6 +1,35 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
+
+- D: storage cleanup at 01:14 Central. Archived 862 pre-existing binary
+  replays (6,496,505,774 bytes) from the owned inst13–20 debug-dump folders.
+  Verified every archived file against its SHA-256 and length before removing
+  the loose originals. The archive is
+  `analysis/coverage-replays-through-2026-11-19.zip` on D: (687,117,062 bytes).
+  It contains original repository-relative paths and a `manifest.jsonl`
+  with sizes and hashes. To restore a replay, extract its entry to the
+  original path when that copy is idle. All 862 text companions remain in
+  place. The working set dropped by 5.41 GiB. Free space was 18.28 GiB at
+  the next launch check. No new files, archives, or game copies on C:.
+  The production checkpoint hash matched and Observatory port 8765 remained
+  active. The existing trainer guard still discards newly generated binary
+  companions after consuming their text dumps.
+- Seed 150952 finished at 01:09 Central with 16 discovery games and no wins.
+  Eight paid for one native Garrison and entered battle with $1,554–$1,802.
+  Two fresh reserved-copy candidate outbreaks ended in retries at 9.96%
+  and 9.99%. Both reference outbreaks reused seeds (one retry, one pause
+  timeout). No valid paired comparison or promotion.
+- Commit e3fa390 extends one confirmed building preference by 2–5 planning
+  decisions within the existing planning limits. The model still chooses
+  which actions and placements to take through the usual game checks.
+  The experiment records actual target, decision, view and spend for each
+  paid or unconfirmed building attempt. All 242 script tests passed.
+- Seed 151952 started at 01:14 Central on D: (PID 36024) using owned
+  inst13–16 for discovery and inst17, inst18, inst20, inst19 for reserved
+  evaluation. Startup headroom was 13.14 GiB RAM and 18.28 GiB free on D:.
+  Run log `analysis/coverage-layout-free-151952-drive-d.log`. The 35%
+  target remains open.
 - Seed 149952 finished at 00:49 Central with 16 discovery rows and no
   wins. One launch failed in inst15 with a native pointer overflow.
   Candidates be8723e2bcd964a0, e06f1094d6776650 and 754a2792eedd5263 each
