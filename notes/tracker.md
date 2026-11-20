@@ -2,6 +2,15 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:19:43 Central, wave five finalized at 9.90% officially
+  saved at retry on repeated candidate outbreak 249701763. The exact
+  session join confirmed the first occupied breach at 50.10 sim
+  seconds, sufficiently close to the first wall-cell break that
+  both chose the same 2,144-to-2,740 zombie snapshots. Wave six, the
+  final scheduled pair, launched under 71620 (inst19 PID 11924,
+  inst20 PID 40036). No new eligible completion. The tested handoff
+  remains waiting on native shutdown.
+
 - At 11:19 Central, verified a change to avoid spending live game
   time on promotion-only waves after the frozen comparison is already
   ineligible. After a completed paired wave, the same existing
