@@ -2,8 +2,10 @@
 
 Private comparison runs write `signal-coverage.json` after each completed
 training checkpoint and after frozen evaluation. Older run files are
-preserved. The report covers rows collected by the current invocation.
-`first_recorded_round` identifies a resumed invocation with partial history.
+preserved. Resumes carry forward signal from earlier completed training
+rounds and exclude interrupted batches. `first_recorded_round` identifies
+the earliest available training evidence, including for older checkpoints
+with limited history.
 
 ## Three questions to ask
 
@@ -19,8 +21,7 @@ preserved. The report covers rows collected by the current invocation.
    experimental arm's reward with the reference coefficient applied to the
    same native measurement. A nonzero candidate reward at the baseline rate
    is reported as unexpected instead of verified differential treatment.
-   Exploration studies compare
-   the sampled masked distribution with the same logits and legal mask at
+   Exploration studies compare the sampled masked distribution with the same logits and legal mask at
    temperature 1 and count actual changes. Optimizer comparisons record
    decision conditions that activate the extra planning entropy or phase
    weighting. Spatial comparisons record when the location head had a

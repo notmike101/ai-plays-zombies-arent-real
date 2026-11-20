@@ -49,6 +49,18 @@ class StateTests(unittest.TestCase):
                              {'err': message})
             stop.assert_not_called()
 
+    def test_resume_signal_retains_complete_round_and_excludes_interrupted_batch(self):
+        from compare_spatial import committed_signal_rows
+        pair = [dict(phase='train', round=0, copy=copy, arm=arm, start_kind='fresh',
+                     outbreak_seed=seed, experiment_signal={'receipts': {'occupied_exposure': True}})
+                for copy, arm, seed in (('inst13', 'reference', 101), ('inst14', 'candidate', 102))]
+        incomplete = [dict(pair[0], round=1, err='UI timeout'), dict(pair[1], round=1)]
+        following = [dict(r, round=2) for r in pair]
+        rows = committed_signal_rows([*pair, *incomplete, *following], 2, ['inst13', 'inst14'])
+        self.assertEqual([r['round'] for r in rows], [0, 0])
+        self.assertEqual([r['outbreak_seed'] for r in rows], [101, 102])
+        self.assertTrue(all(r['experiment_signal']['receipts']['occupied_exposure'] for r in rows))
+
     def test_consistency_excludes_outbreaks_from_earlier_experiments(self):
         from compare_spatial import heldout_consistency, previous_outbreak_seeds
         with tempfile.TemporaryDirectory() as directory:
@@ -295,6 +307,7 @@ class StateTests(unittest.TestCase):
             saved = train.torch.load(run/'paired.pt', weights_only=True)
             self.assertEqual(saved['next_round'], 1)
             self.assertEqual(saved['discovery_seeds'], [17,29])
+            self.assertEqual([r['outbreak_seed'] for r in saved['signal_training_rows']], [17,29])
             self.assertEqual(set(saved['weights']), {'dense','shared'})
             self.assertEqual(set(saved['optimizers']), {'dense','shared'})
             self.assertFalse((run/'paired.tmp').exists())
@@ -343,6 +356,19 @@ class StateTests(unittest.TestCase):
                     self.assertNotIn('occupied_breach_cost', options)
                     self.assertTrue(options['planning_zone_audit'])
                     self.assertEqual(options.get('planning_tool_temperature'), 1.35 if training else None)
+
+    def test_battle_temperature_comparison_uses_one_treatment_during_training_only(self):
+        import compare_spatial as comp
+        with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \
+                patch.object(comp.zar_boot, 'stop'), patch.object(train, 'run_episode') as run:
+            for training in (True, False):
+                for arm, temperature in comp.BATTLE_TEMPERATURES.items():
+                    comp.episode(('inst13', arm, {}, 123, 'test', training))
+                    options = run.call_args.args[0][4]
+                    self.assertEqual(options.get('battle_tool_temperature'), temperature if training else None)
+                    self.assertEqual(options.get('planning_tool_temperature'), 1.35 if training else None)
+                    self.assertEqual(options['experiment_signal'], 'battle_tools')
+                    self.assertEqual(options['ready_coverage_credit'], .30)
 
     def test_planning_entropy_arms_share_the_same_rollout_options(self):
         import compare_spatial as comp

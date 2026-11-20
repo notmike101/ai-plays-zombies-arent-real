@@ -8,7 +8,8 @@ _DESIGN = {
     'ready_shortfall': ('below_ready_target', 'ready_shortfall'),
     'missile_civilian_credit': ('missile_civilian_loss', 'missile_civilian_loss'),
 }
-_SAMPLING = {'zone_exploration': 'zone_cells', 'planning_exploration': 'planning_tools'}
+_SAMPLING = {'zone_exploration': 'zone_cells', 'planning_exploration': 'planning_tools',
+             'battle_exploration': 'battle_tools'}
 _OTHER = {'planning_entropy': 'planning_entropy',
           'phase_balance': 'phase_balance', 'spatial': 'spatial_cells'}
 

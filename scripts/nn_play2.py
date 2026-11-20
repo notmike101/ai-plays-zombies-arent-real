@@ -306,10 +306,10 @@ def battle_geometry_masks(st, width, height):
     return masks
 
 
-def update_geometry_masks(st, width, height, *, placement_feedback, planning_audit):
+def update_geometry_masks(st, width, height, *, placement_feedback, planning_audit, battle_audit=False):
     if st['planning'] and (placement_feedback or planning_audit):
         st['geometry_cells'] = planning_geometry_masks(st, width, height)
-    elif placement_feedback:
+    elif placement_feedback or (battle_audit and not st['planning']):
         st['geometry_cells'] = battle_geometry_masks(st, width, height)
     else:
         st.pop('geometry_cells', None)
@@ -421,6 +421,12 @@ def exploration_distribution(ranked, legal, fraction):
 
 
 ZONE_PLACEMENT_TOOLS = {TOOLS.index(name) for name in ('zone_rect', 'zone_begin', 'zone_corner')}
+
+
+def battle_cast_choice(st, tool_mask):
+    return (not st['planning'] and not st.get('dialog') and not st.get('anchor')
+            and not st.get('gesture_anchor') and any(tool_mask[tool] for tool in U2ABILITY)
+            and np.count_nonzero(tool_mask) > 1)
 
 
 def record_distribution_signal(signal, sampled, reference):
@@ -768,7 +774,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     'input': INPUT_LABELS, 'hu': TOOLS, 'hc': CELL_LABELS})
         rows = {k: [] for k in ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'sim_elapsed')}
         planning_tool_temperature = options.get('planning_tool_temperature')
-        if planning_tool_temperature is not None:
+        battle_tool_temperature = options.get('battle_tool_temperature')
+        if planning_tool_temperature is not None or battle_tool_temperature is not None:
             rows['tool_temperatures'] = []
         signal_mode = options.get('experiment_signal')
         distribution_signal = dict(choices=0, changed=0, variation=0.)
@@ -870,7 +877,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             update_outside_retries(st,env.cw,env.ch)
             st['placement_blocked'] = blocked_placement_cells(st, placement_retry_at, len(rows['obs']))
             update_geometry_masks(st, env.cw, env.ch, placement_feedback=placement_feedback,
-                                  planning_audit=planning_zone_audit)
+                                  planning_audit=planning_zone_audit, battle_audit=signal_mode == 'battle_tools')
             mu, mc = masks_for(st)
             if debt_cancel_retry is not None:
                 balance, deadline = debt_cancel_retry
@@ -890,7 +897,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 mu[TOOLS.index('pause_toggle')] = 0
             x = torch.tensor([[f]], dtype=torch.float32)
             cell_temperature = 1.
-            tool_temperature = planning_tool_temperature if st['planning'] else None
+            cast_choice = signal_mode == 'battle_tools' and battle_cast_choice(st, mu)
+            tool_temperature = (planning_tool_temperature if st['planning'] else
+                                battle_tool_temperature if cast_choice else None)
             with torch.no_grad():
                 if net is None:
                     u = int(np.random.choice(np.flatnonzero(mu)))
@@ -923,7 +932,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                             audit = battle_actions['alternate_tool_audit']
                             audit['compared'] += 1
                             audit['distance_sum'] += net.alternate_tool_distance(du)
-                    if st['planning'] and signal_mode == 'planning_tools' and np.count_nonzero(mu) > 1:
+                    planning_choice = signal_mode == 'planning_tools' and st['planning'] and np.count_nonzero(mu) > 1
+                    if planning_choice or cast_choice:
                         reference = tool_distribution(lu.flatten(), mu) if tool_temperature else None
                         record_distribution_signal(distribution_signal, du, reference)
                     if st['planning'] and signal_mode == 'planning_entropy' and not planning_entropy_observed:
@@ -965,7 +975,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 rows[k].append(v)
             if zone_temperature is not None:
                 rows['cell_temperatures'].append(cell_temperature)
-            if planning_tool_temperature is not None:
+            if 'tool_temperatures' in rows:
                 rows['tool_temperatures'].append(tool_temperature or 1.)
             if not st['planning']:
                 battle_actions['decisions'] += 1
@@ -1011,7 +1021,12 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             repeated_debt_cancel = (placement_feedback and u == prev_u == CANCEL_TOOL
                                     and debt_without_draft(st, before['money']))
             outside = outside_playarea(st, u, c, env.cw, env.ch)
+            cast_receipt = None
+            if signal_mode and not st['planning'] and u in U2ABILITY:
+                cast_receipt = battle_actions.setdefault('cast_receipts', {}).setdefault(TOOLS[u], {})
             if outside:
+                if cast_receipt is not None:
+                    cast_receipt['outside_playarea'] = cast_receipt.get('outside_playarea', 0) + 1
                 if shadow is not None and state['phase'] == 'playing':
                     capture.receipt('rejected', reason='outside_playarea')
                 outside_actions += 1
@@ -1088,6 +1103,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 slot = next(s for s in st['deck'] if s['name'] == U2ABILITY[u])
                 if u in BATTLE_GEOMETRY and not st.get('anchor'):
                     st['anchor'] = (u, c)
+                    if cast_receipt is not None:
+                        cast_receipt['gesture_started'] = cast_receipt.get('gesture_started', 0) + 1
                     if shadow is not None:
                         capture.receipt('gesture_started')
                 else:
@@ -1133,6 +1150,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     if missile_receipt is not None:
                         missile_receipt.update(stock_before=before_stock, stock_after=slot['charges'])
                         battle_actions.setdefault('missile_attempts', []).append(missile_receipt)
+                    if cast_receipt is not None:
+                        status = 'stock_decreased' if slot['charges'] < before_stock else 'no_stock_change'
+                        cast_receipt[status] = cast_receipt.get(status, 0) + 1
                     # The stock receipt, not a sent keypress, proves a resource was spent.
                     if slot['charges'] < before_stock:
                         battle_actions['stock_decreased'] += 1
@@ -1326,7 +1346,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     ready_shortfall=-max(1. - coverage / READY_COVERAGE_SHORTFALL_TARGET, 0.)
                     if coverage is not None else None,
                     missile_civilian_loss=-missile_losses['assigned'] / civ0 if missile_losses is not None else None),
-                distributions={signal_mode: distribution_signal} if signal_mode in ('planning_tools', 'zone_cells') else {})
+                distributions={signal_mode: distribution_signal} if signal_mode in ('planning_tools', 'zone_cells', 'battle_tools') else {})
         if rows['rews']:
             rows['rews'][-1] += rewards['terminal']
         advance = end == 'won' and saved is not None and saved >= .35

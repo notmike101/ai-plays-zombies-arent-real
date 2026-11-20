@@ -45,6 +45,7 @@ BREACH_COSTS = {'breach_baseline': trainer.BREACH_COST,
 READY_CREDITS = {'coverage_baseline': 0., 'coverage_credit': .30}
 ZONE_TEMPERATURES = {'zone_baseline': 1., 'zone_exploration': 1.5}
 PLANNING_TEMPERATURES = {'planning_baseline': 1., 'planning_exploration': 1.35}
+BATTLE_TEMPERATURES = {'battle_baseline': 1., 'battle_exploration': 1.5}
 PLANNING_ENTROPY_BONUSES = {'entropy_baseline': 0., 'planning_entropy': .045}
 DEFENSE_COSTS = {'defense_baseline': trainer.BREACH_COST,
                  'defense_stronger': 3 * trainer.BREACH_COST}
@@ -53,7 +54,8 @@ READY_SHORTFALL_COSTS = {'shortfall_baseline': 0., 'shortfall_penalty': .15}
 
 def episode(job, *, observe=False, audit_signal=False):
     copy, arm, weights, seed, tag, *phase = job
-    planning_study = arm in PLANNING_TEMPERATURES or arm in PLANNING_ENTROPY_BONUSES
+    battle_study = arm in BATTLE_TEMPERATURES
+    planning_study = arm in PLANNING_TEMPERATURES or arm in PLANNING_ENTROPY_BONUSES or battle_study
     try:
         copy_dir = operator.owned_copy(copy)
         env = None
@@ -72,8 +74,9 @@ def episode(job, *, observe=False, audit_signal=False):
         options = dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')
         if observe:
             options['observer_interval'] = 1.
-        if audit_signal:
-            options['experiment_signal'] = ('planning_tools' if arm in PLANNING_TEMPERATURES else
+        if battle_study or audit_signal:
+            options['experiment_signal'] = ('battle_tools' if battle_study else
+                                            'planning_tools' if arm in PLANNING_TEMPERATURES else
                                             'zone_cells' if arm in ZONE_TEMPERATURES else
                                             'planning_entropy' if arm in PLANNING_ENTROPY_BONUSES else
                                             'spatial_cells' if arm in ('dense', 'shared') else 'receipts')
@@ -92,6 +95,8 @@ def episode(job, *, observe=False, audit_signal=False):
             temperature = PLANNING_TEMPERATURES.get(arm, PLANNING_TEMPERATURES['planning_exploration'])
             if phase == [True] and temperature != 1.:
                 options['planning_tool_temperature'] = temperature
+            if battle_study and phase == [True]:
+                options['battle_tool_temperature'] = BATTLE_TEMPERATURES[arm]
         if arm in ZONE_TEMPERATURES or planning_study:
             options['planning_zone_audit'] = True
         if arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS:
@@ -123,6 +128,20 @@ def collect_pairs(pool, jobs, directory, *, observe=False):
                 f.write(json.dumps(dict(pair=[job[4] for job in jobs[pair]], errors=errors))+'\n')
             results[pair] = list(pool.map(worker, jobs[pair]))
     return results
+
+
+def committed_signal_rows(rows, next_round, copies):
+    """Use only training rounds recorded by a completed paired checkpoint."""
+    by_round = {}
+    for row in rows:
+        if row['phase'] == 'train' and row['round'] < next_round and not row.get('err'):
+            by_round.setdefault(row['round'], []).append(row)
+    return [
+        {key: row.get(key) for key in ('round', 'arm', 'phase', 'outbreak_seed', 'start_kind', 'experiment_signal')}
+        for batch in by_round.values() if len(batch) == len(copies)
+        and {row.get('copy') for row in batch} == set(copies)
+        for row in batch
+    ]
 
 
 def previous_outbreak_seeds(analysis):
@@ -221,6 +240,8 @@ def main():
                             help='Broaden model-selected safe-zone cells during private training only')
     comparison.add_argument('--compare-planning-exploration', action='store_true',
                             help='Broaden legal tool sampling during private preparation training')
+    comparison.add_argument('--compare-battle-exploration', action='store_true',
+                            help='Broaden legal tool probabilities only when battle abilities can be used')
     comparison.add_argument('--compare-planning-entropy', action='store_true',
                             help='Compare extra planning-tool entropy during PPO at equal rollout temperature')
     comparison.add_argument('--compare-shelter-defense', action='store_true',
@@ -240,7 +261,8 @@ def main():
             or len(set(evaluation_copies)) != len(evaluation_copies)
             or set(evaluation_copies).intersection(copies)):
         parser.error('Evaluation copies must be distinct, paired and disjoint from training')
-    planning_study = args.compare_planning_exploration or args.compare_planning_entropy
+    planning_study = (args.compare_planning_exploration or args.compare_planning_entropy
+                      or args.compare_battle_exploration)
     coverage_study = (args.compare_ready_coverage or args.compare_zone_exploration
                       or planning_study or args.compare_shelter_defense
                       or args.compare_ready_shortfall)
@@ -271,6 +293,7 @@ def main():
         if paired_weights:
             labels = (tuple(READY_SHORTFALL_COSTS) if args.compare_ready_shortfall else
                       tuple(DEFENSE_COSTS) if args.compare_shelter_defense else
+                      tuple(BATTLE_TEMPERATURES) if args.compare_battle_exploration else
                       tuple(PLANNING_ENTROPY_BONUSES) if args.compare_planning_entropy else
                       tuple(PLANNING_TEMPERATURES) if args.compare_planning_exploration else
                       tuple(ZONE_TEMPERATURES) if args.compare_zone_exploration else
@@ -311,6 +334,10 @@ def main():
         if args.compare_planning_exploration:
             config.update(comparison='planning_exploration', fixed_speed='speed_2',
                           ready_coverage_credit=.30, training_tool_temperature_by_arm=PLANNING_TEMPERATURES)
+        if args.compare_battle_exploration:
+            config.update(comparison='battle_exploration', fixed_speed='speed_2', ready_coverage_credit=.30,
+                          training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
+                          training_battle_temperature_by_arm=BATTLE_TEMPERATURES)
         if args.compare_planning_entropy:
             config.update(comparison='planning_entropy', fixed_speed='speed_2', ready_coverage_credit=.30,
                           training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
@@ -325,6 +352,7 @@ def main():
                           ready_shortfall_cost_by_arm=READY_SHORTFALL_COSTS,
                           ready_shortfall_target=trainer.READY_COVERAGE_SHORTFALL_TARGET)
         first_round = 0
+        prior_signal_rows = []
         source = trainer.policy_id(baseline)
         if warm_source is not None:
             config['warm_source'] = warm_source
@@ -337,14 +365,17 @@ def main():
             first_round, source = snapshot['next_round'], snapshot['source']
             discovery_seeds.update(snapshot.get('discovery_seeds', ()))
             previous_results = args.resume.with_name('results.jsonl')
-            if previous_results.is_file():
-                with previous_results.open(encoding='utf-8') as stream:
-                    discovery_seeds.update(training_outbreak_seeds(json.loads(line) for line in stream))
+            previous_rows = list(records(previous_results)) if previous_results.is_file() else []
+            discovery_seeds.update(training_outbreak_seeds(previous_rows))
+            prior_signal_rows = snapshot.get('signal_training_rows')
+            if prior_signal_rows is None:
+                prior_signal_rows = committed_signal_rows(previous_rows, first_round, copies)
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
         experiment = ('ready-shortfall' if args.compare_ready_shortfall else
                       'shelter-defense' if args.compare_shelter_defense else
+                      'battle-exploration' if args.compare_battle_exploration else
                       'planning-entropy' if args.compare_planning_entropy else
                       'planning-exploration' if args.compare_planning_exploration else
                       'zone-exploration' if args.compare_zone_exploration else
@@ -360,7 +391,9 @@ def main():
             evaluation = {arm: heldout_consistency(
                 [row for row in summaries if row['arm'] == arm], trainer.policy_id(net),
                 discovery_seeds=discovery_seeds) for arm, net in models.items()}
-            report = summarize_signal(summaries, config, models, evaluation, start_round=first_round)
+            rows = [*prior_signal_rows, *summaries]
+            earliest = min((row['round'] for row in rows if row['phase'] == 'train'), default=first_round)
+            report = summarize_signal(rows, config, models, evaluation, start_round=earliest)
             temporary = directory/'signal-coverage.tmp'
             temporary.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
             temporary.replace(directory/'signal-coverage.json')
@@ -398,6 +431,7 @@ def main():
                         summary['missile_civilian_reward'] = row.get('reward_components', {}).get('missile_civilian_loss')
                         summary['legal_cast_tools'] = row.get('battle_actions', {}).get('legal_cast_tools', {})
                         summary['confirmed_spends'] = row.get('battle_actions', {}).get('stock_decreased')
+                        summary['cast_receipts'] = row.get('battle_actions', {}).get('cast_receipts')
                         summary['planning_placements_selected'] = row.get('selected_placements', {})
                     if shelter_study:
                         summary['planning_actions'] = dict(Counter(
@@ -434,7 +468,8 @@ def main():
                         summary['ready_shortfall_reward'] = row.get('reward_components', {}).get('ready_shortfall')
                     if planning_study or args.compare_shelter_defense or args.compare_ready_shortfall:
                         summary['tempered_planning_decisions'] = sum(
-                            temp > 1. for temp in row.get('tool_temperatures', ()))
+                            temp > 1. and obs[trainer.PLANNING_INDEX] > 0
+                            for temp, obs in zip(row.get('tool_temperatures', ()), row.get('obs', ())))
                     with (directory/'results.jsonl').open('a') as f:
                         f.write(json.dumps(summary)+'\n')
                     summaries.append(summary)
@@ -452,6 +487,7 @@ def main():
                     temp = directory/'paired.tmp'
                     torch.save(dict(next_round=rnd+1, source=source, config=config,
                                     discovery_seeds=sorted(discovery_seeds),
+                                    signal_training_rows=[*prior_signal_rows, *committed_signal_rows(summaries, rnd+1, copies)],
                                     weights={a:n.state_dict() for a,n in models.items()},
                                     optimizers={a:o.state_dict() for a,o in optimizers.items()}), temp)
                     temp.replace(directory/'paired.pt')

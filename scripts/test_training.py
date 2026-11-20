@@ -91,6 +91,19 @@ class LearningTests(unittest.TestCase):
             np.testing.assert_array_equal(starts[tool], start_cells)
         self.assertEqual(train.planning_geometry_masks(dict(state, planning=False), 1000, 1000), {})
 
+    def test_battle_exploration_requires_a_free_choice_and_a_legal_cast(self):
+        tools = np.zeros(train.NU)
+        tools[train.TOOLS.index('wait')] = 1
+        playing = {'planning': False}
+        self.assertFalse(train.battle_cast_choice(playing, tools))
+        tools[train.TOOLS.index('police_drop')] = 1
+        self.assertTrue(train.battle_cast_choice(playing, tools))
+        for state in (dict(playing, planning=True), dict(playing, dialog=True),
+                      dict(playing, anchor=(20, 1)), dict(playing, gesture_anchor=('drag_world', 1))):
+            self.assertFalse(train.battle_cast_choice(state, tools))
+        tools[train.TOOLS.index('wait')] = 0
+        self.assertFalse(train.battle_cast_choice(playing, tools))
+
     def test_planning_audit_filters_rectangle_corners_without_placement_feedback(self):
         state = dict(planning=True, playarea_boundary=[(100, 100), (900, 100), (100, 700)])
         zone = train.TOOLS.index('zone_rect')
