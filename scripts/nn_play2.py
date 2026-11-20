@@ -653,7 +653,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         opening_loadout = (opening_loadout_options(dict(st, rules={**st['rules'], **initial.get('counts', {})}))
                            if options.get('placement_feedback') else {})
         ready_loadout = {}
-        ready_paint_mode = None
+        ready_paint_mode = ready_paint_tiles = None
         plan = initial
         net = None if eps_rand else (policy_factory or PolicyNet2)().eval()
         if net is not None:
@@ -855,6 +855,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 if u == 1:
                     if placement_feedback:
                         ready_paint_mode = bool(env.scalar(0x665160, '<B'))
+                        paint = st['native']['paint']['kind']
+                        ready_paint_tiles = dict(spikes=int(np.count_nonzero(paint == 1)),
+                                                 oil=int(np.count_nonzero(paint == 2)))
                     state = ready_once(env)
                     battle_start = time.monotonic()
                     d = dict(initial)
@@ -1000,6 +1003,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         footer = env.stop_log(capture_events=True)
         logging = False
         battle_actions['logged_deployments']=footer.get('deployments') if footer else None
+        battle_actions['logged_kills'] = (footer.get('stats') or {}).get('kills') if footer else None
         battle_actions['deploy_sim_seconds']=footer.get('deploy_sim_seconds') if footer else None
         saved = None
         if footer and footer.get('phase') == state['phase']:
@@ -1066,7 +1070,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     outbreak=footer.get('outbreak') if footer else None,
                     ready_stats=footer.get('ready_stats') if footer else None,
                     opening_loadout=opening_loadout, ready_loadout=ready_loadout,
-                    ready_paint_mode=ready_paint_mode,
+                    ready_paint_mode=ready_paint_mode, ready_paint_tiles=ready_paint_tiles,
                     special_activations=special_activations,
                     reward_components=rewards, outside_playarea_actions=outside_actions,
                     outside_targets=outside_targets, battle_actions=battle_actions,

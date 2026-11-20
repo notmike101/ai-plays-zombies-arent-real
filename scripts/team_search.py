@@ -39,6 +39,7 @@ GARRISON = tr.TOOLS.index('garrison')
 ZONE_RECT = tr.TOOLS.index('zone_rect')
 FAST_SPEED = tr.TOOLS.index('speed_4')
 MISSILE_ROW = CASTS.index(MISSILE)
+FIREBOMB_ROW = CASTS.index(tr.ABILITY_U['Firebomb'])
 SELECT_BUILDING = tr.TOOLS.index('select_building')
 BUILDING_SPECIALS = {name.removeprefix('panel_'):i for i,name in enumerate(tr.TOOLS)
                      if name.startswith('panel_building_') and name.rsplit('_',1)[1].isdigit()}
@@ -371,10 +372,12 @@ def available_placement_neighbors(parent, rosters, rng):
     return children
 
 
-def battle_neighbors(parent, rng):
-    keys = ('battle', 'cast_bias')
+def battle_neighbors(parent, rng, target=None):
+    keys = ('battle', 'cast_bias') if target is None else ('battle',)
     weights = {key: np.asarray(parent[key]) for key in keys}
     offsets = {key: rng.normal(0., .35, weights[key].shape) for key in keys}
+    if target is not None:
+        offsets['battle'][np.arange(len(CASTS)) != target] = 0.
     return tuple(dict(deepcopy(parent),
                       **{key: (weights[key] + sign * offsets[key]).tolist() for key in keys})
                  for sign in (-1, 1))
@@ -787,6 +790,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                outbreak=row.get('outbreak'),
                                ready_stats=row.get('ready_stats'),
                                ready_paint_mode=row.get('ready_paint_mode'),
+                               ready_paint_tiles=row.get('ready_paint_tiles'),
                                opening_loadout=row.get('opening_loadout', {}),
                                ready_loadout=row.get('ready_loadout', {}),
                                timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
@@ -1057,8 +1061,8 @@ def main():
     neighbors = parser.add_mutually_exclusive_group()
     neighbors.add_argument('--placement-neighbors', action='store_true',
                            help='Compare two equipped placement preferences in the same plan slot')
-    neighbors.add_argument('--battle-neighbors', action='store_true',
-                        help='Explore paired cast-score mutations while preserving the learned opening')
+    neighbors.add_argument('--battle-neighbors', nargs='?', const='all', choices=('all', 'firebomb'),
+                           help='Explore paired cast scores, optionally only Firebomb targeting')
     parser.add_argument('--goal-margin', action='store_true',
                         help='Rank unsuccessful discovery battles by survival above the 35 percent target')
     parser.add_argument('--click-start', action='store_true',
@@ -1081,6 +1085,8 @@ def main():
     parser.add_argument('--compare-speed',action='store_true',help='Compare fixed stock 1x and 2x on fresh L1 boards')
     parser.add_argument('--capture-shadow',action='store_true',help='Record bounded crowd frames and confirmed stock spends for offline analysis')
     args=parser.parse_args()
+    battle_target = FIREBOMB_ROW if args.battle_neighbors == 'firebomb' else None
+    repeat_pair = args.placement_neighbors or battle_target is not None
     copies=args.copies
     if not 4<=len(copies)<=8 or len(set(copies))!=len(copies) or args.generations<1 or args.later_retries<0:
         parser.error('Use 4–8 distinct owned copies and positive generations')
@@ -1095,8 +1101,8 @@ def main():
     worker_count = max(len(copies), len(holdout_copies))
     if (args.battle_neighbors or args.placement_neighbors) and (not args.click_start or len(copies) != 4):
         parser.error('Paired exploration requires four copies and the controlled fresh L1 start')
-    if args.placement_neighbors and args.generations != 2:
-        parser.error('Paired placement exploration requires two waves')
+    if repeat_pair and args.generations != 2:
+        parser.error('Fixed paired exploration requires two waves')
     if args.goal_margin and not args.click_start:
         parser.error('Goal-margin ranking requires the controlled fresh L1 start')
     if args.click_start and not args.continue_layout_free:
@@ -1294,7 +1300,7 @@ def main():
                     if candidate is not None:
                         population[index] = candidate
         if args.battle_neighbors:
-            population[1], population[-1] = battle_neighbors(proposal, rng)
+            population[1], population[-1] = battle_neighbors(proposal, rng, battle_target)
         if args.placement_neighbors:
             rosters = [operator.planning_roster((operator.owned_copy(copy) / 'steam_cloud/settings.ini')
                                                .read_text(encoding='utf-8-sig')) for copy in copies]
@@ -1343,13 +1349,13 @@ def main():
                         print('cnn',result['cnn'],result.get('error'),[(r['end'],r['saved']) for r in result['levels']],flush=True)
                 return
             for generation in range(args.generations):
-                if args.placement_neighbors and generation:
+                if repeat_pair and generation:
                     population = first_wave[1:] + first_wave[:1]
                 else:
                     if generation == 0:
-                        population.append(None)
+                        population.append(proposal if battle_target is not None else None)
                     rng.shuffle(population)
-                    if args.placement_neighbors:
+                    if repeat_pair:
                         first_wave = population.copy()
                 jobs=[(copy,weights,team,args.seed+generation*len(copies)+i)
                       for i,(copy,team) in enumerate(zip(copies,population))]
@@ -1487,11 +1493,11 @@ def main():
                     key=stage_parent if stage>1 else l1_ranked[int(rng.integers(min(2,len(l1_ranked))))]
                     child=offspring(archive[key],leader,rng,stage=stage)
                     population.append(budget_candidate(child,[],prices) or child)
-                if args.battle_neighbors and generation + 1 < args.generations:
+                if args.battle_neighbors and not repeat_pair and generation + 1 < args.generations:
                     pair = battle_neighbors(leader, rng)
                     population = [leader, deepcopy(leader), *pair]
                     require_fresh.update(team_id(team) for team in pair)
-                elif args.click_start and generation % 2 == 0 and generation + 1 < args.generations:
+                elif not repeat_pair and args.click_start and generation % 2 == 0 and generation + 1 < args.generations:
                     pair = shelter_cast_pair(defenders, evidence, rng)
                     if pair is not None:
                         population[-2:] = pair

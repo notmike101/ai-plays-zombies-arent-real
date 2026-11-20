@@ -389,6 +389,19 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(search.available_placement_neighbors(parent, [(*r, 'ChemMine') for r in rosters], rng), [])
         self.assertEqual(search.available_placement_neighbors(parent, [rosters[0], ('Garrison',)], rng), [])
 
+    def test_firebomb_neighbors_change_only_its_target_preferences(self):
+        rng = np.random.default_rng(41)
+        parent = search.random_team(rng)
+        row = search.FIREBOMB_ROW
+        lower, upper = search.battle_neighbors(parent, rng, row)
+        self.assertNotEqual(lower['battle'][row], parent['battle'][row])
+        np.testing.assert_allclose((np.asarray(lower['battle'][row]) + upper['battle'][row]) / 2.,
+                                   parent['battle'][row], atol=1e-12)
+        for child in (lower, upper):
+            self.assertEqual(child['battle'][:row], parent['battle'][:row])
+            self.assertEqual(child['battle'][row+1:], parent['battle'][row+1:])
+            self.assertEqual(dict(child, battle=parent['battle']), parent)
+
     def test_battle_neighbors_mirror_only_cast_scores(self):
         rng = np.random.default_rng(28)
         parent = search.random_team(rng)
@@ -856,12 +869,14 @@ class SearchTests(unittest.TestCase):
                  sim=100,trail=[],civ0=100,us=[],cs=[],log_started=True,battle_actions={})
         with patch.object(search.zar_boot,'boot'),patch.object(search.zar_boot,'stop'),              patch.object(search.operator,'owned_copy'),patch.object(search.tr,'run_episode',return_value=row) as run:
             row['ready_stats'] = dict(money=2100, stock=dict(mortar=1))
+            row['ready_paint_tiles'] = dict(spikes=45, oil=0)
             row['paid_buildings'] = dict(Garrison=1)
             row['unconfirmed_buildings'] = dict(Garrison=2)
             row['building_receipts'] = [dict(decision=4, tool='garrison', cell=19, spend=85.2)]
             result=search.rollout(('inst13',{},None,10))
             self.assertEqual([level['stage'] for level in result['levels']],[1])
             self.assertEqual(result['levels'][0]['ready_stats'], row['ready_stats'])
+            self.assertEqual(result['levels'][0]['ready_paint_tiles'], row['ready_paint_tiles'])
             self.assertEqual(result['levels'][0]['paid_buildings'], dict(Garrison=1))
             self.assertEqual(result['levels'][0]['unconfirmed_buildings'], dict(Garrison=2))
             self.assertEqual(result['levels'][0]['building_receipts'], row['building_receipts'])
