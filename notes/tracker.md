@@ -2,6 +2,28 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:42 Central, Police path study 189952 had finished all eight
+  discovery games. Endpoint was 15.63% average, peak 32.99%;
+  path 11.72% average, peak 17.02%. The three outbreaks played by
+  both arms all retried at 9.70-10.00%. The two higher clears
+  came from different inst14 outbreaks, so the raw means do not
+  establish targeting superiority. No reserved qualification.
+- Handoff worked at the idle boundary. Commit 02bcfe8 launched
+  experiment 190952 on D: operator 71708, directory
+  analysis/coverage-team-7ff3782543, log
+  analysis/coverage-layout-free-190952-drive-d.log. All four
+  discovery boards verified (inst13 PID 63684, inst14 43636,
+  inst15 61660, inst16 67564). Frozen base 8a691469a829158d,
+  endpoint bf3fc52369fc3746 versus Missile preference
+  ce5b191516c37f99. The native game confirmed Police purchases
+  with 1 SP left on inst13/15 and Missile purchases with 0 SP
+  left on inst14/16. Each Missile candidate launched all three
+  charges between 30.10 and 30.40 sim seconds, before its first
+  nominal 2.5 s flight would finish. Capture verifies execution
+  of the model-selected buy and casts, not the causal impact of
+  individual shots. Checkout checkpoint hash matched and
+  Observatory PID 12628 remained live. No successor scores yet.
+
 - At 11:36 Central, staged and verified a crossed native-evidenced
   loadout comparison, analysis/coverage-portable314/tmp/loadout-neighbors-study.patch.
   It compares exactly one changed purchase preference from discovery
