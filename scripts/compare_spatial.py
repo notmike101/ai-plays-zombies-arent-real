@@ -217,7 +217,7 @@ def load_warm_start(path, arm):
         raise ValueError('Warm-start checkpoint schema differs from the trainer')
     if arm not in snapshot['weights'] or arm not in snapshot['optimizers']:
         raise ValueError(f'Warm-start checkpoint has no weights and optimizer for {arm}')
-    seeds = set(snapshot['discovery_seeds'])
+    seeds = set(snapshot.get('discovery_seeds', ()))
     with path.with_name('results.jsonl').open(encoding='utf-8') as stream:
         for line in stream:
             outbreak = json.loads(line).get('outbreak_seed')

@@ -218,6 +218,12 @@ class StateTests(unittest.TestCase):
             self.assertEqual(seen, {123, 456, 789})
             self.assertEqual(source['arm'], 'source')
             self.assertEqual(len(source['sha256']), 64)
+            del snapshot['discovery_seeds']
+            train.torch.save(snapshot, path)
+            found, optimizer, seen, _ = load_warm_start(path, 'source')
+            self.assertTrue(train.torch.equal(found['parameter'], weights['parameter']))
+            self.assertEqual(optimizer, adam)
+            self.assertEqual(seen, {456, 789})
             with self.assertRaises(ValueError):
                 load_warm_start(path, 'missing')
             snapshot['config']['schema'] = None
