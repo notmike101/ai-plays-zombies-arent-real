@@ -239,6 +239,16 @@ prefixes with fewer than four measured starts. Promotion-eligible challengers
 receive at least six held-out games per arm with assignments rotated between
 copies. Held-out outcomes gate promotion and never enter search fitness. A new holdout is needed for any later performance claim.
 
+Pass `--continue-layout-free <search-directory>` to seed a new Boston L1
+discovery block with a verified provisional proposal and its frozen GRU.
+One variant shifts a single spatial preference by one grid cell while keeping
+the rest of the proposal fixed. The normal promotion gate still applies.
+Pass `--holdout-copies inst17 inst18 inst19 inst20` to reserve an even set of
+owned copies separate from `--copies`. Preserve `fitness.json`, `trials.jsonl`
+and `holdout.jsonl` when resuming. The fitness ledger carries the known
+outbreak seeds forward, and holdout rows flag overlap with earlier exposure.
+Promotion requires zero overlap and valid saved fractions for both arms.
+
 **Default scope is L1.** A qualifying win counts and completes the copy's L1
 assignment. Campaign search, standalone PPO and the operator launcher require
 `--allow-progression` to enter L2–L5. With explicit authorization, append the
@@ -253,10 +263,10 @@ verifies the live stage before acting and records `start_stage` and
 Practice scores can nominate a specialist for a fresh campaign trial. They
 never enter campaign rankings or held-out results.
 
-Search truncates a training battle after 45 wall seconds continuously paused.
-Resuming resets that timer. The model keeps control of the pause key. Held-out
-and ordinary PPO games keep the full battle deadline. A timeout has no saved
-score; its `timeout_reason` identifies the clock or planning limit.
+Campaign discovery and frozen evaluation truncate an episode after 45 wall
+seconds continuously paused. Resuming resets the timer. The model keeps
+control of the pause key. Ordinary PPO retains its existing battle deadline.
+A timeout records an incomplete outcome and its `timeout_reason`.
 
 The command holds the operator lock and writes its base weights, tested
 genomes, action sequences, native log identifiers, champion and held-out

@@ -1,6 +1,33 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-19 — layout-free search on D:)
+## CURRENT STATE (2026-11-19 — isolated holdout and local placement search)
+- Layout-free continuation 144952 finished at 22:59 Central. Across
+  16 discovery games it had no wins. Proposal 71bdb3116c014319 sheltered
+  1,616 civilians across multiple distinct outbreaks and had roughly
+  56–62 simulated seconds in battle on the reported repeats. Shelter
+  breaches followed. It confirmed no battle stock spends. Frozen retries
+  on the candidate saved 9.96% and 9.84%; both GRU reference games timed
+  out on the battle clock while paused. No champion was promoted.
+- Audited native seed reuse. Two of four frozen rows in discovery block
+  142952 reused discovery outbreak seeds. In block 144952, one of two
+  candidate frozen rows reused its discovery seed. The 58.93-second repeat
+  of proposal 3237e2a74318792e on inst15 also reused its outbreak seed.
+  Keep these rows as diagnostics only when evaluating fresh generalization.
+- Commit 29f10b6 adds separate reserved holdout copies, records known
+  outbreak seeds across continued blocks, rejects overlapping outbreaks and
+  missing scores at the promotion gate, and uses the same 45-second
+  continuous-pause limit for both frozen arms. Discovery also tests a nearby
+  placement variant using a one-cell mutation of a learned spatial choice.
+  All 232 script tests passed. The production GRU file hash stayed unchanged.
+- Started layout-free seed 145952 at 23:02 Central with 13.16 GiB RAM and
+  12.95 GiB disk free. Verified trainer PID 28468, four D: Python workers,
+  and discovery copies inst13–16. inst17–20 are reserved for the separate
+  frozen check. Resumes proposal 71bdb3116c014319 without promotion. Output
+  `analysis/coverage-team-70bcc8625a`. Logs
+  `analysis/coverage-layout-free-145952-drive-d.log` and matching errors log.
+  The 35% consistency goal remains open.
+
+### Earlier layout-free search
 - Completed phase-balance seed 143952 at 22:21 Central from 16 paired
   learning updates, with 6 fresh frozen attempts per arm. Standard averaged
   9.59% across 6 scored early retries, with 2 confirmed stock spends.
