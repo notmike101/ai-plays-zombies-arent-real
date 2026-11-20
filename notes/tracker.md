@@ -1,6 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 20:54 Central. Fixed-1× PPO phase-balance trial 141952
+  finished: both frozen arms 0/12 qualifiers, 9.29% standard versus
+  9.35% balanced mean saved. Balanced increased training stock spends
+  from 4 to 10, but frozen spends fell from 5 to 1. No promotion.
+  Six-copy no-replay follow-up was refused on idle RAM, regular seed
+  141851 resumed on four copies. No-replay 142952 is queued again on
+  four at a guarded boundary (PID 30144). Goal remains open.
 - 2026-11-19 20:44 Central. Phase-balance trial completed four private
   training rounds and entered frozen evaluation. Queued no-replay campaign
   search 142952 behind it (handoff PID 20176). No seed champion or saved
