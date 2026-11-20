@@ -741,6 +741,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         prev_u = prev_c = succ = trend = slope = 0.
         start = time.monotonic()
         battle_start = None
+        ready_step = None
         paused_since = timeout_reason = None
         end = None
         nbuy = 0
@@ -977,6 +978,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         ready_preparation = preparation_counts(st['native'])
                         ready_preparation['layout_id'] = preparation_fingerprint(st['native'])
                     state = ready_once(env)
+                    ready_step = len(rows['rews'])
                     battle_start = time.monotonic()
                     d = dict(initial)
                     d['economy'] = {f'loadout {name}': str(level) for name, level in
@@ -1226,6 +1228,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                               severe_failure=severe_outcome(saved, end))
         rewards['missile_civilian_loss'] = (-MISSILE_CIVILIAN_COST * missile_losses['assigned'] / civ0
                                             if missile_losses is not None and missile_rewards is rows['rews'] else 0.)
+        if 'ready_coverage_credit' in options:
+            rewards['ready_coverage'] = credit_ready_coverage(
+                footer, ready_step, rows['rews'], options['ready_coverage_credit'])
         if rows['rews']:
             rows['rews'][-1] += rewards['terminal']
         advance = end == 'won' and saved is not None and saved >= .35
@@ -1313,6 +1318,17 @@ def gae(rews, vals, lam=BATTLE_LAMBDA, gamma=BATTLE_GAMMA, bootstrap=0.0,
     adv = list(reversed(adv))
     rets = [a + v for a, v in zip(adv, vals)]
     return adv, rets
+
+
+def credit_ready_coverage(footer, step, rewards, scale):
+    outbreak = (footer or {}).get('outbreak') or {}
+    pct = outbreak.get('civilians_inside_pct')
+    if (step is None or not 0 <= step < len(rewards)
+            or type(pct) not in (int, float) or not 0 <= pct <= 100):
+        return 0.
+    credit = scale * pct / 100.
+    rewards[step] += credit
+    return credit
 
 
 def severe_outcome(saved_frac, end):

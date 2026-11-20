@@ -88,6 +88,41 @@ class StateTests(unittest.TestCase):
                          fixed_clock=True, occupied_breach_cost=cost))
                 self.assertIs(run.call_args.kwargs['policy_factory'], train.PolicyNet2)
 
+    def test_ready_coverage_is_credited_once_at_confirmed_ready(self):
+        footer = {'outbreak': {'civilians_inside_pct': 40.}}
+        rewards = [0., -.01, -.05]
+        self.assertAlmostEqual(train.credit_ready_coverage(footer, 1, rewards, .30), .12)
+        self.assertAlmostEqual(rewards[1], .11)
+        self.assertEqual(rewards[::2], [0., -.05])
+        for invalid, step in [(None, 1), (footer, None), (footer, 3),
+                              ({'outbreak': {'civilians_inside_pct': float('nan')}}, 1),
+                              ({'outbreak': {'civilians_inside_pct': 101}}, 1)]:
+            self.assertEqual(train.credit_ready_coverage(invalid, step, rewards, .3), 0.)
+        self.assertAlmostEqual(rewards[1], .11)
+
+    def test_shelter_studies_keep_verified_boot_fallback_and_same_policy(self):
+        import compare_spatial
+        from unittest.mock import call, Mock
+        env = Mock(pid=1234)
+        with patch.object(compare_spatial.operator, 'owned_copy', return_value=Path('owned')), \
+                patch.object(compare_spatial.zar_boot, 'boot',
+                             side_effect=[env_zar.ZAREnvError('welcome held'), env, env]) as boot, \
+                patch.object(compare_spatial.zar_boot, 'stop') as stop, \
+                patch.object(train, 'run_episode', return_value={'end': 'won'}) as run:
+            for arm, scale in compare_spatial.READY_CREDITS.items():
+                self.assertEqual(compare_spatial.episode(('inst13', arm, {}, 123, 'test')),
+                                 {'end': 'won'})
+                self.assertEqual(run.call_args.args[0][4],
+                    dict(start_kind='fresh', seed=123, missile_credit=True, fixed_speed='speed_2',
+                         fixed_clock=True, ready_coverage_credit=scale))
+                self.assertIs(run.call_args.kwargs['policy_factory'], train.PolicyNet2)
+            self.assertEqual(boot.call_args_list, [
+                call(Path('owned'), welcome_wait=15, discard_dump_states=True),
+                call(Path('owned'), discard_dump_states=True),
+                call(Path('owned'), welcome_wait=15, discard_dump_states=True),
+            ])
+            self.assertEqual(stop.call_args_list, [call(env), call(env)])
+
     def test_reserved_ppo_copies_refuse_overlap_before_taking_lock(self):
         import compare_spatial
         with patch('sys.argv', ['compare_spatial', '--copies', 'a', 'b', '--eval-copies', 'a', 'c']), \

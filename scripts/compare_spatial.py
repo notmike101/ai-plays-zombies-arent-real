@@ -38,12 +38,21 @@ class SpatialPolicy(trainer.PolicyNet2):
 
 BREACH_COSTS = {'breach_baseline': trainer.BREACH_COST,
                 'breach_stronger': 3 * trainer.BREACH_COST}
+READY_CREDITS = {'coverage_baseline': 0., 'coverage_credit': .30}
 
 
 def episode(job):
     copy, arm, weights, seed, tag = job
     try:
-        env = zar_boot.boot(operator.owned_copy(copy), discard_dump_states=True)
+        copy_dir = operator.owned_copy(copy)
+        env = None
+        if arm in BREACH_COSTS or arm in READY_CREDITS:
+            try:
+                env = zar_boot.boot(copy_dir, welcome_wait=15, discard_dump_states=True)
+            except ZAREnvError as exc:
+                print(f'{copy} fast boot failed: {exc}. Retrying with standard warmup.', flush=True)
+        if env is None:
+            env = zar_boot.boot(copy_dir, discard_dump_states=True)
     except ZAREnvError as exc:
         return {'err': str(exc)}
     try:
@@ -53,6 +62,8 @@ def episode(job):
             options.update(fixed_speed='speed_1', fixed_clock=True)
         if arm in BREACH_COSTS:
             options.update(fixed_speed='speed_2', fixed_clock=True, occupied_breach_cost=BREACH_COSTS[arm])
+        if arm in READY_CREDITS:
+            options.update(fixed_speed='speed_2', fixed_clock=True, ready_coverage_credit=READY_CREDITS[arm])
         return trainer.run_episode((env.pid, weights, False, tag, options), policy_factory=policy,
                                    telemetry=False)
     finally:
@@ -123,6 +134,8 @@ def main():
                             help='Compare existing PPO loss with equal planning and battle loss mass')
     comparison.add_argument('--compare-breach-cost', action='store_true',
                             help='Compare current and triple occupied shelter exposure costs in private PPO')
+    comparison.add_argument('--compare-ready-coverage', action='store_true',
+                            help='Compare private PPO with and without credit for civilians sheltered at READY')
     args = parser.parse_args()
     copies = args.copies
     if args.train_rounds < 1 or args.eval_rounds < 2 or args.eval_rounds % 2:
@@ -146,9 +159,11 @@ def main():
         torch.manual_seed(args.seed)
         baseline = trainer.PolicyNet2()
         trainer.load_pretrained(baseline, trainer.MODEL)
-        paired_weights = args.compare_missile_credit or args.compare_phase_balance or args.compare_breach_cost
+        shelter_study = args.compare_breach_cost or args.compare_ready_coverage
+        paired_weights = args.compare_missile_credit or args.compare_phase_balance or shelter_study
         if paired_weights:
-            labels = (tuple(BREACH_COSTS) if args.compare_breach_cost else
+            labels = (tuple(READY_CREDITS) if args.compare_ready_coverage else
+                      tuple(BREACH_COSTS) if args.compare_breach_cost else
                       ('standard', 'balanced') if args.compare_phase_balance else ('unshaped', 'missile_credit'))
             models = {labels[0]: baseline, labels[1]: deepcopy(baseline)}
         else:
@@ -174,6 +189,9 @@ def main():
         if args.compare_breach_cost:
             config.update(comparison='occupied_breach_cost', fixed_speed='speed_2',
                           occupied_breach_cost_by_arm=BREACH_COSTS)
+        if args.compare_ready_coverage:
+            config.update(comparison='ready_coverage', fixed_speed='speed_2',
+                          ready_coverage_credit_by_arm=READY_CREDITS)
         first_round = 0
         source = trainer.policy_id(baseline)
         discovery_seeds = set()
@@ -190,7 +208,8 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        experiment = ('breach-cost' if args.compare_breach_cost else
+        experiment = ('ready-coverage' if args.compare_ready_coverage else
+                      'breach-cost' if args.compare_breach_cost else
                       'phase-balance' if args.compare_phase_balance else
                       'missile-credit' if args.compare_missile_credit else 'spatial')
         tag = 'coverage-' + experiment + '-' + uuid.uuid4().hex[:10]
@@ -222,19 +241,28 @@ def main():
                     summary['battle_actions'] = dict(Counter(
                         trainer.TOOLS[u] for u, obs in zip(row.get('us', []), row.get('obs', []))
                         if not obs[trainer.PLANNING_INDEX]))
-                    if args.compare_missile_credit or args.compare_phase_balance:
+                    if args.compare_missile_credit or args.compare_phase_balance or shelter_study:
                         summary['missile_civilian_losses'] = row.get('battle_actions', {}).get('missile_civilian_losses')
                         summary['missile_civilian_reward'] = row.get('reward_components', {}).get('missile_civilian_loss')
                         summary['legal_cast_tools'] = row.get('battle_actions', {}).get('legal_cast_tools', {})
                         summary['confirmed_spends'] = row.get('battle_actions', {}).get('stock_decreased')
                         summary['planning_placements_selected'] = row.get('selected_placements', {})
-                    if args.compare_breach_cost:
+                    if shelter_study:
                         summary['shelter'] = row.get('shelter')
+                        outbreak = row.get('outbreak') or {}
+                        summary['safe_zones_at_ready'] = outbreak.get('safe_zones')
+                        summary['sheltered_pct_at_ready'] = outbreak.get('civilians_inside_pct')
+                        summary['planning_buildings_paid'] = row.get('paid_buildings', {})
+                        summary['ready_stats'] = row.get('ready_stats')
                         battle = row.get('battle_actions', {})
                         for key in ('severe_failure', 'first_outnumbered_sim', 'first_live_at_retry_floor_sim'):
                             summary[key] = battle.get(key)
+                        summary['logged_deployments'] = battle.get('logged_deployments')
+                        summary['deploy_sim_seconds'] = battle.get('deploy_sim_seconds')
                         summary['occupied_breach_reward'] = row.get('reward_components', {}).get('occupied_breach')
-                        summary['occupied_breach_cost'] = BREACH_COSTS[job[1]]
+                        summary['occupied_breach_cost'] = BREACH_COSTS.get(job[1], trainer.BREACH_COST)
+                        if args.compare_ready_coverage:
+                            summary['ready_coverage_reward'] = row.get('reward_components', {}).get('ready_coverage')
                     with (directory/'results.jsonl').open('a') as f:
                         f.write(json.dumps(summary)+'\n')
                     summaries.append(summary)
