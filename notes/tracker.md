@@ -2,6 +2,39 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 157952 finished at 03:09 Central. The spacing-only variant
+  d67f3ddff7d01e93 reached retry at 8.52% and its first occupied
+  breach was at 44.17 sim seconds. The parent retried at 8.59%
+  and breached at 50.47 seconds on another outbreak. All three
+  opening candidate boards sheltered 28.95% at READY. Native
+  placements left one shelter perimeter entirely outside every
+  Garrison's listed maximum range on all three boards. Both
+  candidate reserved games reused discovery outbreaks, as did
+  both references. The candidate scored 8.70% and 6.21% at retry.
+  Those four rows are ineligible for promotion or fresh validation.
+- The earlier-loadout variant 7e8d4bab9296a16d confirmed a second
+  distinct early deployment (2.43 sim seconds) and reached retry
+  at 9.31%. The first occupied breach was at 45.07 seconds. Earlier
+  action access replicated, with no demonstrated survival gain.
+- Read-only geometry on four live boards found snapped candidate
+  sites with nominal marginal perimeter reach of 36%–48%, assuming
+  maximum firing distance. The 96-point helper used about 91 us per
+  48 candidates on a recorded pair of shelters. This is a distance
+  estimate without terrain, line of sight, or effective damage.
+  Commit e094025 gives one discovered variant that feature in the
+  Garrison placement cell scores. The rest of the policy and its
+  legal action choices are paired. Regression tests verify no
+  changes to tool logits or other placement rows. All 254 script
+  and 60 Observatory tests passed.
+- Seed 158952 began at 03:09 Central on D:, portable trainer PID
+  61100. Two discovery waves on inst13–16 and reserved evaluation
+  on inst17, inst18, inst20, inst19. Prior
+  `analysis/coverage-team-cc9c34b751`, output
+  `analysis/coverage-team-3bfc36c36b`, log
+  `analysis/coverage-layout-free-158952-drive-d.log`. Headroom at
+  launch 13.15 GiB RAM and 18.18 GiB free. Production checkpoint
+  hash matched. The 35% consistency goal remains open.
+
 - Seed 156952 finished at 02:55 Central. The repaired sampled policy
   completed two observed pending world drags and cancelled two other
   pending gestures before its 7.57% retry. The opening wave completed
