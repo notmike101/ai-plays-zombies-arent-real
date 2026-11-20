@@ -2,6 +2,28 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:28 Central, the second shelter-cost training round finished.
+  Baseline retries scored 9.15% and 1.45%; stronger cost 4.51%
+  and 6.88%. All eight scores so far are below 10% and all eight
+  got zero breach penalty. Native preparation receipts show a
+  safe zone built then undone on inst13 and one zone with zero
+  civilians inside at READY on inst14. The third round is now
+  running under PID 54556 (inst13 71952, inst14 74224, inst15
+  74148, inst16 70660). Actual native speed receipts show 4 under
+  both arms, the speed_2 (2x target) setting.
+- Staged and tested a shorter boot with guarded standard-warmup
+  fallback for future private breach comparisons, plus native
+  shelter coverage at READY, selected and paid placements, and
+  cast receipt summaries. All 312 isolated script tests passed,
+  including the simulated fast-boot fallback. Patch applies
+  cleanly (analysis/coverage-portable314/tmp/breach-comparison-boot-and-receipts.patch).
+  It has not been deployed and has no live throughput measurement.
+- Archived layout-free zone-population targeting trials covered a
+  median 28.95% initially across 189 distinct policy/revision/seed
+  rows. Their official mean was 10.77% and only two observed wins
+  reached 35%. Coverage can expose the reward signal but cannot
+  substitute for defending occupied shelters or for official saves.
+
 - At 12:25 Central, shelter-cost study 193952 completed round zero
   and atomically saved the two private policies and Adam states.
   The starting policy was identical and the four native outbreaks
@@ -44,7 +66,7 @@
   script tests passed. Private real-game PPO study 193952 is running
   from frozen base 8a691469a829158d under PID 54556, with results under
   analysis/coverage-breach-cost-705d104768. Compare existing 0.10 and
-  experimental 0.30 occupied-exposure costs at normal game speed for
+  experimental 0.30 occupied-exposure costs at the same fixed speed for
   16 training games on inst13-16 and eight frozen attempts on reserved
   inst19/20. Both arms use native unlock timing and the same continuous
   saved-fraction reward. Official evaluation, Observatory and the
