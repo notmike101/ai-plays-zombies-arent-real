@@ -2,14 +2,22 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
-- At 17:44 Central, phase balance 216952 checkpointed two rounds.
-  All eight games entered battle and retried. Neither arm had
-  civilians sheltered at READY. Round 1 had no closed shelter,
-  6-8 planning decisions per game, $3021-$3111 unspent and no
-  confirmed battle spends. The standard arm assigned roughly
-  3% of episode loss weight to planning that round and the
-  balanced arm 50%. This verifies delivered weighting and
-  early sparse preparation. Round 2 live under PID 61372.
+- At 17:47 Central, phase balance 216952 checkpointed three
+  rounds. All 12 games entered battle and retried. Neither arm
+  had civilians sheltered at READY. Round 1 and 2 had no closed
+  shelters, 6-11 planning decisions per game, $2937-$3111 unspent,
+  and one confirmed battle spend across the eight games. The
+  balanced arm still assigns 50% of each mixed episode's loss
+  weight to planning. Fourth batch live under PID 61372.
+- Across 68 distinct native training outbreaks with known
+  READY coverage in completed duration and occupancy-input runs
+  and the first three phase-balance rounds, 40 had no closed
+  shelter, 19 had only empty closed shelters and nine had
+  positive coverage. The duration run's uncommitted round was
+  excluded after its restart. These are adaptive discovery
+  counts. Shelter defense credit is limited by preparation
+  rarely producing an occupied shelter.
+
 - Audited 32 private comparison journals by exact policy ID
   and distinct native outbreak. Retained schema-4 policy
   1c3be633f44497fc had two occupied READY batches across four
