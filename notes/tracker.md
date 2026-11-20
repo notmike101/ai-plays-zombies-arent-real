@@ -2,6 +2,40 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- First two rounds of split-CPU duration 214952 had eight
+  retries, and roughly 7-8% of their decisions were planning.
+  Legal casts appeared in three battles; two before first
+  outnumbered. Three native spends, zero occupied READY starts.
+  Faster decisions cannot supply an unpurchased or late ability.
+- Passive occupancy audit on occupied game PID 75040 preserved
+  four frames where exact native polygon occupancy was 1581.
+  Multiplying the policy's coarse civilian grid by the shelter
+  center mask estimated 1021-1502 despite equal exact count.
+  One outbreak only. Candidate for explicit exact occupancy
+  input with compatible private migration and held-out test.
+  Source analysis/coverage-portable314/tmp/occupancy-214952.jsonl.
+- At 17:01, original split study PID 69524 exited after a
+  repeated payload-map reader error at RVA 0x650988. The
+  unfinished round did not update Adam or either model. Its
+  paired.pt holds next_round=2 and eight completed records.
+  Resumed with the same exact config under PID 35716 (17:02:26)
+  and a bounded read-only reader diagnostic. New journal
+  analysis/coverage-shelter-duration-db66164c99; original
+  analysis/coverage-shelter-duration-0e7fdfc762 retained.
+  At 17:04, round 2 checkpointed with four retries and verified
+  candidate credit .0985007324 for 80199.30 civilian-seconds.
+  Baseline measured 42806.47 without extra reward. Candidate
+  first outnumbered 39.80 sim seconds and retried at 9.79%.
+  No payload refusal on the resumed round, underlying cause
+  unverified. Fourth batch active. Production/Observatory intact.
+- Staged phase loss-weight journal and shelter diagnostics for
+  the existing private equal-phase PPO comparison. 57 focused
+  tests passed against the stage. Apply check passed for
+  analysis/coverage-portable314/tmp/phase-credit-214952/
+  phase-loss-ledger.patch SHA256 F1C3B8EE034721D52521B0B6A742061AA8D12C9094C6A113D4345E61FF2FBA68.
+  Report configured per-episode weight mass separately from
+  action counts, optimizer effects and official outcomes.
+
 - 213952 completed all 16 frozen timing trials at stock 1x.
   Eight native outbreaks repeated exactly across the two CPU
   arrangements; all ended at retry. Shared 212 decisions over
