@@ -2,6 +2,23 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 165952 started at 04:34 Central, portable D: trainer PID 53252,
+  output `analysis/coverage-team-c31b6d0999` and log
+  `analysis/coverage-layout-free-165952-drive-d.log`. Launch headroom
+  12.94 GiB RAM and 18.84 GiB free. Two discovery waves compare the same
+  learned plan, weight and building-specific reach with and without the
+  occupied-shelter first-shot preference. It affects placement scores
+  when the resolved outside first-shot delay is positive. Legal options
+  and reward evaluation are preserved. Commit 9188555. All 261 script
+  tests passed. Production checkpoint hash verified at launch.
+- Seed 164952 drained at 04:34 Central with eight scored retries, no
+  native wins, and no reserved evaluation. First-corner 73b85480651905dc
+  moved the second rectangle. Native initial sheltering fell from 28.95%
+  to 19.21%, and retry was at 9.59% on seed 1317865041. Provisional parent
+  6a41db6d3b08aef0 retried at 8.24% and 8.95%, so its 10.19% native win
+  remains unreplicated. No candidate reached the 35% gate. At the next
+  launch all owned debug-dump directories had zero loose .state files.
+
 - Seed 164952 started at 04:23 Central on D:, portable trainer PID
   9476, output `analysis/coverage-team-8469fed87e`, log
   `analysis/coverage-layout-free-164952-drive-d.log`. Headroom at launch
