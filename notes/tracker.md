@@ -2,6 +2,34 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 14:47 Central, completed the signal-coverage pilot 202952
+  in analysis/coverage-ready-shortfall-3c0cb78f9f. Valid READY
+  receipts matched the configured reward in all 18 training
+  battles that reached READY. Penalty activated in five
+  candidate battles and zero baseline battles. Occupied
+  starts and breaches were four baseline, three candidate.
+  Training means 5.64% over ten and 6.78% over eight. Six
+  distinct fresh frozen retries averaged 8.54% over four
+  baseline and 8.72% over two candidate. Two other candidate
+  attempts timed out in planning. Zero eligible natural
+  finishes. Signal function established; gameplay improvement
+  unproven. Frozen candidate a8b8bbf69bbaefed had one occupied
+  reserve start, chosen only as the next private training source.
+- Deployed reward-rate verification a86700b after natural
+  exit of 202952. It checks applied components against the
+  expected and reference rates for the same native receipt.
+  337 isolated script tests passed. Started comparison
+  203952 under PID 6692, baseline cost .10 and candidate .30
+  with identical exploration settings. Private data
+  analysis/coverage-shelter-defense-2f1aad336c, console
+  analysis/coverage-signal-breach-203952-drive-d.log. First
+  four calibrated games inst13 9280, inst14 62820, inst15
+  46992, inst16 70840, launched with ZAR_MODEL_ONLY_INPUT=1.
+  Observatory listener PID 21012 was verified from the
+  approved host process check. Production checkpoint matched.
+  Preserve the report's distinction between no coverage,
+  missing receipts, verified treatment and frozen performance.
+
 - At 14:10 Central, completed 200952 and started private entropy
   study 201952 from 7753268e22cc7823. All eight 200952 frozen
   battles were fresh retry outcomes, averaging 7.86% baseline
