@@ -167,7 +167,19 @@ def cast_candidate(trial,rng):
     first=levels[0]
     if first.get('start_kind')!='fresh' or first['stage']!=1:return None
     actions=first.get('battle_actions',{})
-    if actions.get('cast_available',0)<10 or actions.get('cast_sampled')!=0:return None
+    if actions.get('cast_available',0)<10:
+        return None
+    if actions.get('cast_sampled'):
+        deployments = actions.get('logged_deployments') or []
+        times = actions.get('deploy_sim_seconds') or []
+        saved = first.get('saved')
+        # Only native deployment receipts can establish a burst of casts.
+        if (not isinstance(saved, (int, float)) or not 0 <= saved < .35
+                or actions.get('stock_decreased', 0) < 3
+                or len(deployments) < 3 or len(set(deployments[:3])) != 1
+                or len(times) < 3 or not all(isinstance(t, (int, float)) for t in times[:3])
+                or not 0 <= times[0] <= times[1] <= times[2] <= times[0] + 3):
+            return None
     child=deepcopy(trial['team'])
     child['cast_timing']=[float(rng.uniform(.5,7.)),float(rng.uniform(.5,6.))]
     return child
@@ -818,6 +830,7 @@ def main():
         evidence={}
         prices={}
         defenders = {}
+        resumed_cast_probe = None
         discovery_seeds = set()
         resume_directory = args.seed_from or args.continue_layout_free
         if resume_directory and (resume_directory/'fitness.json').exists():
@@ -844,6 +857,9 @@ def main():
                     discovery_seeds.add(observed_seed)
                 if trial.get('view_revision')==view_revision:
                     fitness.record(evidence,trial)
+                    if (proposal is not None and resumed_cast_probe is None
+                            and trial.get('team') == proposal):
+                        resumed_cast_probe = cast_candidate(trial, rng)
                     if args.continue_layout_free and has_defense_evidence(trial):
                         defender = checkpoint_team(dict(base=base, team_id=trial['team_id'],
                                                         team=trial['team']), base)
@@ -868,6 +884,8 @@ def main():
                 population[1] = defender
             population[-1] = (defense_duration_candidate(defense_trial, rng)
                               or planning_scale_candidate(defender, rng))
+        if resumed_cast_probe is not None:
+            population[-1] = resumed_cast_probe
         if prior and not (args.compare_forecast or args.compare_speed):
             previous=args.seed_from/'provisional.json'
             if previous.is_file():

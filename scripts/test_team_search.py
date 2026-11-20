@@ -276,6 +276,26 @@ class SearchTests(unittest.TestCase):
         first.update(start_kind='next_level',stage=2)
         self.assertIsNone(search.cast_candidate(trial,rng))
 
+    def test_cast_timing_explores_confirmed_rapid_casts_after_a_scored_loss(self):
+        rng = np.random.default_rng(47)
+        team = search.random_team(rng)
+        actions = dict(cast_available=15, cast_sampled=15, stock_decreased=4,
+                       logged_deployments=['demolition']*3+['fire_bomb'],
+                       deploy_sim_seconds=[21.27, 22.1, 23.17, 30.7])
+        row = dict(stage=1, start_kind='fresh', saved=.0544, battle_actions=actions)
+        trial = dict(team=team, levels=[row])
+        child = search.cast_candidate(trial, rng)
+        child.pop('cast_timing')
+        self.assertEqual(child, team)
+        row['saved'] = None
+        self.assertIsNone(search.cast_candidate(trial, rng))
+        row['saved'] = .0544
+        actions['stock_decreased'] = 2
+        self.assertIsNone(search.cast_candidate(trial, rng))
+        actions['stock_decreased'] = 4
+        actions['deploy_sim_seconds'][2] = 29
+        self.assertIsNone(search.cast_candidate(trial, rng))
+
     def test_contextual_cast_timing_responds_only_to_legal_cells(self):
         team=search.random_team(np.random.default_rng(7))
         base=search.TeamPolicy(team)
