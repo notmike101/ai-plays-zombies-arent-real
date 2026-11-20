@@ -2,6 +2,29 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:31 Central, recovered shelter study 198952 after a
+  second native map-read error exhausted the pair retry. The
+  original process 64444 exited at paired next_round 1. Resume
+  operator 1812 used the original seed, copies, run arguments,
+  both private Adam states and retained seen outbreaks. Data
+  analysis/coverage-shelter-defense-1fbda1a418, console
+  analysis/coverage-shelter-defense-198952-resume1-drive-d.log.
+  The replayed round completed cleanly and checkpointed both
+  arms at next_round 2. Baseline saved 9.20% and 8.24%; stronger
+  cost 5.87% and a natural 0% loss. No occupied coverage; third
+  round launched. Original interrupted attempts are retained
+  and excluded from scored training aggregates.
+- Staged an isolated READY shortfall comparison. With a valid
+  native READY receipt, the candidate pays up to 0.15 at zero
+  starting civilian coverage, tapering to zero at 5%. Either
+  an empty zone or no zone gives the same penalty. Missing
+  receipts get zero, and masks, official outcomes, base shelter
+  credit and breach cost stay equal across arms. All 324
+  isolated tests passed, applicability checked. D: patch
+  analysis/coverage-portable314/tmp/ready-coverage-shortfall-study.patch
+  SHA256 786514DE42CA2F0C216B9CF2988E0732E135DF599EA86763B9D7A764986FB319.
+  Existing breach experiment continues before any deployment.
+
 - At 13:29 Central, audited native starting coverage in 1,119
   scored fresh L1 archive entries deduplicated by team, view
   revision and outbreak. No zones: 39, mean 11.61%, 34 below
