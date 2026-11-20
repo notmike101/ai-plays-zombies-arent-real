@@ -63,6 +63,22 @@ class FreshEvidence(unittest.TestCase):
             self.record(self.c,self.row(seed,.1))
         self.assertIs(fitness.promote(self.data,self.c,self.a),self.a)
 
+    def test_l1_proposals_distinguish_failed_battles_without_promoting_them(self):
+        self.record(self.a, dict(self.row(1, .099), end='aborted', score=[0, 0, 0, .13]))
+        self.record(self.c, dict(self.row(2, .094), end='aborted', score=[0, 0, 0, .32]))
+        rank = lambda team: fitness.l1_proposal_rank(self.data, team)
+        self.assertGreater(rank(self.c), rank(self.a))
+        key = fitness.prefix_id(self.c, 1)
+        self.data[key]['seed/2'] = self.data[key]['seed/2'][:3]
+        self.assertLess(rank(self.c), rank(self.a))
+        self.record(self.c, dict(self.row(2, .094), end='aborted', score=[0, 0, 0, .32]))
+        self.assertGreater(rank(self.c), rank(self.a))
+        self.assertEqual(fitness.stats(self.data, self.c, 1)['starts'], 1)
+        self.assertIs(fitness.promote(self.data, self.c, self.a), self.a)
+        self.record(self.a, dict(self.row(3, .23), score=[0, 1, .23, .19]))
+        self.assertGreater(rank(self.a), rank(self.c))
+        self.assertEqual(fitness.stats(self.data,self.a,1)['wins'], 0)
+
     def test_holdout_needs_complete_arms_and_two_distinct_qualifying_outbreaks(self):
         rows=[dict(arm=arm,levels=[self.row(i,value)]) for i,(arm,value) in enumerate(
             [('candidate',.39),('incumbent',.18),('candidate',.37),('incumbent',.36)])]

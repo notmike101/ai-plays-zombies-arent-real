@@ -679,6 +679,7 @@ def main():
                                              defense_weight=float(rng.uniform(.08,.22)))
         base=tr.policy_id(net)
         view_revision='playable-overview-v3-bounded-targets-shelter-v2-specials-v1-retries-v1'
+        explore_without_layout = not args.demonstration and not (prior or {}).get('layout')
         evidence={}
         prices={}
         if args.seed_from and (args.seed_from/'fitness.json').exists():
@@ -788,9 +789,13 @@ def main():
                 if not valid_candidates:raise RuntimeError('No valid candidates this generation; inspect trials')
                 ranked=sorted(archive,key=lambda k:fitness.ranking(evidence,archive[k]),reverse=True)
                 def l1_rank(key):
+                    if explore_without_layout:
+                        return fitness.l1_proposal_rank(evidence, archive[key])
                     outcomes=fitness.stats(evidence,archive[key],1)
                     return outcomes['lower'],outcomes['objective']
                 l1_ranked=sorted(archive,key=l1_rank,reverse=True)
+                if explore_without_layout and not args.allow_progression:
+                    ranked = l1_ranked
                 leader=archive[l1_ranked[0]]
                 report=fitness.stats(evidence,leader,1)
                 print('fresh L1 leader',team_id(leader),report,flush=True)

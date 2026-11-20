@@ -21,8 +21,17 @@ def record(evidence,trial):
         won=row['end']=='won' and row['saved'] is not None and row['saved']>=.35
         samples=evidence.setdefault(prefix_id(team,stage),{})
         cost=row.get('outside_playarea_actions',0)*row.get('playarea_cost',0.)
-        value=[won,row['saved'] or 0.,cost-row.get('shelter_objective',0.)-row.get('special_objective',0.)]
-        samples[sample]=min(samples.get(sample,value),value)
+        score = row.get('score') or ()
+        area = score[3] if isinstance(score, (tuple, list)) and len(score) >= 4 else 0.
+        if not isinstance(area, (int, float)) or not math.isfinite(area) or not 0 <= area <= 1:
+            area = 0.
+        value=[won,row['saved'] or 0.,cost-row.get('shelter_objective',0.)-row.get('special_objective',0.),
+               row['end']=='won' and row['saved'] is not None,area]
+        previous = samples.get(sample, value)
+        # Refresh a legacy record with the same official outcome from its full trial.
+        if len(previous) < len(value) and previous == value[:len(previous)]:
+            previous = value
+        samples[sample] = min(previous, value)
         if not won:break
 
 
@@ -37,6 +46,17 @@ def stats(evidence,team,stage):
     mean=sum(row[1] for row in samples.values())/n
     costs=sum(row[2] for row in samples.values() if len(row)>2)/n
     return dict(starts=n,wins=wins,lower=max(0.,lower),mean=mean,objective=mean-costs)
+
+
+def l1_proposal_rank(evidence, team):
+    """Give failed L1 battles a search signal while keeping official wins first."""
+    summary = stats(evidence, team, 1)
+    samples = evidence.get(prefix_id(team, 1), {}).values()
+    has_win = any(len(row) >= 5 and row[3] for row in samples)
+    if summary['wins'] or has_win:
+        return summary['lower'], True, summary['objective'], 0.
+    area = math.fsum(row[4] for row in samples if len(row) >= 5)
+    return 0., False, area / max(1, summary['starts']), summary['objective']
 
 
 def replication_candidate(evidence, candidates, already_scheduled):
