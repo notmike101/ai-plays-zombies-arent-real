@@ -1,6 +1,12 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 18:32 Central. Queued six-copy fixed-plan shadow comparison
+  seed 138952 behind active production seed 138851. Handoff PID 55736 holds
+  the supervisor marker until production exits normally, checks headroom,
+  deploys the staged native combat receipts and comparison mode, and restores
+  regular search after capture. Frozen predictor evaluation uses prior
+  inst13–16 labels and newly captured inst17–18 outcomes.
 - 2026-11-19 Central. Status audit: production seed 136851 active on six
   copies, frozen base 8a691469a829158d. Incumbent 230c8ceb72a1b1a3
   had 28 qualifying starts of 42 at 37.15% mean in the fresh search ledger.
