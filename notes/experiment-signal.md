@@ -24,7 +24,10 @@ with limited history.
    Exploration studies compare the sampled masked distribution with the same logits and legal mask at
    temperature 1 and count actual changes. Optimizer comparisons record
    decision conditions that activate the extra planning entropy or phase
-   weighting. Spatial comparisons record when the location head had a
+   weighting. Target-settle studies verify the one-frame wait during a
+   dispatched model-selected single-click building cast. A stock decrease or native
+   deploy remains separate evidence of execution. Spatial comparisons
+   record when the location head had a
    choice. They do not measure a same-state architecture contrast.
 3. **Can gameplay outcomes be compared?** The frozen report counts distinct
    fresh native outbreaks with an official natural finish for each frozen

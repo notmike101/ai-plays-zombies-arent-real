@@ -86,6 +86,14 @@ class SignalTests(unittest.TestCase):
                    experiment_signal=dict(distributions={'zone_cells': signal}))
         self.assertEqual(self.report('zone_exploration', [row])['advisory'], 'treatment_observed')
 
+    def test_target_settle_requires_an_executed_snapped_cast_with_the_frame_wait(self):
+        rows = self.rows({'snapped_cast': True, 'target_pointer_settled': False}, {})
+        self.assertEqual(self.report('target_settle', rows)['advisory'], 'mechanism_without_treatment')
+        rows[-1]['experiment_signal']['receipts'] = {'snapped_cast': True, 'target_pointer_settled': True}
+        report = self.report('target_settle', rows)
+        self.assertEqual(report['advisory'], 'treatment_observed')
+        self.assertEqual(report['arms']['candidate']['treatment_episodes'], 1)
+
     def test_spatial_head_activity_does_not_claim_measured_ab_difference(self):
         report = self.report('spatial', self.rows({'spatial_cells': True}, {}))
         self.assertEqual(report['advisory'], 'architecture_exercised_distribution_difference_unmeasured')

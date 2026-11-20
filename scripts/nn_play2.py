@@ -781,6 +781,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         distribution_signal = dict(choices=0, changed=0, variation=0.)
         planning_entropy_observed = False
         spatial_cells_observed = False
+        snapped_cast_attempts = settled_cast_attempts = 0
         planning_zone_audit = options.get('planning_zone_audit', False)
         if planning_zone_audit:
             rows['planning_action_windows'] = []
@@ -877,7 +878,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             update_outside_retries(st,env.cw,env.ch)
             st['placement_blocked'] = blocked_placement_cells(st, placement_retry_at, len(rows['obs']))
             update_geometry_masks(st, env.cw, env.ch, placement_feedback=placement_feedback,
-                                  planning_audit=planning_zone_audit, battle_audit=signal_mode == 'battle_tools')
+                                  planning_audit=planning_zone_audit,
+                                  battle_audit=signal_mode in ('battle_tools', 'target_settle'))
             mu, mc = masks_for(st)
             if debt_cancel_retry is not None:
                 balance, deadline = debt_cancel_retry
@@ -1138,7 +1140,13 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                                 missile_receipt.update(world=world[0].tolist(),
                                                        civilians=int(counts[0, 0]), zombies=int(counts[1, 0]),
                                                        shelter_overlap=bool(risk[0]) if risk is not None else None)
-                        env.cast(slot['key'], *points[0])
+                        snapped = u in st.get('battle_targets', {})
+                        if snapped and options.get('settle_cast_target'):
+                            env.cast(slot['key'], *points[0], settle_target=True)
+                            settled_cast_attempts += 1
+                        else:
+                            env.cast(slot['key'], *points[0])
+                        snapped_cast_attempts += int(snapped)
                     slot['charges'] = env.battle_stock()[slot['name']]
                     if drag_receipt is not None:
                         drag_receipt.update(decision_sim=st['sim'], start=list(start_xy), end=list(end_xy),
@@ -1338,7 +1346,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     missile_civilian_loss=missile_losses['confirmed'] > 0 if missile_losses is not None else None,
                     planning_entropy=planning_entropy_observed,
                     phase_balance=planning_steps > 0 and battle_steps > 0 and planning_steps != battle_steps,
-                    spatial_cells=spatial_cells_observed),
+                    spatial_cells=spatial_cells_observed,
+                    snapped_cast=bool(snapped_cast_attempts),
+                    target_pointer_settled=bool(settled_cast_attempts)),
                 reward_components=rewards.copy(),
                 reward_bases=dict(
                     occupied_breach=-shelter.breach_exposures / civ0 if shelter.next_sample else None,

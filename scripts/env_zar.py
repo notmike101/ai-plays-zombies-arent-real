@@ -527,7 +527,7 @@ class ZAREnv:
         raise ZAREnvError('Could not confirm planning after retry/continue')
 
     # ---------------- actions ----------------
-    def cast(self, bar_key, cx, cy):
+    def cast(self, bar_key, cx, cy, *, settle_target=False):
         """Select battle-bar deployable (hotkey char) and click at client px."""
         import ctypes
         if len(bar_key) != 1 or not bar_key.isascii() or not bar_key.isalnum():
@@ -535,8 +535,15 @@ class ZAREnv:
         vk = ord(bar_key.upper())
         sc = ctypes.windll.user32.MapVirtualKeyW(vk, 0)
         self._arm(vk, sc)
-        self.vi.click(cx, cy)
         from game_controls import Controls
+        if settle_target:
+            controls = Controls(self)
+            self.vi.move_to(cx, cy)
+            controls.frames(1)
+            self.vi.click()
+            controls.frames()
+            return
+        self.vi.click(cx, cy)
         Controls(self).frames()
 
     # ---------------- planning actions (pre-READY) ----------------

@@ -357,6 +357,37 @@ class StateTests(unittest.TestCase):
                     self.assertTrue(options['planning_zone_audit'])
                     self.assertEqual(options.get('planning_tool_temperature'), 1.35 if training else None)
 
+    def test_snapped_cast_settles_the_selected_target_before_one_click(self):
+        import ctypes
+        from types import SimpleNamespace
+        from unittest.mock import Mock, call
+        actions = Mock()
+        env = SimpleNamespace(_arm=actions.arm, vi=actions.vi)
+        win = SimpleNamespace(user32=SimpleNamespace(MapVirtualKeyW=lambda vk, mode: 2))
+        with patch.object(ctypes, 'windll', win, create=True), \
+                patch('game_controls.Controls', return_value=actions.controls):
+            env_zar.ZAREnv.cast(env, '1', 120, 300, settle_target=True)
+            self.assertEqual(actions.mock_calls, [call.arm(49, 2), call.vi.move_to(120, 300),
+                                                  call.controls.frames(1), call.vi.click(), call.controls.frames()])
+            actions.reset_mock()
+            env_zar.ZAREnv.cast(env, '1', 120, 300)
+            self.assertEqual(actions.mock_calls, [call.arm(49, 2), call.vi.click(120, 300),
+                                                  call.controls.frames()])
+
+    def test_target_settle_comparison_varies_only_execution_timing(self):
+        import compare_spatial as comp
+        with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \
+                patch.object(comp.zar_boot, 'stop'), patch.object(train, 'run_episode') as run:
+            for training in (True, False):
+                options = []
+                for arm, settles in comp.TARGET_SETTLE.items():
+                    comp.episode(('inst13', arm, {}, 123, 'test', training))
+                    settings = run.call_args.args[0][4].copy()
+                    self.assertEqual(settings.pop('settle_cast_target'), settles)
+                    self.assertEqual(settings['experiment_signal'], 'target_settle')
+                    options.append(settings)
+                self.assertEqual(*options)
+
     def test_battle_temperature_comparison_uses_one_treatment_during_training_only(self):
         import compare_spatial as comp
         with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \

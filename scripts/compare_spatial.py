@@ -46,6 +46,7 @@ READY_CREDITS = {'coverage_baseline': 0., 'coverage_credit': .30}
 ZONE_TEMPERATURES = {'zone_baseline': 1., 'zone_exploration': 1.5}
 PLANNING_TEMPERATURES = {'planning_baseline': 1., 'planning_exploration': 1.35}
 BATTLE_TEMPERATURES = {'battle_baseline': 1., 'battle_exploration': 1.5}
+TARGET_SETTLE = {'target_baseline': False, 'target_settle': True}
 PLANNING_ENTROPY_BONUSES = {'entropy_baseline': 0., 'planning_entropy': .045}
 DEFENSE_COSTS = {'defense_baseline': trainer.BREACH_COST,
                  'defense_stronger': 3 * trainer.BREACH_COST}
@@ -55,7 +56,9 @@ READY_SHORTFALL_COSTS = {'shortfall_baseline': 0., 'shortfall_penalty': .15}
 def episode(job, *, observe=False, audit_signal=False):
     copy, arm, weights, seed, tag, *phase = job
     battle_study = arm in BATTLE_TEMPERATURES
-    planning_study = arm in PLANNING_TEMPERATURES or arm in PLANNING_ENTROPY_BONUSES or battle_study
+    target_study = arm in TARGET_SETTLE
+    planning_study = (arm in PLANNING_TEMPERATURES or arm in PLANNING_ENTROPY_BONUSES
+                      or battle_study or target_study)
     try:
         copy_dir = operator.owned_copy(copy)
         env = None
@@ -74,8 +77,11 @@ def episode(job, *, observe=False, audit_signal=False):
         options = dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')
         if observe:
             options['observer_interval'] = 1.
-        if battle_study or audit_signal:
-            options['experiment_signal'] = ('battle_tools' if battle_study else
+        if target_study:
+            options['settle_cast_target'] = TARGET_SETTLE[arm]
+        if battle_study or target_study or audit_signal:
+            options['experiment_signal'] = ('target_settle' if target_study else
+                                            'battle_tools' if battle_study else
                                             'planning_tools' if arm in PLANNING_TEMPERATURES else
                                             'zone_cells' if arm in ZONE_TEMPERATURES else
                                             'planning_entropy' if arm in PLANNING_ENTROPY_BONUSES else
@@ -240,6 +246,8 @@ def main():
                             help='Broaden model-selected safe-zone cells during private training only')
     comparison.add_argument('--compare-planning-exploration', action='store_true',
                             help='Broaden legal tool sampling during private preparation training')
+    comparison.add_argument('--compare-target-settle', action='store_true',
+                            help='Wait one UI frame at the model-selected single-click building target before clicking')
     comparison.add_argument('--compare-battle-exploration', action='store_true',
                             help='Broaden legal tool probabilities only when battle abilities can be used')
     comparison.add_argument('--compare-planning-entropy', action='store_true',
@@ -262,7 +270,7 @@ def main():
             or set(evaluation_copies).intersection(copies)):
         parser.error('Evaluation copies must be distinct, paired and disjoint from training')
     planning_study = (args.compare_planning_exploration or args.compare_planning_entropy
-                      or args.compare_battle_exploration)
+                      or args.compare_battle_exploration or args.compare_target_settle)
     coverage_study = (args.compare_ready_coverage or args.compare_zone_exploration
                       or planning_study or args.compare_shelter_defense
                       or args.compare_ready_shortfall)
@@ -293,6 +301,7 @@ def main():
         if paired_weights:
             labels = (tuple(READY_SHORTFALL_COSTS) if args.compare_ready_shortfall else
                       tuple(DEFENSE_COSTS) if args.compare_shelter_defense else
+                      tuple(TARGET_SETTLE) if args.compare_target_settle else
                       tuple(BATTLE_TEMPERATURES) if args.compare_battle_exploration else
                       tuple(PLANNING_ENTROPY_BONUSES) if args.compare_planning_entropy else
                       tuple(PLANNING_TEMPERATURES) if args.compare_planning_exploration else
@@ -334,6 +343,10 @@ def main():
         if args.compare_planning_exploration:
             config.update(comparison='planning_exploration', fixed_speed='speed_2',
                           ready_coverage_credit=.30, training_tool_temperature_by_arm=PLANNING_TEMPERATURES)
+        if args.compare_target_settle:
+            config.update(comparison='target_settle', fixed_speed='speed_2', ready_coverage_credit=.30,
+                          training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
+                          settle_cast_target_by_arm=TARGET_SETTLE)
         if args.compare_battle_exploration:
             config.update(comparison='battle_exploration', fixed_speed='speed_2', ready_coverage_credit=.30,
                           training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
@@ -375,6 +388,7 @@ def main():
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
         experiment = ('ready-shortfall' if args.compare_ready_shortfall else
                       'shelter-defense' if args.compare_shelter_defense else
+                      'target-settle' if args.compare_target_settle else
                       'battle-exploration' if args.compare_battle_exploration else
                       'planning-entropy' if args.compare_planning_entropy else
                       'planning-exploration' if args.compare_planning_exploration else
