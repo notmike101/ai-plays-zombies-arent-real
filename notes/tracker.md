@@ -2,6 +2,45 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:54 Central, Observatory visibility restored for private
+  comparisons (f5d1ca4). Prior workers explicitly disabled policy
+  telemetry and the game inventory omitted compare_spatial.py.
+  Restarted only the Observatory after study 199952 finished;
+  D: listener PID 21012, created 1795204440.983753, port 8765.
+  Tests: 325 scripts, 61 Observatory, exact recurrent policy
+  parity and graph assertions. Fresh events and all four runtime
+  files verified live, with 4,889 input labels and no warning.
+  Selected inst13 game 64108/worker 42260 matched a live HTTP
+  200 fragmented MP4 with initialization and media data. The
+  immediate thumbnail request returned waiting during capture.
+
+- At 13:54 Central, started private study 200952 under PID
+  40184 with --observe (up to 1 Hz per worker). Tests whether
+  broader preparation sampling helps when both arms start from
+  the original 8a691469a829158d policy and Adam, avoiding
+  further training on the poor shelter-study descendants.
+  Six training rounds, four frozen reserve pairs, all strategy
+  chosen by the model. First games inst13 64108, inst14 72036,
+  inst15 72764, inst16 72660 all verified native protocol 3
+  model_only=1. Data analysis/coverage-planning-exploration-44ab24afdc,
+  log analysis/coverage-planning-observed-200952-drive-d.log.
+  Production checkpoint hash matched; active game count remains
+  within the same four training and two reserve copy schedule.
+
+- At 13:53 Central, READY shortfall study 199952 finished.
+  Candidate received the full 0.15 cost in 10 training games,
+  zero in the one occupied start and the one planning timeout.
+  Both arms had just one occupied start during training (19.68%
+  coverage, same native geometry, different outbreaks), both
+  breached. Baseline scored 3.44% averaged over 12 training
+  scores; candidate 4.79% over 11. All eight frozen attempts
+  went to retry with zero coverage. Four raw scores per arm
+  averaged 5.655% baseline and 6.822% penalty. Distinct fresh
+  scores excluding inherited, training and prior reserve seeds
+  averaged 7.86% baseline (two) and 7.05% penalty (three).
+  Frozen policies 3874fddd53858923 / 38d587c37655588d. Neither
+  meets the consistency gate. Keep the penalty experimental.
+
 - At 13:41 Central, study 198952 completed eight frozen reserve
   attempts. All hit the retry floor and none counted as a natural
   finish. One baseline attempt overlapped an inherited outbreak.
