@@ -19,8 +19,10 @@ class StateTests(unittest.TestCase):
         paired = [{'saved_frac': .31}, {'saved_frac': .34}]
         pool.map.side_effect = [[{'saved_frac': .3}, {'err': 'Native map changed during read'}], paired]
         with tempfile.TemporaryDirectory() as directory:
-            self.assertEqual(collect_pairs(pool, jobs, Path(directory)), paired)
+            self.assertEqual(collect_pairs(pool, jobs, Path(directory), observe=True), paired)
             self.assertEqual(pool.map.call_args.args[1], jobs)
+            self.assertEqual(pool.map.call_args.args[0].keywords, {'observe': True})
+            self.assertIs(pool.map.call_args_list[0].args[0], pool.map.call_args.args[0])
             self.assertIn('Native map changed', (Path(directory)/'interface-retries.jsonl').read_text())
 
     def test_private_ppo_preserves_boot_failure_without_returning_a_score(self):
@@ -234,13 +236,14 @@ class StateTests(unittest.TestCase):
             (root/'analysis').mkdir()
             trials = []
 
-            def collect(pool, jobs, run):
+            def collect(pool, jobs, run, *, observe):
+                self.assertTrue(observe)
                 trials.append(jobs)
                 (run/'stop-after-round').touch()
                 return [dict(end='lost', saved_frac=.0, start_kind='fresh', outbreak={'seed': seed})
                         for seed in (17, 29)]
 
-            with patch('sys.argv', ['compare_spatial','--copies','a','b','--train-rounds','3']), \
+            with patch('sys.argv', ['compare_spatial','--copies','a','b','--train-rounds','3','--observe']), \
                     patch.object(comp.operator, 'ROOT', root), \
                     patch.object(comp.operator, 'training_lock', return_value=nullcontext()), \
                     patch.object(comp.operator, 'inventory', return_value=[]), \
@@ -307,6 +310,17 @@ class StateTests(unittest.TestCase):
                     self.assertNotIn('occupied_breach_cost', options)
                     self.assertTrue(options['planning_zone_audit'])
                     self.assertEqual(options.get('planning_tool_temperature'), 1.35 if training else None)
+
+    def test_private_observer_is_opt_in_and_throttled(self):
+        import compare_spatial as comp
+        with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \
+                patch.object(comp.zar_boot, 'stop'), patch.object(train, 'run_episode') as run:
+            job = ('inst13', 'shortfall_baseline', {}, 123, 'test', True)
+            comp.episode(job)
+            self.assertFalse(run.call_args.kwargs['telemetry'])
+            comp.episode(job, observe=True)
+            self.assertTrue(run.call_args.kwargs['telemetry'])
+            self.assertEqual(run.call_args.args[0][4]['observer_interval'], 1.)
 
     def test_reserved_ppo_copies_refuse_overlap_before_taking_lock(self):
         import compare_spatial

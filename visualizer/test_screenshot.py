@@ -31,6 +31,20 @@ class Inventory:
 
 
 class ScreenshotTests(unittest.TestCase):
+    def test_comparison_games_require_the_owned_launcher(self):
+        from pathlib import Path
+        from game_inventory import GameInventory
+
+        root = Path(__file__).resolve().parent.parent
+        inventory = GameInventory(root)
+        def process(launcher_root):
+            parent = SimpleNamespace(cmdline=lambda: ['python', 'scripts/compare_spatial.py'],
+                                     cwd=lambda: str(launcher_root))
+            return SimpleNamespace(parents=lambda: [parent])
+
+        self.assertTrue(inventory.owns(process(root)))
+        self.assertFalse(inventory.owns(process(root / 'other')))
+
     def test_worker_diagram_tracks_selection_timeline_and_exit(self):
         import json
         from pathlib import Path

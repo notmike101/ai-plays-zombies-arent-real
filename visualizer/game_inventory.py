@@ -5,7 +5,7 @@ import time
 
 import psutil
 
-TRAINERS = {'team_search.py', 'train_run.py', 'nn_play2.py'}
+TRAINERS = {'team_search.py', 'train_run.py', 'nn_play2.py', 'compare_spatial.py'}
 
 
 class GameInventory:

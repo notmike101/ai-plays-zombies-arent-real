@@ -47,6 +47,7 @@ the higher-resolution JPEG thumbnail every two seconds. Video and thumbnails
 run independently of decisions and do not appear in replay. Freezing the view
 holds the displayed frame and stops media requests.
 Campaign search publishes every worker. Secondary workers publish up to once per second. Held-out workers use the lower rate.
+Private comparisons appear in Game view and can publish policy decisions at up to 1 Hz per worker with `--observe`.
 
 On Windows, install the optional Graphics Capture dependencies into the
 ignored runtime directory. The repository's Python environment supplies

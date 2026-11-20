@@ -8,6 +8,7 @@ import time
 import uuid
 from collections import Counter
 from copy import deepcopy
+from functools import partial
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -47,7 +48,7 @@ DEFENSE_COSTS = {'defense_baseline': trainer.BREACH_COST,
 READY_SHORTFALL_COSTS = {'shortfall_baseline': 0., 'shortfall_penalty': .15}
 
 
-def episode(job):
+def episode(job, *, observe=False):
     copy, arm, weights, seed, tag, *phase = job
     try:
         copy_dir = operator.owned_copy(copy)
@@ -65,6 +66,8 @@ def episode(job):
     try:
         policy = SpatialPolicy if arm == 'shared' else trainer.PolicyNet2
         options = dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')
+        if observe:
+            options['observer_interval'] = 1.
         if arm in ('standard', 'balanced'):
             options.update(fixed_speed='speed_1', fixed_clock=True)
         if arm in BREACH_COSTS:
@@ -91,13 +94,14 @@ def episode(job):
             if phase == [True]:
                 options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
         return trainer.run_episode((env.pid, weights, False, tag, options), policy_factory=policy,
-                                   telemetry=False)
+                                   telemetry=observe)
     finally:
         zar_boot.stop(env)
 
 
-def collect_pairs(pool, jobs, directory):
-    results = list(pool.map(episode, jobs))
+def collect_pairs(pool, jobs, directory, *, observe=False):
+    worker = partial(episode, observe=observe)
+    results = list(pool.map(worker, jobs))
     transient = ('Timed out waiting for UI frames', 'Stale native HUD frame',
                  'No consistent HUD observer frame', 'Native map changed during read',
                  'failed at injection: argument 1: OverflowError')
@@ -107,7 +111,7 @@ def collect_pairs(pool, jobs, directory):
         if errors and all(any(reason in error for reason in transient) for error in errors):
             with (directory/'interface-retries.jsonl').open('a') as f:
                 f.write(json.dumps(dict(pair=[job[4] for job in jobs[pair]], errors=errors))+'\n')
-            results[pair] = list(pool.map(episode, jobs[pair]))
+            results[pair] = list(pool.map(worker, jobs[pair]))
     return results
 
 
@@ -192,6 +196,8 @@ def main():
                             help='Compare breach costs with broader planning exploration in both training arms')
     comparison.add_argument('--compare-ready-shortfall', action='store_true',
                             help='Compare a capped penalty for low verified civilian shelter coverage at READY')
+    parser.add_argument('--observe', action='store_true',
+                        help='Publish read-only Observatory decisions at up to 1 Hz per worker')
     args = parser.parse_args()
     copies = args.copies
     if args.train_rounds < 1 or args.eval_rounds < 2 or args.eval_rounds % 2:
@@ -323,7 +329,7 @@ def main():
                     jobs.append((copy, arm, models[arm].state_dict(), args.seed+rnd*100+i//2,
                                  f'{tag}/{rnd}/{arm}/{copy}', training))
                 start = time.monotonic()
-                results = collect_pairs(pool, jobs, directory)
+                results = collect_pairs(pool, jobs, directory, observe=args.observe)
                 batch_seconds = time.monotonic() - start
                 policies = {arm: trainer.policy_id(net) for arm, net in models.items()}
                 for job, row in zip(jobs, results):
