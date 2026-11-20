@@ -236,12 +236,25 @@ class SearchTests(unittest.TestCase):
         candidate['refuge']['scale']=1.
         self.assertEqual(parent,candidate)
 
+    def test_batch_headroom_refusal_does_not_submit_any_game(self):
+        jobs = [('a', {}, None, 10), ('b', {}, None, 11)]
+        with (patch.object(search.operator, 'require_resource_headroom',
+                           side_effect=ValueError('Insufficient headroom')) as check,
+              patch.object(search, 'as_completed', return_value=[]),
+              patch.object(search, 'ProcessPoolExecutor') as pool):
+            with self.assertRaisesRegex(ValueError, 'headroom'):
+                list(search.completed_rollouts(pool, jobs))
+            check.assert_called_once_with(len(jobs))
+            pool.submit.assert_not_called()
+
     def test_completed_results_keep_their_copy_and_error_when_workers_finish_out_of_order(self):
         a,b=Future(),Future()
         a.set_result({'copy':'a'})
         b.set_exception(RuntimeError('no board'))
         jobs=[('a',{},None,10),('b',{},None,11)]
-        with patch.object(search,'as_completed',return_value=[b,a]),patch.object(search,'ProcessPoolExecutor') as pool:
+        with (patch.object(search.operator, 'require_resource_headroom'),
+              patch.object(search, 'as_completed', return_value=[b, a]),
+              patch.object(search, 'ProcessPoolExecutor') as pool):
             pool.submit.side_effect=[a,b]
             completed=list(search.completed_rollouts(pool,jobs,[1,2],2,True))
         self.assertEqual(completed[0][0],jobs[1])
@@ -252,7 +265,9 @@ class SearchTests(unittest.TestCase):
         jobs = [('baseline', {}, None, 10), ('candidate', {}, {'plan': []}, 11),
                 ('other', {}, None, 12)]
         for training, expected in ((True, [.2, 1.]), (False, [1., 1.])):
-            with self.subTest(training=training), patch.object(search, 'ProcessPoolExecutor') as pool:
+            with (self.subTest(training=training),
+                  patch.object(search.operator, 'require_resource_headroom'),
+                  patch.object(search, 'ProcessPoolExecutor') as pool):
                 futures = [Future() for _ in jobs]
                 for future in futures:
                     future.set_result({})

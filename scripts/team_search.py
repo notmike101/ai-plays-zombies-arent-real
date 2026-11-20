@@ -545,6 +545,8 @@ def shadow_variants(champion):
 
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False,
                        capture_shadow=False, speeds=None):
+    if jobs:
+        operator.require_resource_headroom(len(jobs))
     if starts is None:starts=[1]*len(jobs)
     primary = next((job for job in jobs if job[2]), jobs[0] if jobs else None)
     practice_copy=next((j[0] for j,stage in zip(jobs,starts) if training and j[2] and stage==1),None)
