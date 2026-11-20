@@ -2,6 +2,19 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:17 Central, preserved compact native crowd snapshots for
+  reserve wave five in analysis/coverage-team-c81131e97f/police-native-audit.json
+  (40,215 bytes total). Candidate inst19 PID 35092 still plays repeated
+  outbreak 249701763, exact native session header 1795194822621. The
+  first wall-cell break was at 49.70 sim seconds. At 50.47 and 70.47
+  sim seconds the native zombie counts were 2,144 and 2,740 (+27.8%),
+  and living civilian counts were 4,524 and 3,254. This window uses a
+  physical wall-cell break, not a proven occupied-zone penetration or
+  a terminal score. The retained data can later join a campaign result
+  by copy, exact header and outbreak and recompute an occupied-breach
+  window. The reference again paused indefinitely on 1067415937.
+  Operator 71620 and handoff 71480 remain live. Production hash matched.
+
 - At 11:13 Central, wave four candidate retried at 9.99% on repeated
   outbreak 2033973644. It adds no fresh result. Wave five launched
   (inst19 PID 35092, inst20 PID 66200) under operator 71620. The combined
