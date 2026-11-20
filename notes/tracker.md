@@ -2,6 +2,23 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:03 Central, preflight passed for all six next-study copies
+  inst13-16 and inst19-20. The current candidate is still playing the
+  repeated outbreak on inst19 PID 69796. Handoff PID 68120 remains
+  waiting for the exact operator 71620.
+- Explained the missing Cruise Missile entry in starter ability evidence.
+  The normal owned inst19 dump has a 2 SP purchase cost, 30 s unlock
+  and 2.5 s flight, with no arrival_seconds field. The opening-offer
+  reader skipped it despite verified unlock and affordability. Native
+  Nuke timing analogously uses delay_seconds but exceeds the L1
+  starting budget at 15 SP. The staged opening-loadout-timing.patch
+  records those native timing fields with the same unlock and cost
+  checks. All 29 focused training tests passed and replay of the actual
+  dump returned Police 1 SP/8 s and Missile 2 SP/32.5 s. Both D: patches
+  pass the joint applicability check. The fix concerns evidence and
+  search suggestions; the current game masks, prices, actions and
+  queued Police-path study remain unchanged.
+
 - At 10:59 Central, reserved wave three repeated the wave-one native
   outbreak seeds on both copies. The GRU reference on inst20 again
   timed out continuously paused on 1067415937, this time at 8.97 sim
