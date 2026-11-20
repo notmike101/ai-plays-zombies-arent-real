@@ -9,6 +9,38 @@ import team_search as search
 
 
 class SearchTests(unittest.TestCase):
+    def test_explicit_holdout_copies_must_be_disjoint_and_paired(self):
+        from contextlib import redirect_stderr
+        from io import StringIO
+
+        base = ['team_search.py', '--copies', 'inst13', 'inst14', 'inst15', 'inst16',
+                '--holdout-copies']
+        for copies in (['inst13', 'inst17'], ['inst17', 'inst18', 'inst19']):
+            errors = StringIO()
+            with (self.subTest(copies=copies), patch('sys.argv', base + copies),
+                  redirect_stderr(errors), patch.object(search.operator, 'training_lock') as lock):
+                with self.assertRaises(SystemExit):
+                    search.main()
+                self.assertIn('distinct, paired holdout copies disjoint from training', errors.getvalue())
+                lock.assert_not_called()
+
+    def test_spatial_proposal_varies_one_anchor_and_preserves_its_actions(self):
+        rng = np.random.default_rng(57)
+        parent = search.random_team(rng)
+        parent['plan'] = [
+            dict(search.gene(rng), family=1, tool=search.tr.TOOLS.index('zone_rect'), x=0, y=4),
+            dict(search.gene(rng), family=2, tool=search.tr.TOOLS.index('buy_Missile'), x=7, y=0),
+        ]
+        before = copy.deepcopy(parent)
+        child = search.nearby_plan_candidate(parent, rng)
+        self.assertEqual(parent, before)
+        x, y = (child['plan'][0][key] for key in ('x', 'y'))
+        self.assertIn((x, y), ((1, 4), (0, 3)))
+        child['plan'][0].update(x=0, y=4)
+        self.assertEqual(child, before)
+        parent['plan'] = parent['plan'][1:]
+        self.assertIsNone(search.nearby_plan_candidate(parent, rng))
+
     def test_layout_free_resume_checks_policy_identity_and_rejects_replay(self):
         import json
         import tempfile
@@ -318,6 +350,7 @@ class SearchTests(unittest.TestCase):
                       episode['finished'], worker['finished']]
             self.assertEqual(stamps, sorted(stamps))
             self.assertIsNone(episode['battle_started'])
+            self.assertEqual(run.call_args.args[0][4]['paused_seconds'], 45)
             run.assert_called_once()
             run.reset_mock()
             jobs=[(123,{},False,'test',{})]*2

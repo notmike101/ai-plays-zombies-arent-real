@@ -90,21 +90,35 @@ def promote(evidence, challenger, incumbent):
     return incumbent
 
 
-def holdout_passed(rows, expected, stage=1):
+def l1_outbreak_seed(trial):
+    levels = trial.get('levels', [])
+    if not levels:
+        return None
+    level = levels[0]
+    seed = (level.get('outbreak') or {}).get('seed')
+    if (level.get('stage') == 1 and level.get('start_kind') == 'fresh'
+            and not level.get('attempt', 0) and type(seed) is int):
+        return seed
+    return None
+
+
+def holdout_passed(rows, expected, stage=1, *, discovery_seeds=()):
     arms={'candidate':{},'reference':{}}
     for trial in rows:
         if trial['arm']=='extra':continue
         samples=arms['candidate' if trial['arm']=='candidate' else 'reference']
         levels=trial.get('levels',[])
-        if not levels or levels[0].get('start_kind')!='fresh':return False
-        seed=(levels[0].get('outbreak') or {}).get('seed')
-        if seed is None:return False
+        seed = l1_outbreak_seed(trial)
+        if seed is None or seed in discovery_seeds or seed in samples:
+            return False
         outcome=(False,0.)
         for index in range(stage):
             if index>=len(levels):return False
             row=levels[index]
             if row['stage']!=index+1 or row.get('attempt',0):return False
-            saved=row['saved'] or 0.
+            saved = row['saved']
+            if not isinstance(saved, (int, float)) or not math.isfinite(saved) or not 0 <= saved <= 1:
+                return False
             qualified=row['end']=='won' and saved>=.35
             if index+1==stage:outcome=(qualified,saved)
             if not qualified:break

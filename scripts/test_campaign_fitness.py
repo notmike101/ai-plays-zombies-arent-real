@@ -79,6 +79,17 @@ class FreshEvidence(unittest.TestCase):
         self.assertGreater(rank(self.a), rank(self.c))
         self.assertEqual(fitness.stats(self.data,self.a,1)['wins'], 0)
 
+    def test_holdout_refuses_an_outbreak_already_used_for_discovery(self):
+        rows = [dict(arm=arm, levels=[self.row(seed, saved)]) for arm, seed, saved in (
+            ('candidate', 11, .39), ('candidate', 12, .42),
+            ('incumbent', 19, .20), ('incumbent', 20, .18),
+        )]
+        self.assertTrue(fitness.holdout_passed(rows, 2, discovery_seeds={1, 2}))
+        self.assertFalse(fitness.holdout_passed(rows, 2, discovery_seeds={1, 11}))
+        self.assertFalse(fitness.holdout_passed(rows, 2, discovery_seeds={20}))
+        rows[-1]['levels'][0].update(end='timeout', saved=None)
+        self.assertFalse(fitness.holdout_passed(rows, 2))
+
     def test_holdout_needs_complete_arms_and_two_distinct_qualifying_outbreaks(self):
         rows=[dict(arm=arm,levels=[self.row(i,value)]) for i,(arm,value) in enumerate(
             [('candidate',.39),('incumbent',.18),('candidate',.37),('incumbent',.36)])]

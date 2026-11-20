@@ -69,6 +69,20 @@ def loadout_candidate(parent,rng):
     return candidate
 
 
+def nearby_plan_candidate(parent, rng):
+    spatial_genes = [i for i, step in enumerate(parent['plan'])
+                     if step['family'] in (0, 1) or step['tool'] in FAMILIES[0] + FAMILIES[1]]
+    if not spatial_genes:
+        return None
+    child = deepcopy(parent)
+    step = child['plan'][int(rng.choice(spatial_genes))]
+    x, y = step['x'], step['y']
+    adjacent = [(a, b) for a, b in ((x-1, y), (x+1, y), (x, y-1), (x, y+1))
+                if 0 <= a < 8 and 0 <= b < 5]
+    step['x'], step['y'] = adjacent[int(rng.integers(len(adjacent)))]
+    return child
+
+
 def l1_candidate(parent,rng):
     if not parent.get('refuge'):return offspring(parent,parent,rng)
     # Isolate the change in initial protection from changes in battle behavior.
@@ -372,8 +386,8 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
             start_kind='carry' if attempt else ('fresh' if stage==1 else
                                                 'continue' if stage==start_stage else 'next_level')
             options=dict(start_kind=start_kind,seed=seed,record_layout=bool(layout),greedy=True,
-                         allow_progression=allow_progression, observer_interval=observer_interval)
-            if training:options['paused_seconds']=45
+                         allow_progression=allow_progression, observer_interval=observer_interval,
+                         paused_seconds=45)
             if capture_shadow:options['capture_shadow']=True
             if fixed_speed:options['fixed_speed']=fixed_speed
             episode_started = monotonic()
@@ -602,6 +616,8 @@ def budget_candidate(team,levels,prices=None):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--copies',nargs='+',required=True)
+    parser.add_argument('--holdout-copies', nargs='+',
+                        help='Reserve separate owned copies for the final frozen evaluation')
     parser.add_argument('--generations',type=int,default=10)
     parser.add_argument('--allow-progression',action='store_true',help='Explicitly allow Boston L2–L5')
     parser.add_argument('--seed',type=int,default=92851)
@@ -621,6 +637,15 @@ def main():
     copies=args.copies
     if not 4<=len(copies)<=8 or len(set(copies))!=len(copies) or args.generations<1 or args.later_retries<0:
         parser.error('Use 4–8 distinct owned copies and positive generations')
+    holdout_copies = args.holdout_copies or copies
+    if args.holdout_copies:
+        if (len(holdout_copies) not in (2, 4, 6, 8)
+                or len(set(holdout_copies)) != len(holdout_copies)
+                or set(copies).intersection(holdout_copies)):
+            parser.error('Use 2–8 distinct, paired holdout copies disjoint from training')
+        if args.compare_forecast or args.compare_speed or args.compare_shadow:
+            parser.error('Reserved holdout copies are for the final campaign evaluation')
+    worker_count = max(len(copies), len(holdout_copies))
     if args.continue_layout_free and (args.demonstration or args.allow_progression):
         parser.error('Layout-free continuation requires Boston L1 without a demonstration')
     if args.compare_forecast and (not args.seed_from or len(copies)%2 or args.demonstration):
@@ -634,11 +659,11 @@ def main():
         parser.error('Shadow comparison requires a saved champion, six copies, a multiple of three waves and fresh L1 only')
     with operator.training_lock(operator.LOCK):
         ancestors=[p.pid for p in psutil.Process().parents()]
-        for copy in copies:
+        for copy in dict.fromkeys(copies + holdout_copies):
             operator.require_idle(operator.inventory(),copy,os.getpid(),ancestor_pids=ancestors)
             report=operator.preflight(copy)
             if not report['ok']:raise RuntimeError(report['errors'])
-        operator.limit_resources(len(copies))
+        operator.limit_resources(worker_count)
         rng=np.random.default_rng(args.seed)
         net=tr.PolicyNet2()
         prior = proposal = None
@@ -673,6 +698,8 @@ def main():
         if initial_team:
             population[0] = initial_team
             population[1] = offspring(initial_team, initial_team, rng)
+        if proposal:
+            population[-1] = nearby_plan_candidate(proposal, rng) or population[-1]
         if args.demonstration:
             from layout_memory import demonstrations
             stages=demonstrations(args.demonstration)
@@ -701,16 +728,29 @@ def main():
         explore_without_layout = not args.demonstration and not (prior or {}).get('layout')
         evidence={}
         prices={}
+        discovery_seeds = set()
         resume_directory = args.seed_from or args.continue_layout_free
         if resume_directory and (resume_directory/'fitness.json').exists():
             ledger=json.loads((resume_directory/'fitness.json').read_text())
             if ledger['base']!=base:raise ValueError('Campaign fitness base mismatch')
             if ledger.get('view_revision')==view_revision:evidence=ledger['evidence']
             prices=ledger.get('layout_prices',{})
+            if 'discovery_seeds' in ledger:
+                discovery_seeds.update(ledger['discovery_seeds'])
+            else:
+                discovery_seeds.update(int(key.removeprefix('seed/'))
+                                       for samples in ledger['evidence'].values() for key in samples
+                                       if key.startswith('seed/'))
         if resume_directory and not (args.compare_forecast or args.compare_speed):
             best_budget=None
             paths=[resume_directory/name for name in ('trials.jsonl','extra-trials.jsonl')]
+            previous_holdout = resume_directory/'holdout.jsonl'
+            if previous_holdout.is_file():
+                discovery_seeds.update(seed for trial in records(previous_holdout)
+                                       if (seed := fitness.l1_outbreak_seed(trial)) is not None)
             for trial in chain.from_iterable(records(path) for path in paths if path.is_file()):
+                if (observed_seed := fitness.l1_outbreak_seed(trial)) is not None:
+                    discovery_seeds.add(observed_seed)
                 if trial.get('view_revision')==view_revision:fitness.record(evidence,trial)
                 if not args.seed_from or not trial.get('levels'):continue
                 candidate=budget_candidate(trial.get('team'),trial['levels'],prices)
@@ -732,7 +772,7 @@ def main():
         incumbent=prior
         continued={}
         require_fresh=set()
-        with ProcessPoolExecutor(len(copies)) as pool:
+        with ProcessPoolExecutor(worker_count) as pool:
             if args.compare_speed:
                 for wave in range(args.generations):
                     speed = ('speed_1', 'speed_2')[(wave + wave // 2) % 2]
@@ -782,6 +822,8 @@ def main():
                     team=job[2]
                     key=team_id(team) if team else 'control'
                     result.update(view_revision=view_revision,generation=generation,team_id=key,team=team,start_stage=start_stage)
+                    if (observed_seed := fitness.l1_outbreak_seed(result)) is not None:
+                        discovery_seeds.add(observed_seed)
                     with (directory/'trials.jsonl').open('a') as f:
                         f.write(json.dumps(result)+'\n')
                     if 'error' in result:
@@ -819,7 +861,8 @@ def main():
                 leader=archive[l1_ranked[0]]
                 report=fitness.stats(evidence,leader,1)
                 print('fresh L1 leader',team_id(leader),report,flush=True)
-                for filename,data in [('fitness',dict(base=base,view_revision=view_revision,evidence=evidence,layout_prices=prices)),
+                for filename,data in [('fitness',dict(base=base,view_revision=view_revision,evidence=evidence,layout_prices=prices,
+                                                   discovery_seeds=sorted(discovery_seeds))),
                                       ('provisional',dict(team=leader,team_id=team_id(leader),base=base))]:
                     temp=directory/(filename+'.tmp')
                     temp.write_text(json.dumps(data))
@@ -840,7 +883,11 @@ def main():
                     population.append(repeat)
                     require_fresh.add(team_id(repeat))
                 probe=next((cast_probes[k] for k in l1_ranked if k in cast_probes),None)
-                if generation%2==0:
+                nearby = (nearby_plan_candidate(leader, rng)
+                          if explore_without_layout and generation % 2 == 0 else None)
+                if nearby is not None:
+                    population.append(nearby)
+                elif generation%2==0:
                     defender=deepcopy(incumbent or leader)
                     if generation%4==0:
                         defender['missile_followup']=float(rng.uniform(6,14))
@@ -874,20 +921,22 @@ def main():
             challenger=next(iter(qualified or distinct),leader)
             stage=next((i for i in range(1,6 if args.allow_progression else 2) if prior is None or
                         fitness.prefix_id(challenger,i)!=fitness.prefix_id(prior,i)),1)
-            pairs = len(copies)//2
+            pairs = len(holdout_copies)//2
             waves = (6+pairs-1)//pairs if challenger in qualified else 1
             seed = args.seed+(args.generations+1)*len(copies)
             evaluation=[]
             for wave in range(waves):
-                jobs,arms = holdout_assignments(copies,weights,challenger,prior,seed,wave)
+                jobs,arms = holdout_assignments(holdout_copies,weights,challenger,prior,seed,wave)
                 for job,_,result in completed_rollouts(pool,jobs,allow_progression=args.allow_progression,
                                                        capture_shadow=args.capture_shadow):
                     result.update(arm=arms[job[0]],team_id=team_id(job[2]) if job[2] else 'control',
-                                  holdout_round=wave)
+                                  holdout_round=wave,
+                                  discovery_overlap=fitness.l1_outbreak_seed(result) in discovery_seeds)
                     evaluation.append(result)
                     with (directory/'holdout.jsonl').open('a') as f:
                         f.write(json.dumps(result)+'\n')
-            if challenger in qualified and fitness.holdout_passed(evaluation,pairs*waves,stage):
+            if challenger in qualified and fitness.holdout_passed(
+                    evaluation, pairs*waves, stage, discovery_seeds=discovery_seeds):
                 stages=[fitness.stats(evidence,challenger,i) for i in range(1,6)]
                 record=dict(team_id=team_id(challenger),team=challenger,base=base,generation=generation,
                             trials=stages[0]['starts'],fresh_stages=stages,holdout_stage=stage,holdout_opponent=team_id(prior) if prior else 'gru')
