@@ -152,6 +152,33 @@ class StateTests(unittest.TestCase):
                     self.assertEqual(options.get('zone_temperature'),
                                      1.5 if training and arm == 'zone_exploration' else None)
 
+    def test_warm_start_keeps_optimizer_and_excludes_previously_seen_outbreaks(self):
+        from compare_spatial import load_warm_start
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'paired.pt'
+            weights = {'parameter': train.torch.tensor([4.])}
+            adam = {'step': 11}
+            snapshot = dict(config={'schema': train.checkpoint_schema()},
+                            discovery_seeds=[123], weights={'source': weights},
+                            optimizers={'source': adam})
+            train.torch.save(snapshot, path)
+            path.with_name('results.jsonl').write_text(
+                '{"phase": "train", "outbreak_seed": 456}\n'
+                '{"phase": "evaluation", "outbreak_seed": 789}\n'
+                '{"phase": "evaluation", "outbreak_seed": null}\n', encoding='utf-8')
+            found, optimizer, seen, source = load_warm_start(path, 'source')
+            self.assertTrue(train.torch.equal(found['parameter'], weights['parameter']))
+            self.assertEqual(optimizer, adam)
+            self.assertEqual(seen, {123, 456, 789})
+            self.assertEqual(source['arm'], 'source')
+            self.assertEqual(len(source['sha256']), 64)
+            with self.assertRaises(ValueError):
+                load_warm_start(path, 'missing')
+            snapshot['config']['schema'] = None
+            train.torch.save(snapshot, path)
+            with self.assertRaises(ValueError):
+                load_warm_start(path, 'source')
+
     def test_reserved_ppo_copies_refuse_overlap_before_taking_lock(self):
         import compare_spatial
         with patch('sys.argv', ['compare_spatial', '--copies', 'a', 'b', '--eval-copies', 'a', 'c']), \

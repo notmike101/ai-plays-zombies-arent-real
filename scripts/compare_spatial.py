@@ -1,5 +1,6 @@
 """Guarded fresh-board PPO comparison. Production weights are read-only."""
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -124,6 +125,25 @@ def heldout_consistency(rows, policy_id, *, discovery_seeds=()):
                 discovery_overlap=discovery_overlap, passed=len(means)==3 and min(means)>=.35)
 
 
+def load_warm_start(path, arm):
+    with path.open('rb') as stream:
+        fingerprint = hashlib.file_digest(stream, 'sha256').hexdigest()
+        stream.seek(0)
+        snapshot = torch.load(stream, weights_only=True, map_location='cpu')
+    if snapshot['config']['schema'] != trainer.checkpoint_schema():
+        raise ValueError('Warm-start checkpoint schema differs from the trainer')
+    if arm not in snapshot['weights'] or arm not in snapshot['optimizers']:
+        raise ValueError(f'Warm-start checkpoint has no weights and optimizer for {arm}')
+    seeds = set(snapshot['discovery_seeds'])
+    with path.with_name('results.jsonl').open(encoding='utf-8') as stream:
+        for line in stream:
+            outbreak = json.loads(line).get('outbreak_seed')
+            if type(outbreak) is int:
+                seeds.add(outbreak)
+    return (snapshot['weights'][arm], snapshot['optimizers'][arm], seeds,
+            {'arm': arm, 'sha256': fingerprint})
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--copies', nargs='+', required=True)
@@ -131,7 +151,10 @@ def main():
     parser.add_argument('--train-rounds', type=int, default=1)
     parser.add_argument('--eval-rounds', type=int, default=2)
     parser.add_argument('--eval-copies', nargs='+', help='Separate owned copies for frozen evaluation')
-    parser.add_argument('--resume', type=Path, help='Resume both arms from a paired training snapshot')
+    source_args = parser.add_mutually_exclusive_group()
+    source_args.add_argument('--resume', type=Path, help='Resume both arms from a paired training snapshot')
+    source_args.add_argument('--warm-start', nargs=2, metavar=('SNAPSHOT', 'ARM'),
+                             help='Start both arms from one private PPO snapshot with its optimizer')
     comparison = parser.add_mutually_exclusive_group()
     comparison.add_argument('--compare-missile-credit', action='store_true',
                         help='Train two private copies of the same policy with and without the civilian-impact reward')
@@ -154,6 +177,11 @@ def main():
             or len(set(evaluation_copies)) != len(evaluation_copies)
             or set(evaluation_copies).intersection(copies)):
         parser.error('Evaluation copies must be distinct, paired and disjoint from training')
+    coverage_study = args.compare_ready_coverage or args.compare_zone_exploration
+    shelter_study = args.compare_breach_cost or coverage_study
+    paired_weights = args.compare_missile_credit or args.compare_phase_balance or shelter_study
+    if args.warm_start and not paired_weights:
+        parser.error('Warm starting requires a comparison with the same network in both arms')
     workers = max(len(copies), len(evaluation_copies))
     with operator.training_lock(operator.LOCK):
         ancestors = [p.pid for p in psutil.Process().parents()]
@@ -165,10 +193,14 @@ def main():
         operator.limit_resources(workers)
         torch.manual_seed(args.seed)
         baseline = trainer.PolicyNet2()
-        trainer.load_pretrained(baseline, trainer.MODEL)
-        coverage_study = args.compare_ready_coverage or args.compare_zone_exploration
-        shelter_study = args.compare_breach_cost or coverage_study
-        paired_weights = args.compare_missile_credit or args.compare_phase_balance or shelter_study
+        discovery_seeds = set()
+        warm_source = None
+        if args.warm_start:
+            path, arm = args.warm_start
+            weights, adam, discovery_seeds, warm_source = load_warm_start(Path(path), arm)
+            baseline.load_state_dict(weights)
+        else:
+            trainer.load_pretrained(baseline, trainer.MODEL)
         if paired_weights:
             labels = (tuple(ZONE_TEMPERATURES) if args.compare_zone_exploration else
                       tuple(READY_CREDITS) if args.compare_ready_coverage else
@@ -182,9 +214,10 @@ def main():
             models = {'dense': baseline, 'shared': candidate}
         optimizers = {arm: torch.optim.Adam(net.parameters(), lr=3e-4) for arm, net in models.items()}
         if paired_weights:
-            checkpoint = torch.load(trainer.MODEL, weights_only=True)
+            if warm_source is None:
+                adam = torch.load(trainer.MODEL, weights_only=True)['optimizer']
             for opt in optimizers.values():
-                opt.load_state_dict(deepcopy(checkpoint['optimizer']))
+                opt.load_state_dict(deepcopy(adam))
         config = dict(seed=args.seed, copies=copies, train_rounds=args.train_rounds,
                       eval_rounds=args.eval_rounds, schema=trainer.checkpoint_schema(),
                       learning=trainer.learning_config())
@@ -206,9 +239,12 @@ def main():
                           ready_coverage_credit=.30, training_zone_temperature_by_arm=ZONE_TEMPERATURES)
         first_round = 0
         source = trainer.policy_id(baseline)
-        discovery_seeds = set()
+        if warm_source is not None:
+            config['warm_source'] = warm_source
         if args.resume:
             snapshot = torch.load(args.resume, weights_only=True)
+            if 'warm_source' in snapshot['config']:
+                config['warm_source'] = snapshot['config']['warm_source']
             if snapshot['config'] != config or not 0 < snapshot['next_round'] <= args.train_rounds:
                 parser.error('Trial configuration differs from the paired snapshot')
             first_round, source = snapshot['next_round'], snapshot['source']
@@ -261,6 +297,10 @@ def main():
                         summary['confirmed_spends'] = row.get('battle_actions', {}).get('stock_decreased')
                         summary['planning_placements_selected'] = row.get('selected_placements', {})
                     if shelter_study:
+                        summary['planning_actions'] = dict(Counter(
+                            trainer.TOOLS[u] for u, obs in zip(row.get('us', []), row.get('obs', []))
+                            if obs[trainer.PLANNING_INDEX]))
+                        summary['planning_blockers'] = row.get('planning_blockers')
                         summary['shelter'] = row.get('shelter')
                         outbreak = row.get('outbreak') or {}
                         summary['safe_zones_at_ready'] = outbreak.get('safe_zones')
