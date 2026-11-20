@@ -2,6 +2,31 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 14:00 Central, study 200952 had four completed training
+  rounds. Baseline scored 5.64% across seven scored games
+  (one planning timeout); broader prep 4.66% across eight.
+  Each arm opened two battles with occupied shelters. Legal
+  casts were observed in two battles per arm; one deployment
+  on the broader arm. Each arm had six retries. Retry median
+  was 33.18 versus 40.17 sim seconds, illustrating that a
+  longer battle can still have a lower average official score.
+  Round five live under operator 40184, inst13 70048, inst14
+  72716, inst15 61980, inst16 73356; Observatory PID 21012.
+
+- Staged first native credited zombie-kill timing as a game
+  clock interval bracketed by zero and positive kill counters.
+  Zero kills through the last sample and missing evidence
+  stay distinct. Existing outnumbered, live civilian floor,
+  natural finish and official save fields retain their roles.
+  No training/reward changes. Isolated tests 326 passed;
+  archive replay of existing complete native logs found 92
+  kill intervals, four observed zero-kill sessions and seven
+  unknown. D: analysis/coverage-portable314/tmp/battle-timing/battle-timing.patch,
+  SHA256 B01840685D41F005E3F543225053561B0B8E8361ED269FC61FA197690AB526B3.
+  Apply at the idle boundary. In the first eight retries of
+  study 200952, outnumbering led the live retry floor by a
+  median 13.95 simulated seconds.
+
 - At 13:55 Central, observed study 200952 completed round one
   and saved both private models and Adam states. Official
   training scores 2.69%, 4.51% baseline and 9.54%, 0% broader
