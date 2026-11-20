@@ -2,6 +2,30 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:51 Central, crossed Missile inst13 outbreak 429480045
+  finalized at 9.38% at retry. It launched at 43.43, 51.87 and
+  74.73 sim seconds, so timing varied without a new rule. Its
+  first direct impact killed no civilians but the official
+  campaign receipt confirmed and assigned 223 Missile civilian
+  deaths across the episode. Spacing alone did not remove the
+  targeting failure. Operator 71708 and queued follow-up 70252
+  remained live; three other crossed results were pending.
+- Staged a separate missile-footprint experiment in
+  analysis/coverage-portable314/tmp/missile-footprint-study.patch,
+  based on the pending missile-followup patch. It uses the native
+  current civilian/zombie counts inside each legal candidate blast
+  circle in place of the corresponding coarse-grid inputs to the
+  existing learned Missile target score. A fixed 2-logit soft
+  preference discourages overlap with an occupied intact shelter
+  perimeter. No masks, actions, timing weights, training rewards
+  or official scores change. The reference and candidate keep the
+  same timing preference. Native config echo verified 56 m as the
+  radius. 308 isolated script tests passed, including exact-radius
+  populations, only-Missile-cell score changes, and held-out
+  control pairing. It is a current-state geometry estimate, with
+  no validation of occupants at impact or survival benefit yet.
+  Not deployed during current or queued follow-up study.
+
 - At 11:48 Central, 190952 first wave is scored: Police controls
   9.89% and 9.86% (mean 9.875%), Missile 9.37% and 9.91% (mean
   9.64%). All retries. The crossed wave is live under 71708
