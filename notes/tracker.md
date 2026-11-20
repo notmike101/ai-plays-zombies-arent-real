@@ -1,6 +1,15 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 20:34 Central. Private PPO missile-credit trial 140952 finished
+  12 training and 24 frozen results. Neither arm qualified; frozen means
+  9.31% baseline and 8.75% missile-credit. Zero confirmed missile civilian
+  impacts across both arms, so this trial did not expose the reward contrast.
+  Twelve training episodes selected 714 pause/speed controls among 5,610
+  battle choices. Started phase-balance trial 141952 on six fresh copies,
+  both arms fixed 1× with playback controls held steady. Four private train
+  rounds and four frozen rounds in `analysis/coverage-phase-balance-673a887408`.
+  Production checkpoint remains private to regular search and was not written.
 - 2026-11-19 19:42 Central. Queued private six-copy PPO missile-credit
   comparison 140952 behind production seed 140851 (handoff PID 64432).
   Both arms start from identical schema-4 checkpoint and Adam state, use
