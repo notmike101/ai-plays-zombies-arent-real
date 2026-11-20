@@ -2,6 +2,27 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 10:59 Central, reserved wave three repeated the wave-one native
+  outbreak seeds on both copies. The GRU reference on inst20 again
+  timed out continuously paused on 1067415937, this time at 8.97 sim
+  seconds. Frozen candidate inst19 PID 69796 was still playing on
+  249701763. Any score there is a same-outbreak repeat and cannot
+  add a fresh held-out sample. Existing operator 71620 remains live
+  and the Police path handoff PID 68120 is still waiting.
+- Cross-run audit grouped candidates by frozen team, GRU base and
+  recorded view revision, screening for fresh L1, known end-game
+  scores, duplicate seeds and overlaps with 1,042 archived discovery
+  seeds. Among 15 layout-free cohorts (34 attempts), only one
+  eligible natural finish was found and it saved 0%. From the older
+  layout-replay runs, team 230c8ceb72a1b1a3 on the recorded v2
+  overview averaged 36.28% in 33 distinct completed games screened
+  against discovery. Its first three ten-game blocks of eligible
+  completions averaged 36.50%, 36.88% and 34.79%. This is a
+  descriptive archive audit and cannot qualify the autonomous policy.
+  Reserve rotation is insufficient when the fitted preparation policy
+  reproduces native outbreak seeds. A future consistency candidate
+  needs to generalize across more actual fresh preparation results.
+
 - At 10:56 Central, the second fresh reserved candidate outbreak
   (2033973644, inst20) ended at 10.00% officially saved at retry,
   234.12 simulated seconds, with seven stock-confirmed Police drops.
