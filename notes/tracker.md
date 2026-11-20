@@ -2,6 +2,27 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:40 Central, breach-cost study 193952 exited naturally.
+  In the reserve, the baseline averaged 9.82% across three
+  scored retries and had one planning timeout. Stronger cost
+  averaged 7.54% across four scored retries. All seven scored
+  outbreaks were distinct and absent from training. There were
+  zero natural finishes and zero occupied exposures, including
+  all 16 training games. The official consistency report failed
+  both arms. Native final reserve receipts showed no zones and
+  no deployments despite one Helicopter or Airstrike in stock.
+  Mark the breach-cost comparison unexercised.
+- Deployed the tested READY coverage patch in 02b8347 at the
+  idle boundary after verifying the hashes and headroom. Private
+  study 194952 launched at 12:40 under PID 68152, data
+  analysis/coverage-ready-coverage-db06c78332, log
+  analysis/coverage-ready-coverage-194952-drive-d.log.
+  Both arms clone original policy 8a691469a829158d and Adam;
+  only the challenger earns additional reward for native
+  civilian coverage at verified READY, scale 0.30. Four
+  training copies and two disjoint reserved copies. Model
+  controls all moves. Production checkpoint hash matched.
+
 - At 12:36 Central, the first four held-out attempts in study
   193952 were all retries below 10%, all on distinct outbreaks
   absent from training. Frozen baseline 8d56592a424c5272 scored
