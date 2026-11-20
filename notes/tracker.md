@@ -10,6 +10,12 @@
   battle-tool logit is three lower. All speeds and gameplay choices
   stay available to the model. Confirmed deployment and official saved
   fraction are the comparison outcomes. Commit 677632e.
+- At 05:26 the four 170952 worlds reached verified fresh planning.
+  Two boards entered with 21 Garrisons and each logged three native
+  Demolition deployments near sim seconds 20–22. Neither had recorded
+  a 4x transition at that read. Both battles were in progress and full
+  trial receipts are pending. Host check: 10.14 GiB RAM and 18.42 GiB
+  free with four games running. Observatory listener PID 12628.
 - Seed 169952 drained at 05:24 with seven scored early retries and an
   incomplete UI wait, no native wins or reserved evaluation. All starts
   verified click mode. inst14 policy 10c063b71e9f3043 selected
