@@ -2,6 +2,26 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Shelter-penalty audit at 09:22 Central. All eight seed 184952
+  boards had an occupied penetration at 53.40-62.77 simulated seconds.
+  They recorded 1,872-2,361 exposed civilians over the episode. The
+  current 0.10 exposure coefficient contributed -0.0230 to -0.0290
+  in reward, or 0.46-0.58 percentage points divided by the terminal
+  score scale. It is not the infection or final-outcome penalty.
+  In the no-win branch of L1 discovery, the survival integral ranks
+  before the shelter-adjusted objective. A game-free rescore using an
+  additional 2x exposure charge did not change the order of the three
+  failed-arm means in seed 184952 or seed 182952. Existing data
+  therefore does not show that scaling the term alone would affect
+  these selections. No default reward or official evaluation change.
+- Seed 185952 reached READY on four crossed-wave copies at 09:22.
+  Generation 0 scored 7.66%, 4.72%, and 9.75%, plus one sampled-arm
+  timeout without a terminal official score. The operator and
+  Observatory remain active. The broader preparation fixture now
+  verifies 12 distinct combinations using 12 available unit types
+  and each of wall, gate, corridor, and hold over four waves, without
+  modifying battle weights or producing a preset layout.
+
 - Seed 185952 launched at 09:11 Central on D:, operator PID 72040,
   directory `analysis/coverage-team-0ce9d6bea2`, log
   `analysis/coverage-layout-free-185952-drive-d.log`. Uses the same
