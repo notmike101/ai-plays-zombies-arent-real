@@ -2,6 +2,15 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:37 Central, all valid shelter defense 198952 training
+  rounds completed (24 scored attempts, 23 distinct outbreaks,
+  excluding the interrupted batch). Baseline averaged 6.36%
+  and stronger cost 5.85%. Every board again had zero initial
+  coverage and zero breach cost. No penalty effect observed.
+  Half of those attempts had no legal battle cast sampled.
+  Final paired checkpoint is next_round 6. Frozen evaluation
+  launched with inst19 69316 and inst20 49472 under PID 1812.
+
 - At 13:35 Central, shelter defense 198952 has four completed
   rounds and paired next_round 4. Across the original and
   resumed valid rounds (discarding the bad pair batch), 16
