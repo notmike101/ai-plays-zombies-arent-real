@@ -102,8 +102,23 @@ def planning_scale_candidate(parent, rng):
     return dict(deepcopy(parent), planning_logit_scale=float(rng.uniform(.35, .7)))
 
 
-def best_defense_team(defenders, evidence):
-    return max(defenders.values(), key=lambda team: fitness.l1_proposal_rank(evidence, team), default=None)
+def defense_duration_candidate(trial, rng):
+    parent = trial['team']
+    remaining = tr.PLAN_STEPS - sum(step['duration'] for step in parent['plan'])
+    paid = trial['levels'][0]['paid_buildings']
+    eligible = [i for i, step in enumerate(parent['plan'])
+                if paid.get(tr.PLACEMENTS.get(step['tool']), 0) > 0 and step['duration'] < tr.PLAN_STEPS]
+    if remaining <= 0 or not eligible:
+        return None
+    child = deepcopy(parent)
+    step = child['plan'][int(rng.choice(eligible))]
+    step['duration'] += min(int(rng.integers(2, 6)), remaining, tr.PLAN_STEPS - step['duration'])
+    return child
+
+
+def best_defense_trial(defenders, evidence):
+    return max(defenders.values(), key=lambda trial: fitness.l1_proposal_rank(evidence, trial['team']),
+               default=None)
 
 
 def nearby_plan_candidate(parent, rng):
@@ -473,6 +488,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                selected_placements=row.get('selected_placements',{}),
                                paid_buildings=row.get('paid_buildings',{}),
                                unconfirmed_buildings=row.get('unconfirmed_buildings',{}),
+                               building_receipts=row.get('building_receipts',[]),
                                outside_playarea_actions=row.get('outside_playarea_actions',0)+
                                    sum(r.get('result')=='outside_playarea' for r in receipts),
                                playarea_cost=tr.OUTSIDE_PLAYAREA_COST/tr.SAVED_REWARD_SCALE,
@@ -831,7 +847,7 @@ def main():
                     if args.continue_layout_free and has_defense_evidence(trial):
                         defender = checkpoint_team(dict(base=base, team_id=trial['team_id'],
                                                         team=trial['team']), base)
-                        defenders[defender['team_id']] = defender['team']
+                        defenders[defender['team_id']] = trial
                     if args.continue_layout_free and previous_pause_variant is None:
                         previous_pause_variant = pause_variant(trial, rng)
                         if previous_pause_variant is not None:
@@ -845,11 +861,13 @@ def main():
                         best_budget,population[-1]=rank,candidate
             for i in range(1,len(population)):
                 population[i]=budget_candidate(population[i],[],prices) or population[i]
-        defender = best_defense_team(defenders, evidence)
-        if defender is not None:
+        defense_trial = best_defense_trial(defenders, evidence)
+        if defense_trial is not None:
+            defender = defense_trial['team']
             if defender != proposal:
                 population[1] = defender
-            population[-1] = planning_scale_candidate(defender, rng)
+            population[-1] = (defense_duration_candidate(defense_trial, rng)
+                              or planning_scale_candidate(defender, rng))
         if prior and not (args.compare_forecast or args.compare_speed):
             previous=args.seed_from/'provisional.json'
             if previous.is_file():
@@ -936,7 +954,7 @@ def main():
                         deepest[key]=max(deepest.get(key,1),levels[-1]['stage'],result.get('failed_stage',1))
                         fitness.record(evidence,result)
                         if explore_without_layout and not args.allow_progression and has_defense_evidence(result):
-                            defenders[key] = team
+                            defenders[key] = result
                         probe=cast_candidate(result,rng)
                         if probe:cast_probes[key]=probe
                     print(generation,key,[(r['stage'],r['end'],r['saved'],round(r['sim'],1)) for r in levels],flush=True)
@@ -969,12 +987,18 @@ def main():
                 # Replicate the leader on independent boards and reserve one L1 mutation.
                 alternate = incumbent or leader
                 if explore_without_layout and incumbent is None:
-                    defender = best_defense_team(defenders, evidence)
-                    if defender is not None:
-                        alternate = (defender if defender != leader and generation % 2 == 0
-                                     else planning_scale_candidate(defender, rng))
-                    else:
+                    defense_trial = best_defense_trial(defenders, evidence)
+                    if defense_trial is None:
                         alternate = defense_placement_candidate(leader, rng) or alternate
+                    else:
+                        defender = defense_trial['team']
+                        if defender != leader and generation % 2 == 0:
+                            alternate = defender
+                        elif generation % 4 == 1:
+                            alternate = (defense_duration_candidate(defense_trial, rng)
+                                         or planning_scale_candidate(defender, rng))
+                        else:
+                            alternate = planning_scale_candidate(defender, rng)
                 population = [leader, alternate]
                 require_fresh.update(team_id(t) for t in population)
                 population.append(l1_candidate(leader,rng) if generation%2==0 else offspring(leader,leader,rng,stage=1))

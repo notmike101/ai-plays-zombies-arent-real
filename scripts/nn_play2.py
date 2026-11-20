@@ -594,6 +594,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         placement_feedback = options.get('placement_feedback', False)
         paid_buildings = {}
         unconfirmed_buildings = {}
+        building_receipts = []
         plan_limit = options.get('plan_steps', PLAN_STEPS)
         state = env.game_state()
         next_rest=0.
@@ -836,10 +837,14 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 counts = paid_buildings if succ else unconfirmed_buildings
                 unit = PLACEMENTS[u]
                 counts[unit] = counts.get(unit, 0) + 1
-                if placement_feedback and not succ:
-                    placement_retry_at[u, c] = (
-                        len(rows['obs']) + 5, tuple(st['native']['camera']), st['build_targets'][c],
-                    )
+                if placement_feedback:
+                    camera = tuple(float(v) for v in st['native']['camera'])
+                    target = st['build_targets'][c]
+                    building_receipts.append(dict(decision=len(rows['obs'])-1, tool=TOOLS[u], cell=c,
+                                                  target=target, camera=camera, paid=bool(succ),
+                                                  spend=round(before['money']-o['money'], 2)))
+                    if not succ:
+                        placement_retry_at[u, c] = (len(rows['obs']) + 5, camera, target)
             nbuy += int(succ)
             st['spend_frac'] = max(0., (m0-o['money']) / max(m0, 1))
             prev_u, prev_c = float(u), float(c)
@@ -933,6 +938,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     outside_targets=outside_targets, battle_actions=battle_actions,
                     selected_placements=selected_placements,
                     paid_buildings=paid_buildings, unconfirmed_buildings=unconfirmed_buildings,
+                    building_receipts=building_receipts,
                     shelter=dict(credited_civilians=len(shelter.credited),exposed_civilians=len(shelter.exposed),
                                  breach_exposures=shelter.breach_exposures,
                                  occupied_breaches=shelter.occupied_breaches,

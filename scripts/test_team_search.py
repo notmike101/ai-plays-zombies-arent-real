@@ -24,6 +24,27 @@ class SearchTests(unittest.TestCase):
                 self.assertIn('distinct, paired holdout copies disjoint from training', errors.getvalue())
                 lock.assert_not_called()
 
+    def test_defense_duration_extends_only_a_paid_preference_within_planning_cap(self):
+        rng = np.random.default_rng(77)
+        parent = search.random_team(rng)
+        garrison, mortar = (search.tr.TOOLS.index(name) for name in ('garrison', 'mortar'))
+        parent['plan'] = [
+            dict(search.gene(rng), family=0, tool=garrison, duration=2),
+            dict(search.gene(rng), family=0, tool=mortar, duration=search.tr.PLAN_STEPS-4),
+        ]
+        before = copy.deepcopy(parent)
+        trial = dict(team=parent, levels=[dict(paid_buildings={'Garrison': 1})])
+        child = search.defense_duration_candidate(trial, rng)
+        self.assertEqual(parent, before)
+        self.assertEqual(child['plan'][0]['duration'], 4)
+        child['plan'][0]['duration'] = 2
+        self.assertEqual(child, parent)
+        parent['plan'][1]['duration'] = search.tr.PLAN_STEPS-2
+        self.assertIsNone(search.defense_duration_candidate(trial, rng))
+        parent['plan'][1]['duration'] = 2
+        trial['levels'][0]['paid_buildings'] = {'Garrison': 0}
+        self.assertIsNone(search.defense_duration_candidate(trial, rng))
+
     def test_defense_evidence_requires_paid_build_and_native_ready_units(self):
         rng = np.random.default_rng(39)
         team = search.random_team(rng)
@@ -447,11 +468,13 @@ class SearchTests(unittest.TestCase):
             row['ready_stats'] = dict(money=2100, stock=dict(mortar=1))
             row['paid_buildings'] = dict(Garrison=1)
             row['unconfirmed_buildings'] = dict(Garrison=2)
+            row['building_receipts'] = [dict(decision=4, tool='garrison', cell=19, spend=85.2)]
             result=search.rollout(('inst13',{},None,10))
             self.assertEqual([level['stage'] for level in result['levels']],[1])
             self.assertEqual(result['levels'][0]['ready_stats'], row['ready_stats'])
             self.assertEqual(result['levels'][0]['paid_buildings'], dict(Garrison=1))
             self.assertEqual(result['levels'][0]['unconfirmed_buildings'], dict(Garrison=2))
+            self.assertEqual(result['levels'][0]['building_receipts'], row['building_receipts'])
             self.assertTrue(run.call_args.args[0][4]['placement_feedback'])
             worker = result['timing']
             episode = result['levels'][0]['timing']
