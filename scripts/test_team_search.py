@@ -269,6 +269,22 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(search.tr.select_policy_cell(dist, True), 3)
         self.assertTrue(torch.equal(state, torch.random.get_rng_state()))
 
+    def test_planning_scale_neighbors_require_a_native_clear_and_change_only_scale(self):
+        rng = np.random.default_rng(79)
+        parent = dict(search.random_team(rng), planning_logit_scale=.41)
+        prefix = search.fitness.prefix_id(parent, 1)
+        self.assertEqual(search.planning_scale_neighbors(parent, {}), [])
+        self.assertEqual(search.planning_scale_neighbors(
+            parent, {prefix: {'seed/7': [False, .25, 0., False]}}), [])
+        evidence = {prefix: {'seed/7': [False, .2482, 0., True]}}
+        low, high = search.planning_scale_neighbors(parent, evidence)
+        self.assertAlmostEqual(low['planning_logit_scale'], .31)
+        self.assertAlmostEqual(high['planning_logit_scale'], .51)
+        self.assertEqual(dict(low, planning_logit_scale=.41), parent)
+        self.assertEqual(dict(high, planning_logit_scale=.41), parent)
+        evidence[search.fitness.prefix_id(low, 1)] = {}
+        self.assertEqual(search.planning_scale_neighbors(parent, evidence), [high])
+
     def test_battle_sampling_is_a_distinct_frozen_policy(self):
         parent = search.random_team(np.random.default_rng(4))
         candidate = search.battle_sampling_candidate(parent)

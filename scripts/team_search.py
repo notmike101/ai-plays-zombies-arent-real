@@ -146,6 +146,22 @@ def planning_scale_candidate(parent, rng):
     return dict(deepcopy(parent), planning_logit_scale=float(rng.uniform(.35, .7)))
 
 
+def planning_scale_neighbors(parent, evidence):
+    scale = parent.get('planning_logit_scale')
+    samples = evidence.get(fitness.prefix_id(parent, 1), {})
+    if scale is None or not any(seed.startswith('seed/') and len(row) >= 4
+                                and row[3] and row[1] >= .20 for seed, row in samples.items()):
+        return []
+    neighbors = []
+    for value in (max(.2, scale - .10), min(1., scale + .10)):
+        if value == scale:
+            continue
+        child = dict(deepcopy(parent), planning_logit_scale=value)
+        if fitness.prefix_id(child, 1) not in evidence:
+            neighbors.append(child)
+    return neighbors
+
+
 def defense_duration_candidate(trial, rng):
     parent = trial['team']
     remaining = tr.PLAN_STEPS - sum(step['duration'] for step in parent['plan'])
@@ -1142,6 +1158,9 @@ def main():
                             population[-1] = dict(deepcopy(proposal), zone_anchor_lookahead=True)
                         else:
                             population[-1] = dict(deepcopy(proposal), zone_population=float(rng.uniform(6., 12.)))
+        if proposal is not None:
+            for index, candidate in zip((1, -1), planning_scale_neighbors(proposal, evidence)):
+                population[index] = candidate
         if prior and not (args.compare_forecast or args.compare_speed):
             previous=args.seed_from/'provisional.json'
             if previous.is_file():
