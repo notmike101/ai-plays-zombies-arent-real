@@ -2,6 +2,27 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:36 Central, staged and verified a crossed native-evidenced
+  loadout comparison, analysis/coverage-portable314/tmp/loadout-neighbors-study.patch.
+  It compares exactly one changed purchase preference from discovery
+  receipts, retains the actual frozen discovery control in reserve,
+  and includes the bounded Police dispatch timing diagnostics. The
+  actual 189952 journals support changing Police to Missile on either
+  arm. Both paid Police level 1 and kept 1 SP; native catalog says
+  Missile costs 2 SP and first effect 32.5 sim seconds. The observed
+  discovery breaches at 54.37 and 61.00 s provide eligibility only.
+  Endpoint control bf3fc52369fc3746 yields ce5b191516c37f99; path
+  control 847df0f375da30cf yields ba6edad2a6f074b0. No other policy
+  field differs, and the game still decides payment, ownership, and
+  delivery. All 304 script tests passed and patch applicability verified.
+- Queued experiment 190952 via handoff PID 69928, waiting on exact
+  active operator 70324. The child uses the portable Python for hash
+  validation and the same idle/clean checkout/checkpoint guards.
+  Handoff log analysis/coverage-loadout-study-handoff.log. The active
+  Police study has five official scores so far; the newest was a
+  9.95% retry for path on matched outbreak 2413602735. No live
+  source changed and successor launch still pending.
+
 - At 11:33 Central, first Police trial wave finished. Endpoint
   bf3fc52369fc3746 retried at 10.00% and 9.70%, mean 9.85%.
   Path 847df0f375da30cf cleared one outbreak at 17.02% and
