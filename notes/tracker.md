@@ -1,6 +1,33 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-19 — isolated holdout and local placement search)
+## CURRENT STATE (2026-11-19 — continued search with pause handling)
+- Seed 145952 finished at 23:22 Central with no discovery wins in 16
+  games and no promotion. The frozen games ran on reserved inst17–20.
+  All four outbreak seeds were distinct and absent from the three blocks
+  of known prior discovery/evaluation records. Candidate 71bdb3116c014319
+  early-retried at 9.95% and 9.96%. Both GRU references timed out from a
+  continuous pause. Neither timeout supplied an official saved fraction.
+- A one-cell placement variant 046fba76da751f39 sheltered 1,508 civilians
+  on its initial attempt and spent a Bomber charge in two of three trials.
+  It timed out while paused all three times. Its first timeout led the
+  preliminary discovery ranking because accrued survival area survived the
+  missing score. Commit 33ecec8 removes that credit for unscored attempts
+  and mutates only the learned pause bias in one resumed trial when a prior
+  attempt spent stock and then timed out. The original plan is preserved.
+  234 total script tests passed and the targeted suite passed after the
+  final numeric-type check.
+- The private PPO consistency checker now stores training outbreak seeds
+  in its resumable paired checkpoints and excludes matching evaluation
+  rows across both arms (c7a6d63). Replaying the earlier comparison logs
+  gave zero qualifying evaluations and zero recorded training-seed overlap.
+- Seed 146952 launched at 23:23 Central, trainer PID 35676. Verified four
+  D: worker processes and games inst13–16. inst17–20 again serve as reserved
+  evaluation copies. Launch headroom was 13.14 GiB RAM and 12.91 GiB D:
+  free. Output `analysis/coverage-team-4332a2b5f0` and
+  `analysis/coverage-layout-free-146952-drive-d.log` with matching error log.
+  The production checkpoint hash is unchanged. The 35% target is pending.
+
+### Isolated holdout and local placement search
 - Layout-free continuation 144952 finished at 22:59 Central. Across
   16 discovery games it had no wins. Proposal 71bdb3116c014319 sheltered
   1,616 civilians across multiple distinct outbreaks and had roughly
