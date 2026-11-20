@@ -2,6 +2,36 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 17:49 Central, phase balance 216952 checkpointed four
+  rounds. All 16 games entered battle and retried. Both arms
+  still had zero occupied shelters at READY. Round 3 standard
+  logged three confirmed stock spends in one game and $247
+  remaining at READY in a different game. The latter still
+  had no civilian coverage. Fifth batch active under 61372.
+- Corrected the interpretation of the native outbreak counter.
+  In all six exact-input training games with a positive
+  safe_zones counter and zero civilians sheltered, the full
+  placement receipt list contains only two-corner walls.
+  Native safe_zones cannot establish a closed polygon.
+  Across the 68 audited training starts, 55 of 59 zero-coverage
+  starts had no zone_rect, zone_begin, zone_corner or zone_finish
+  selection. All nine occupied starts had a verified closed
+  placement with positive coverage. Among the 47 zero-coverage
+  starts with untruncated receipt capture, no closed-polygon place
+  receipt appeared. Wall or polygon edits can occur elsewhere;
+  these counts establish the dominant observed deficit in this
+  sample is sparse shelter selection and confirmed placement.
+- Staged a diagnostic patch to record the count of committed
+  native polygons with at least three vertices at READY, using
+  the same preparation counts already used at timeouts. No
+  learning or scoring change. Mixed open wall/polygon regression
+  failed before the patch and all 19 staged mechanics tests
+  passed afterward. Apply check passed for
+  analysis/coverage-portable314/tmp/closed-shelter-216952/
+  closed-shelter.patch SHA256
+  5A66947B498F4CFFD924D0F4E8501DAF4708AB41F5B26BE6363CA2401D58AD16.
+  Leave trainer source untouched until the comparison is idle.
+
 - At 17:47 Central, phase balance 216952 checkpointed three
   rounds. All 12 games entered battle and retried. Neither arm
   had civilians sheltered at READY. Round 1 and 2 had no closed
@@ -11,8 +41,8 @@
   weight to planning. Fourth batch live under PID 61372.
 - Across 68 distinct native training outbreaks with known
   READY coverage in completed duration and occupancy-input runs
-  and the first three phase-balance rounds, 40 had no closed
-  shelter, 19 had only empty closed shelters and nine had
+  and the first three phase-balance rounds, 40 had a zero native geometry counter, 19 had a nonzero
+  counter but zero coverage and nine had
   positive coverage. The duration run's uncommitted round was
   excluded after its restart. These are adaptive discovery
   counts. Shelter defense credit is limited by preparation
