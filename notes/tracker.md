@@ -3,10 +3,10 @@
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 - Seed 149952 finished at 00:49 Central with 16 discovery rows and no
   wins. One launch failed in inst15 with a native pointer overflow.
-  Candidates be8723e2bcd964a0 and e06f1094d6776650 each had one paid
-  Garrison attempt, one unconfirmed attempt, and a native garrison
-  count of one at READY. Their scored early retries were 9.99% and
-  9.90%. All four reserved-copy rows reused earlier outbreak seeds.
+  Candidates be8723e2bcd964a0, e06f1094d6776650 and 754a2792eedd5263 each
+  had one paid Garrison attempt, one unconfirmed attempt, and a native
+  garrison count of one at READY. Their early retries scored 9.99%,
+  9.90% and 9.60%. All four reserved-copy rows reused earlier outbreak seeds.
   No promotion. The aggregate receipts alone do not show the order
   of each successful and unsuccessful placement.
 - A read-only sample covered 11 live planning frames over four discovery
@@ -25,6 +25,14 @@
   Read-only preflight found none of inst1–8 eligible under the existing
   game checks (inst9–12 were already rejected). Production checkpoint hash
   matched. The 35% target remains open.
+
+- Seed 150952 completed generation zero at 00:54 Central. The retained
+  defender be8723e2bcd964a0 and its planning-scale-only variant
+  8acff04584ae0d51 (scale 0.5916) each paid for one Garrison, had one
+  unconfirmed attempt, and had one garrison at READY. They ran on
+  different native outbreaks. The two retries scored 9.85% and 10.00%,
+  respectively. No wins, and no claim of a survival improvement from
+  the scale change. Generation one is live.
 
 ### Placement receipts and target feedback
 - Seed 148952 finished at 00:24 Central. All 16 discovery games had
