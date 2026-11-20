@@ -2,6 +2,29 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:31 Central, three training rounds in breach-cost study
+  193952 completed. All 12 native-outbreak trials ended below
+  10% at retry, with zero credited civilians, occupied exposures
+  or breach penalties. The baseline mean was 5.98%, stronger
+  cost 6.38%, six attempts each. The penalty never activated.
+  Round four is live under PID 54556, copies inst13 71604,
+  inst14 62388, inst15 60364 and inst16 70084.
+- Tested an isolated follow-up for the missing preparation signal.
+  The optional --compare-ready-coverage arm adds up to 0.30 PPO
+  reward in proportion to the game-reported civilian coverage,
+  once on the verified READY transition. Both arms choose their
+  own layouts and use the original 0.10 breach cost and official
+  outcome evaluation. Empty, failed or unverifiable READY gets
+  zero additional credit. The staged patch also incorporates the
+  shorter boot fallback and native comparison receipts. All 313
+  isolated tests passed and git apply --check passed. D: patch
+  analysis/coverage-portable314/tmp/ready-coverage-study.patch
+  SHA256 A65EEFE7129DB7F83018F488C8F4E8485E85ED04F6C92F370FABCDEEFE5EFB20.
+  Evaluate on the reserved copies after the current operator
+  exits. Require actual evidence of coverage signal and better
+  official saves before treating the reward as useful. Production
+  checkpoint hash matched.
+
 - At 12:28 Central, the second shelter-cost training round finished.
   Baseline retries scored 9.15% and 1.45%; stronger cost 4.51%
   and 6.88%. All eight scores so far are below 10% and all eight
