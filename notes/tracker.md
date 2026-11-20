@@ -9,6 +9,20 @@
   are incomplete for the 35% consistency gate. No promotion.
   Evidence: `analysis/coverage-phase-balance-6b7086fe19/results.jsonl` and
   `consistency.json` in the same directory.
+- Search 142952 completed at 22:34 Central. The 16 discovery games produced
+  14 early retries, 1 loss, 1 timeout, and no wins. In generation zero,
+  two proposals tied at 9.96% saved on retry; the selected leader sustained
+  29.6 simulated seconds versus 25.2 for the other. This exercised the new
+  area ordering in a real round. Frozen proposal ef0ae8f88e081549 scored
+  9.54% and 9.81% against the GRU's 9.90% and 9.87%, all early retries.
+  No promotion. Both progression and layout replay were disabled.
+- Added explicit layout-free continuation e986df9. It validates the provisional
+  proposal and GRU identities, refuses saved layouts and loads prior evidence
+  without treating the proposal as the incumbent. 229 game-free script tests
+  passed. Continued as seed 144952 with 13.23 GiB available RAM and
+  12.96 GiB free disk. Trainer PID 66700, four D: Python workers, games
+  inst13–16. New output `analysis/coverage-team-c5f242fb3a` with
+  `analysis/coverage-layout-free-144952-drive-d.log` and matching error log.
 - Started Boston L1-only campaign search 142952 at 22:22 Central, four
   generations, no seed champion, no demonstration, no saved-layout replay.
   Started with 13.23 GiB RAM and 12.98 GiB disk free and verified trainer
