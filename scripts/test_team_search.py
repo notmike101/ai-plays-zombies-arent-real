@@ -389,6 +389,34 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(search.available_placement_neighbors(parent, [(*r, 'ChemMine') for r in rosters], rng), [])
         self.assertEqual(search.available_placement_neighbors(parent, [rosters[0], ('Garrison',)], rng), [])
 
+    def test_firebomb_line_changes_only_firebomb_endpoint_scores(self):
+        tr = search.tr
+        parent = search.random_team(np.random.default_rng(41))
+        parent['battle'] = [[0., 1., 0., 0., 0.] for _ in search.CASTS]
+        line = dict(parent, firebomb_line_targeting=True)
+        reference, model = search.TeamPolicy(parent), search.TeamPolicy(line)
+        tools = np.zeros(tr.NU)
+        tools[search.FIREBOMB] = 1
+        st = dict(planning=False, anchor=(search.FIREBOMB, 8))
+        for policy in (reference, model):
+            policy.set_cast_targets(st, tools, np.ones(tr.NC), 1000, 1000)
+        x = torch.zeros(1, 1, tr.NOBS)
+        x[..., search.GRID_START + tr.NC + 10] = 8.  # Crowd between cells 8 and 12.
+        def base_scores(*args):
+            return torch.zeros(1,1,tr.NU), torch.zeros(1,1,tr.NU*tr.NC), None, None
+        with torch.no_grad(), patch.object(tr.PolicyNet2, 'forward', side_effect=base_scores):
+            base_tools, base, _, _ = reference(x)
+            new_tools, new, _, _ = model(x)
+        expected, actual = base.reshape(tr.NU, tr.NC), new.reshape(tr.NU, tr.NC)
+        self.assertEqual(expected[search.FIREBOMB, 12], 0.)
+        self.assertGreater(actual[search.FIREBOMB, 12], 0.)
+        expected[search.FIREBOMB] = actual[search.FIREBOMB]
+        torch.testing.assert_close(expected, actual)
+        torch.testing.assert_close(base_tools, new_tools)
+        model.set_cast_targets(dict(planning=False, anchor=(search.MISSILE, 8)),
+                               tools, np.ones(tr.NC), 1000, 1000)
+        self.assertIsNone(model.firebomb_segments)
+
     def test_firebomb_neighbors_change_only_its_target_preferences(self):
         rng = np.random.default_rng(41)
         parent = search.random_team(rng)

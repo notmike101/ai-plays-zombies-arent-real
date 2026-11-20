@@ -20,7 +20,7 @@ import nn_play2 as tr
 from game_controls import Controls
 from nn_report import records
 from shelter_reward import garrison_perimeter_gain, garrison_reach
-from spatial import project
+from spatial import grid_bins, project
 import zar_boot
 
 
@@ -39,7 +39,8 @@ GARRISON = tr.TOOLS.index('garrison')
 ZONE_RECT = tr.TOOLS.index('zone_rect')
 FAST_SPEED = tr.TOOLS.index('speed_4')
 MISSILE_ROW = CASTS.index(MISSILE)
-FIREBOMB_ROW = CASTS.index(tr.ABILITY_U['Firebomb'])
+FIREBOMB = tr.ABILITY_U['Firebomb']
+FIREBOMB_ROW = CASTS.index(FIREBOMB)
 SELECT_BUILDING = tr.TOOLS.index('select_building')
 BUILDING_SPECIALS = {name.removeprefix('panel_'):i for i,name in enumerate(tr.TOOLS)
                      if name.startswith('panel_building_') and name.rsplit('_',1)[1].isdigit()}
@@ -441,6 +442,8 @@ class TeamPolicy(tr.PolicyNet2):
         self.battle = torch.tensor(team['battle'])
         self.bias = torch.tensor(team['cast_bias'])
         self.cast_timing = team.get('cast_timing')
+        self.firebomb_line_targeting = team.get('firebomb_line_targeting', False)
+        self.firebomb_segments = None
         self.garrison_coverage_weight = team.get('garrison_coverage', 0.)
         self.garrison_building_range = team.get('garrison_building_range', False)
         self.garrison_early_coverage = team.get('garrison_early_coverage', False)
@@ -479,7 +482,16 @@ class TeamPolicy(tr.PolicyNet2):
         self.missile_in_flight = False
         self.occupied_shelter = False
         self.missile_charges = 0.
-        if st['planning'] or st.get('anchor') or st.get('dialog'):
+        self.firebomb_segments = None
+        if st['planning'] or st.get('dialog'):
+            return
+        if anchor := st.get('anchor'):
+            if self.firebomb_line_targeting and anchor[0] == FIREBOMB and tools[FIREBOMB]:
+                start = np.asarray(tr.battle_point(st, FIREBOMB, anchor[1], width, height))
+                ends = np.asarray([tr.cell_of_px(cell, width, height) for cell in range(tr.NC)])
+                points = start + (ends[:, None, :] - start) * np.linspace(0., 1., 9)[None, :, None]
+                self.firebomb_segments = torch.from_numpy(
+                    grid_bins(points.reshape(-1, 2), width, height).reshape(tr.NC, 9))
             return
         boundary = st.get('playarea_boundary')
         if boundary is None:
@@ -678,7 +690,11 @@ class TeamPolicy(tr.PolicyNet2):
                 tools[...,MISSILE] -= self.missile_reserve*(1.-legal_pressure.max())/self.missile_charges
                 cells[MISSILE] += self.missile_reserve*legal_pressure
             tools[...,tr.TOOLS.index('wait')] += self.team['idle_bias']
-            cells[CASTS] += self.battle @ grid
+            scores = self.battle @ grid
+            if self.firebomb_segments is not None:
+                segments = grid[:, self.firebomb_segments].mean(dim=2)
+                scores[FIREBOMB_ROW] = self.battle[FIREBOMB_ROW] @ segments
+            cells[CASTS] += scores
         return tools, cells.reshape(1,1,-1), value, h
 
 
@@ -877,7 +893,9 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','sample_zone_geometry','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','sample_zone_geometry','firebomb_line_targeting','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
+    if 'firebomb_line_targeting' in team and team['firebomb_line_targeting'] is not True:
+        raise ValueError('Invalid Firebomb line targeting flag')
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
         raise ValueError('Invalid gesture planning flag')
     if 'sample_battle' in team and team['sample_battle'] is not True:
@@ -1061,8 +1079,9 @@ def main():
     neighbors = parser.add_mutually_exclusive_group()
     neighbors.add_argument('--placement-neighbors', action='store_true',
                            help='Compare two equipped placement preferences in the same plan slot')
-    neighbors.add_argument('--battle-neighbors', nargs='?', const='all', choices=('all', 'firebomb'),
-                           help='Explore paired cast scores, optionally only Firebomb targeting')
+    neighbors.add_argument('--battle-neighbors', nargs='?', const='all',
+                           choices=('all', 'firebomb', 'firebomb-line'),
+                           help='Compare cast-score mutations or score Firebomb by its full line')
     parser.add_argument('--goal-margin', action='store_true',
                         help='Rank unsuccessful discovery battles by survival above the 35 percent target')
     parser.add_argument('--click-start', action='store_true',
@@ -1086,7 +1105,8 @@ def main():
     parser.add_argument('--capture-shadow',action='store_true',help='Record bounded crowd frames and confirmed stock spends for offline analysis')
     args=parser.parse_args()
     battle_target = FIREBOMB_ROW if args.battle_neighbors == 'firebomb' else None
-    repeat_pair = args.placement_neighbors or battle_target is not None
+    compare_line = args.battle_neighbors == 'firebomb-line'
+    repeat_pair = args.placement_neighbors or battle_target is not None or compare_line
     copies=args.copies
     if not 4<=len(copies)<=8 or len(set(copies))!=len(copies) or args.generations<1 or args.later_retries<0:
         parser.error('Use 4–8 distinct owned copies and positive generations')
@@ -1299,7 +1319,11 @@ def main():
                     candidate = placement_mode_candidate(proposal, rng, tool)
                     if candidate is not None:
                         population[index] = candidate
-        if args.battle_neighbors:
+        if compare_line:
+            endpoint = dict(proposal)
+            endpoint.pop('firebomb_line_targeting', None)
+            line_arms = (endpoint, dict(endpoint, firebomb_line_targeting=True))
+        elif args.battle_neighbors:
             population[1], population[-1] = battle_neighbors(proposal, rng, battle_target)
         if args.placement_neighbors:
             rosters = [operator.planning_roster((operator.owned_copy(copy) / 'steam_cloud/settings.ini')
@@ -1349,7 +1373,9 @@ def main():
                         print('cnn',result['cnn'],result.get('error'),[(r['end'],r['saved']) for r in result['levels']],flush=True)
                 return
             for generation in range(args.generations):
-                if repeat_pair and generation:
+                if compare_line:
+                    population = [line_arms[(i+generation) % 2] for i in range(len(copies))]
+                elif repeat_pair and generation:
                     population = first_wave[1:] + first_wave[:1]
                 else:
                     if generation == 0:
@@ -1357,7 +1383,7 @@ def main():
                     rng.shuffle(population)
                     if repeat_pair:
                         first_wave = population.copy()
-                jobs=[(copy,weights,team,args.seed+generation*len(copies)+i)
+                jobs=[(copy,weights,team,args.seed+generation*len(copies)+(i//2 if compare_line else i))
                       for i,(copy,team) in enumerate(zip(copies,population))]
                 starts=[1]*len(jobs)
                 for i,(copy,_,team,_) in enumerate(jobs):

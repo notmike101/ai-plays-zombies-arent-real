@@ -767,7 +767,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     ulp, clp = -math.log(mu.sum()), -math.log(mc.sum())
                 else:
                     if (getattr(net,'cast_timing',None) is not None or getattr(net,'missile_reserve',0.)
-                            or getattr(net,'missile_followup',0.)):
+                            or getattr(net,'missile_followup',0.) or getattr(net,'firebomb_line_targeting',False)):
                         net.set_cast_targets(st, mu, mc, env.cw, env.ch)
                     if st['planning'] and getattr(net, 'garrison_coverage_weight', 0.):
                         net.set_garrison_coverage(st, mu, mc, env.cw, env.ch)
@@ -1004,6 +1004,15 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         logging = False
         battle_actions['logged_deployments']=footer.get('deployments') if footer else None
         battle_actions['logged_kills'] = (footer.get('stats') or {}).get('kills') if footer else None
+        if placement_feedback and footer:
+            events = footer.get('combat_events') or ()
+            battle_actions['firebomb_lines'] = [
+                dict(sim=event.get('sim'), start=(event.get('from') or {}).get('world'),
+                     end=(event.get('to') or {}).get('world'))
+                for event in events
+                if event.get('ev') == 'deploy' and event.get('what') == 'fire_bomb']
+            battle_actions['firebomb_impacts'] = sum(
+                event.get('ev') == 'bomb' and event.get('what') == 'fire_bomb' for event in events)
         battle_actions['deploy_sim_seconds']=footer.get('deploy_sim_seconds') if footer else None
         saved = None
         if footer and footer.get('phase') == state['phase']:
