@@ -135,10 +135,13 @@ def main():
                 start = time.monotonic()
                 results = collect_pairs(pool, jobs, directory)
                 batch_seconds = time.monotonic() - start
+                policies = {arm: trainer.policy_id(net) for arm, net in models.items()}
                 for job, row in zip(jobs, results):
                     summary = {k: row.get(k) for k in ('end','saved_frac','win','advance','sim','t','err','board_id','timeout_phase','log_started')}
                     summary.update(copy=job[0], arm=job[1], seed=job[3], round=rnd,
                                    phase='train' if training else 'evaluation',
+                                   policy_id=policies[job[1]], start_kind=row.get('start_kind'),
+                                   outbreak_seed=(row.get('outbreak') or {}).get('seed'),
                                    decisions=len(row.get('obs', [])), batch_seconds=batch_seconds)
                     summary['battle_actions'] = dict(Counter(
                         trainer.TOOLS[u] for u, obs in zip(row.get('us', []), row.get('obs', []))
