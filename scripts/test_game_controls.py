@@ -21,6 +21,31 @@ class ControlsTests(unittest.TestCase):
         c.env.vi.button_down.assert_called_once()
         c.env.vi.button_up.assert_called_once()
 
+    def test_rectangle_confirms_only_a_complete_native_draft(self):
+        for corners, modal, active, confirmed in ((4, False, True, True),
+                (2, False, True, False), (4, True, True, False), (4, False, False, False)):
+            with self.subTest(corners=corners, modal=modal, active=active):
+                control = Controls(Mock())
+                control.polygon_corner = Mock()
+                control.polygon_finish = Mock()
+
+                def native(rva, fmt):
+                    count = control.polygon_corner.call_count
+                    if rva == 0x667868:
+                        return modal and count == 4
+                    if rva == 0x65c488:
+                        return active or count < 4
+                    return corners
+
+                control.env.scalar.side_effect = native
+                self.assertEqual(control.zone_rectangle((100, 200), (300, 400)), confirmed)
+                self.assertEqual(control.polygon_corner.call_args_list, [
+                    unittest.mock.call((100, 200), begin=True),
+                    unittest.mock.call((300, 200), begin=False),
+                    unittest.mock.call((300, 400), begin=False),
+                    unittest.mock.call((100, 400), begin=False)])
+                self.assertEqual(control.polygon_finish.call_count, int(confirmed))
+
     def test_gesture_preserves_selection_and_releases_modifier_on_failure(self):
         c=Controls(Mock());c.frames=Mock();c.cancel=Mock()
         c.env.vi.drag.side_effect=RuntimeError('input failure')

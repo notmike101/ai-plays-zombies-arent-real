@@ -167,6 +167,21 @@ class Controls:
         self.env.vi.key_press(13,sc=28)
         self.frames()
 
+    def zone_rectangle(self, start, end):
+        x1, y1 = start
+        x2, y2 = end
+        for i, point in enumerate(((x1, y1), (x2, y1), (x2, y2), (x1, y2))):
+            if self.env.scalar(0x667868, '<B'):
+                return False
+            if i and self.env.scalar(0x65c488, '<B') != 1:
+                return False
+            self.polygon_corner(point, begin=i == 0)
+        if (self.env.scalar(0x667868, '<B') or self.env.scalar(0x65c488, '<B') != 1
+                or self.env.scalar(0x65cce0, '<q') != 4):
+            return False
+        self.polygon_finish()
+        return True
+
     def polygon_back(self):
         if self.env.scalar(0x65c488,'<B') != 1:
             raise ZAREnvError('No active safe-zone polygon')

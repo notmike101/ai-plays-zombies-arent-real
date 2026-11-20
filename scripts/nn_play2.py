@@ -596,7 +596,14 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         unconfirmed_buildings = {}
         building_receipts = []
         plan_limit = options.get('plan_steps', PLAN_STEPS)
-        state = env.game_state()
+        def episode_state():
+            observed = env.game_state()
+            if battle_start is None and observed['phase'] != 'planning':
+                action = TOOLS[u] if u is not None else 'initial observation'
+                raise ZAREnvError(f"Game entered {observed['phase']} without model READY after {action}")
+            return observed
+
+        state = episode_state()
         next_rest=0.
         excursion=False
         while end is None:
@@ -625,7 +632,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     battle_actions['view_fits']=battle_actions.get('view_fits',0)+int(fitted)
                 excursion=False
                 next_rest=time.monotonic()+2.
-                after_view=env.game_state()
+                after_view=episode_state()
                 if after_view['phase']!=state['phase']:
                     state=after_view
                     o=env.obs()
@@ -755,16 +762,14 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     else:
                         x1, y1 = cell_of_px(st.pop('anchor')[1], env.cw, env.ch)
                         x2, y2 = cell_of_px(c, env.cw, env.ch)
-                        env._arm(*((0x42, 48) if u == 10 else U_HOTKEY[u]))
                         if u == 10:
-                            for px, py in ((x1, y1), (x2, y1), (x2, y2), (x1, y2)):
-                                env.vi.click(px, py)
-                            env.vi.key_press(0x0D, sc=28)
+                            mechanics.controls.zone_rectangle((x1, y1), (x2, y2))
                         else:
+                            env._arm(*U_HOTKEY[u])
                             mechanics.controls.drag_handles((x1,y1),(x2,y2))
                             if u == 15:
                                 env.vi.click(x2, y2)
-                        mechanics.controls.frames()
+                            mechanics.controls.frames()
                 elif u in U_HOTKEY:
                     env._arm(*U_HOTKEY[u])
                     cx, cy = cell_of_px(c, env.cw, env.ch)
@@ -805,7 +810,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     # The stock receipt, not a sent keypress, proves a resource was spent.
                     if slot['charges'] < before_stock:
                         battle_actions['stock_decreased'] += 1
-                        slot['last_cast_t'] = env.game_state()['sim']
+                        slot['last_cast_t'] = episode_state()['sim']
                         if shadow is not None:
                             capture.receipt('confirmed', before=before_stock, after=slot['charges'],
                                             sim=slot['last_cast_t'], pixels=pixels)
@@ -826,7 +831,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             # Observe after this action; outcomes belong to this transition.
             time.sleep(max(0., (.1 if st['planning'] else STEP_S) - (time.monotonic()-action_started)))
             o = env.obs()
-            state = env.game_state()
+            state = episode_state()
             if any(o[k] is None for k in ('money', 'civ', 'zomb', 'infections')):
                 raise ZAREnvError('Incomplete observation')
             dt = max(state['sim'] - previous_state['sim'], .001)

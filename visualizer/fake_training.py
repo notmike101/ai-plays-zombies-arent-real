@@ -50,7 +50,7 @@ class FakeGame:
     def start_log(self):
         return {'wall': 100, 'session': {'stats': {'quota_base': 100}}}
 
-    def stop_log(self):
+    def stop_log(self, *, capture_events=False):
         self.closed_log = True
         return {'phase': self.phase, 'stats': {'saved_pct': 100-self.infections}}
 

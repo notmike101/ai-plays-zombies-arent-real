@@ -160,6 +160,27 @@ class IntegrationTests(unittest.TestCase):
         self.assertAlmostEqual(result['reward_components']['special_activation'],.03)
         self.assertEqual(result['rews'][:6],[0.,.01,0.,.01,.01,0.])
 
+    def test_episode_rejects_native_battle_without_model_ready(self):
+        game = FakeGame(-1)
+
+        class UnexpectedPhase(FakeMechanics):
+            def execute(self, st, name, cell):
+                game.phase = 'playing'
+
+        overrides = dict(Observer=None, Mechanics=UnexpectedPhase,
+                         load_bind_keys=lambda env: [], time=FakeClock(game))
+        tool = self.globals['TOOLS'].index('panel_building_5')
+        with patch.dict(self.globals, overrides), patch.dict(sys.modules, {
+                'env_zar': SimpleNamespace(ZAREnv=lambda pid: game, ZAREnvError=RuntimeError)}):
+            with patch.object(torch.distributions.Categorical, 'sample',
+                              side_effect=[torch.tensor(tool), torch.tensor(0)]):
+                with redirect_stderr(io.StringIO()):
+                    result = self.run_episode((-1, self.model.state_dict(), False, 'unexpected-phase'))
+        self.assertRegex(result['err'], 'without model READY after panel_building_5')
+        self.assertNotIn('saved_frac', result)
+        self.assertTrue(game.closed_log and game.closed)
+        self.assertNotIn(0x20, game.keys)
+
     def test_episode_failure_still_closes_observer(self):
         result = self.episode(self.factory, fail=True)
         self.assertEqual(result['err'], 'synthetic observation failure')
