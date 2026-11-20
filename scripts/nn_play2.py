@@ -29,7 +29,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT)
 try:
     from visualizer.observer import Observer
-    from visualizer.labels import INPUT_LABELS, validate as validate_labels
+    from visualizer.labels import INPUT_LABELS, SHELTER_OCCUPANCY_LABEL, validate as validate_labels
 except ImportError:
     Observer = None
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, extra_cell_label
@@ -96,9 +96,9 @@ def cell_of_px(c, cw, ch):
 
 
 class PolicyNet2(nn.Module):
-    def __init__(self):
+    def __init__(self, *, shelter_occupancy=False):
         super().__init__()
-        self.gru = nn.GRU(NOBS, HID, 1, batch_first=True)
+        self.gru = nn.GRU(NOBS+int(shelter_occupancy), HID, 1, batch_first=True)
         self.hu = nn.Linear(HID, NU)
         self.hc = nn.Linear(HID, NU * NC)
         self.val = nn.Linear(HID, 1)
@@ -143,6 +143,8 @@ def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
     base.extend([st.get('sp', 0) / 10., anchor[0]/72 if anchor else -1.,
                  anchor[1]/NC if anchor else -1.])
     base.extend(st.get('mechanics_features', [0.]*len(EXTRA_LABELS)))
+    if 'shelter_occupancy_input' in st:
+        base.append(st['shelter_occupancy_fraction'] if st['shelter_occupancy_input'] else 0.)
     return base
 
 
@@ -591,8 +593,9 @@ def refresh_battle_state(st, dump):
                 slot['pending'] = False
 
 
-def checkpoint_schema():
-    return dict(version=4, inputs=INPUT_LABELS, tools=TOOLS, cells=CELL_LABELS)
+def checkpoint_schema(*, shelter_occupancy=False):
+    labels = INPUT_LABELS + [SHELTER_OCCUPANCY_LABEL] if shelter_occupancy else INPUT_LABELS
+    return dict(version=5 if shelter_occupancy else 4, inputs=labels, tools=TOOLS, cells=CELL_LABELS)
 
 
 def learning_config(*, legacy=False):
@@ -754,6 +757,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         shelter_tracker = Shelter(civ0, breach_cost=options.get('occupied_breach_cost', BREACH_COST),
                                   duration_rate=options.get('shelter_duration_rate'))
         st = dict(t=0., planning=True, spend_frac=0., deck=[], sim=0., mult=8., shelter=shelter_tracker)
+        shelter_occupancy_input = options.get('shelter_occupancy_input')
+        shelter_occupancy_peak = None
+        if shelter_occupancy_input is not None:
+            st['shelter_occupancy_input'] = shelter_occupancy_input
         config = initial.get('config', {})
         st['rules']={**config,**initial.get('params',{})}
         st.update(loadout=env.loadout_levels(), sp=session.get('sp_unspent', 0),
@@ -773,7 +780,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 if session['scenario']>1 and os.path.isfile(path):load_pretrained(net,path)
             if Observer is not None and telemetry:
                 observer = Observer(net, pid, tag, interval=options.get('observer_interval', .2), labels={
-                    'input': INPUT_LABELS, 'hu': TOOLS, 'hc': CELL_LABELS})
+                    'input': checkpoint_schema(shelter_occupancy=shelter_occupancy_input is not None)['inputs'],
+                    'hu': TOOLS, 'hc': CELL_LABELS})
         rows = {k: [] for k in ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'sim_elapsed')}
         planning_tool_temperature = options.get('planning_tool_temperature')
         battle_tool_temperature = options.get('battle_tool_temperature')
@@ -881,6 +889,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 rows['rews'][-1] += st['shelter'].observe(st.get('native'),st['sim'])
             blobs = []
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
+            if shelter_occupancy_input is not None:
+                shelter_occupancy_peak = max(shelter_occupancy_peak or 0., st['shelter_occupancy_fraction'])
             update_outside_retries(st,env.cw,env.ch)
             st['placement_blocked'] = blocked_placement_cells(st, placement_retry_at, len(rows['obs']))
             update_geometry_masks(st, env.cw, env.ch, placement_feedback=placement_feedback,
@@ -1364,6 +1374,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 receipts=dict(
                     occupied_exposure=bool(shelter.breach_exposures) if shelter.next_sample else None,
                     occupied_duration=bool(shelter.occupant_seconds) if shelter.duration_intervals else None,
+                    shelter_occupancy_input=bool(shelter_occupancy_peak) if shelter_occupancy_peak is not None else None,
                     occupied_ready=coverage > 0 if coverage is not None else None,
                     below_ready_target=coverage < READY_COVERAGE_SHORTFALL_TARGET if coverage is not None else None,
                     missile_civilian_loss=missile_losses['confirmed'] > 0 if missile_losses is not None else None,
@@ -1373,6 +1384,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     snapped_cast=bool(snapped_cast_attempts),
                     target_pointer_settled=bool(settled_cast_attempts),
                     legal_ready_declined=bool(ready_declined_steps)),
+                shelter_occupancy_peak=shelter_occupancy_peak,
                 reward_components=rewards.copy(),
                 reward_bases=dict(
                     occupied_breach=-shelter.breach_exposures / civ0 if shelter.next_sample else None,

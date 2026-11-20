@@ -12,6 +12,7 @@ class SignalTests(unittest.TestCase):
                     ready_coverage_credit_by_arm={'reference': 0., 'candidate': .30},
                     ready_shortfall_cost_by_arm={'reference': 0., 'candidate': .15},
                     shelter_duration_rate_by_arm={'reference': 0., 'candidate': .01},
+                    shelter_input_by_arm={'reference': False, 'candidate': True},
                     ready_delay_cost_by_arm={'reference': 0., 'candidate': .002})
 
     def report(self, kind, rows, *, complete=0):
@@ -104,6 +105,15 @@ class SignalTests(unittest.TestCase):
         report = self.report('shelter_duration', rows)
         self.assertEqual(report['advisory'], 'treatment_observed')
         self.assertAlmostEqual(report['arms']['candidate']['reward_difference_sum'], .04)
+        self.assertEqual(report['outcome_evidence'], 'insufficient_independent_natural_finishes')
+
+    def test_exact_shelter_input_reports_exposure_separately_from_outcomes(self):
+        rows = self.rows({'shelter_occupancy_input': False}, {})
+        self.assertEqual(self.report('shelter_input', rows)['advisory'], 'unexercised')
+        rows[-1]['experiment_signal'] = dict(receipts={'shelter_occupancy_input': True})
+        report = self.report('shelter_input', rows)
+        self.assertEqual(report['advisory'], 'treatment_observed')
+        self.assertEqual(report['arms']['candidate']['treatment_episodes'], 1)
         self.assertEqual(report['outcome_evidence'], 'insufficient_independent_natural_finishes')
 
     def test_target_settle_requires_an_executed_snapped_cast_with_the_frame_wait(self):

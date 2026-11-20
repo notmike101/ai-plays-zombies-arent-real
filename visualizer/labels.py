@@ -64,6 +64,8 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from scripts.mechanic_contract import EXTRA_LABELS
 INPUT_LABELS += EXTRA_LABELS
 
+SHELTER_OCCUPANCY_LABEL = 'Living civilians inside closed safe zones (fraction)'
+
 
 def validate(nobs=None, labels=None):
     """Hard gate before training launch: labels must match model width."""

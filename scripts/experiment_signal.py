@@ -14,6 +14,7 @@ _SAMPLING = {'zone_exploration': 'zone_cells', 'planning_exploration': 'planning
              'battle_exploration': 'battle_tools'}
 _OTHER = {'planning_entropy': 'planning_entropy',
           'phase_balance': 'phase_balance', 'spatial': 'spatial_cells',
+          'shelter_input': 'shelter_occupancy_input',
           'target_settle': 'snapped_cast'}
 
 
@@ -85,6 +86,7 @@ def summarize_signal(rows, config, arms, evaluation, *, start_round, minimum=4):
                 difference = occurrence and (
                     design == 'planning_entropy' and config['planning_tool_entropy_bonus_by_arm'][arm] > 0
                     or design == 'phase_balance' and arm == 'balanced'
+                    or design == 'shelter_input' and config['shelter_input_by_arm'][arm]
                     or design == 'target_settle' and receipts_seen.get('target_pointer_settled') is True
                 )
             if observed is None:

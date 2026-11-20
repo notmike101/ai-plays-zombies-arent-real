@@ -54,6 +54,28 @@ DEFENSE_COSTS = {'defense_baseline': trainer.BREACH_COST,
                  'defense_stronger': 3 * trainer.BREACH_COST}
 READY_SHORTFALL_COSTS = {'shortfall_baseline': 0., 'shortfall_penalty': .15}
 SHELTER_DURATION_RATES = {'duration_baseline': 0., 'duration_credit': .01}
+SHELTER_INPUT_BY_ARM = {'shelter_grid': False, 'shelter_exact': True}
+
+
+def extend_shelter_model(source, optimizer):
+    """Preserve the original GRU and Adam values when adding a zero input column."""
+    net = trainer.PolicyNet2(shelter_occupancy=True)
+    weights = source.state_dict()
+    key = 'gru.weight_ih_l0'
+    original_shape = weights[key].shape
+    weights[key] = nn.functional.pad(weights[key], (0, 1))
+    net.load_state_dict(weights)
+    optimizer = deepcopy(optimizer)
+    groups = optimizer['param_groups']
+    if len(groups) != 1 or len(groups[0]['params']) != len(weights):
+        raise ValueError('Unexpected optimizer parameters for shelter input extension')
+    first = groups[0]['params'][list(weights).index(key)]
+    for name, value in optimizer['state'].get(first, {}).items():
+        if name in ('exp_avg', 'exp_avg_sq', 'max_exp_avg_sq'):
+            if value.shape != original_shape:
+                raise ValueError('Unexpected Adam input moment width')
+            optimizer['state'][first][name] = nn.functional.pad(value, (0, 1))
+    return net, optimizer
 
 
 def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=False):
@@ -62,13 +84,15 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
     target_study = arm in TARGET_SETTLE
     ready_study = arm in READY_DELAY_COSTS
     duration_study = arm in SHELTER_DURATION_RATES
+    input_study = arm in SHELTER_INPUT_BY_ARM
     planning_study = (arm in PLANNING_TEMPERATURES or arm in PLANNING_ENTROPY_BONUSES
                       or battle_study or target_study or ready_study)
     try:
         copy_dir = operator.owned_copy(copy)
         env = None
         if (arm in BREACH_COSTS or arm in READY_CREDITS or arm in ZONE_TEMPERATURES
-                or planning_study or arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS or duration_study):
+                or planning_study or arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS
+                or duration_study or input_study):
             try:
                 env = zar_boot.boot(copy_dir, welcome_wait=15, discard_dump_states=True)
             except ZAREnvError as exc:
@@ -127,6 +151,13 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
             options.update(fixed_speed='speed_1', fixed_clock=True, ready_coverage_credit=.30,
                            planning_zone_audit=True, experiment_signal='receipts',
                            shelter_duration_rate=SHELTER_DURATION_RATES[arm])
+            if phase == [True]:
+                options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
+        if input_study:
+            policy = partial(trainer.PolicyNet2, shelter_occupancy=True)
+            options.update(fixed_speed='speed_1', fixed_clock=True, ready_coverage_credit=.30,
+                           planning_zone_audit=True, experiment_signal='receipts',
+                           shelter_occupancy_input=SHELTER_INPUT_BY_ARM[arm])
             if phase == [True]:
                 options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
         if separate_policy_cpus:
@@ -289,6 +320,8 @@ def main():
                             help='Compare a capped penalty for low verified civilian shelter coverage at READY')
     comparison.add_argument('--compare-shelter-duration', action='store_true',
                             help='Compare bounded credit for civilians spending time in intact shelters')
+    comparison.add_argument('--compare-shelter-input', action='store_true',
+                            help='Compare a private policy input for exact civilian shelter occupancy')
     parser.add_argument('--observe', action='store_true',
                         help='Publish read-only Observatory decisions at up to 1 Hz per worker')
     parser.add_argument('--separate-policy-cpus', action='store_true',
@@ -308,7 +341,7 @@ def main():
                       or args.compare_battle_exploration or args.compare_target_settle or args.compare_ready_delay)
     coverage_study = (args.compare_ready_coverage or args.compare_zone_exploration
                       or planning_study or args.compare_shelter_defense
-                      or args.compare_ready_shortfall or args.compare_shelter_duration)
+                      or args.compare_ready_shortfall or args.compare_shelter_duration or args.compare_shelter_input)
     shelter_study = args.compare_breach_cost or coverage_study
     paired_weights = args.compare_missile_credit or args.compare_phase_balance or shelter_study
     if args.warm_start and not paired_weights:
@@ -333,8 +366,13 @@ def main():
             baseline.load_state_dict(weights)
         else:
             trainer.load_pretrained(baseline, trainer.MODEL)
+        if paired_weights and warm_source is None:
+            adam = torch.load(trainer.MODEL, weights_only=True)['optimizer']
+        if args.compare_shelter_input:
+            baseline, adam = extend_shelter_model(baseline, adam)
         if paired_weights:
-            labels = (tuple(SHELTER_DURATION_RATES) if args.compare_shelter_duration else
+            labels = (tuple(SHELTER_INPUT_BY_ARM) if args.compare_shelter_input else
+                      tuple(SHELTER_DURATION_RATES) if args.compare_shelter_duration else
                       tuple(READY_SHORTFALL_COSTS) if args.compare_ready_shortfall else
                       tuple(DEFENSE_COSTS) if args.compare_shelter_defense else
                       tuple(READY_DELAY_COSTS) if args.compare_ready_delay else
@@ -354,12 +392,10 @@ def main():
             models = {'dense': baseline, 'shared': candidate}
         optimizers = {arm: torch.optim.Adam(net.parameters(), lr=3e-4) for arm, net in models.items()}
         if paired_weights:
-            if warm_source is None:
-                adam = torch.load(trainer.MODEL, weights_only=True)['optimizer']
             for opt in optimizers.values():
                 opt.load_state_dict(deepcopy(adam))
         config = dict(seed=args.seed, copies=copies, train_rounds=args.train_rounds,
-                      eval_rounds=args.eval_rounds, schema=trainer.checkpoint_schema(),
+                      eval_rounds=args.eval_rounds, schema=trainer.checkpoint_schema(shelter_occupancy=args.compare_shelter_input),
                       learning=trainer.learning_config())
         rollout_options = {'observe': args.observe}
         if args.separate_policy_cpus:
@@ -414,6 +450,10 @@ def main():
                           training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
                           shelter_duration_rate_by_arm=SHELTER_DURATION_RATES,
                           shelter_duration_cap=DURATION_CAP, shelter_duration_max_interval=DURATION_MAX_INTERVAL)
+        if args.compare_shelter_input:
+            config.update(comparison='shelter_input', fixed_speed='speed_1', ready_coverage_credit=.30,
+                          training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
+                          shelter_input_by_arm=SHELTER_INPUT_BY_ARM)
         first_round = 0
         prior_signal_rows = []
         source = trainer.policy_id(baseline)
@@ -436,7 +476,8 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        experiment = ('shelter-duration' if args.compare_shelter_duration else
+        experiment = ('shelter-input' if args.compare_shelter_input else
+                      'shelter-duration' if args.compare_shelter_duration else
                       'ready-shortfall' if args.compare_ready_shortfall else
                       'shelter-defense' if args.compare_shelter_defense else
                       'ready-delay' if args.compare_ready_delay else
@@ -522,7 +563,8 @@ def main():
                         if coverage_study:
                             summary['ready_coverage_reward'] = row.get('reward_components', {}).get('ready_coverage')
                     if (args.compare_zone_exploration or planning_study
-                            or args.compare_shelter_defense or args.compare_ready_shortfall or args.compare_shelter_duration):
+                            or args.compare_shelter_defense or args.compare_ready_shortfall
+                            or args.compare_shelter_duration or args.compare_shelter_input):
                         summary['planning_zone_receipts'] = row.get('planning_zone_receipts')
                         for key in ('ready_embedded_defenses', 'ready_preparation', 'ready_loadout',
                                     'first_legal_cast_sim', 'timeout_preparation'):

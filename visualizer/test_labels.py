@@ -10,7 +10,7 @@ import unittest
 import torch
 from torch import nn
 
-from labels import INPUT_LABELS, validate
+from labels import INPUT_LABELS, SHELTER_OCCUPANCY_LABEL, validate
 
 ROOT = Path(__file__).resolve().parent
 _TR = {}
@@ -21,6 +21,19 @@ def trainer():
         _TR.update(runpy.run_path(str(ROOT.parent / 'scripts' / 'nn_play2.py'),
                                   run_name='test_labels'))
     return _TR
+
+
+class ShelterInputLabels(unittest.TestCase):
+    def test_private_shelter_input_is_appended_with_the_exact_label(self):
+        tr = trainer()
+        labels = tr['checkpoint_schema'](shelter_occupancy=True)['inputs']
+        self.assertEqual(labels, [*INPUT_LABELS, SHELTER_OCCUPANCY_LABEL])
+        self.assertEqual(tr['PolicyNet2'](shelter_occupancy=True).gru.input_size, len(labels))
+        args = (PROBE_O, 1., 0., 0., [], 0., 0., 0.)
+        masked = tr['make_obs'](dict(PROBE_ST, shelter_occupancy_input=False), *args)
+        exact = tr['make_obs'](dict(PROBE_ST, shelter_occupancy_input=True, shelter_occupancy_fraction=.25), *args)
+        self.assertEqual(masked, [*exact[:-1], 0.])
+        self.assertEqual(exact[-1], .25)
 
 
 # One unambiguous value per feature slot, independent of make_obs internals.

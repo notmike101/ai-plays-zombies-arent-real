@@ -10,6 +10,42 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_shelter_input_starts_with_identical_policy_and_adam(self):
+        import compare_spatial as comp
+        torch = train.torch
+        old = train.PolicyNet2()
+        optimizer = torch.optim.Adam(old.parameters())
+        old.gru.weight_ih_l0.grad = torch.ones_like(old.gru.weight_ih_l0)
+        optimizer.step()
+        net, moments = comp.extend_shelter_model(old, optimizer.state_dict())
+        new = torch.optim.Adam(net.parameters()); new.load_state_dict(moments)
+        x = torch.randn(1, 2, train.NOBS)
+        with torch.no_grad():
+            old_output = old(x)
+            new_output = net(torch.cat((x, torch.full((1, 2, 1), .75)), dim=-1))
+        for left, right in zip(old_output, new_output):
+            torch.testing.assert_close(left, right, rtol=0., atol=2e-6)
+        for name in ('exp_avg', 'exp_avg_sq'):
+            original = optimizer.state[old.gru.weight_ih_l0][name]
+            expanded = new.state[net.gru.weight_ih_l0][name]
+            torch.testing.assert_close(original, expanded[:, :-1], rtol=0., atol=0.)
+            self.assertFalse(expanded[:, -1].any())
+
+    def test_shelter_input_pair_changes_only_whether_the_input_is_visible(self):
+        import compare_spatial as comp
+        with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \
+                patch.object(comp.zar_boot, 'stop'), patch.object(train, 'run_episode') as run:
+            for training in (True, False):
+                options = []
+                for arm, visible in comp.SHELTER_INPUT_BY_ARM.items():
+                    comp.episode(('inst13', arm, {}, 123, 'test', training), observe=True)
+                    settings = run.call_args.args[0][4].copy()
+                    self.assertEqual(settings.pop('shelter_occupancy_input'), visible)
+                    self.assertEqual(run.call_args.kwargs['policy_factory']().gru.input_size, train.NOBS+1)
+                    self.assertTrue(run.call_args.kwargs['telemetry'])
+                    options.append(settings)
+                self.assertEqual(*options)
+
     def test_private_ppo_retries_both_arms_after_transient_native_map_change(self):
         from compare_spatial import collect_pairs
         from unittest.mock import Mock

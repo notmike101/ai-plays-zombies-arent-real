@@ -202,16 +202,23 @@ def preparation_counts(snapshot):
                 other_units=dict(Counter(str(name) for name in names if name)))
 
 
-def planning_timeout_preparation(snapshot, money):
-    """Record the final planning board without inventing an outbreak receipt."""
+def civilian_zone_fraction(snapshot):
     units = snapshot['units']
     civilians = units['pos'][units['kind'] == 0]
-    zones = [zone for zone in snapshot['zones'] if len(zone) >= 3]
+    if not len(civilians):
+        return None
     covered = np.zeros(len(civilians), dtype=bool)
-    for zone in zones:
-        covered |= inside_polygon(civilians, zone)
-    return dict(preparation_counts(snapshot), money=money, closed_zones=len(zones),
-                civilian_zone_fraction=float(covered.mean()) if len(civilians) else None,
+    for zone in snapshot['zones']:
+        if len(zone) >= 3:
+            covered |= inside_polygon(civilians, zone)
+    return float(covered.mean())
+
+
+def planning_timeout_preparation(snapshot, money):
+    """Record the final planning board without inventing an outbreak receipt."""
+    return dict(preparation_counts(snapshot), money=money,
+                closed_zones=sum(len(zone) >= 3 for zone in snapshot['zones']),
+                civilian_zone_fraction=civilian_zone_fraction(snapshot),
                 embedded_defenses=embedded_defenses(snapshot))
 
 
@@ -319,6 +326,8 @@ class Mechanics:
 
     def refresh(self,st):
         e=self.env;c=self.controls;s=self.reader.snapshot()
+        if 'shelter_occupancy_input' in st:
+            st['shelter_occupancy_fraction'] = civilian_zone_fraction(s) or 0.
         if e.scalar(0x6553d4,'<f') or e.scalar(0x6553d8,'<f'):
             raise RuntimeError('Policy projection requires top-down camera')
         st['dialog']=bool(e.scalar(0x667868,'<B'))
