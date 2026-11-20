@@ -90,6 +90,29 @@ class LearningTests(unittest.TestCase):
             np.testing.assert_array_equal(starts[tool], start_cells)
         self.assertEqual(train.planning_geometry_masks(dict(state, planning=False), 1000, 1000), {})
 
+    def test_battle_geometry_filters_unplayable_clicks_and_cast_endpoints(self):
+        state = dict(planning=False, playarea_boundary=[(0, 0), (900, 0), (50, 900), (0, 900)],
+                     sim=40, deck=[dict(name=name, key='1', unlock=20, pending=False, charges=1)
+                                   for name in ('Firebomb', 'Demolition')])
+        targets = [None] * train.NC
+        targets[10], targets[15] = (900, 200), (100, 100)
+        state['battle_targets'] = {24: targets}
+        for current in (
+                state, dict(state, anchor=(24, 10)), dict(state, anchor=(24, 15)),
+                dict(state, gesture_anchor=(train.TOOLS.index('shift_drag_world'), 15)),
+                dict(state, gesture_anchor=(train.TOOLS.index('drag_world'), 8))):
+            masks = train.battle_geometry_masks(current, 1000, 1000)
+            self.assertTrue(masks)
+            for tool, mask in masks.items():
+                np.testing.assert_array_equal(
+                    mask, [not train.outside_playarea(current, tool, cell, 1000, 1000)
+                           for cell in range(train.NC)])
+        current = dict(state, anchor=(24, 10))
+        current['geometry_cells'] = train.battle_geometry_masks(current, 1000, 1000)
+        tools, _ = train.masks_for(current)
+        self.assertFalse(tools[24])
+        self.assertTrue(tools[train.TOOLS.index('cancel_tool')])
+
     def test_unconfirmed_building_retries_apply_only_to_the_same_target_and_camera(self):
         targets = [None] * train.NC
         targets[34], targets[35] = (430, 560), (520, 560)

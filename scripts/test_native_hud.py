@@ -58,6 +58,19 @@ class HudTests(unittest.TestCase):
             self.assertTrue(read_panel(env)['valid'])
         self.assertEqual(env.vi.hud_snapshot.call_count,2)
 
+    def test_seqlock_retries_after_a_torn_frame(self):
+        raw = ctypes.create_string_buffer(4096)
+        vi = VirtualInput.__new__(VirtualInput)
+        vi.hud_view = ctypes.addressof(raw)
+
+        def publish(sequence):
+            ctypes.memmove(vi.hud_view, struct.pack('<IIQQII', 0x5a485544, 1, sequence, 55, 1, 2), 32)
+
+        publish(3)
+        with patch('zar_input.time.sleep', side_effect=lambda _: publish(4)) as pause:
+            self.assertEqual(vi.hud_snapshot()['frame'], 55)
+        pause.assert_called_once_with(.01)
+
     def test_shared_mapping_seqlock_and_protocol(self):
         raw=ctypes.create_string_buffer(4096)
         vi=VirtualInput.__new__(VirtualInput);vi.hud_view=ctypes.addressof(raw)

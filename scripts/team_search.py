@@ -838,7 +838,7 @@ def main():
         view_revision='playable-overview-v3-bounded-targets-shelter-v2-specials-v1-retries-v2-verified-ready-v1'
         explore_without_layout = not args.demonstration and not (prior or {}).get('layout')
         if explore_without_layout and not args.allow_progression:
-            view_revision += '-placement-feedback-v2'
+            view_revision += '-placement-feedback-v3'
         evidence={}
         prices={}
         defenders = {}

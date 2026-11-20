@@ -246,6 +246,42 @@ def planning_geometry_masks(st, width, height):
     segments = inside & (inside.sum() >= 2)
     return {10: rectangles.any(axis=1), 15: segments, 17: segments, 18: segments}
 
+def battle_geometry_masks(st, width, height):
+    boundary = st.get('playarea_boundary')
+    if st['planning'] or boundary is None or st.get('dialog'):
+        return {}
+    if st.get('anchor'):
+        tool, anchor = st['anchor']
+        if tool not in BATTLE_GEOMETRY:
+            return {}
+        origin = battle_point(st, tool, anchor, width, height)
+        endpoints = [cell_of_px(i, width, height) for i in range(NC)]
+        return {tool: inside_polygon(endpoints, boundary) & inside_polygon([origin], boundary)[0]}
+
+    world_points = [(round(XF[i % 8] * width), round(YF[i // 8] * height)) for i in range(NC)]
+    pointer_cells = inside_polygon(world_points, boundary)
+    if st.get('gesture_anchor'):
+        tool, anchor = st['gesture_anchor']
+        if TOOLS[tool] in ('drag_world', 'shift_drag_world'):
+            return {tool: pointer_cells & pointer_cells[anchor]}
+        return {}
+    masks = {TOOLS.index(name): pointer_cells
+             for name in ('click_world', 'right_click_world', 'drag_world', 'shift_drag_world')}
+    cast_cells = None
+    for slot in st.get('deck', ()):
+        tool = ABILITY_U.get(slot['name'])
+        if tool is None or not slot_castable(st, slot):
+            continue
+        if tool in st.get('battle_targets', {}):
+            points = [battle_point(st, tool, i, width, height) for i in range(NC)]
+            masks[tool] = inside_polygon(points, boundary)
+        else:
+            if cast_cells is None:
+                cast_cells = inside_polygon([cell_of_px(i, width, height) for i in range(NC)], boundary)
+            masks[tool] = cast_cells
+    return masks
+
+
 def masks_for(st):
     tools, cells = base_masks(st)
     blocked_tools = (st.get('outside_retries', {}).keys()
@@ -671,7 +707,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             update_outside_retries(st,env.cw,env.ch)
             st['placement_blocked'] = blocked_placement_cells(st, placement_retry_at, len(rows['obs']))
             if placement_feedback:
-                st['geometry_cells'] = planning_geometry_masks(st, env.cw, env.ch)
+                geometry = planning_geometry_masks if st['planning'] else battle_geometry_masks
+                st['geometry_cells'] = geometry(st, env.cw, env.ch)
             mu, mc = masks_for(st)
             base_cells = mc
             greedy = options.get('greedy') and (st['planning'] or not options.get('sample_battle'))

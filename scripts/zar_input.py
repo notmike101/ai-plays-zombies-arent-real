@@ -490,7 +490,9 @@ class VirtualInput:
                 kernel32.CloseHandle(ctypes.c_void_p(section))
                 raise OSError('Cannot map read-only HUD observer')
             self.hud_section, self.hud_view = section, view
-        for _ in range(5):
+        for attempt in range(5):
+            if attempt:
+                time.sleep(.01)
             first = ctypes.string_at(self.hud_view, 32)
             magic, version, sequence, frame, valid, status = struct.unpack('<IIQQII', first)
             if magic != 0x5a485544 or version != 1 or status != 2:
