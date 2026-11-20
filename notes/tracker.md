@@ -2,6 +2,28 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 168952 started at 05:05 Central on D:, portable trainer PID
+  70872, output `analysis/coverage-team-61e1c86039` and log
+  `analysis/coverage-layout-free-168952-drive-d.log`. Launch headroom
+  12.94 GiB RAM and 18.77 GiB free. Commit 70d2596 tests previously
+  untried scales 0.3111077 and 0.5111077 around frozen parent 0.4111077,
+  with the same genome otherwise and the GRU reference. A verified
+  native discovery clear at or above 20% triggers this local search
+  only. Official qualification, saved fractions, and held-out rules
+  remain intact. All 265 script tests passed. Production hash verified.
+- Seed 167952 drained at 05:05 with seven early retries, one timeout,
+  no native win and no reserved evaluation. All eight copies started
+  without observed startup fallback. cb77350565675243 retried at
+  9.31% and 8.36% on different outbreaks from its 24.82% clear. Its
+  conservative discovery mean is 14.16% for three distinct seeds.
+  In the first repeat it entered with eight Garrisons and $809 versus
+  21 and $82 in the earlier clear. The same first Garrison action
+  selected the same cell and snapped pixel, with $0 spent on the repeat
+  versus $72 on the clear. Native receipt differences appeared before
+  the decision sequences diverged. Cause of the placement variance
+  remains unverified. Corner sampling produced a new 19.68%-sheltered
+  opening and a 5.59% retry. No policy reached the 35% gate.
+
 - Seed 167952 started at 04:55 Central on D:, portable trainer PID
   70536, output `analysis/coverage-team-b2e80f522d` and log
   `analysis/coverage-layout-free-167952-drive-d.log`. Startup headroom
