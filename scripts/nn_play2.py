@@ -5,6 +5,7 @@ Reward = -new infections / initial population + 5 * terminal saved fraction - .0
 Timeouts bootstrap; they never earn a terminal save reward. R carries the board.
 """
 import argparse
+from bisect import bisect_left
 import hashlib
 import json
 import math
@@ -39,6 +40,7 @@ NOBS, HID = 332+len(EXTRA_LABELS), 128
 PLANNING_INDEX = INPUT_LABELS.index('Planning phase')
 BATTLE_GAMMA, BATTLE_LAMBDA = .99, .95
 SAVED_REWARD_SCALE = 5.
+MISSILE_CIVILIAN_COST = 1.
 OUTSIDE_PLAYAREA_COST = .02
 SPECIAL_ACTIVATION_CREDIT = .01
 MAX_CREDITED_SPECIALS = 3
@@ -397,7 +399,7 @@ def checkpoint_schema():
 
 
 def learning_config(*, legacy=False):
-    config = dict(revision=1 if legacy else 8, infection_cost=1.,
+    config = dict(revision=1 if legacy else 9, infection_cost=1.,
                   terminal_saved_scale=SAVED_REWARD_SCALE,
                   planning_gamma=1., planning_lambda=1.,
                   battle_gamma=BATTLE_GAMMA, battle_lambda=BATTLE_LAMBDA)
@@ -408,6 +410,7 @@ def learning_config(*, legacy=False):
         config['block_rejected_targets_until_legal'] = True
         config['shelter_credit'] = SHELTER_CREDIT
         config['occupied_breach_cost'] = BREACH_COST
+        config['missile_civilian_cost'] = MISSILE_CIVILIAN_COST
         config['special_activation_credit'] = SPECIAL_ACTIVATION_CREDIT
         config['max_credited_specials'] = MAX_CREDITED_SPECIALS
     return config
@@ -423,6 +426,34 @@ def load_pretrained(net, path):
 def transition_reward(before, after, civ0):
     # Infections are losses; evacuation is not. No per-sample clipping.
     return -max(after['infections'] - before['infections'], 0) / civ0
+
+
+def charge_missile_civilian_loss(footer, step_ends, rewards, civ0):
+    """Put each verified civilian loss on the step that crosses its native impact time."""
+    if not footer or footer.get('combat_events_truncated') is not False:
+        return None
+    if any(not math.isfinite(t) for t in step_ends) or any(
+            a > b for a, b in zip(step_ends, step_ends[1:])):
+        return None
+    impacts = {}
+    for event in footer.get('combat_events', ()):
+        if event.get('ev') != 'bomb' or event.get('what') != 'cruise_missile':
+            continue
+        seq, sim = event.get('seq'), event.get('sim')
+        kills = (event.get('killed') or {}).get('civilians')
+        if (type(seq) is not int or not isinstance(sim, (int, float)) or not math.isfinite(sim)
+                or sim < 0 or type(kills) is not int or not 0 <= kills <= civ0):
+            return None
+        if seq in impacts and impacts[seq] != (sim, kills):
+            return None
+        impacts[seq] = sim, kills
+    assigned = 0
+    for sim, kills in impacts.values():
+        step = bisect_left(step_ends, sim)
+        if step < len(rewards):
+            rewards[step] -= MISSILE_CIVILIAN_COST * kills / civ0
+            assigned += kills
+    return dict(confirmed=sum(kills for _, kills in impacts.values()), assigned=assigned)
 
 
 def apply_loadout_action(env, st, name, delta):
@@ -523,6 +554,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         end = None
         nbuy = 0
         battle_actions = dict(decisions=0, cast_available=0, cast_sampled=0, stock_decreased=0)
+        legal_casts = {}
+        selected_casts = {}
+        selected_placements = {}
         shadow = dict(frames=[], casts=[]) if options.get('capture_shadow') else None
         if shadow is not None:
             import psutil
@@ -615,8 +649,13 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 rows[k].append(v)
             if not st['planning']:
                 battle_actions['decisions'] += 1
-                battle_actions['cast_available'] += int(any(mu[tool] for tool in U2ABILITY))
+                available_casts = [TOOLS[tool] for tool in U2ABILITY if mu[tool]]
+                battle_actions['cast_available'] += int(bool(available_casts))
                 battle_actions['cast_sampled'] += int(u in U2ABILITY)
+                for name in available_casts:
+                    legal_casts[name] = legal_casts.get(name, 0) + 1
+                if u in U2ABILITY:
+                    selected_casts[TOOLS[u]] = selected_casts.get(TOOLS[u], 0) + 1
                 if shadow is not None and not capture.truncated and state['phase'] == 'playing':
                     capture.observe(
                         dict(sim=state['sim'], tick=int(st['native']['tick']), speed=state['mult'],
@@ -636,8 +675,11 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     if len(frames) < 2048 and (not frames or state['sim'] >= frames[-1]['sim'] + .25):
                         frames.append(dict(sim=state['sim'], camera=list(st['native']['camera']),
                                            grid=st['grid'][:4].tolist(), civilians=o['civ'], zombies=o['zomb'],
-                                           legal_casts=[TOOLS[tool] for tool in U2ABILITY if mu[tool]],
+                                           legal_casts=available_casts,
                                            selected=TOOLS[u], cell=c))
+            elif u in PLACEMENTS:
+                name = PLACEMENTS[u]
+                selected_placements[name] = selected_placements.get(name, 0) + 1
             before = o
             previous_state = state
             action_started = time.monotonic()
@@ -784,7 +826,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                   and planning_limit_reached(len(rows['obs']), plan_limit, env.scalar(0x667868, '<B'))):
                 end = 'timeout'
                 timeout_reason='planning_decisions'
-        footer = env.stop_log(capture_events=True) if shadow is not None else env.stop_log()
+        footer = env.stop_log(capture_events=True)
         logging = False
         battle_actions['logged_deployments']=footer.get('deployments') if footer else None
         battle_actions['deploy_sim_seconds']=footer.get('deploy_sim_seconds') if footer else None
@@ -823,6 +865,13 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                        outside_playarea=outside_reward, shelter=shelter.presence_credit,
                        occupied_breach=shelter.breach_penalty,
                        terminal=outcome_reward(saved, end))
+        missile_rewards = rows['rews'] if options.get('missile_credit', True) else [0.] * len(rows['rews'])
+        missile_losses = charge_missile_civilian_loss(
+            footer, [step[0] for step in rows['trail']], missile_rewards, civ0)
+        battle_actions['missile_civilian_losses'] = missile_losses
+        battle_actions.update(legal_cast_tools=legal_casts, selected_cast_tools=selected_casts)
+        rewards['missile_civilian_loss'] = (-MISSILE_CIVILIAN_COST * missile_losses['assigned'] / civ0
+                                            if missile_losses is not None and missile_rewards is rows['rews'] else 0.)
         if rows['rews']:
             rows['rews'][-1] += rewards['terminal']
         advance = end == 'won' and saved is not None and saved >= .35
@@ -847,6 +896,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     special_activations=special_activations,
                     reward_components=rewards, outside_playarea_actions=outside_actions,
                     outside_targets=outside_targets, battle_actions=battle_actions,
+                    selected_placements=selected_placements,
                     shelter=dict(credited_civilians=len(shelter.credited),exposed_civilians=len(shelter.exposed),
                                  breach_exposures=shelter.breach_exposures,
                                  occupied_breaches=shelter.occupied_breaches,

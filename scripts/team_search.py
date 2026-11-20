@@ -394,6 +394,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
                                unmatched_layout=remaining_layout(layout,{'_text':row['layout_text']}) if layout else [],
                                layout_receipts=receipts,battle_actions=row['battle_actions'],
+                               selected_placements=row.get('selected_placements',{}),
                                outside_playarea_actions=row.get('outside_playarea_actions',0)+
                                    sum(r.get('result')=='outside_playarea' for r in receipts),
                                playarea_cost=tr.OUTSIDE_PLAYAREA_COST/tr.SAVED_REWARD_SCALE,
@@ -534,13 +535,12 @@ def holdout_assignments(copies, weights, challenger, incumbent, seed, wave):
     return jobs,arms
 
 
-def shadow_variants(champion, rng):
+def shadow_variants(champion):
     timing = deepcopy(champion)
     targeting = deepcopy(champion)
     timing['cast_bias'][MISSILE_ROW] -= 3.
-    targeting['battle'][MISSILE_ROW] = (
-        np.asarray(targeting['battle'][MISSILE_ROW]) + rng.normal(0, 2, 5)).tolist()
-    return {'control': champion, 'timing': timing, 'targeting': targeting}
+    targeting['battle'][MISSILE_ROW][0] -= 2.
+    return {'control': champion, 'timing': timing, 'civilian_avoidance': targeting}
 
 
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False,
@@ -637,7 +637,7 @@ def main():
         print(directory,'base',tr.policy_id(net),flush=True)
         print('Campaign scope:', 'Boston L1 to L5' if args.allow_progression else 'Boston L1 only', flush=True)
         if args.compare_shadow:
-            variants = shadow_variants(prior, rng)
+            variants = shadow_variants(prior)
             (directory/'comparison-teams.json').write_text(json.dumps(variants))
             arms = list(variants)
             with ProcessPoolExecutor(len(copies)) as pool:
@@ -833,6 +833,8 @@ def main():
                     require_fresh.add(team_id(specialist))
                 elif affordable:
                     population.append(max(affordable,key=lambda entry:(entry[0],team_id(entry[1])))[1])
+                if len(population)<len(copies):
+                    population.append(loadout_candidate(leader,rng))
                 while len(population)<len(copies):
                     stage_parent=ranked[0]
                     stage=deepest[stage_parent] if len(population)%2 else 1

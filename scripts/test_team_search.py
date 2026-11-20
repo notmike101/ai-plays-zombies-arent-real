@@ -11,13 +11,17 @@ import team_search as search
 class SearchTests(unittest.TestCase):
     def test_shadow_arms_vary_only_one_missile_preference(self):
         parent = search.random_team(np.random.default_rng(3))
-        arms = search.shadow_variants(parent, np.random.default_rng(4))
+        arms = search.shadow_variants(parent)
         self.assertEqual(arms['control'], parent)
-        for name, key in [('timing', 'cast_bias'), ('targeting', 'battle')]:
+        for name, key in [('timing', 'cast_bias'), ('civilian_avoidance', 'battle')]:
             candidate = arms[name]
             self.assertEqual({k for k in parent if candidate[k] != parent[k]}, {key})
             self.assertEqual([i for i, (a, b) in enumerate(zip(parent[key], candidate[key])) if a != b],
                              [search.MISSILE_ROW])
+        weights = arms['civilian_avoidance']['battle'][search.MISSILE_ROW]
+        original = parent['battle'][search.MISSILE_ROW]
+        self.assertEqual(weights[0], original[0] - 2.)
+        self.assertEqual(weights[1:], original[1:])
 
     def test_experiment_options_and_capture_are_opt_in(self):
         row = dict(scenario=1, end='won', saved_frac=.43, advance=True, win=True,

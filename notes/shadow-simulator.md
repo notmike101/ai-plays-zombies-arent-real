@@ -48,7 +48,7 @@ At the next idle boundary, use `--compare-shadow --generations 3` with a
 saved champion and six idle owned copies. Each wave runs two copies per arm,
 and rotating the arms gives every copy one run in each arm. The control
 keeps the champion, the timing arm reduces only its missile cast preference,
-and the targeting arm perturbs only its missile target-scoring weights.
+and the civilian-avoidance arm decreases only its missile civilian-density weight.
 The model still selects every action through the native masks. Seeds are
 paired within a wave but native outbreaks are independently sampled.
 The command enables capture, writes `shadow-comparison.jsonl`, and exits

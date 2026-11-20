@@ -10,6 +10,37 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_missile_reward_comparison_uses_same_network_without_layout_override(self):
+        import compare_spatial
+        with patch.object(compare_spatial.operator, 'owned_copy'), \
+                patch.object(compare_spatial.zar_boot, 'boot'), \
+                patch.object(compare_spatial.zar_boot, 'stop'), \
+                patch.object(train, 'run_episode') as run:
+            for arm, enabled in [('unshaped', False), ('missile_credit', True)]:
+                compare_spatial.episode(('inst13', arm, {}, 123, 'test'))
+                self.assertEqual(run.call_args.args[0][4],
+                                 dict(start_kind='fresh', seed=123, missile_credit=enabled))
+                self.assertIs(run.call_args.kwargs['policy_factory'], train.PolicyNet2)
+
+    def test_missile_civilian_loss_is_charged_at_native_impact(self):
+        events = [
+            {'seq': 1, 'ev': 'deploy', 'what': 'cruise_missile', 'sim': 1},
+            {'seq': 2, 'ev': 'bomb', 'what': 'cruise_missile', 'sim': 2.5,
+             'killed': {'civilians': 4, 'zombies': 30}},
+            {'seq': 3, 'ev': 'bomb', 'what': 'fire_bomb', 'sim': 2.5,
+             'killed': {'civilians': 20}},
+            {'seq': 4, 'ev': 'bomb', 'what': 'cruise_missile', 'sim': 4,
+             'killed': {'civilians': 3}},
+        ]
+        events.append(events[1].copy())
+        rewards = [0., 0., 0.]
+        footer = dict(combat_events=events, combat_events_truncated=False)
+        stats = train.charge_missile_civilian_loss(footer, [1., 2., 3.], rewards, 100)
+        self.assertEqual(rewards, [0., 0., -.04])
+        self.assertEqual(stats, dict(confirmed=7, assigned=4))
+        self.assertIsNone(train.charge_missile_civilian_loss(
+            dict(footer, combat_events_truncated=True), [1., 2., 3.], rewards, 100))
+
     def test_planning_scan_codes_match_physical_keys(self):
         from zar_input import SC
         for vk,sc in train.U_HOTKEY.values():self.assertEqual(sc,SC[vk])

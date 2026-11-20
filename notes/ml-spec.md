@@ -71,6 +71,7 @@ For a known completed/aborted outcome, add:
     episode_reward = sum(infection_reward) + terminal_reward - 0.02 * outside_playarea_actions
                      + 0.05 * unique_sheltered_civilians / initial_civilians
                      - 0.10 * new_breach_exposures / initial_civilians
+                     - verified_missile_civilian_deaths_at_recorded_steps / initial_civilians
                      + 0.01 * min(verified_special_activations, 3)
 
 A civilian earns shelter credit once after appearing in an intact zone at two
@@ -83,6 +84,16 @@ during the same exposure count once. Initial contamination and empty breaches
 earn no penalty. This is an observed penetration check along the polygon, not an
 interpretation of the native wall-cell event count. The original terminal
 survival score remains the main objective.
+
+Learning revision 9 charges verified civilian deaths reported by native
+cruise-missile impact events at the first transition ending at or after the
+impact. It uses the same per-person scale as infection. Launches and stock
+spends are not civilian deaths. Missing, truncated or inconsistent event
+evidence is unknown. Impacts beyond the last observed step are reported
+but cannot be attached to a reward step. The penalty does not change the
+official saved fraction, legal actions, or stage qualification. The capture
+does not establish whether a missile caused a wall breach, and the existing
+occupied-penetration cost remains unchanged.
 
 Special-building credit requires the selected building's native ability to
 change from zero to the exact enabled choice clicked by the policy. Selection,
