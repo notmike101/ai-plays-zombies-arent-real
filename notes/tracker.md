@@ -23,6 +23,13 @@
   12.96 GiB free disk. Trainer PID 66700, four D: Python workers, games
   inst13–16. New output `analysis/coverage-team-c5f242fb3a` with
   `analysis/coverage-layout-free-144952-drive-d.log` and matching error log.
+- Verified continuation generation zero completed at 22:39 Central with
+  the retained proposal ef0ae8f88e081549 among the actual fresh trials.
+  Two new proposals sustained 58.9 and 59.5 simulated seconds, versus
+  29.6 for the retained proposal. All three early-retried below 10% saved.
+  The GRU control timed out. The longer-lived proposal 3237e2a74318792e
+  led by survival area. Generation one is live. These are discovery
+  results, not evidence for promotion or the 35% consistency target.
 - Started Boston L1-only campaign search 142952 at 22:22 Central, four
   generations, no seed champion, no demonstration, no saved-layout replay.
   Started with 13.23 GiB RAM and 12.98 GiB disk free and verified trainer
