@@ -2,6 +2,25 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 10:46 Central, frozen candidate bf3fc52369fc3746 scored 9.92% at
+  retry on its first eligible reserved outbreak (249701763, inst19).
+  Same READY layout 418150907bbd395c and Police deck as discovery.
+  Seven confirmed drops began at 0.87 sim seconds. Occupied breaches
+  first appeared at 49.87 sim seconds and exposed 2,354 civilians,
+  versus 1,588 and 1,606 on the two discovery clears. This official
+  retry is a severe loss. The three-block consistency check requires
+  natural terminal games and treats a retry as an incomplete attempt.
+  Reserved wave two started under operator PID 71620.
+- Staged an opening-cast-only holdout fix in ignored
+  analysis/coverage-portable314/tmp/opening-cast-reference.patch. The
+  experiment will use its own frozen unbiased discovery policy as
+  the reserved reference and record its policy ID. The unchanged
+  discovery qualification and holdout rules still gate promotion.
+  Verified a game-free two-wave discovery and six-pair reserve
+  regression, all 82 campaign tests, and patch applicability. Pending
+  the normal idle boundary. No changes to the running process, game
+  settings, checkpoint, reward, or official evaluation data.
+
 - At 10:39 Central, seed 188952 finished the crossed discovery comparison.
   Frozen opening-bias bf3fc52369fc3746 posted official clears of 39.89%
   (outbreak 162782703) and 38.74% (2949929277). Its other official retry
