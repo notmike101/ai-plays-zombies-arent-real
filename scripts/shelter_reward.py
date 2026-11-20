@@ -9,6 +9,29 @@ SAMPLE_SECONDS = .5
 PERIMETER_METRES = 150.
 
 
+def garrison_perimeter_gain(zones, existing, targets, radius):
+    """Estimate additional perimeter within the native maximum firing distance."""
+    polygons = [p for p in zones if len(p) >= 3]
+    if not polygons or not len(targets):
+        return np.zeros(len(targets), dtype=np.float32)
+    starts = np.concatenate(polygons)
+    edges = np.concatenate([np.roll(p, -1, axis=0) - p for p in polygons])
+    lengths = np.linalg.norm(edges, axis=1)
+    cumulative = np.cumsum(lengths)
+    if cumulative[-1] <= 0:
+        return np.zeros(len(targets), dtype=np.float32)
+    samples = (np.arange(96) + .5) * cumulative[-1] / 96
+    bins = np.searchsorted(cumulative, samples, side='right')
+    fraction = (samples - cumulative[bins] + lengths[bins]) / lengths[bins]
+    points = starts[bins] + fraction[:, None] * edges[bins]
+    radius2 = radius ** 2
+    if len(existing):
+        covered = ((points[:, None] - existing) ** 2).sum(axis=-1) <= radius2
+        points = points[~covered.any(axis=1)]
+    reached = ((targets[:, None] - points) ** 2).sum(axis=-1) <= radius2
+    return (reached.sum(axis=1) / len(samples)).astype(np.float32)
+
+
 class Shelter:
     def __init__(self, population):
         self.population = population

@@ -746,6 +746,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     if (getattr(net,'cast_timing',None) is not None or getattr(net,'missile_reserve',0.)
                             or getattr(net,'missile_followup',0.)):
                         net.set_cast_targets(st, mu, mc, env.cw, env.ch)
+                    if st['planning'] and getattr(net, 'garrison_coverage_weight', 0.):
+                        net.set_garrison_coverage(st, mu, mc, env.cw, env.ch)
                     if getattr(net,'special_probe',0.):
                         net.set_special_probe(st,env.cw,env.ch)
                     lu, lc, _, h = net(x, h)

@@ -74,6 +74,40 @@ class SearchTests(unittest.TestCase):
         level['paid_buildings']['Garrison'] = 1
         self.assertIsNone(search.defense_spacing_candidate(trial, rng))
 
+    def test_garrison_coverage_changes_only_its_placement_cell_logits(self):
+        rng = np.random.default_rng(17)
+        parent = search.random_team(rng)
+        parent['plan'] = []
+        trial = dict(team=parent, levels=[dict(stage=1, start_kind='fresh', saved=.09,
+                    outbreak={'seed': 88, 'safe_zones': 2}, paid_buildings={'Garrison': 1},
+                    ready_stats={'garrisons': 1})])
+        variant = search.defense_coverage_candidate(trial, rng)
+        self.assertEqual({k: v for k, v in variant.items() if k != 'garrison_coverage'}, parent)
+        frozen = dict(base='base', team_id=search.team_id(variant), team=variant)
+        self.assertEqual(search.checkpoint_team(frozen, 'base')['team'], variant)
+        model = search.TeamPolicy(variant)
+        tool = search.tr.TOOLS.index('garrison')
+        tools = np.zeros(search.tr.NU)
+        tools[tool] = 1
+        box = np.array([[0, 0], [40, 0], [40, 40], [0, 40]])
+        state = dict(planning=True, rules={'garrison_range_max': '50'},
+                     native=dict(camera=[0., 0., 1.], zones=[box, box + [400, 0]],
+                                 units=dict(kind=np.array([6]), pos=np.array([[20, 20]]))),
+                     build_targets=[(520, 480), (920, 480)] + [None] * (search.tr.NC - 2))
+        model.set_garrison_coverage(state, tools, np.ones(search.tr.NC), 1000, 1000)
+        torch.testing.assert_close(model.garrison_coverage_cells[:2], torch.tensor([0., .5]))
+        x = torch.zeros(1, 1, search.tr.NOBS)
+        x[..., search.tr.PLANNING_INDEX] = 1
+        def base(*args):
+            return torch.zeros(1, 1, search.tr.NU), torch.zeros(search.tr.NU * search.tr.NC), None, None
+        with patch.object(search.tr.PolicyNet2, 'forward', side_effect=base):
+            plain = search.TeamPolicy(parent)(x)
+            result = model(x)
+        torch.testing.assert_close(result[0], plain[0])
+        diff = (result[1] - plain[1]).reshape(search.tr.NU, search.tr.NC)
+        self.assertAlmostEqual(diff[tool, 1].item(), variant['garrison_coverage'] * .5, places=5)
+        self.assertEqual(int(torch.count_nonzero(diff)), 1)
+
     def test_planning_scale_changes_tool_preferences_without_changing_battle(self):
         rng = np.random.default_rng(43)
         parent = search.random_team(rng)

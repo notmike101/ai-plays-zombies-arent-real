@@ -18,6 +18,7 @@ import torch
 import local_agent as operator
 import nn_play2 as tr
 from nn_report import records
+from shelter_reward import garrison_perimeter_gain
 from spatial import project
 import zar_boot
 
@@ -32,6 +33,7 @@ FAMILIES = [sorted(tr.PLACEMENTS), [10, 15, 16, 17, 18, 9],
             matching('buy_'), matching('equip_'), matching('perk_'), list(range(tr.NU))]
 CASTS = sorted(tr.U2ABILITY)
 MISSILE = tr.ABILITY_U['Missile']
+GARRISON = tr.TOOLS.index('garrison')
 MISSILE_ROW = CASTS.index(MISSILE)
 SELECT_BUILDING = tr.TOOLS.index('select_building')
 BUILDING_SPECIALS = {name.removeprefix('panel_'):i for i,name in enumerate(tr.TOOLS)
@@ -172,6 +174,15 @@ def defense_spacing_candidate(trial, rng):
     weights = child['plan'][int(rng.choice(candidates))]['weights']
     weights[2] -= float(rng.uniform(1., 2.5))
     return child
+
+
+def defense_coverage_candidate(trial, rng):
+    if not trial or not has_defense_evidence(trial):
+        return None
+    level = trial['levels'][0]
+    if not level['outbreak'].get('safe_zones') or not level['paid_buildings'].get('Garrison'):
+        return None
+    return dict(deepcopy(trial['team']), garrison_coverage=float(rng.uniform(7., 12.)))
 
 
 def best_defense_trial(defenders, evidence):
@@ -320,6 +331,8 @@ class TeamPolicy(tr.PolicyNet2):
         self.battle = torch.tensor(team['battle'])
         self.bias = torch.tensor(team['cast_bias'])
         self.cast_timing = team.get('cast_timing')
+        self.garrison_coverage_weight = team.get('garrison_coverage', 0.)
+        self.garrison_coverage_cells = torch.zeros(tr.NC)
         self.shelter_defense = team.get('shelter_defense',0.)
         self.missile_reserve = team.get('missile_reserve',0.)
         self.missile_followup = team.get('missile_followup',0.)
@@ -380,6 +393,23 @@ class TeamPolicy(tr.PolicyNet2):
                 if self.occupied_shelter:
                     self.missile_charges = missile['charges']
 
+    def set_garrison_coverage(self, st, tools, cells, width, height):
+        self.garrison_coverage_cells.zero_()
+        native = st.get('native')
+        if not tools[GARRISON] or not native or not native['zones'] or not st.get('build_targets'):
+            return
+        radius = tr._rule(st.get('rules', {}), 'Garrison', '_range_max')
+        if not np.isfinite(radius) or radius <= 0:
+            return
+        legal = np.flatnonzero(tr.cell_mask(st, GARRISON, cells))
+        targets = np.array([st['build_targets'][i] for i in legal], dtype=float).reshape(-1, 2)
+        camera = native['camera']
+        world = (targets - [width / 2, height / 2]) / [camera[2], -camera[2]] + camera[:2]
+        units = native['units']
+        defenders = units['pos'][units['kind'] == 6]
+        gain = garrison_perimeter_gain(native['zones'], defenders, world, radius)
+        self.garrison_coverage_cells[legal] = torch.from_numpy(gain)
+
     def set_special_probe(self, st, width, height):
         self.special_tools = []
         self.special_cells = []
@@ -415,6 +445,8 @@ class TeamPolicy(tr.PolicyNet2):
         grid = x[0,0,GRID_START:GRID_START+5*tr.NC].reshape(5,tr.NC)
         cells = cells.reshape(tr.NU,tr.NC)
         if x[0,0,tr.PLANNING_INDEX]:
+            if self.garrison_coverage_weight:
+                cells[GARRISON] += self.garrison_coverage_weight * self.garrison_coverage_cells
             if self.index < len(self.steps):
                 g, t = self.steps[self.index]
                 scale = self.team.get('planning_logit_scale')
@@ -639,11 +671,15 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','garrison_coverage'))
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
         raise ValueError('Invalid gesture planning flag')
     if 'sample_battle' in team and team['sample_battle'] is not True:
         raise ValueError('Invalid battle sampling flag')
+    if 'garrison_coverage' in team:
+        weight = team['garrison_coverage']
+        if type(weight) not in (int, float) or not 0 <= weight <= 16:
+            raise ValueError('Invalid Garrison coverage weight')
     if 'planning_logit_scale' in team:
         scale = team['planning_logit_scale']
         if type(scale) not in (int, float) or not .2 <= scale <= 1.:
@@ -952,9 +988,11 @@ def main():
         if resumed_cast_probe is not None:
             population[-1] = resumed_cast_probe
         if proposal is not None:
-            spacing = defense_spacing_candidate(defenders.get(team_id(proposal)), rng)
-            if spacing is not None:
-                population[-1] = spacing
+            matched = defenders.get(team_id(proposal))
+            placement = (defense_coverage_candidate(matched, rng)
+                         or defense_spacing_candidate(matched, rng))
+            if placement is not None:
+                population[-1] = placement
         if prior and not (args.compare_forecast or args.compare_speed):
             previous=args.seed_from/'provisional.json'
             if previous.is_file():
