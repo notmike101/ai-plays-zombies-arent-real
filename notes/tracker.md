@@ -2,6 +2,26 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 186952 launched at 09:30 Central on D:, operator PID 44548,
+  output `analysis/coverage-team-9b44e71750`, log
+  `analysis/coverage-layout-free-186952-drive-d.log`. Four waves on
+  inst13, inst14, inst17, inst18; inst19/20 remain separate reserves.
+  Launch headroom 14.89 GiB RAM and 18.92 GiB free disk. Commit 2e54583
+  tests 12 distinct proposal combinations plus a rotating retained
+  reference. The game-free fixture using the exact launch seed and
+  present rosters covered 12 unit types and walls, gates, corridors
+  and holds. Proposals differ only in preparation preferences.
+  Actual native READY receipts and official outcomes remain separate.
+  All 291 script and 60 Observatory tests, model parity and graph
+  assertions passed. Production checkpoint SHA-256 matched.
+- Seed 185952 ended at 09:29. Garrison site sampling scored 9.75%,
+  8.84%, and one native clear at 17.51%, with one timeout excluded
+  from the 12.03% scored mean. The four reference scores averaged
+  7.04%; no native clear. All eight outbreak seeds differed. Ready
+  sampled sites yielded 16 or 21 Garrisons, seven or nine inside
+  occupied shelters. References all had 21 and nine. No qualifier
+  or promotion; the provisional parent remains 922f9e1dcd8205c2.
+
 - A game-free private PPO comparison fixture at 09:23 varied the
   occupied breach charge from 0.10 to 0.30 per exposure fraction and
   verified exactly threefold penalties with the same occupants and
