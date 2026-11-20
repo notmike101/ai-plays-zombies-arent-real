@@ -68,6 +68,28 @@ class LearningTests(unittest.TestCase):
             for cell in np.flatnonzero(mask):
                 self.assertLess(train.cell_of_px(cell, 1920, 1200)[1], 840)
 
+    def test_unconfirmed_building_retries_apply_only_to_the_same_target_and_camera(self):
+        targets = [None] * train.NC
+        targets[34], targets[35] = (430, 560), (520, 560)
+        camera = (1631., 1318., .58)
+        st = dict(planning=True, build_targets=targets, native=dict(camera=camera))
+        retries = {(2, 35): (8, camera, targets[35])}
+        masked = dict(planning=True, build_targets=targets,
+                      placement_blocked=train.blocked_placement_cells(st, retries, 4))
+        tools, cells = train.masks_for(masked)
+        self.assertTrue(tools[2])
+        self.assertFalse(train.cell_mask(masked, 2, cells)[35])
+        self.assertTrue(train.cell_mask(masked, 2, cells)[34])
+        self.assertTrue(train.cell_mask(masked, 3, cells)[35])
+        targets[34] = None
+        self.assertFalse(train.masks_for(masked)[0][2])
+        self.assertEqual(train.blocked_placement_cells(st, retries, 8), {})
+        targets[35] = (526, 560)
+        self.assertEqual(train.blocked_placement_cells(st, retries, 4), {})
+        targets[35] = (520, 560)
+        st['native']['camera'] = (1635., 1318., .58)
+        self.assertEqual(train.blocked_placement_cells(st, retries, 4), {})
+
     def test_building_tools_require_a_target_above_the_hud(self):
         targets = [None]*train.NC
         targets[-1] = np.array([1680, 912])

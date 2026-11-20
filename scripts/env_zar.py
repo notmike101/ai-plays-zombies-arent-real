@@ -62,7 +62,10 @@ def read_session(path, started_ms, *, expected_wall=None, capture_events=False):
                       and r.get('from') == 'planning' and r.get('to') == 'playing'
                       and r.get('reason') == 'ready' and isinstance(r.get('stats'), dict)), None)
         data = {'header': rows[0],
-                'ready_stats': {k: ready.get(k) for k in ('money', 'stock')} if ready is not None else None,
+                'ready_stats': ({'money': ready.get('money'), 'stock': ready.get('stock'),
+                                 **{k: ready[k] for k in ('garrisons', 'snipers', 'mortars', 'turrets',
+                                                          'mines', 'c4', 'battleships', 'apcs') if k in ready}}
+                                if ready is not None else None),
                 'outbreak': {k:outbreak.get(k) for k in ('seed','safe_zones','civilians_inside_pct')} if outbreak else None,
                 'deployments': [r.get('what') for r in rows if r.get('ev')=='deploy'],
                 'deploy_sim_seconds': [r.get('sim') for r in rows if r.get('ev')=='deploy'],

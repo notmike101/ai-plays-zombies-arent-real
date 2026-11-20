@@ -315,13 +315,13 @@ class StateTests(unittest.TestCase):
                 dict(ev='header', wall=100),
                 dict(ev='phase', to='playing', reason='resume', stats=dict(money=77)),
                 {'ev': 'phase', 'from': 'planning', 'to': 'playing', 'reason': 'ready',
-                 'stats': {'money': 1815, 'stock': {'garrison': 2, 'airstrike': 1}}},
+                 'stats': {'money': 1815, 'stock': {'garrison': 0, 'airstrike': 1}, 'garrisons': 2}},
                 dict(ev='footer', stats=dict(money=999)),
             ]
             path.write_text('\n'.join(map(json.dumps, rows)))
             result = env_zar.read_session(path, 100)
             self.assertEqual(result['ready_stats'],
-                             dict(money=1815, stock=dict(garrison=2, airstrike=1)))
+                             dict(money=1815, stock=dict(garrison=0, airstrike=1), garrisons=2))
             path.write_text('\n'.join(map(json.dumps, rows[:2] + rows[3:])))
             self.assertIsNone(env_zar.read_session(path, 100)['ready_stats'])
 

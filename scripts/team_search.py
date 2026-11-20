@@ -424,7 +424,8 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                                 'continue' if stage==start_stage else 'next_level')
             options=dict(start_kind=start_kind,seed=seed,record_layout=bool(layout),greedy=True,
                          allow_progression=allow_progression, observer_interval=observer_interval,
-                         paused_seconds=45)
+                         paused_seconds=45,
+                         placement_feedback=not allow_progression and not layout)
             if capture_shadow:options['capture_shadow']=True
             if fixed_speed:options['fixed_speed']=fixed_speed
             episode_started = monotonic()
@@ -447,6 +448,8 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                unmatched_layout=remaining_layout(layout,{'_text':row['layout_text']}) if layout else [],
                                layout_receipts=receipts,battle_actions=row['battle_actions'],
                                selected_placements=row.get('selected_placements',{}),
+                               paid_buildings=row.get('paid_buildings',{}),
+                               unconfirmed_buildings=row.get('unconfirmed_buildings',{}),
                                outside_playarea_actions=row.get('outside_playarea_actions',0)+
                                    sum(r.get('result')=='outside_playarea' for r in receipts),
                                playarea_cost=tr.OUTSIDE_PLAYAREA_COST/tr.SAVED_REWARD_SCALE,
@@ -767,6 +770,8 @@ def main():
         base=tr.policy_id(net)
         view_revision='playable-overview-v3-bounded-targets-shelter-v2-specials-v1-retries-v1'
         explore_without_layout = not args.demonstration and not (prior or {}).get('layout')
+        if explore_without_layout and not args.allow_progression:
+            view_revision += '-placement-feedback-v1'
         evidence={}
         prices={}
         discovery_seeds = set()

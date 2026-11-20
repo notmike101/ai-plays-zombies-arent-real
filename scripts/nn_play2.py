@@ -208,9 +208,27 @@ def base_masks(st):
     return mu, mc
 
 
+BUILDING_PLACEMENTS = {tool for tool, name in PLACEMENTS.items() if name in (
+    'Garrison', 'Sniper', 'Mortar', 'Nest', 'GasMortar', 'FireMortar',
+    'Railgun', 'Howitzer', 'MLRS',
+)}
+
+
+def blocked_placement_cells(st, retries, decision):
+    if not st['planning'] or not retries:
+        return {}
+    blocked = {}
+    view = tuple(st['native']['camera'])
+    for (tool, cell), (deadline, camera, target) in retries.items():
+        if decision < deadline and view == camera and st['build_targets'][cell] == target:
+            blocked.setdefault(tool, set()).add(cell)
+    return blocked
+
+
 def masks_for(st):
     tools, cells = base_masks(st)
-    for tool in st.get('outside_retries',{}):
+    blocked_tools = st.get('outside_retries', {}).keys() | st.get('placement_blocked', {}).keys()
+    for tool in blocked_tools:
         if tools[tool] and not cell_mask(st,tool,cells).any():
             tools[tool]=0
     return tools,cells
@@ -218,8 +236,10 @@ def masks_for(st):
 
 def cell_mask(st, u, mc):
     result = base_cell_mask(st,u,mc)
-    for cell in st.get('outside_retries',{}).get(u,()):
-        result[cell]=0
+    for cell in st.get('outside_retries', {}).get(u, ()):
+        result[cell] = 0
+    for cell in st.get('placement_blocked', {}).get(u, ()):
+        result[cell] = 0
     return result
 
 
@@ -253,8 +273,7 @@ def outside_playarea(st, tool, cell, width, height):
     center = cell_of_px(cell, width, height)
     points = []
     if st['planning'] and tool in (*PLANNING_U[2:], *PLACEMENTS):
-        building_units = ('Garrison','Sniper','Mortar','Nest','GasMortar','FireMortar','Railgun','Howitzer','MLRS')
-        if PLACEMENTS.get(tool) in building_units or tool in (5, 9):
+        if tool in BUILDING_PLACEMENTS or tool in (5, 9):
             points = [st['build_targets'][cell]]
         else:
             points = [center]
@@ -571,6 +590,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         special_activations = {}
         picker_rejections = {}
         picker_retry_at = {}
+        placement_retry_at = {}
+        placement_feedback = options.get('placement_feedback', False)
+        paid_buildings = {}
+        unconfirmed_buildings = {}
         plan_limit = options.get('plan_steps', PLAN_STEPS)
         state = env.game_state()
         next_rest=0.
@@ -612,6 +635,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             blobs = []
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
             update_outside_retries(st,env.cw,env.ch)
+            st['placement_blocked'] = blocked_placement_cells(st, placement_retry_at, len(rows['obs']))
             mu, mc = masks_for(st)
             base_cells = mc
             if fixed_speed:
@@ -697,7 +721,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 outside_targets[target] = outside_targets.get(target,0)+1
             elif u in PLACEMENTS:
                 cx,cy=cell_of_px(c,env.cw,env.ch)
-                if PLACEMENTS[u] in ('Garrison','Sniper','Mortar','Nest','GasMortar','FireMortar','Railgun','Howitzer','MLRS'):
+                if u in BUILDING_PLACEMENTS:
                     cx,cy=map(int,st['build_targets'][c])
                 mechanics.controls.place(PLACEMENTS[u],(cx,cy))
             elif u >= 72:
@@ -808,6 +832,14 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             trend = (o['zomb'] - before['zomb']) / dt
             slope = (o['civ'] - before['civ']) / (dt*civ0)
             succ = float(st['planning'] and o['money'] < before['money'] - .01)
+            if st['planning'] and u in BUILDING_PLACEMENTS and not outside:
+                counts = paid_buildings if succ else unconfirmed_buildings
+                unit = PLACEMENTS[u]
+                counts[unit] = counts.get(unit, 0) + 1
+                if placement_feedback and not succ:
+                    placement_retry_at[u, c] = (
+                        len(rows['obs']) + 5, tuple(st['native']['camera']), st['build_targets'][c],
+                    )
             nbuy += int(succ)
             st['spend_frac'] = max(0., (m0-o['money']) / max(m0, 1))
             prev_u, prev_c = float(u), float(c)
@@ -900,6 +932,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     reward_components=rewards, outside_playarea_actions=outside_actions,
                     outside_targets=outside_targets, battle_actions=battle_actions,
                     selected_placements=selected_placements,
+                    paid_buildings=paid_buildings, unconfirmed_buildings=unconfirmed_buildings,
                     shelter=dict(credited_civilians=len(shelter.credited),exposed_civilians=len(shelter.exposed),
                                  breach_exposures=shelter.breach_exposures,
                                  occupied_breaches=shelter.occupied_breaches,

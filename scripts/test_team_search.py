@@ -410,9 +410,14 @@ class SearchTests(unittest.TestCase):
                  sim=100,trail=[],civ0=100,us=[],cs=[],log_started=True,battle_actions={})
         with patch.object(search.zar_boot,'boot'),patch.object(search.zar_boot,'stop'),              patch.object(search.operator,'owned_copy'),patch.object(search.tr,'run_episode',return_value=row) as run:
             row['ready_stats'] = dict(money=2100, stock=dict(mortar=1))
+            row['paid_buildings'] = dict(Garrison=1)
+            row['unconfirmed_buildings'] = dict(Garrison=2)
             result=search.rollout(('inst13',{},None,10))
             self.assertEqual([level['stage'] for level in result['levels']],[1])
             self.assertEqual(result['levels'][0]['ready_stats'], row['ready_stats'])
+            self.assertEqual(result['levels'][0]['paid_buildings'], dict(Garrison=1))
+            self.assertEqual(result['levels'][0]['unconfirmed_buildings'], dict(Garrison=2))
+            self.assertTrue(run.call_args.args[0][4]['placement_feedback'])
             worker = result['timing']
             episode = result['levels'][0]['timing']
             stamps = [worker['started'], worker['board_ready'], episode['started'],
