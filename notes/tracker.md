@@ -2,6 +2,15 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:55 Central, observed study 200952 completed round one
+  and saved both private models and Adam states. Official
+  training scores 2.69%, 4.51% baseline and 9.54%, 0% broader
+  preparation. Zero occupied shelters or logged battle casts.
+  Both arms picked READY as the first decision in one game.
+  All four outbreaks have appeared in prior studies. Round two
+  launched inst13 60540, inst14 68144, inst15 59896, inst16 50568.
+  Exclude all earlier seen native outbreaks when auditing reserves.
+
 - At 13:54 Central, Observatory visibility restored for private
   comparisons (f5d1ca4). Prior workers explicitly disabled policy
   telemetry and the game inventory omitted compare_spatial.py.
@@ -11,8 +20,9 @@
   parity and graph assertions. Fresh events and all four runtime
   files verified live, with 4,889 input labels and no warning.
   Selected inst13 game 64108/worker 42260 matched a live HTTP
-  200 fragmented MP4 with initialization and media data. The
-  immediate thumbnail request returned waiting during capture.
+  200 fragmented MP4 with initialization and media data. On
+  the next batch's inst13, waited for capture and verified a
+  267,080-byte JPEG before that process published policy data.
 
 - At 13:54 Central, started private study 200952 under PID
   40184 with --observe (up to 1 Hz per worker). Tests whether
