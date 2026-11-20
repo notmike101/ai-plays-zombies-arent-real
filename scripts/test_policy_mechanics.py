@@ -141,6 +141,12 @@ class MechanicsTests(unittest.TestCase):
         m.controls.drag_handles.assert_called_once_with((633,336),(422,336))
         self.assertNotIn('gesture_anchor',st)
 
+    def test_nonfinite_observation_names_the_native_feature(self):
+        with self.assertRaisesRegex(RuntimeError, 'Corridor full width'):
+            observation(fixture(), ['-']*7, [dict(name='-', locked=False)]*3,
+                        {'actions': {}}, 0, True, 0, 1920, 1200,
+                        evac_tool=(True, False, float('nan')))
+
     def test_pause_speed_and_gesture_sentinels_have_explicit_meanings(self):
         values=observation(fixture(),['-']*7,[dict(name='-',locked=False)]*3,
                            {'actions':{}},0,True,0,1920,1200,paused=True,speed=8)

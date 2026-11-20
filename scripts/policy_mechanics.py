@@ -227,7 +227,10 @@ def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, 
     for name in ('flags','green','burnt','oil'):
         result.extend(s['fire'][name]/(255 if name=='flags' else 1))
     assert len(result)==len(EXTRA_LABELS)
-    if not np.isfinite(result).all():raise RuntimeError('Nonfinite mechanics observation')
+    finite = np.isfinite(result)
+    if not finite.all():
+        labels = ', '.join(EXTRA_LABELS[i] for i in np.flatnonzero(~finite)[:4])
+        raise RuntimeError(f'Nonfinite mechanics observation: {labels}')
     return list(map(float,result))
 
 

@@ -132,9 +132,12 @@ class StateTests(unittest.TestCase):
             dumps.mkdir(parents=True)
             (dumps/'old.state').write_bytes(b'evidence')
             e.copy_dir = lambda: str(copy)
+            writes = 0
             def emit(*args, **kwargs):
+                nonlocal writes
+                writes += 1
                 (dumps/'fresh.state').write_bytes(b'replay')
-                (dumps/'fresh.txt').write_text('[where]\nphase = planning\n')
+                (dumps/'fresh.txt').write_text('[where]\nphase = planning\n' + '\n'*writes)
             e.vi = SimpleNamespace(key_press=emit)
             e.discard_dump_states = True
             self.assertEqual(e.dump()['where']['phase'], 'planning')
@@ -304,6 +307,23 @@ class StateTests(unittest.TestCase):
         state['paused']=False
         self.assertEqual(train.battle_timeout(state,64,0,20,limits),(None,None))
         self.assertEqual(train.battle_timeout(state,600,0,None,{}),('battle_clock',None))
+
+    def test_ready_phase_preserves_the_native_budget_and_stock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'episode.jsonl'
+            rows = [
+                dict(ev='header', wall=100),
+                dict(ev='phase', to='playing', reason='resume', stats=dict(money=77)),
+                {'ev': 'phase', 'from': 'planning', 'to': 'playing', 'reason': 'ready',
+                 'stats': {'money': 1815, 'stock': {'garrison': 2, 'airstrike': 1}}},
+                dict(ev='footer', stats=dict(money=999)),
+            ]
+            path.write_text('\n'.join(map(json.dumps, rows)))
+            result = env_zar.read_session(path, 100)
+            self.assertEqual(result['ready_stats'],
+                             dict(money=1815, stock=dict(garrison=2, airstrike=1)))
+            path.write_text('\n'.join(map(json.dumps, rows[:2] + rows[3:])))
+            self.assertIsNone(env_zar.read_session(path, 100)['ready_stats'])
 
     def test_log_outcome_requires_this_session_footer(self):
         with tempfile.TemporaryDirectory() as tmp:

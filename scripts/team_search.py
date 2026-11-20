@@ -69,6 +69,17 @@ def loadout_candidate(parent,rng):
     return candidate
 
 
+def defense_placement_candidate(parent, rng):
+    if len(parent['plan']) >= 64:
+        return None
+    child = deepcopy(parent)
+    step = gene(rng)
+    step.update(family=0, tool=int(rng.choice(FAMILIES[0])), duration=2)
+    index = int(rng.integers(len(child['plan']) + 1))
+    child['plan'].insert(index, step)
+    return child
+
+
 def nearby_plan_candidate(parent, rng):
     spatial_genes = [i for i, step in enumerate(parent['plan'])
                      if step['family'] in (0, 1) or step['tool'] in FAMILIES[0] + FAMILIES[1]]
@@ -421,6 +432,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                            finished=episode_finished),
                                refuge=refuge,garrison_relocation=relocation,
                                outbreak=row.get('outbreak'),
+                               ready_stats=row.get('ready_stats'),
                                timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
                                unmatched_layout=remaining_layout(layout,{'_text':row['layout_text']}) if layout else [],
                                layout_receipts=receipts,battle_actions=row['battle_actions'],
@@ -715,6 +727,7 @@ def main():
             population[0] = initial_team
             population[1] = offspring(initial_team, initial_team, rng)
         if proposal:
+            population[1] = defense_placement_candidate(proposal, rng) or population[1]
             population[-1] = nearby_plan_candidate(proposal, rng) or population[-1]
         if args.demonstration:
             from layout_memory import demonstrations
@@ -898,7 +911,10 @@ def main():
                     temp.write_text(json.dumps(champion))
                     temp.replace(directory/'champion.json')
                 # Replicate the leader on independent boards and reserve one L1 mutation.
-                population=[leader,incumbent or leader]
+                alternate = incumbent or leader
+                if explore_without_layout and incumbent is None:
+                    alternate = defense_placement_candidate(leader, rng) or alternate
+                population = [leader, alternate]
                 require_fresh.update(team_id(t) for t in population)
                 population.append(l1_candidate(leader,rng) if generation%2==0 else offspring(leader,leader,rng,stage=1))
                 repeat = fitness.replication_candidate(evidence, (archive[k] for k in l1_ranked), population)

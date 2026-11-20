@@ -24,6 +24,23 @@ class SearchTests(unittest.TestCase):
                 self.assertIn('distinct, paired holdout copies disjoint from training', errors.getvalue())
                 lock.assert_not_called()
 
+    def test_defense_variant_inserts_a_learned_preference_without_losing_the_plan(self):
+        rng = np.random.default_rng(23)
+        parent = search.random_team(rng)
+        before = copy.deepcopy(parent)
+        child = search.defense_placement_candidate(parent, rng)
+        self.assertEqual(parent, before)
+        for index, extra in enumerate(child['plan']):
+            remaining = child['plan'][:index] + child['plan'][index + 1:]
+            if remaining == parent['plan'] and extra['family'] == 0:
+                self.assertIn(extra['tool'], search.tr.PLACEMENTS)
+                self.assertEqual(extra['duration'], 2)
+                child['plan'] = remaining
+                self.assertEqual(child, parent)
+                break
+        else:
+            self.fail('No new defense preference preserved the previous planning sequence')
+
     def test_pause_variant_preserves_the_plan_that_executed_a_cast(self):
         rng = np.random.default_rng(17)
         parent = search.random_team(rng)
@@ -358,8 +375,10 @@ class SearchTests(unittest.TestCase):
                  campaign='Boston',board_id='b',board={'scenario':1,'scenario_count':5},
                  sim=100,trail=[],civ0=100,us=[],cs=[],log_started=True,battle_actions={})
         with patch.object(search.zar_boot,'boot'),patch.object(search.zar_boot,'stop'),              patch.object(search.operator,'owned_copy'),patch.object(search.tr,'run_episode',return_value=row) as run:
+            row['ready_stats'] = dict(money=2100, stock=dict(mortar=1))
             result=search.rollout(('inst13',{},None,10))
             self.assertEqual([level['stage'] for level in result['levels']],[1])
+            self.assertEqual(result['levels'][0]['ready_stats'], row['ready_stats'])
             worker = result['timing']
             episode = result['levels'][0]['timing']
             stamps = [worker['started'], worker['board_ready'], episode['started'],

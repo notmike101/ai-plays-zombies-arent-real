@@ -895,6 +895,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     timeout_reason=timeout_reason if end=='timeout' else None,
                     planning_blockers=planning_blockers, picker_rejections=picker_rejections,
                     outbreak=footer.get('outbreak') if footer else None,
+                    ready_stats=footer.get('ready_stats') if footer else None,
                     special_activations=special_activations,
                     reward_components=rewards, outside_playarea_actions=outside_actions,
                     outside_targets=outside_targets, battle_actions=battle_actions,

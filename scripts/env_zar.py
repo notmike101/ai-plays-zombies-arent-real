@@ -58,7 +58,11 @@ def read_session(path, started_ms, *, expected_wall=None, capture_events=False):
         if expected_wall is not None and rows[0].get('wall') != expected_wall:
             return None
         outbreak=next((r for r in rows if r.get('ev')=='outbreak'),None)
+        ready = next((r['stats'] for r in rows if r.get('ev') == 'phase'
+                      and r.get('from') == 'planning' and r.get('to') == 'playing'
+                      and r.get('reason') == 'ready' and isinstance(r.get('stats'), dict)), None)
         data = {'header': rows[0],
+                'ready_stats': {k: ready.get(k) for k in ('money', 'stock')} if ready is not None else None,
                 'outbreak': {k:outbreak.get(k) for k in ('seed','safe_zones','civilians_inside_pct')} if outbreak else None,
                 'deployments': [r.get('what') for r in rows if r.get('ev')=='deploy'],
                 'deploy_sim_seconds': [r.get('sim') for r in rows if r.get('ev')=='deploy'],
@@ -213,7 +217,8 @@ class ZAREnv:
                                 expected_wall=self.log_header_wall, capture_events=capture_events)
             if data and data['footer']:
                 footer = dict(data['footer'],deployments=data['deployments'],
-                            deploy_sim_seconds=data['deploy_sim_seconds'],outbreak=data['outbreak'])
+                            deploy_sim_seconds=data['deploy_sim_seconds'],outbreak=data['outbreak'],
+                            ready_stats=data['ready_stats'])
                 if capture_events:
                     footer.update(combat_events=data['combat_events'],
                                   combat_events_truncated=data['combat_events_truncated'])
