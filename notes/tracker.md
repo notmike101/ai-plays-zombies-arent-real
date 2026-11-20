@@ -2,6 +2,29 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:33 Central, first Police trial wave finished. Endpoint
+  bf3fc52369fc3746 retried at 10.00% and 9.70%, mean 9.85%.
+  Path 847df0f375da30cf cleared one outbreak at 17.02% and
+  retried at 10.00%, mean 13.51%. Four distinct native seeds,
+  identical READY layout ID 418150907bbd395c, 1 spare SP each.
+  All four native trail counts match stock-confirmed cast counts.
+  All four exposed at least 2,355 civilians. The 17.02% game
+  reduced the native zombie count from 2,599 to 2,334 in its
+  20 s occupied-breach window. Descriptive results, no 35% win.
+  Crossed wave two is live on inst13 PID 6696, inst14 PID 28444,
+  inst15 PID 69868 and inst16 PID 62036 under operator 70324.
+- Tested the unmodified virtual drag timing with fake mouse
+  edges/movement, same below-normal priority and CPU set as the
+  live operator, 16 calls. Button hold was 452.90-473.24 ms
+  (median 457.59 ms); largest step 60.41 ms. This isolates Python
+  timer waits from native processing and does not reproduce
+  native first holds of 1.48-2.31 s. Staged bounded Police
+  dispatch timestamps with stock and native release timestamps
+  in analysis/coverage-portable314/tmp/police-dispatch-timing.patch.
+  No change to actual gestures, policy choices or rewards. All
+  303 script tests passed against isolated candidate source.
+  Applicability verified, pending the live operator's exit.
+
 - At 11:30 Central, all four 189952 boards were actively playing.
   Native planning receipts on each confirm Police level 1 with one
   skill point remaining. First Police sprays delivered 12-15 of the
