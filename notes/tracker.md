@@ -2,6 +2,33 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:10 Central, seven rounds of warm study 196952 completed
+  (28 scored games, 25 distinct native outbreaks). Baseline mean
+  was 4.33%, challenger 4.97%. Neither received positive READY
+  coverage or selected a shelter construction corner. The final
+  training round is live under 53348 (inst13 55948, inst14 67716,
+  inst15 70652, inst16 64116). Read-only shared mapping checks
+  found protocol 3 and model_only=0 on all four. Keep the run
+  intact until the verified idle boundary.
+- Staged tool-level exploration in place of further corner-only
+  tuning. Candidate temperature 1.35 broadens legal planning
+  tool choices during training only; PPO stores the exact rollout
+  temperature for each step, and evaluation uses ordinary
+  probabilities. Both keep the same terminal, READY and other
+  rewards. All 318 isolated tests passed on rerun after a fixture
+  temporary-directory rename error. Patch applicability passed.
+  D: analysis/coverage-portable314/tmp/planning-tool-exploration.patch
+  SHA256 EB611F9C2018A62E73A9BD776E3AE31E33855C6D46624EA762DF5C7856307E29.
+- Staged controlled stop at a future paired checkpoint. A
+  stop-after-round file in the active run directory will be
+  honored after both optimizer updates, results and atomic
+  paired.pt, before another batch. Test confirmed order and
+  preserved states and seeds; all 317 isolated tests passed.
+  D: analysis/coverage-portable314/tmp/comparison-clean-checkpoint-stop.patch
+  SHA256 B97D2FEEB85173956F7A62C921BCB57F787B4C5FC36C7B258E034C21AE2D4CAE.
+  Existing operator does not have this code. Neither staged
+  change alters the live inputs or training process.
+
 - At 13:06 Central, warm study 196952 had four complete training
   rounds (16 games, 15 distinct native seeds, one seed shared
   with the prior study). Baseline averaged 3.98% saved, challenger
