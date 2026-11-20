@@ -660,7 +660,8 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                          allow_progression=allow_progression, observer_interval=observer_interval,
                          paused_seconds=45,
                          placement_feedback=not allow_progression and not layout,
-                         sample_battle=bool((active or {}).get('sample_battle')))
+                         sample_battle=bool((active or {}).get('sample_battle')),
+                         sample_zone_geometry=bool((active or {}).get('sample_zone_geometry')))
             if capture_shadow:options['capture_shadow']=True
             if fixed_speed:options['fixed_speed']=fixed_speed
             episode_started = monotonic()
@@ -765,11 +766,13 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','sample_zone_geometry','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead'))
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
         raise ValueError('Invalid gesture planning flag')
     if 'sample_battle' in team and team['sample_battle'] is not True:
         raise ValueError('Invalid battle sampling flag')
+    if 'sample_zone_geometry' in team and team['sample_zone_geometry'] is not True:
+        raise ValueError('Invalid safe-zone geometry sampling flag')
     if 'garrison_coverage' in team:
         weight = team['garrison_coverage']
         if type(weight) not in (int, float) or not 0 <= weight <= 16:
@@ -1129,13 +1132,16 @@ def main():
                     population[-1] = matched_plan
                     population[1] = dict(deepcopy(matched_plan), garrison_early_coverage=True)
                     paired_early_defense = True
-            if matched is not None and not paired_early_defense:
+            if matched is not None:
                 sheltered = matched['levels'][0]['outbreak'].get('civilians_inside_pct')
                 if isinstance(sheltered, (int, float)) and 0 < sheltered < 35:
-                    if proposal.get('zone_population') and not proposal.get('zone_anchor_lookahead'):
-                        population[-1] = dict(deepcopy(proposal), zone_anchor_lookahead=True)
-                    else:
-                        population[-1] = dict(deepcopy(proposal), zone_population=float(rng.uniform(6., 12.)))
+                    if not proposal.get('sample_zone_geometry'):
+                        population[-1] = dict(deepcopy(proposal), sample_zone_geometry=True)
+                    elif not paired_early_defense:
+                        if proposal.get('zone_population') and not proposal.get('zone_anchor_lookahead'):
+                            population[-1] = dict(deepcopy(proposal), zone_anchor_lookahead=True)
+                        else:
+                            population[-1] = dict(deepcopy(proposal), zone_population=float(rng.uniform(6., 12.)))
         if prior and not (args.compare_forecast or args.compare_speed):
             previous=args.seed_from/'provisional.json'
             if previous.is_file():

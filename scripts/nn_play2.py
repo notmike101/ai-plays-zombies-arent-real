@@ -369,6 +369,12 @@ def update_outside_retries(st, width, height):
     st['outside_retries'] = retries
 
 
+def select_policy_cell(distribution, greedy, generator=None):
+    if generator is not None:
+        return int(torch.multinomial(distribution.probs, 1, generator=generator))
+    return int(distribution.probs.argmax() if greedy else distribution.sample())
+
+
 def cell_distribution(logits, tool, mask):
     logits = logits.reshape(-1, NU, NC)
     tools = torch.as_tensor(tool, dtype=torch.long).reshape(-1)
@@ -585,6 +591,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
     if 'seed' in options:
         torch.manual_seed(options['seed'])
         np.random.seed(options['seed'] % (2**32))
+    zone_rng = None
+    if options.get('sample_zone_geometry'):
+        zone_rng = torch.Generator().manual_seed(options['seed'])
     from env_zar import ZAREnv, ZAREnvError
     env = observer = None
     u = c = None
@@ -757,7 +766,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     u = int(du.probs.argmax() if greedy else du.sample())
                     mc = cell_mask(st, u, mc)
                     dc = cell_distribution(lc, u, mc)
-                    c = int(dc.probs.argmax() if greedy else dc.sample())
+                    cell_rng = zone_rng if st['planning'] and TOOLS[u] == 'zone_rect' else None
+                    c = select_policy_cell(dc, greedy, cell_rng)
                     ulp, clp = float(du.log_prob(torch.tensor(u))), float(dc.log_prob(torch.tensor(c)))
                     if observer:
                         cp = torch.zeros(NU, NC)

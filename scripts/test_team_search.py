@@ -249,6 +249,26 @@ class SearchTests(unittest.TestCase):
             x[..., search.tr.PLANNING_INDEX] = 0
             torch.testing.assert_close(original(x)[0], modified(x)[0])
 
+    def test_zone_cell_sampling_is_frozen_masked_and_separate_from_battle_rng(self):
+        parent = search.random_team(np.random.default_rng(4))
+        candidate = dict(parent, sample_zone_geometry=True)
+        self.assertNotEqual(search.team_id(candidate), search.team_id(parent))
+        record = dict(base='base', team_id=search.team_id(candidate), team=candidate)
+        self.assertEqual(search.checkpoint_team(record, 'base')['team'], candidate)
+        logits = torch.zeros((search.tr.NU, search.tr.NC))
+        mask = np.zeros(search.tr.NC)
+        mask[[3, 7]] = 1
+        dist = search.tr.cell_distribution(logits, search.ZONE_RECT, mask)
+        state = torch.random.get_rng_state().clone()
+        def choices():
+            generator = torch.Generator().manual_seed(45)
+            return [search.tr.select_policy_cell(dist, True, generator) for _ in range(16)]
+        selected = choices()
+        self.assertEqual(selected, choices())
+        self.assertEqual(set(selected), {3, 7})
+        self.assertEqual(search.tr.select_policy_cell(dist, True), 3)
+        self.assertTrue(torch.equal(state, torch.random.get_rng_state()))
+
     def test_battle_sampling_is_a_distinct_frozen_policy(self):
         parent = search.random_team(np.random.default_rng(4))
         candidate = search.battle_sampling_candidate(parent)
