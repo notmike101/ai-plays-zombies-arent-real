@@ -71,6 +71,7 @@ DECK_ORDER = ['Police', 'Bomber', 'Heli', 'Stungas', 'Firebomb', 'CallArms',
               'APC', 'Demolition', 'Rally', 'SeekDestroy', 'Bus', 'Missile',
               'Medevac', 'Dozer', 'Cluster', 'Tank', 'AC130', 'Cure', 'Nuke']
 U2ABILITY = {v: k for k, v in ABILITY_U.items()}
+BUY_TOOLS = slice(34, 34 + len(DECK_ORDER))
 TOOLS += [f'buy_{n}' for n in DECK_ORDER] + [f'refund_{n}' for n in DECK_ORDER]
 CELL_LABELS = [f'{tool}: cell {c+1}' for tool in TOOLS for c in range(NC)]
 TOOLS += EXTRA_TOOLS
@@ -388,6 +389,15 @@ def select_policy_cell(distribution, greedy, generator=None):
     return int(distribution.probs.argmax() if greedy else distribution.sample())
 
 
+def loadout_distribution(logits, legal_tools):
+    legal_buys = torch.zeros_like(logits, dtype=torch.bool)
+    legal_buys[BUY_TOOLS] = torch.as_tensor(legal_tools[BUY_TOOLS], dtype=torch.bool)
+    ranked = logits.masked_fill(~legal_buys, -torch.inf).softmax(dim=0)
+    # A peaked purchase preference otherwise keeps offering the same loadout.
+    exploratory = legal_buys / legal_buys.sum()
+    return torch.distributions.Categorical(probs=0.5 * ranked + 0.5 * exploratory)
+
+
 def cell_distribution(logits, tool, mask):
     logits = logits.reshape(-1, NU, NC)
     tools = torch.as_tensor(tool, dtype=torch.long).reshape(-1)
@@ -607,6 +617,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
     zone_rng = None
     if options.get('sample_zone_geometry'):
         zone_rng = torch.Generator().manual_seed(options['seed'])
+    loadout_rng = (torch.Generator().manual_seed(options['seed'] ^ 0x6C6F6164)
+                   if options.get('sample_loadout') else None)
     cast_target_mode = options.get('cast_target_mode')
     cast_target_rng = (torch.Generator().manual_seed(options['seed'] ^ 0x687A90D5)
                        if cast_target_mode == 'sample' else None)
@@ -787,6 +799,11 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     lu, lc, _, h = net(x, h)
                     du = torch.distributions.Categorical(logits=lu.flatten().masked_fill(torch.tensor(mu == 0), -1e9))
                     u = int(du.probs.argmax() if greedy else du.sample())
+                    if (loadout_rng is not None and greedy and st['planning']
+                            and BUY_TOOLS.start <= u < BUY_TOOLS.stop
+                            and mu[BUY_TOOLS].sum() > 1):
+                        du = loadout_distribution(lu.flatten(), mu)
+                        u = int(torch.multinomial(du.probs, 1, generator=loadout_rng))
                     if not st['planning']:
                         if options.get('collect_cast_tool_gradients'):
                             net.record_cast_tool_gradient(u, du.probs)

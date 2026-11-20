@@ -869,6 +869,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                          placement_feedback=not allow_progression and not layout,
                          sample_battle=bool((active or {}).get('sample_battle')),
                          cast_target_mode=(active or {}).get('cast_target_mode'),
+                         sample_loadout=bool((active or {}).get('sample_loadout')),
                          sample_zone_geometry=bool((active or {}).get('sample_zone_geometry')))
             if capture_shadow:options['capture_shadow']=True
             if fixed_speed:options['fixed_speed']=fixed_speed
@@ -988,7 +989,7 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','cast_target_mode','sample_zone_geometry','firebomb_line_targeting','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','cast_target_mode','sample_loadout','sample_zone_geometry','firebomb_line_targeting','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
     if 'firebomb_line_targeting' in team and team['firebomb_line_targeting'] is not True:
         raise ValueError('Invalid Firebomb line targeting flag')
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
@@ -998,6 +999,8 @@ def checkpoint_team(record,base):
     if 'cast_target_mode' in team and (
             team['cast_target_mode'] not in ('sample', 'greedy') or not team.get('sample_battle')):
         raise ValueError('Cast target mode requires sampled battle tools')
+    if 'sample_loadout' in team and team['sample_loadout'] is not True:
+        raise ValueError('Invalid loadout sampling flag')
     if 'sample_zone_geometry' in team and team['sample_zone_geometry'] is not True:
         raise ValueError('Invalid safe-zone geometry sampling flag')
     if 'garrison_coverage' in team:
@@ -1206,6 +1209,8 @@ def main():
     neighbors = parser.add_mutually_exclusive_group()
     neighbors.add_argument('--placement-neighbors', action='store_true',
                            help='Compare two equipped placement preferences in the same plan slot')
+    neighbors.add_argument('--loadout-sampling', action='store_true',
+                           help='Compare greedy and exploratory choices among legal purchases')
     neighbors.add_argument('--battle-neighbors', nargs='?', const='all',
                            choices=('all', 'firebomb', 'firebomb-line', 'cast-sampling', 'learn-targets', 'learn-cast-tools', 'retest-fit'),
                            help='Compare battle targeting or learn cast weights from real scores')
@@ -1236,8 +1241,9 @@ def main():
     learn_tools = args.battle_neighbors == 'learn-cast-tools'
     learn_targets = args.battle_neighbors in ('learn-targets', 'learn-cast-tools')
     retest_fit = args.battle_neighbors == 'retest-fit'
-    paired_battle = args.battle_neighbors in ('firebomb-line', 'cast-sampling', 'retest-fit')
-    repeat_pair = args.placement_neighbors or battle_target is not None or paired_battle or learn_targets
+    paired_policy = args.loadout_sampling or args.battle_neighbors in (
+        'firebomb-line', 'cast-sampling', 'retest-fit')
+    repeat_pair = args.placement_neighbors or battle_target is not None or paired_policy or learn_targets
     copies=args.copies
     cross_fit = learn_targets and args.generations == 3
     target_folds = {copy: i//2 if cross_fit else 0 for i, copy in enumerate(copies)}
@@ -1254,7 +1260,7 @@ def main():
             parser.error('Reserved holdout copies are for the final campaign evaluation')
     worker_count = max(len(copies), len(holdout_copies))
     paired_copy_counts = (2, 4) if retest_fit else (4,)
-    if (args.battle_neighbors or args.placement_neighbors) and (
+    if (args.battle_neighbors or args.placement_neighbors or args.loadout_sampling) and (
             not args.click_start or len(copies) not in paired_copy_counts):
         parser.error('Paired exploration requires the controlled fresh L1 start and a supported copy count')
     if repeat_pair and args.generations != 2 and not cross_fit:
@@ -1457,8 +1463,8 @@ def main():
                         population[index] = candidate
         fit_outbreaks = set()
         if retest_fit:
-            battle_arms, fit_outbreaks = restore_fitted_pair(args.continue_layout_free, base)
-            print('Frozen target retest:', [team_id(team) for team in battle_arms],
+            policy_arms, fit_outbreaks = restore_fitted_pair(args.continue_layout_free, base)
+            print('Frozen target retest:', [team_id(team) for team in policy_arms],
                   'excluded fit outbreaks:', sorted(fit_outbreaks), flush=True)
         elif learn_targets:
             train_mode = proposal.get('cast_target_mode', 'sample') if learn_tools else 'sample'
@@ -1466,11 +1472,15 @@ def main():
         elif compare_line:
             endpoint = dict(proposal)
             endpoint.pop('firebomb_line_targeting', None)
-            battle_arms = (endpoint, dict(endpoint, firebomb_line_targeting=True))
-        elif paired_battle:
+            policy_arms = (endpoint, dict(endpoint, firebomb_line_targeting=True))
+        elif args.loadout_sampling:
+            greedy_buy = dict(proposal)
+            greedy_buy.pop('sample_loadout', None)
+            policy_arms = (greedy_buy, dict(greedy_buy, sample_loadout=True))
+        elif paired_policy:
             if not proposal.get('sample_battle'):
                 raise ValueError('Cast target comparison requires a sampled-battle reference')
-            battle_arms = tuple(dict(proposal, cast_target_mode=mode) for mode in ('sample', 'greedy'))
+            policy_arms = tuple(dict(proposal, cast_target_mode=mode) for mode in ('sample', 'greedy'))
         elif args.battle_neighbors:
             population[1], population[-1] = battle_neighbors(proposal, rng, battle_target)
         if args.placement_neighbors:
@@ -1532,8 +1542,8 @@ def main():
                     population = [pair[(i+generation) % 2] for i, pair in enumerate(pairs)]
                     alternate_teams = {copy: pair[1-(i+generation) % 2]
                                        for i, (copy, pair) in enumerate(zip(copies, pairs))}
-                elif paired_battle:
-                    population = [battle_arms[(i+generation) % 2] for i in range(len(copies))]
+                elif paired_policy:
+                    population = [policy_arms[(i+generation) % 2] for i in range(len(copies))]
                 elif repeat_pair and generation:
                     population = first_wave[1:] + first_wave[:1]
                 else:
@@ -1542,7 +1552,7 @@ def main():
                     rng.shuffle(population)
                     if repeat_pair:
                         first_wave = population.copy()
-                if paired_battle or (learn_targets and not fit_targets):
+                if paired_policy or (learn_targets and not fit_targets):
                     first_seed = args.seed + (len(copies) if learn_targets else 0)
                     seeds = [first_seed + i//2 for i in range(len(copies))]
                 else:

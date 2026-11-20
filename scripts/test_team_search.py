@@ -520,6 +520,31 @@ class SearchTests(unittest.TestCase):
         search.fitness.record(evidence, dict(rows[0], team=child, target_fit_overlap=True))
         self.assertEqual(evidence, {})
 
+    def test_loadout_sampling_is_legal_ranked_and_replayable(self):
+        tr = search.tr
+        start = tr.BUY_TOOLS.start
+        legal = np.zeros(tr.NU, dtype=np.uint8)
+        legal[[0, start, start + 1]] = 1
+        logits = torch.full((tr.NU,), 100.)
+        logits[start:start+2] = torch.tensor([1., 0.])
+        distribution = tr.loadout_distribution(logits, legal)
+        self.assertEqual(distribution.probs.nonzero().flatten().tolist(), [start, start + 1])
+        self.assertGreater(distribution.probs[start], distribution.probs[start + 1])
+        state = torch.random.get_rng_state()
+        draws = [torch.multinomial(distribution.probs, 20, replacement=True,
+                                  generator=torch.Generator().manual_seed(13)).tolist()
+                 for _ in range(2)]
+        self.assertEqual(draws[0], draws[1])
+        self.assertEqual(set(draws[0]), {start, start + 1})
+        torch.testing.assert_close(torch.random.get_rng_state(), state)
+        parent = search.random_team(np.random.default_rng(11))
+        child = dict(parent, sample_loadout=True)
+        self.assertNotEqual(search.team_id(parent), search.team_id(child))
+        search.checkpoint_team(dict(team=child, team_id=search.team_id(child), base='base'), 'base')
+        child['sample_loadout'] = False
+        with self.assertRaisesRegex(ValueError, 'Invalid loadout sampling flag'):
+            search.checkpoint_team(dict(team=child, team_id=search.team_id(child), base='base'), 'base')
+
     def test_cast_target_modes_preserve_tool_sampling_identity(self):
         parent = dict(search.random_team(np.random.default_rng(11)), sample_battle=True)
         teams = [dict(parent, cast_target_mode=mode) for mode in ('sample', 'greedy')]
