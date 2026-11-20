@@ -622,6 +622,27 @@ class SearchTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Invalid sampling flag: sample_loadout'):
             search.checkpoint_team(dict(team=child, team_id=search.team_id(child), base='base'), 'base')
 
+    def test_opening_cast_preference_fades_and_ends_on_first_confirmed_spend(self):
+        parent = search.random_team(np.random.default_rng(117))
+        baseline = search.TeamPolicy(parent)
+        child = dict(parent, opening_cast_bias=2.)
+        probe = search.TeamPolicy(child)
+        probe.load_state_dict(baseline.state_dict())
+        search.checkpoint_team(dict(team=child, team_id=search.team_id(child), base='base'), 'base')
+        x = torch.zeros(1, 1, search.tr.NOBS)
+        mask = torch.ones(search.tr.NU)
+        expected = torch.zeros(search.tr.NU)
+        with torch.no_grad():
+            for sim, confirmed, bonus in ((0., False, 2.), (15., False, 1.),
+                                          (15., True, 0.), (45., False, 0.)):
+                probe.set_cast_targets(dict(planning=False, sim=sim, first_cast_confirmed=confirmed),
+                                       mask, None, 1920, 1200)
+                lu, cells, _, _ = probe(x)
+                original, original_cells, _, _ = baseline(x)
+                expected[search.CASTS] = bonus
+                torch.testing.assert_close((lu-original).flatten(), expected)
+                torch.testing.assert_close(cells, original_cells)
+
     def test_cast_target_modes_preserve_tool_sampling_identity(self):
         parent = dict(search.random_team(np.random.default_rng(11)), sample_battle=True)
         teams = [dict(parent, cast_target_mode=mode) for mode in ('sample', 'greedy')]

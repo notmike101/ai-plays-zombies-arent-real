@@ -220,6 +220,15 @@ SNAPPED_PLANNING_TOOLS = BUILDING_PLACEMENTS | {9}
 PLANNING_SPATIAL_TOOLS = set(PLANNING_U[2:]) | set(PLACEMENTS)
 
 
+CANCEL_TOOL = TOOLS.index('cancel_tool')
+
+
+def debt_without_draft(st, balance):
+    native_draft = st.get('native', {}).get('selection', {}).get('polygon', ())
+    return (st['planning'] and balance < -.5 and not st.get('dialog')
+            and not st.get('anchor') and not st.get('gesture_anchor') and not len(native_draft))
+
+
 def blocked_placement_cells(st, retries, decision):
     if not st['planning'] or not retries:
         return {}
@@ -724,6 +733,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         special_activations = {}
         picker_rejections = {}
         picker_retry_at = {}
+        debt_cancel_retry = None
         placement_retry_at = {}
         placement_feedback = options.get('placement_feedback', False)
         paid_buildings = {}
@@ -783,6 +793,13 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 geometry = planning_geometry_masks if st['planning'] else battle_geometry_masks
                 st['geometry_cells'] = geometry(st, env.cw, env.ch)
             mu, mc = masks_for(st)
+            if debt_cancel_retry is not None:
+                balance, deadline = debt_cancel_retry
+                if (len(rows['obs']) < deadline and o['money'] == balance
+                        and debt_without_draft(st, balance)):
+                    mu[CANCEL_TOOL] = 0
+                else:
+                    debt_cancel_retry = None
             base_cells = mc
             greedy = options.get('greedy') and (st['planning'] or not options.get('sample_battle'))
             if fixed_speed:
@@ -801,7 +818,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     ulp, clp = -math.log(mu.sum()), -math.log(mc.sum())
                 else:
                     if (getattr(net,'cast_timing',None) is not None or getattr(net,'missile_reserve',0.)
-                            or getattr(net,'missile_followup',0.) or getattr(net,'firebomb_line_targeting',False)):
+                            or getattr(net,'missile_followup',0.) or getattr(net,'firebomb_line_targeting',False)
+                            or getattr(net,'opening_cast_bias',0.)):
                         net.set_cast_targets(st, mu, mc, env.cw, env.ch)
                     if st['planning'] and getattr(net, 'garrison_coverage_weight', 0.):
                         net.set_garrison_coverage(st, mu, mc, env.cw, env.ch)
@@ -889,6 +907,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             action_started = time.monotonic()
             picker_rejected = False
             special_credit = 0.
+            repeated_debt_cancel = (placement_feedback and u == prev_u == CANCEL_TOOL
+                                    and debt_without_draft(st, before['money']))
             outside = outside_playarea(st, u, c, env.cw, env.ch)
             if outside:
                 if shadow is not None and state['phase'] == 'playing':
@@ -992,6 +1012,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     # The stock receipt, not a sent keypress, proves a resource was spent.
                     if slot['charges'] < before_stock:
                         battle_actions['stock_decreased'] += 1
+                        st['first_cast_confirmed'] = True
                         slot['last_cast_t'] = episode_state()['sim']
                         if shadow is not None:
                             capture.receipt('confirmed', before=before_stock, after=slot['charges'],
@@ -1016,6 +1037,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             state = episode_state()
             if any(o[k] is None for k in ('money', 'civ', 'zomb', 'infections')):
                 raise ZAREnvError('Incomplete observation')
+            if (repeated_debt_cancel and state['phase'] == 'planning'
+                    and o['money'] == before['money']):
+                debt_cancel_retry = (o['money'], len(rows['obs']) + 3)
+                battle_actions['debt_cancel_cooldowns'] = battle_actions.get('debt_cancel_cooldowns', 0) + 1
             dt = max(state['sim'] - previous_state['sim'], .001)
             trend = (o['zomb'] - before['zomb']) / dt
             slope = (o['civ'] - before['civ']) / (dt*civ0)

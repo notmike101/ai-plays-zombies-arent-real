@@ -543,6 +543,8 @@ class TeamPolicy(tr.PolicyNet2):
             if alternate_team['cast_bias'] != team['cast_bias']:
                 self.cast_bias_delta = torch.tensor(alternate_team['cast_bias']) - self.bias
         self.cast_timing = team.get('cast_timing')
+        self.opening_cast_bias = team.get('opening_cast_bias', 0.)
+        self.opening_cast_bonus = 0.
         self.firebomb_line_targeting = team.get('firebomb_line_targeting', False)
         self.firebomb_segments = None
         self.garrison_coverage_weight = team.get('garrison_coverage', 0.)
@@ -609,8 +611,11 @@ class TeamPolicy(tr.PolicyNet2):
         self.occupied_shelter = False
         self.missile_charges = 0.
         self.firebomb_segments = None
+        self.opening_cast_bonus = 0.
         if st['planning'] or st.get('dialog'):
             return
+        if self.opening_cast_bias and not st.get('first_cast_confirmed'):
+            self.opening_cast_bonus = self.opening_cast_bias * max(0., 1. - st['sim'] / 30.)
         if anchor := st.get('anchor'):
             if self.firebomb_line_targeting and anchor[0] == FIREBOMB and tools[FIREBOMB]:
                 start = np.asarray(tr.battle_point(st, FIREBOMB, anchor[1], width, height))
@@ -798,7 +803,7 @@ class TeamPolicy(tr.PolicyNet2):
             if self.predict is not None:
                 future=self.predict(grid[:3].reshape(1,3,6,8)).clamp_min(0).reshape(2,tr.NC)
                 grid=torch.cat((future,grid[2:]))
-            tools[..., CASTS] += self.bias
+            tools[..., CASTS] += self.bias + self.opening_cast_bonus
             if self.cast_timing is not None:
                 gain, threshold = self.cast_timing
                 demand = grid[1] - .75*grid[0] - threshold
@@ -1035,7 +1040,11 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','cast_target_mode','sample_loadout','sample_garrison_sites','sample_zone_geometry','firebomb_line_targeting','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','cast_target_mode','sample_loadout','sample_garrison_sites','opening_cast_bias','sample_zone_geometry','firebomb_line_targeting','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
+    if 'opening_cast_bias' in team:
+        weight = team['opening_cast_bias']
+        if type(weight) not in (int, float) or not 0 < weight <= 4.:
+            raise ValueError('Invalid opening cast bias')
     if 'firebomb_line_targeting' in team and team['firebomb_line_targeting'] is not True:
         raise ValueError('Invalid Firebomb line targeting flag')
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
@@ -1265,7 +1274,7 @@ def main():
     neighbors.add_argument('--loadout-sampling', action='store_true',
                            help='Compare greedy and exploratory choices among legal purchases')
     neighbors.add_argument('--battle-neighbors', nargs='?', const='all',
-                           choices=('all', 'firebomb', 'firebomb-line', 'cast-sampling', 'learn-targets', 'learn-cast-tools', 'retest-fit'),
+                           choices=('all', 'firebomb', 'firebomb-line', 'cast-sampling', 'early-first-cast', 'learn-targets', 'learn-cast-tools', 'retest-fit'),
                            help='Compare battle targeting or learn cast weights from real scores')
     parser.add_argument('--goal-margin', action='store_true',
                         help='Rank unsuccessful discovery battles by survival above the 35 percent target')
@@ -1297,7 +1306,7 @@ def main():
     planning_sampling = ('sample_loadout' if args.loadout_sampling else
                          'sample_garrison_sites' if args.garrison_site_sampling else None)
     paired_policy = planning_sampling or args.defense_neighbors or args.battle_neighbors in (
-        'firebomb-line', 'cast-sampling', 'retest-fit')
+        'firebomb-line', 'cast-sampling', 'early-first-cast', 'retest-fit')
     repeat_pair = args.placement_neighbors or battle_target is not None or paired_policy or learn_targets
     copies=args.copies
     cross_fit = learn_targets and args.generations == 3
@@ -1410,7 +1419,7 @@ def main():
         view_revision='playable-overview-v3-bounded-targets-shelter-v2-specials-v1-retries-v2-verified-ready-v1'
         explore_without_layout = not args.demonstration and not (prior or {}).get('layout')
         if explore_without_layout and not args.allow_progression:
-            view_revision += '-placement-feedback-v4'
+            view_revision += '-placement-feedback-v4-debt-cancel-v1'
         if args.click_start:
             view_revision += '-click-start-v1'
         if args.goal_margin:
@@ -1530,6 +1539,10 @@ def main():
             endpoint = dict(proposal)
             endpoint.pop('firebomb_line_targeting', None)
             policy_arms = (endpoint, dict(endpoint, firebomb_line_targeting=True))
+        elif args.battle_neighbors == 'early-first-cast':
+            standard = dict(proposal)
+            standard.pop('opening_cast_bias', None)
+            policy_arms = (standard, dict(standard, opening_cast_bias=2.))
         elif planning_sampling:
             greedy_plan = dict(proposal)
             greedy_plan.pop(planning_sampling, None)

@@ -307,6 +307,17 @@ class LearningTests(unittest.TestCase):
 
 
 
+class PlanningRecoveryTests(unittest.TestCase):
+    def test_debt_recovery_telemetry_preserves_active_gestures(self):
+        st = dict(planning=True, native=dict(selection=dict(polygon=[])))
+        self.assertTrue(train.debt_without_draft(st, -401))
+        self.assertFalse(train.debt_without_draft(st, -.5))
+        for blockers in (dict(planning=False), dict(dialog=True),
+                         dict(anchor=(10, 3)), dict(gesture_anchor=('drag_world', 0)),
+                         dict(native=dict(selection=dict(polygon=[(0, 0)])))):
+            self.assertFalse(train.debt_without_draft(dict(st, **blockers), -401))
+
+
 class PopulationPressureTests(unittest.TestCase):
     def test_first_outnumbered_and_low_population_are_separate(self):
         events = {}
