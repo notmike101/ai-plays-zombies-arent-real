@@ -1,6 +1,11 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 20:44 Central. Phase-balance trial completed four private
+  training rounds and entered frozen evaluation. Queued no-replay campaign
+  search 142952 behind it (handoff PID 20176). No seed champion or saved
+  demonstration is loaded. Both experiments use six owned copies without
+  overlap, and the existing production supervisor resumes after the search.
 - 2026-11-19 20:34 Central. Private PPO missile-credit trial 140952 finished
   12 training and 24 frozen results. Neither arm qualified; frozen means
   9.31% baseline and 8.75% missile-credit. Zero confirmed missile civilian
