@@ -2,6 +2,10 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:22 Central, first frozen pair retried at 8.36% and 8.41%.
+  Both outbreak IDs are in the inherited exclusion set and
+  cannot count toward fresh consistency. Further reserves live.
+
 - At 13:22 Central, model-only study 197952 finished training
   (16 attempts, 12 distinct native outbreaks). Baseline averaged
   4.49%, broader planning arm 6.53%. Baseline sheltered none;
