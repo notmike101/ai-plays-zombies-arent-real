@@ -2,6 +2,26 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 11:13 Central, wave four candidate retried at 9.99% on repeated
+  outbreak 2033973644. It adds no fresh result. Wave five launched
+  (inst19 PID 35092, inst20 PID 66200) under operator 71620. The combined
+  study handoff PID 71480 is still waiting.
+- Audited breach recovery against archived real game outcomes. For the
+  older fixed-layout 230c8ceb72a1b1a3 discovery cohort, the 72 distinct
+  >=35% games exposed a median of 2,202.5 sheltered civilians and the
+  35 below-target games exposed a median of 2,121. A 49.79% clear
+  recorded 2,224 exposures. Breach exposure alone is not sufficient
+  to rank across these strategies. In 24 aligned archived
+  speed/outbreak crowd windows, the median ratio of zombies 20 sim
+  seconds after the first occupied breach to zombies at breach was
+  0.695 for five qualifying normal-speed runs versus 0.827 for seven
+  below-target runs. At half speed it was 0.524 in one qualifying
+  run versus 0.634 for eleven below target. This is observational
+  and does not isolate a Missile effect. Compare both exposure
+  and post-breach pressure relief on future live trials before
+  strengthening the breach-only reward. No changes to reward or
+  active policy.
+
 - At 11:11 Central, combined the Police path trial, matched reserve
   reference and native loadout receipt changes in one staged patch,
   analysis/coverage-portable314/tmp/police-and-loadout-study.patch.
