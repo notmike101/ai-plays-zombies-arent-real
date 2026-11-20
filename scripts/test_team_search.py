@@ -1,7 +1,7 @@
 """Game-free checks for genome search, independent team state and outcome scoring."""
 import copy
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 from concurrent.futures import Future
 import numpy as np
 import torch
@@ -319,6 +319,19 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(run.call_args.args[0][4]['fixed_speed'], 'speed_2')
         self.assertTrue(run.call_args.args[0][4]['capture_shadow'])
         self.assertEqual(experiment['levels'][0]['shadow'], dict(row['shadow'], copy='inst13', team=None))
+
+    def test_failed_fast_boot_retries_with_the_standard_warmup(self):
+        with (patch.object(search.operator, 'owned_copy', return_value='copy'),
+              patch.object(search.zar_boot, 'boot',
+                           side_effect=[search.zar_boot.ZAREnvError('no board'),
+                                        RuntimeError('still no board')]) as boot):
+            result = search.rollout(('inst13', {}, None, 10), fast_boot=True)
+        self.assertEqual(result['error'], 'still no board')
+        self.assertFalse(result['timing']['fast_boot'])
+        self.assertEqual(boot.call_args_list, [
+            call('copy', ('campaign', 'stage1'), discard_dump_states=True, welcome_wait=15),
+            call('copy', ('campaign', 'stage1'), discard_dump_states=True),
+        ])
 
     def test_failed_boot_still_records_worker_lifetime(self):
         with patch.object(search.operator, 'owned_copy'), patch.object(

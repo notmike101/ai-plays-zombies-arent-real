@@ -526,7 +526,7 @@ def score(row):
 
 
 def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, observer_interval=.2,
-            practice_retry=False, allow_progression=False, capture_shadow=False, fixed_speed=None):
+            practice_retry=False, allow_progression=False, capture_shadow=False, fixed_speed=None, fast_boot=False):
     timing = {'started': monotonic()}
     if start_stage>1 and not allow_progression:
         raise ValueError('Later-stage starts require explicit campaign progression')
@@ -542,7 +542,15 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
     result=dict(copy=copy,seed=seed,levels=levels,timing=timing)
     stage,attempt=start_stage,0
     try:
-        env=zar_boot.boot(operator.owned_copy(copy),destination,discard_dump_states=True)
+        copy_dir = operator.owned_copy(copy)
+        if fast_boot:
+            try:
+                env = zar_boot.boot(copy_dir, destination, discard_dump_states=True, welcome_wait=15)
+            except zar_boot.ZAREnvError as error:
+                print(f'{copy} fast boot failed: {error}. Retrying with standard warmup.', flush=True)
+            timing['fast_boot'] = env is not None
+        if env is None:
+            env = zar_boot.boot(copy_dir, destination, discard_dump_states=True)
         timing['board_ready'] = monotonic()
         layout_receipts=[]
         while stage <= 5:
@@ -793,7 +801,7 @@ def shadow_variants(champion):
 
 
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False,
-                       capture_shadow=False, speeds=None):
+                       capture_shadow=False, speeds=None, fast_boot=False):
     if jobs:
         operator.require_resource_headroom(len(jobs))
     if starts is None:starts=[1]*len(jobs)
@@ -802,7 +810,7 @@ def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_
     futures={pool.submit(rollout,job,retries,stage,training=training,observe=True,
                          observer_interval=.2 if training and job is primary else 1.,
                          practice_retry=job[0]==practice_copy,allow_progression=allow_progression,
-                         capture_shadow=capture_shadow,
+                         capture_shadow=capture_shadow, fast_boot=fast_boot,
                          fixed_speed=speeds[job[0]] if speeds else None):(job,stage)
              for job,stage in zip(jobs,starts,strict=True)}
     for future in as_completed(futures):
@@ -846,6 +854,8 @@ def main():
                         help='Defer reserved evaluation until a discovery policy qualifies')
     parser.add_argument('--holdout-copies', nargs='+',
                         help='Reserve separate owned copies for the final frozen evaluation')
+    parser.add_argument('--fast-boot', action='store_true',
+                        help='Use a shorter warmup on layout-free discovery boards')
     parser.add_argument('--generations',type=int,default=10)
     parser.add_argument('--allow-progression',action='store_true',help='Explicitly allow Boston L2–L5')
     parser.add_argument('--seed',type=int,default=92851)
@@ -874,6 +884,8 @@ def main():
         if args.compare_forecast or args.compare_speed or args.compare_shadow:
             parser.error('Reserved holdout copies are for the final campaign evaluation')
     worker_count = max(len(copies), len(holdout_copies))
+    if args.fast_boot and not args.continue_layout_free:
+        parser.error('Faster boot is available only for layout-free discovery')
     if args.continue_layout_free and (args.demonstration or args.allow_progression):
         parser.error('Layout-free continuation requires Boston L1 without a demonstration')
     if args.compare_forecast and (not args.seed_from or len(copies)%2 or args.demonstration):
@@ -1086,7 +1098,8 @@ def main():
                 loadout_probes={}
                 valid_candidates=0
                 for job,start_stage,result in completed_rollouts(pool,jobs,starts,args.later_retries,training=True,
-                        allow_progression=args.allow_progression,capture_shadow=args.capture_shadow):
+                        allow_progression=args.allow_progression,capture_shadow=args.capture_shadow,
+                        fast_boot=args.fast_boot):
                     team=job[2]
                     key=team_id(team) if team else 'control'
                     result.update(view_revision=view_revision,generation=generation,team_id=key,team=team,start_stage=start_stage)

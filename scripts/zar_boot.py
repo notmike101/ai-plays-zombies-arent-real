@@ -102,10 +102,10 @@ def placement_bindings(settings):
     return settings
 
 
-def boot(copy_dir, dest=('campaign', 'stage1'), *, discard_dump_states=False):
+def boot(copy_dir, dest=('campaign', 'stage1'), *, discard_dump_states=False, welcome_wait=75):
     """Launch, inject once, navigate with client fractions, verify planning.
 
-    Busy copies are refused. Boot waits 75 s for the welcome service, then
+    Busy copies are refused. Boot allows a welcome-service warmup, then
     uses bounded menu/dialog steps. No screenshots, console or physical input.
     """
     path = copy_path(copy_dir)
@@ -151,7 +151,7 @@ def boot(copy_dir, dest=('campaign', 'stage1'), *, discard_dump_states=False):
         welcome, campaign, fresh, resume = menu_points(rect.right, rect.bottom, in_progress,
                                                        unplayed=campaign_cleared(progress_text) == 0)
         step = 'welcome'
-        time.sleep(max(0, 75 - (time.monotonic() - started)))
+        time.sleep(max(0, welcome_wait - (time.monotonic() - started)))
         click_fraction(vi, *welcome)
         step = 'campaign'
         click_fraction(vi, *campaign)
