@@ -2,6 +2,34 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 176952 started at 06:49 Central on D:, trainer PID 61696,
+  output `analysis/coverage-team-ca003d1e59`, and log
+  `analysis/coverage-layout-free-176952-drive-d.log`. Launch headroom
+  was 12.86 GiB RAM and 18.94 GiB disk. Commit 9e01055 compares two
+  mirrored changes to the Firebomb cell-score weights around frozen
+  reference 0c63192f22089b99. It preserves preparation, other cast
+  weights and timing preferences. Each variant runs twice on rotated
+  copies; the learned reference runs four times. A fixture verified
+  both waves and a regression pinned the unchanged weights. All 277
+  script tests passed. Production hash matched. A compact ready paint
+  receipt and session-bound kill counters are retained with the trial.
+- Seed 175952 finished at 06:48 with one native clear at 13.14%,
+  four scored early retries and three timeouts. No reserved evaluation.
+  The unchanged policy averaged 10.96% over its two distinct scored
+  outbreaks. Oil retried at 9.79% and 8.28%. Spikes had one wall-clock
+  timeout and an 8.86% retry. On the shared outbreak 2993894596 Oil
+  saved 9.79% and Spikes 8.86%; both started with 19 Garrisons.
+  The same native map counts, 45 Spikes and 36 Oil tiles, replicated
+  in wave two on different copies. Every trial recorded zero
+  outside-playable-area targets. In a first-wave snapshot, 73 zombies
+  were within 20 metres of Spikes, and none were within 20 metres
+  of Oil in its own game. This is exposure evidence from live state.
+- Game counters credited first-wave confirmed Firebomb deployments
+  with 0 zombie kills for Oil, 754 for the reference and 1,405 in a
+  late snapshot for Spikes. These different outbreaks and outcomes
+  motivate isolating the target weights. They do not establish causal
+  action value or a relationship to official civilians saved.
+
 - Seed 175952 started at 06:32 Central on D:, trainer PID 53364,
   output `analysis/coverage-team-0afbef6ec6`, and log
   `analysis/coverage-layout-free-175952-drive-d.log`. Launch headroom
