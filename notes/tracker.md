@@ -1,6 +1,25 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-19 — training paused for storage constraint)
+## CURRENT STATE (2026-11-19 — trial resumed on D:)
+- Verified the official Python 3.14.4 x64 embeddable archive SHA-256, loaded
+  it from memory, and extracted 21.8 MiB to ignored
+  `analysis/coverage-portable314` on D:. Reuses the existing D: dependencies
+  and directs TEMP, TMP and TMPDIR to its D: scratch folder. No ZIP was stored.
+  A first launch under `.venv` inherited the C: base executable in spawned
+  workers. Stopped those trial processes without a new paired update.
+  The relocated runtime passed a real worker-spawn probe for executable,
+  base executable, temporary directory and Torch package drive.
+- Both owned copies passed preflight. The script suite passed 226 tests
+  with the portable interpreter. Confirmed the saved trial is at update 12
+  with 10 Adam states per arm. Started seed 143952 on D: with 12.84 GiB
+  idle RAM and 13.07 GiB free disk. Verified trainer PID 10212, Python
+  worker PIDs 31504 and 16924, and both owned games running from D:.
+  Outputs are under `analysis/coverage-phase-balance-6b7086fe19`.
+  Logs: `analysis/coverage-phase-balance-drive-d.log` and its `.err.log`.
+  No automatic follow-up is armed. Production weights remain read-only
+  through this comparison. No frozen evaluation has started.
+
+### Earlier storage pause
 - The user directed all project work away from C:. The D: virtual environment
   resolves its base Python executable to C:, so the private two-copy trial and
   its queued automatic handoff were stopped. The Observatory was left running.
