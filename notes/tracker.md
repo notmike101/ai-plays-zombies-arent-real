@@ -2,6 +2,33 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- 213952 completed all 16 frozen timing trials at stock 1x.
+  Eight native outbreaks repeated exactly across the two CPU
+  arrangements; all ended at retry. Shared 212 decisions over
+  290.30 sim seconds (0.73/s), split 1743 over 273.87 (6.36/s).
+  Per-wave p95 sim gaps shared 5.87/2.40 s, split .33/.40 s.
+  Worst refresh shared 6.57 s, split .023 s. Seven of eight
+  matched retries scored higher under the split (9.39% vs 6.86%
+  mean); this is timing/survival-under-retry evidence, with zero
+  natural finishes or holdout qualification.
+- At idle boundary 8fde0b8 added an opt-in split to the private
+  PPO runner. 354 isolated tests passed. Launch 214952 under PID
+  69524 (16:53:53) uses 5f80a288d2c1053a and private Adam,
+  stock 1x, eight paired rounds and four frozen pairs. Both arms
+  use the same split and retain the existing shelter-duration
+  reward comparison. Actual first workers verified policy CPUs
+  6-7, games 0-5, below-normal priority. Four first-batch model
+  starts retried, 162/264/169/232 battle decisions, one native
+  deployment and zero occupied READY coverage. Second batch live.
+  Data analysis/coverage-shelter-duration-0e7fdfc762. Console
+  analysis/coverage-shelter-duration-split-214952-drive-d.log.
+- Across the three preceding archive studies, 51 training games
+  started with closed shelters and only 16 with civilian coverage.
+  Genuine preparation coverage remains a separate bottleneck.
+  The CPU crossover supplied no occupied snapshots to the passive
+  grid-versus-exact audit. Preserve the feature contract until
+  it can be evaluated on real occupied boards.
+
 - At 16:42 Central, shelter-duration comparison 211952 completed.
   Candidate got .049247355 recorded differential credit across
   two of 16 training games. Second episode logged 39059.20
