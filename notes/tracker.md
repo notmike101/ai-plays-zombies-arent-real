@@ -2,6 +2,30 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 13:06 Central, warm study 196952 had four complete training
+  rounds (16 games, 15 distinct native seeds, one seed shared
+  with the prior study). Baseline averaged 3.98% saved, challenger
+  4.22%; four natural zero-save losses. No positive READY
+  coverage or tempered choices. Verified atomic paired.pt at
+  next_round 4 carries both model/Adam states and 38 known seeds.
+  Fifth round is live under operator 53348 (inst13 PID 54124,
+  inst14 73620, inst15 43744, inst16 71936).
+- Joined two native zone placement receipts to the first-round
+  episode IDs. Both were empty at READY and neither episode
+  selected zone_rect, zone_begin, zone_corner or zone_finish.
+  Both used wall/corridor/hold among other actions. Cause is not
+  established. Retain planning-zone receipts by exact native
+  timestamp, and identify only unique bracketed actions. Staged
+  optional read-only trace patch in
+  analysis/coverage-portable314/tmp/planning-zone-receipts-study.patch
+  SHA256 A501A9D266C2414173D4EA96104E47D712C224FCC2FC5F0F60D928F1FF50A2B1.
+  All 317 script tests and applicability passed.
+- Model-only input 2caf0a3 is fetched on origin/main. Existing
+  comparison has no controlled pause at checkpoint save and can
+  immediately submit another batch. Do not interrupt an episode
+  or swap live input code/DLL. Wait for natural operator exit;
+  local tracker commit remains unpushed while this checkout
+  runs the previous input version. Production hash matched.
 - 2026-11-20: integrated opt-in model-only input. Isolated inst91
   rejected ordinary key, click and wheel messages while tagged input
   passed dialog, placement, geometry, zoom, battle and retry checks.
