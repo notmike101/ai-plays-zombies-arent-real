@@ -10,6 +10,19 @@ import nn_play2 as train
 
 
 class StateTests(unittest.TestCase):
+    def test_consistency_keeps_incomplete_or_weak_held_out_blocks_visible(self):
+        from compare_spatial import heldout_consistency
+        cohort = [dict(phase='evaluation', policy_id='frozen', start_kind='fresh',
+                       outbreak_seed=i, end='won', win=True, saved_frac=.4) for i in range(30)]
+        self.assertTrue(heldout_consistency(cohort, 'frozen')['passed'])
+        cohort[0]['end'] = 'timeout'
+        self.assertEqual(heldout_consistency(cohort, 'frozen')['incomplete'], 1)
+        self.assertFalse(heldout_consistency(cohort, 'frozen')['passed'])
+        cohort[0]['end'] = 'won'
+        for row in cohort[:10]:
+            row['saved_frac'] = .3
+        self.assertFalse(heldout_consistency(cohort, 'frozen')['passed'])
+
     def test_phase_loss_weighting_keeps_both_phases_visible(self):
         phases = train.torch.tensor([True, False, False, False])
         weights = train.phase_loss_weights(phases)
