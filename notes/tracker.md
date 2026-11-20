@@ -1,6 +1,32 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
-## CURRENT STATE (2026-11-20 — placement receipts and target feedback)
+## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
+- Seed 149952 finished at 00:49 Central with 16 discovery rows and no
+  wins. One launch failed in inst15 with a native pointer overflow.
+  Candidates be8723e2bcd964a0 and e06f1094d6776650 each had one paid
+  Garrison attempt, one unconfirmed attempt, and a native garrison
+  count of one at READY. Their scored early retries were 9.99% and
+  9.90%. All four reserved-copy rows reused earlier outbreak seeds.
+  No promotion. The aggregate receipts alone do not show the order
+  of each successful and unsuccessful placement.
+- A read-only sample covered 11 live planning frames over four discovery
+  games. The highest unselected Garrison probability reported in that
+  sample was about 0.08%; the chosen action in that frame was over 21%.
+  Commit 138c2ba preserves a defense candidate when both an actual purchase
+  and a native unit at READY are recorded. It also tests a separate
+  genome variant with lower inherited GRU tool-logit scale during plan
+  steps. The original plan, tool masks, battle action logits and
+  promotion checks retain their prior semantics. All 241 script tests passed.
+- Seed 150952 started at 00:50 Central, trainer PID 60664. Discovery
+  inst13–16, separate evaluation inst18, inst17, inst19, inst20. Launch
+  headroom 13.19 GiB RAM and 12.88 GiB free on D:. Output
+  `analysis/coverage-team-104121a04e`; run log
+  `analysis/coverage-layout-free-150952-drive-d.log`.
+  Read-only preflight found none of inst1–8 eligible under the existing
+  game checks (inst9–12 were already rejected). Production checkpoint hash
+  matched. The 35% target remains open.
+
+### Placement receipts and target feedback
 - Seed 148952 finished at 00:24 Central. All 16 discovery games had
   zero wins. All four reserved-copy outcomes reused earlier outbreak
   seeds and were ineligible. The two candidate retries scored 10.00% and
