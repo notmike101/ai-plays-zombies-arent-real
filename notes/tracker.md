@@ -2,6 +2,22 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Preparation evaluation clarification at 09:34 Central: the game
+  recalculates the outbreak seed when placement changes. A different
+  seed in a preparation comparison is part of the full policy's result.
+  Compare whole frozen policies across fresh boards and prespecified
+  policy RNG seeds. Native seed matching can aid battle-only comparisons
+  with the same preparation. Preserve evaluation deduplication and
+  training-exposure checks. Runbook updated in 86edac5. An in-memory
+  pre-READY geometry signature test ignores reorderings and changes
+  when a placement moves; a read-only live probe confirmed execution
+  on two owned copies. The telemetry is diagnostic and is not deployed.
+- Seed 186952 first scored results: Spikes + corridor 8.44%, initial
+  occupied breach at 50.93 simulated seconds; Gas Mortar + hold 9.94%,
+  breach at 61.20 seconds. Both combinations appear in the saved
+  proposal and native-receipt fields. Reference and Oil results
+  still pending at 09:34, operator PID 44548 and Observatory running.
+
 - At 09:30:56 Central all four seed 186952 games had reached
   battle. A read-only native sample at 2.9-5.1 sim seconds verified
   inst14 had an evacuation corridor and 45 Spikes tiles; inst17
