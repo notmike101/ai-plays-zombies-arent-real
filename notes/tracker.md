@@ -2,6 +2,31 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 10:50 Central, the 188952 comparison had nine scored discovery or
+  eligible reserved rows for the two frozen policy arms on READY layout
+  418150907bbd395c, including repeated outbreaks in the crossed discovery
+  design. First deployment times overlapped between the two 35% clears
+  (4.03-11.83 sim seconds) and seven retries (0.87-14.33). First occupied
+  breach times also overlapped (52.97-57.70 vs. 49.87-60.57 seconds).
+  Breach exposure differed (1,588-1,606 vs. 2,265-2,365 civilians).
+  This is a small descriptive check, with no causal claim. Reserve wave
+  two remains live under operator 71620, candidate inst20 PID 68420.
+  Its GRU reference retried at 9.94% on previously seen outbreak 694232781.
+- Native Police deployment receipts log officer counts along the drag
+  path. The reserved inst20 first drop had four officers delivered along
+  the route, with an interior native center. The model currently scores
+  the end cell only. Staged an optional two-arm police-line trial in
+  analysis/coverage-portable314/tmp/police-line-study.patch, including
+  the earlier reserve reference correction. The candidate scores nine
+  sampled positions along each legal drag using the existing battle
+  weights. It changes only the Police endpoint preference while a
+  Police gesture is pending, and logs the confirmed native trail bounds.
+  Same frozen starting policy, legal masks, execution and rewards.
+  All 298 script tests passed against the isolated candidate source,
+  including Firebomb parity and full game-free pairing for both studies.
+  The patch applies cleanly and waits for the existing run to finish.
+  Production hash matched.
+
 - At 10:46 Central, frozen candidate bf3fc52369fc3746 scored 9.92% at
   retry on its first eligible reserved outbreak (249701763, inst19).
   Same READY layout 418150907bbd395c and Police deck as discovery.
