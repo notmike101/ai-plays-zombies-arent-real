@@ -26,7 +26,7 @@ def record(evidence,trial):
         if not isinstance(area, (int, float)) or not math.isfinite(area) or not 0 <= area <= 1:
             area = 0.
         value=[won,row['saved'] or 0.,cost-row.get('shelter_objective',0.)-row.get('special_objective',0.),
-               row['end']=='won' and row['saved'] is not None,area]
+               row['end']=='won' and row['saved'] is not None,area,row['saved'] is not None]
         previous = samples.get(sample, value)
         # Refresh a legacy record with the same official outcome from its full trial.
         if len(previous) < len(value) and previous == value[:len(previous)]:
@@ -55,7 +55,9 @@ def l1_proposal_rank(evidence, team):
     has_win = any(len(row) >= 5 and row[3] for row in samples)
     if summary['wins'] or has_win:
         return summary['lower'], True, summary['objective'], 0.
-    area = math.fsum(row[4] for row in samples if len(row) >= 5)
+    # Old ledgers used zero for both timeouts and scored losses.
+    area = math.fsum(row[4] for row in samples if len(row) >= 5
+                     and (row[5] if len(row) >= 6 else row[1] > 0))
     return 0., False, area / max(1, summary['starts']), summary['objective']
 
 

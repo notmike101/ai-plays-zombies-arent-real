@@ -93,6 +93,22 @@ def l1_candidate(parent,rng):
     return child
 
 
+def pause_variant(trial, rng):
+    team = trial.get('team')
+    levels = trial.get('levels', [])
+    if not team or team.get('layout') or any(team.get('later_layouts', {}).values()) or not levels:
+        return None
+    level = levels[0]
+    if (level.get('timeout_reason') != 'continuous_pause'
+            or not level.get('battle_actions', {}).get('stock_decreased')):
+        return None
+    child = deepcopy(team)
+    bias = np.asarray(child.get('camera_pause', [0.] * 6), dtype=float)
+    bias[4:] += rng.normal(0, 2, 2)
+    child['camera_pause'] = bias.tolist()
+    return child
+
+
 def cast_candidate(trial,rng):
     levels=trial.get('levels',[])
     if not levels or not trial.get('team'):return None
@@ -743,6 +759,7 @@ def main():
                                        if key.startswith('seed/'))
         if resume_directory and not (args.compare_forecast or args.compare_speed):
             best_budget=None
+            previous_pause_variant = None
             paths=[resume_directory/name for name in ('trials.jsonl','extra-trials.jsonl')]
             previous_holdout = resume_directory/'holdout.jsonl'
             if previous_holdout.is_file():
@@ -751,7 +768,13 @@ def main():
             for trial in chain.from_iterable(records(path) for path in paths if path.is_file()):
                 if (observed_seed := fitness.l1_outbreak_seed(trial)) is not None:
                     discovery_seeds.add(observed_seed)
-                if trial.get('view_revision')==view_revision:fitness.record(evidence,trial)
+                if trial.get('view_revision')==view_revision:
+                    fitness.record(evidence,trial)
+                    if args.continue_layout_free and previous_pause_variant is None:
+                        previous_pause_variant = pause_variant(trial, rng)
+                        if previous_pause_variant is not None:
+                            checkpoint_team(dict(base=base, team_id=trial['team_id'], team=trial['team']), base)
+                            population[1] = previous_pause_variant
                 if not args.seed_from or not trial.get('levels'):continue
                 candidate=budget_candidate(trial.get('team'),trial['levels'],prices)
                 if candidate:

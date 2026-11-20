@@ -79,6 +79,19 @@ class FreshEvidence(unittest.TestCase):
         self.assertGreater(rank(self.a), rank(self.c))
         self.assertEqual(fitness.stats(self.data,self.a,1)['wins'], 0)
 
+    def test_unscored_pause_cannot_outrank_a_scored_battle(self):
+        paused = dict(self.row(11, None), score=[0, 0, 0, .5])
+        scored = dict(self.row(12, .099), end='aborted', score=[0, 0, 0, .16])
+        self.record(self.a, paused)
+        self.record(self.c, scored)
+        self.assertGreater(fitness.l1_proposal_rank(self.data, self.c),
+                           fitness.l1_proposal_rank(self.data, self.a))
+        self.record(self.a, dict(self.row(13, 0.), end='lost', score=[0, 0, 0, .4]))
+        self.assertAlmostEqual(fitness.l1_proposal_rank(self.data, self.a)[2], .2)
+        key = fitness.prefix_id(self.a, 1)
+        self.data[key]['seed/11'] = self.data[key]['seed/11'][:5]
+        self.assertAlmostEqual(fitness.l1_proposal_rank(self.data, self.a)[2], .2)
+
     def test_holdout_refuses_an_outbreak_already_used_for_discovery(self):
         rows = [dict(arm=arm, levels=[self.row(seed, saved)]) for arm, seed, saved in (
             ('candidate', 11, .39), ('candidate', 12, .42),

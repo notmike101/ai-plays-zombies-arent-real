@@ -24,6 +24,22 @@ class SearchTests(unittest.TestCase):
                 self.assertIn('distinct, paired holdout copies disjoint from training', errors.getvalue())
                 lock.assert_not_called()
 
+    def test_pause_variant_preserves_the_plan_that_executed_a_cast(self):
+        rng = np.random.default_rng(17)
+        parent = search.random_team(rng)
+        parent['camera_pause'] = [1, 2, 3, 4, 5, 6]
+        trial = dict(team=parent, levels=[dict(timeout_reason='continuous_pause',
+                                               battle_actions={'stock_decreased': 1})])
+        before = copy.deepcopy(parent)
+        child = search.pause_variant(trial, rng)
+        self.assertEqual(parent, before)
+        self.assertEqual(child['camera_pause'][:4], parent['camera_pause'][:4])
+        self.assertNotEqual(child['camera_pause'][4:], parent['camera_pause'][4:])
+        child['camera_pause'] = parent['camera_pause']
+        self.assertEqual(child, parent)
+        trial['levels'][0]['battle_actions']['stock_decreased'] = 0
+        self.assertIsNone(search.pause_variant(trial, rng))
+
     def test_spatial_proposal_varies_one_anchor_and_preserves_its_actions(self):
         rng = np.random.default_rng(57)
         parent = search.random_team(rng)
