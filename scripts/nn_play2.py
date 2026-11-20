@@ -455,6 +455,26 @@ def ability_effect_delay(rules, name, default=math.nan):
     return _rule(rules, name, suffix, default=default)
 
 
+def missile_target_context(st, pixels, width, height):
+    native = st.get('native')
+    radius = _rule(st.get('rules', {}), 'Missile', '_blast_radius', default=math.nan)
+    if not native or not math.isfinite(radius) or radius <= 0:
+        return None
+    camera = native['camera']
+    world = (np.asarray(pixels, dtype=np.float32) - np.float32([width/2, height/2]))
+    world /= np.float32([camera[2], -camera[2]])
+    world += np.asarray(camera[:2], dtype=np.float32)
+    units = native['units']
+    positions = units['pos']
+    dx = world[:, None, 0] - positions[None, :, 0]
+    dy = world[:, None, 1] - positions[None, :, 1]
+    inside = dx*dx + dy*dy <= radius*radius
+    counts = np.stack([np.count_nonzero(inside[:, units['kind'] == kind], axis=1)
+                       for kind in (0, 1)])
+    risk = st['shelter'].perimeter(world, radius=radius) > 0. if st.get('shelter') else None
+    return world, counts, risk
+
+
 def opening_loadout_options(st):
     offers = {}
     for name, cost in st['costs'].items():
@@ -833,7 +853,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 else:
                     if (getattr(net,'cast_timing',None) is not None or getattr(net,'missile_reserve',0.)
                             or getattr(net,'missile_followup',0.) or getattr(net,'line_casts',())
-                            or getattr(net,'opening_cast_bias',0.)):
+                            or getattr(net,'opening_cast_bias',0.) or getattr(net,'missile_footprint',False)):
                         net.set_cast_targets(st, mu, mc, env.cw, env.ch)
                     if st['planning'] and getattr(net, 'garrison_coverage_weight', 0.):
                         net.set_garrison_coverage(st, mu, mc, env.cw, env.ch)
@@ -1004,7 +1024,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         capture.receipt('gesture_started')
                 else:
                     before_stock = env.battle_stock()[slot['name']]
-                    drag_receipt = None
+                    drag_receipt = missile_receipt = None
                     if u in BATTLE_GEOMETRY:
                         import ctypes
                         vk = ord(slot['key'].upper())
@@ -1024,6 +1044,15 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         mechanics.controls.frames()
                     else:
                         points = (battle_point(st,u,c,env.cw,env.ch),)
+                        if (placement_feedback and slot['name'] == 'Missile'
+                                and len(battle_actions.get('missile_attempts', ())) < 64):
+                            missile_receipt = dict(decision_sim=st['sim'], cell=c)
+                            context = missile_target_context(st, points, env.cw, env.ch)
+                            if context is not None:
+                                world, counts, risk = context
+                                missile_receipt.update(world=world[0].tolist(),
+                                                       civilians=int(counts[0, 0]), zombies=int(counts[1, 0]),
+                                                       shelter_overlap=bool(risk[0]) if risk is not None else None)
                         env.cast(slot['key'], *points[0])
                     slot['charges'] = env.battle_stock()[slot['name']]
                     if drag_receipt is not None:
@@ -1033,6 +1062,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     if shadow is not None:
                         pixels = [[float(x), float(y)] for x, y in points]
                         capture.receipt('attempted', before=before_stock, after=slot['charges'], pixels=pixels)
+                    if missile_receipt is not None:
+                        missile_receipt.update(stock_before=before_stock, stock_after=slot['charges'])
+                        battle_actions.setdefault('missile_attempts', []).append(missile_receipt)
                     # The stock receipt, not a sent keypress, proves a resource was spent.
                     if slot['charges'] < before_stock:
                         battle_actions['stock_decreased'] += 1
@@ -1141,6 +1173,12 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                                                  held_seconds=event.get('held_seconds'),
                                                  bounds=event.get('bounds')))
             battle_actions['paratrooper_lines'] = police_lines
+            battle_actions['missile_impacts'] = [
+                dict(sim=event.get('sim'), world=(event.get('at') or {}).get('world'),
+                     killed=event.get('killed'), buildings_levelled=event.get('buildings_levelled'))
+                for event in events
+                if event.get('ev') == 'bomb' and event.get('what') == 'cruise_missile']
+            battle_actions['missile_impact_log_truncated'] = footer.get('combat_events_truncated')
             battle_actions['firebomb_impacts'] = sum(
                 event.get('ev') == 'bomb' and event.get('what') == 'fire_bomb' for event in events)
         battle_actions['deploy_sim_seconds']=footer.get('deploy_sim_seconds') if footer else None

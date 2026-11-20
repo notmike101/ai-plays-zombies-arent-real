@@ -1069,6 +1069,51 @@ class SearchTests(unittest.TestCase):
             with self.subTest(mode=mode):
                 self.check_cast_comparison(mode, change)
 
+    def test_missile_local_population_is_measured_within_native_radius(self):
+        units = dict(pos=np.array([[0., 1.], [7., 0.], [10., 0.], [11., 0.], [4., 1.]]),
+                     kind=np.array([0, 1, 0, 0, 2]))
+        st = dict(native=dict(camera=[0.,0.,1.], units=units), rules={'missile_blast_radius': 10.})
+        world, count, risk = search.tr.missile_target_context(st, [(50,50),(65,50)], 100, 100)
+        np.testing.assert_allclose(world, [[0.,0.],[15.,0.]])
+        np.testing.assert_array_equal(count, [[2,2],[1,1]])
+        self.assertIsNone(risk)
+        st['rules'].pop('missile_blast_radius')
+        self.assertIsNone(search.tr.missile_target_context(st, [(50,50)], 100, 100))
+
+    def test_missile_footprint_changes_only_the_missile_target_preference(self):
+        tr = search.tr
+        parent = search.random_team(np.random.default_rng(41))
+        parent['battle'] = [[-1., 1., 0., 0., 0.] for _ in search.CASTS]
+        reference = search.TeamPolicy(parent)
+        model = search.TeamPolicy(dict(parent, missile_footprint=True))
+        shelf = tr.Shelter(100)
+        px_target = np.array(tr.cell_of_px(8, 1000, 1000), dtype=np.float32)
+        world = (px_target - [500, 500]) * [1., -1.]
+        shelf.protected = [(world + [[-20., -10.], [20., -10.], [20., 10.], [-20., 10.]], 1.)]
+        native = dict(camera=[0., 0., 1.], units=dict(pos=np.array([world]), kind=np.array([0])))
+        st = dict(planning=False, sim=31., native=native, shelter=shelf,
+                  rules={'missile_blast_radius': 56.},
+                  playarea_boundary=[(0,0),(999,0),(999,999),(0,999)])
+        tools = np.zeros(tr.NU)
+        tools[search.MISSILE] = 1
+        for policy in (reference, model):
+            policy.set_cast_targets(st, tools, np.ones(tr.NC), 1000, 1000)
+        torch.testing.assert_close(reference.cast_targets, model.cast_targets)
+        self.assertTrue(model.missile_wall_risk[8])
+        x = torch.zeros(1, 1, tr.NOBS)
+        with torch.no_grad(), patch.object(tr.PolicyNet2, 'forward',
+            side_effect=lambda *args: (torch.zeros(1, 1, tr.NU), torch.zeros(1, 1, tr.NU*tr.NC), None, None)):
+            a_tool, a_cell, _, _ = reference(x)
+            b_tool, b_cell, _, _ = model(x)
+        a_cell, b_cell = a_cell.reshape(tr.NU,tr.NC), b_cell.reshape(tr.NU,tr.NC)
+        self.assertLess(float(b_cell[search.MISSILE,8]), float(a_cell[search.MISSILE,8]))
+        a_cell[search.MISSILE] = b_cell[search.MISSILE]
+        torch.testing.assert_close(a_cell, b_cell)
+        torch.testing.assert_close(a_tool, b_tool)
+
+    def test_missile_footprint_comparison_uses_confirmed_discovery_arm(self):
+        self.check_cast_comparison('missile-footprint', {'missile_footprint': True})
+
     def test_missile_followup_comparison_uses_confirmed_discovery_arm(self):
         self.check_cast_comparison('missile-followup', {'missile_followup': 10.})
 
@@ -1110,7 +1155,7 @@ class SearchTests(unittest.TestCase):
             root = Path(temp)
             (root / 'analysis').mkdir()
             resume = root / 'resume'
-            if mode in ('loadout', 'missile-followup'):
+            if mode in ('loadout', 'missile-followup', 'missile-footprint'):
                 resume.mkdir()
                 discovery = dict(stage=1, end='aborted', saved=.099, start_kind='fresh',
                                  outbreak={'seed': 40}, ready_loadout={'Police': 8.},
@@ -1121,7 +1166,7 @@ class SearchTests(unittest.TestCase):
                             '-placement-feedback-v4-debt-cancel-v1-click-start-v1')
                 prior = dict(copy='a', team=baseline, team_id=search.team_id(baseline),
                              view_revision=revision, levels=[discovery])
-                if mode == 'missile-followup':
+                if mode in ('missile-followup', 'missile-footprint'):
                     discovery.update(ready_loadout={'Missile': 32.5},
                                      battle_actions={'logged_deployments': ['cruise_missile'] * 3})
                 (resume / 'trials.jsonl').write_text(json.dumps(prior) + '\n')

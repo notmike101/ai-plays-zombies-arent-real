@@ -590,6 +590,9 @@ class TeamPolicy(tr.PolicyNet2):
         self.shelter_defense = team.get('shelter_defense',0.)
         self.missile_reserve = team.get('missile_reserve',0.)
         self.missile_followup = team.get('missile_followup',0.)
+        self.missile_footprint = team.get('missile_footprint',False)
+        self.missile_local = None
+        self.missile_wall_risk = None
         self.missile_in_flight = False
         self.missile_charges = 0.
         self.occupied_shelter = False
@@ -613,6 +616,8 @@ class TeamPolicy(tr.PolicyNet2):
             self.campaign_forecast_id=digest.hexdigest()[:16]
 
     def cast_cell_features(self, tool):
+        if tool == MISSILE and self.missile_local is not None:
+            return torch.cat((self.missile_local, self.cast_grid[2:]))
         if self.cast_line is not None and tool == self.cast_line[0]:
             return self.cast_grid[:, self.cast_line[1]].mean(dim=2)
         return self.cast_grid
@@ -644,6 +649,8 @@ class TeamPolicy(tr.PolicyNet2):
         self.occupied_shelter = False
         self.missile_charges = 0.
         self.cast_line = None
+        self.missile_local = None
+        self.missile_wall_risk = None
         self.opening_cast_bonus = 0.
         if st['planning'] or st.get('dialog'):
             return
@@ -678,6 +685,17 @@ class TeamPolicy(tr.PolicyNet2):
             else:
                 eligible &= inside
             self.cast_targets[row] = torch.from_numpy(eligible)
+        if self.missile_footprint and self.cast_targets[MISSILE_ROW].any() and st.get('native'):
+            legal = self.cast_targets[MISSILE_ROW].numpy()
+            pixels = [tr.battle_point(st, MISSILE, int(cell), width, height) for cell in np.flatnonzero(legal)]
+            context = tr.missile_target_context(st, pixels, width, height)
+            if context is not None:
+                _, counts, risk = context
+                self.missile_local = torch.zeros(2, tr.NC)
+                self.missile_local[:, legal] = torch.from_numpy(np.log1p(counts.astype(np.float32)))
+                if risk is not None:
+                    self.missile_wall_risk = torch.zeros(tr.NC, dtype=torch.bool)
+                    self.missile_wall_risk[legal] = torch.from_numpy(risk)
         if (self.missile_followup or self.missile_reserve) and self.cast_targets[MISSILE_ROW].any():
             missile = next((slot for slot in st.get('deck',[]) if slot['name']=='Missile'),None)
             if missile:
@@ -858,6 +876,10 @@ class TeamPolicy(tr.PolicyNet2):
             if self.cast_gradients is not None or self.cast_weight_delta is not None:
                 self.cast_grid = grid
             scores = self.battle @ grid
+            if self.missile_local is not None:
+                scores[MISSILE_ROW] += self.battle[MISSILE_ROW, :2] @ (self.missile_local - grid[:2])
+            if self.missile_wall_risk is not None:
+                scores[MISSILE_ROW] -= 2. * self.missile_wall_risk
             if self.cast_line is not None:
                 tool, bins = self.cast_line
                 row = CASTS.index(tool)
@@ -1077,12 +1099,12 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','cast_target_mode','sample_loadout','sample_garrison_sites','opening_cast_bias','sample_zone_geometry','firebomb_line_targeting','police_line_targeting','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','missile_footprint','keep_plan_through_gestures','planning_logit_scale','sample_battle','cast_target_mode','sample_loadout','sample_garrison_sites','opening_cast_bias','sample_zone_geometry','firebomb_line_targeting','police_line_targeting','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
     if 'opening_cast_bias' in team:
         weight = team['opening_cast_bias']
         if type(weight) not in (int, float) or not 0 < weight <= 4.:
             raise ValueError('Invalid opening cast bias')
-    for flag in ('firebomb_line_targeting', 'police_line_targeting'):
+    for flag in ('firebomb_line_targeting', 'police_line_targeting', 'missile_footprint'):
         if flag in team and team[flag] is not True:
             raise ValueError(f'Invalid {flag} flag')
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
@@ -1314,7 +1336,7 @@ def main():
     neighbors.add_argument('--loadout-sampling', action='store_true',
                            help='Compare greedy and exploratory choices among legal purchases')
     neighbors.add_argument('--battle-neighbors', nargs='?', const='all',
-                           choices=('all', 'firebomb', 'firebomb-line', 'police-line', 'missile-followup', 'cast-sampling', 'early-first-cast', 'learn-targets', 'learn-cast-tools', 'retest-fit'),
+                           choices=('all', 'firebomb', 'firebomb-line', 'police-line', 'missile-followup', 'missile-footprint', 'cast-sampling', 'early-first-cast', 'learn-targets', 'learn-cast-tools', 'retest-fit'),
                            help='Compare battle targeting or learn cast weights from real scores')
     parser.add_argument('--goal-margin', action='store_true',
                         help='Rank unsuccessful discovery battles by survival above the 35 percent target')
@@ -1347,7 +1369,7 @@ def main():
     planning_sampling = ('sample_loadout' if args.loadout_sampling else
                          'sample_garrison_sites' if args.garrison_site_sampling else None)
     paired_policy = planning_sampling or args.loadout_neighbors or args.defense_neighbors or args.battle_neighbors in (
-        'firebomb-line', 'police-line', 'missile-followup', 'cast-sampling', 'early-first-cast', 'retest-fit')
+        'firebomb-line', 'police-line', 'missile-followup', 'missile-footprint', 'cast-sampling', 'early-first-cast', 'retest-fit')
     repeat_pair = args.placement_neighbors or battle_target is not None or paired_policy or learn_targets
     copies=args.copies
     cross_fit = learn_targets and args.generations == 3
@@ -1506,7 +1528,7 @@ def main():
                         candidate = early_loadout_candidate(trial, rng, ability=args.loadout_neighbors)
                         if candidate is not None:
                             loadout_neighbor = candidate
-                    if args.battle_neighbors == 'missile-followup':
+                    if args.battle_neighbors in ('missile-followup', 'missile-footprint'):
                         reference = missile_trial_reference(trial)
                         if reference is not None and (missile_reference is None or reference[0] > missile_reference[0]):
                             missile_reference = reference
@@ -1595,14 +1617,18 @@ def main():
             standard = dict(proposal)
             standard.pop('opening_cast_bias', None)
             policy_arms = (standard, dict(standard, opening_cast_bias=2.))
-        elif args.battle_neighbors == 'missile-followup':
+        elif args.battle_neighbors in ('missile-followup', 'missile-footprint'):
             if missile_reference is None:
                 raise ValueError('Missile feedback comparison requires a scored fresh discovery game with native launches')
             trial = missile_reference[1]
             standard = dict(checkpoint_team(dict(base=base, team=trial['team'],
                                                   team_id=trial['team_id']), base)['team'])
-            standard.pop('missile_followup', None)
-            policy_arms = (standard, dict(standard, missile_followup=10.))
+            if args.battle_neighbors == 'missile-followup':
+                standard.pop('missile_followup', None)
+                policy_arms = (standard, dict(standard, missile_followup=10.))
+            else:
+                standard.pop('missile_footprint', None)
+                policy_arms = (standard, dict(standard, missile_footprint=True))
         elif args.loadout_neighbors:
             if loadout_neighbor is None:
                 raise ValueError('Loadout comparison requires an affordable offer in the selected policy’s discovery receipts')
@@ -1897,7 +1923,7 @@ def main():
                         require_fresh.update(team_id(team) for team in pair)
             # Frozen arms on fresh boards. The game chooses its own outbreak seeds.
             matched_reference = args.loadout_neighbors or args.battle_neighbors in (
-                'early-first-cast', 'police-line', 'missile-followup')
+                'early-first-cast', 'police-line', 'missile-followup', 'missile-footprint')
             reference = policy_arms[0] if matched_reference else prior
             distinct=[archive[k] for k in ranked if archive[k]!=reference and
                       (args.allow_progression or reference is None or

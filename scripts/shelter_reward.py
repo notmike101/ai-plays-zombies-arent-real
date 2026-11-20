@@ -117,12 +117,12 @@ class Shelter:
         self.breach_penalty += penalty
         return credit+penalty
 
-    def perimeter(self, cells):
+    def perimeter(self, cells, radius=PERIMETER_METRES):
         pressure = np.zeros(len(cells),dtype=np.float32)
         for polygon,occupancy in self.protected:
             segments = np.roll(polygon,-1,axis=0)-polygon
             delta = cells[:,None,:]-polygon
             axis = np.clip((delta*segments).sum(axis=-1)/np.maximum((segments**2).sum(axis=-1),1e-6),0,1)
             distance = ((delta-axis[...,None]*segments)**2).sum(axis=-1).min(axis=1)
-            np.maximum(pressure,occupancy*np.maximum(0.,1-np.sqrt(distance)/PERIMETER_METRES),out=pressure)
+            np.maximum(pressure,occupancy*np.maximum(0.,1-np.sqrt(distance)/radius),out=pressure)
         return pressure
