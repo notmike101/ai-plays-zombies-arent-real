@@ -414,6 +414,13 @@ def exploration_distribution(ranked, legal, fraction):
 ZONE_PLACEMENT_TOOLS = {TOOLS.index(name) for name in ('zone_rect', 'zone_begin', 'zone_corner')}
 
 
+def tool_distribution(logits, mask, *, temperature=None):
+    if temperature is not None:
+        logits = logits / torch.as_tensor(temperature, dtype=logits.dtype).reshape(-1, 1)
+        logits = logits.reshape_as(torch.as_tensor(mask))
+    return torch.distributions.Categorical(logits=logits.masked_fill(torch.as_tensor(mask) == 0, -1e9))
+
+
 def cell_distribution(logits, tool, mask, *, temperature=None):
     logits = logits.reshape(-1, NU, NC)
     tools = torch.as_tensor(tool, dtype=torch.long).reshape(-1)
@@ -742,6 +749,12 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 observer = Observer(net, pid, tag, interval=options.get('observer_interval', .2), labels={
                     'input': INPUT_LABELS, 'hu': TOOLS, 'hc': CELL_LABELS})
         rows = {k: [] for k in ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'sim_elapsed')}
+        planning_tool_temperature = options.get('planning_tool_temperature')
+        if planning_tool_temperature is not None:
+            rows['tool_temperatures'] = []
+        planning_zone_audit = options.get('planning_zone_audit', False)
+        if planning_zone_audit:
+            rows['planning_action_windows'] = []
         zone_temperature = options.get('zone_temperature')
         if zone_temperature is not None:
             rows['cell_temperatures'] = []
@@ -855,6 +868,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 mu[TOOLS.index('pause_toggle')] = 0
             x = torch.tensor([[f]], dtype=torch.float32)
             cell_temperature = 1.
+            tool_temperature = planning_tool_temperature if st['planning'] else None
             with torch.no_grad():
                 if net is None:
                     u = int(np.random.choice(np.flatnonzero(mu)))
@@ -873,7 +887,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     if getattr(net,'special_probe',0.):
                         net.set_special_probe(st,env.cw,env.ch)
                     lu, lc, _, h = net(x, h)
-                    du = torch.distributions.Categorical(logits=lu.flatten().masked_fill(torch.tensor(mu == 0), -1e9))
+                    du = tool_distribution(lu.flatten(), mu, temperature=tool_temperature)
                     u = int(du.probs.argmax() if greedy else du.sample())
                     if (loadout_rng is not None and greedy and st['planning']
                             and BUY_TOOLS.start <= u < BUY_TOOLS.stop
@@ -919,6 +933,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 rows[k].append(v)
             if zone_temperature is not None:
                 rows['cell_temperatures'].append(cell_temperature)
+            if planning_tool_temperature is not None:
+                rows['tool_temperatures'].append(tool_temperature or 1.)
             if not st['planning']:
                 battle_actions['decisions'] += 1
                 available_casts = [TOOLS[tool] for tool in U2ABILITY if mu[tool]]
@@ -955,6 +971,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             before = o
             previous_state = state
             action_started = time.monotonic()
+            planning_started_ms = time.time_ns() // 1_000_000 if planning_zone_audit and st['planning'] else None
             picker_rejected = False
             special_credit = 0.
             repeated_debt_cancel = (placement_feedback and u == prev_u == CANCEL_TOOL
@@ -1104,6 +1121,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 picker_rejections[TOOLS[u]] = picker_rejections.get(TOOLS[u], 0) + 1
                 # Try other actions before reopening a picker that just rejected this choice.
                 picker_retry_at[u, c] = len(rows['obs']) + 5
+            if planning_started_ms is not None:
+                rows['planning_action_windows'].append(dict(
+                    decision=len(rows['obs']) - 1, tool=TOOLS[u], cell=c, started=planning_started_ms,
+                    finished=time.time_ns() // 1_000_000, outside=outside))
             # Observe after this action; outcomes belong to this transition.
             time.sleep(max(0., (.1 if st['planning'] else STEP_S) - (time.monotonic()-action_started)))
             o = env.obs()
@@ -1166,6 +1187,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 timeout_reason='planning_decisions'
         footer = env.stop_log(capture_events=True)
         logging = False
+        if planning_zone_audit:
+            rows['planning_zone_receipts'] = planning_zone_receipts(rows['planning_action_windows'], footer)
         battle_actions['logged_deployments']=footer.get('deployments') if footer else None
         battle_actions['logged_kills'] = (footer.get('stats') or {}).get('kills') if footer else None
         if options.get('collect_cast_gradients'):
@@ -1334,6 +1357,19 @@ def gae(rews, vals, lam=BATTLE_LAMBDA, gamma=BATTLE_GAMMA, bootstrap=0.0,
     return adv, rets
 
 
+def planning_zone_receipts(windows, footer):
+    if not footer or footer.get('planning_zone_events_truncated') or 'planning_zone_events' not in footer:
+        return None
+    receipts = []
+    for event in footer.get('planning_zone_events', ()):
+        wall = event.get('wall')
+        matched = [action for action in windows if type(wall) is int and not action['outside']
+                   and action['started'] <= wall <= action['finished']]
+        source = matched[0] if len(matched) == 1 else None
+        receipts.append(dict(event=event, source=source, matching_decisions=len(matched)))
+    return receipts
+
+
 def credit_ready_coverage(footer, step, rewards, scale):
     outbreak = (footer or {}).get('outbreak') or {}
     pct = outbreak.get('civilians_inside_pct')
@@ -1398,7 +1434,7 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *, balanc
                      torch.tensor(adv, dtype=torch.float32),
                             torch.tensor(ret, dtype=torch.float32), MC,
                      phase_loss_weights(X[0,:,PLANNING_INDEX].bool()) if balance_phases else 1.,
-                     temperature))
+                     temperature, t.get('tool_temperatures')))
     alladv = np.concatenate([s[6].numpy() for s in seqs])
     mu_a, sd_a = alladv.mean(), alladv.std() + 1e-8
     diagnostics = []
@@ -1406,10 +1442,9 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *, balanc
         order = np.random.permutation(len(seqs))
         tot = 0.0
         for k in order:
-            X, U, C, ULP, CLP, MU, ADV, RET, MC, W, temperature = seqs[k]
+            X, U, C, ULP, CLP, MU, ADV, RET, MC, W, temperature, tool_temperature = seqs[k]
             lu, lc, v, _ = net(X)
-            du = torch.distributions.Categorical(
-                logits=lu.squeeze(0).masked_fill_(MU == 0, -1e9))
+            du = tool_distribution(lu.squeeze(0), MU, temperature=tool_temperature)
             dc = cell_distribution(lc, U, MC, temperature=temperature)
             lp = du.log_prob(U) + dc.log_prob(C)
             ratio = torch.exp(lp - (ULP + CLP))

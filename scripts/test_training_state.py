@@ -179,6 +179,93 @@ class StateTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load_warm_start(path, 'source')
 
+    def test_planning_tool_temperature_preserves_mask_and_replay_likelihood(self):
+        torch = train.torch
+        logits = torch.tensor([[4., 1., 20.], [2., 0., 20.]])
+        mask = torch.tensor([[1., 1., 0.], [1., 1., 0.]])
+        cold = train.tool_distribution(logits[0], mask[0])
+        warm = train.tool_distribution(logits[0], mask[0], temperature=1.35)
+        replay = train.tool_distribution(logits, mask, temperature=[1.35, 1.])
+        self.assertGreater(float(warm.probs[1]), float(cold.probs[1]))
+        self.assertEqual(float(warm.probs[2]), 0.)
+        self.assertTrue(torch.equal(warm.probs, replay.probs[0]))
+        self.assertTrue(torch.equal(train.tool_distribution(logits[1], mask[1]).probs, replay.probs[1]))
+
+    def test_frozen_planning_exploration_uses_original_tool_sampling(self):
+        import compare_spatial
+        with patch.object(compare_spatial.operator, 'owned_copy'), \
+                patch.object(compare_spatial.zar_boot, 'boot'), \
+                patch.object(compare_spatial.zar_boot, 'stop'), \
+                patch.object(train, 'run_episode') as run:
+            for training in (True, False):
+                for arm in compare_spatial.PLANNING_TEMPERATURES:
+                    compare_spatial.episode(('inst13', arm, {}, 123, 'test', training))
+                    options = run.call_args.args[0][4]
+                    self.assertEqual(options['ready_coverage_credit'], .30)
+                    self.assertEqual(options.get('planning_tool_temperature'),
+                                     1.35 if training and arm == 'planning_exploration' else None)
+                    self.assertNotIn('zone_temperature', options)
+
+    def test_planning_receipts_require_one_eligible_window(self):
+        win = dict(decision=0, tool='wall', cell=3, started=130, finished=150, outside=False)
+        next_win = dict(win, decision=1, tool='hold', started=150, finished=170)
+        stale = dict(win, decision=2, started=92, finished=108, outside=True)
+        with tempfile.TemporaryDirectory() as directory:
+            p = Path(directory) / 'native.jsonl'
+            rows = [dict(ev='header', wall=90)]
+            rows += [dict(ev='place', seq=i, wall=t, phase=phase, what='safe_zone')
+                     for i,(t,phase) in enumerate([(100,'planning'),(140,'planning'),
+                                                 (150,'planning'),(165,'playing')],1)]
+            rows.append(dict(ev='footer', wall=180))
+            p.write_text(''.join(json.dumps(r) + '\n' for r in rows), encoding='utf-8')
+            data = env_zar.read_session(p, 90, expected_wall=90, capture_events=True)
+            self.assertEqual([r['wall'] for r in data['planning_zone_events']], [100,140,150])
+            audit = train.planning_zone_receipts([win, next_win, stale], data)
+            self.assertEqual([r['matching_decisions'] for r in audit], [0,1,2])
+            self.assertEqual([r['source'] for r in audit], [None,win,None])
+            self.assertIsNone(train.planning_zone_receipts([win], None))
+            self.assertIsNone(train.planning_zone_receipts([win], dict(data, planning_zone_events_truncated=True)))
+
+    def test_stop_request_waits_for_both_policies_and_resumable_checkpoint(self):
+        import compare_spatial as comp
+        from contextlib import nullcontext
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root/'analysis').mkdir()
+            trials = []
+
+            def collect(pool, jobs, run):
+                trials.append(jobs)
+                (run/'stop-after-round').touch()
+                return [dict(end='lost', saved_frac=.0, start_kind='fresh', outbreak={'seed': seed})
+                        for seed in (17, 29)]
+
+            with patch('sys.argv', ['compare_spatial','--copies','a','b','--train-rounds','3']), \
+                    patch.object(comp.operator, 'ROOT', root), \
+                    patch.object(comp.operator, 'training_lock', return_value=nullcontext()), \
+                    patch.object(comp.operator, 'inventory', return_value=[]), \
+                    patch.object(comp.operator, 'require_idle'), \
+                    patch.object(comp.operator, 'preflight', return_value={'ok': True}), \
+                    patch.object(comp.operator, 'limit_resources'), \
+                    patch.object(comp.operator, 'require_resource_headroom'), \
+                    patch.object(comp, 'ProcessPoolExecutor', return_value=nullcontext()), \
+                    patch.object(comp, 'collect_pairs', side_effect=collect), \
+                    patch.object(train, 'load_pretrained'), \
+                    patch.object(train, 'ppo_update') as update:
+                comp.main()
+
+            self.assertEqual(len(trials), 1)
+            self.assertEqual(update.call_count, 2)
+            run, = (root/'analysis').iterdir()
+            saved = train.torch.load(run/'paired.pt', weights_only=True)
+            self.assertEqual(saved['next_round'], 1)
+            self.assertEqual(saved['discovery_seeds'], [17,29])
+            self.assertEqual(set(saved['weights']), {'dense','shared'})
+            self.assertEqual(set(saved['optimizers']), {'dense','shared'})
+            self.assertFalse((run/'paired.tmp').exists())
+            self.assertFalse((run/'consistency.json').exists())
+            self.assertEqual(len((run/'results.jsonl').read_text().splitlines()), 2)
+
     def test_reserved_ppo_copies_refuse_overlap_before_taking_lock(self):
         import compare_spatial
         with patch('sys.argv', ['compare_spatial', '--copies', 'a', 'b', '--eval-copies', 'a', 'c']), \

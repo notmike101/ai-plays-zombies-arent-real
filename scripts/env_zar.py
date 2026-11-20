@@ -89,6 +89,18 @@ def read_session(path, started_ms, *, expected_wall=None, capture_events=False):
                         break
             data['combat_events'] = events[:1024]
             data['combat_events_truncated'] = len(events) > 1024
+            zone_events = []
+            for row in rows[1:]:
+                if row.get('ev') == 'footer':
+                    break
+                if (row.get('phase') == 'planning' and row.get('what') == 'safe_zone'
+                        and row.get('ev') in ('place', 'delete')):
+                    zone_events.append({k: row.get(k) for k in ('seq', 'wall', 'ev', 'corners',
+                                                               'wall_cells', 'civilians_inside_pct')})
+                    if len(zone_events) == 129:
+                        break
+            data['planning_zone_events'] = zone_events[:128]
+            data['planning_zone_events_truncated'] = len(zone_events) > 128
         return data
     except (OSError, ValueError):
         return None
@@ -244,7 +256,9 @@ class ZAREnv:
                             ready_stats=data['ready_stats'], ready_loadout_sp=data['ready_loadout_sp'])
                 if capture_events:
                     footer.update(combat_events=data['combat_events'],
-                                  combat_events_truncated=data['combat_events_truncated'])
+                                  combat_events_truncated=data['combat_events_truncated'],
+                                  planning_zone_events=data['planning_zone_events'],
+                                  planning_zone_events_truncated=data['planning_zone_events_truncated'])
                 return footer
             time.sleep(.05)
         return None
