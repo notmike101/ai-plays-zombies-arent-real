@@ -17,6 +17,16 @@
   synthetic outcomes or changes to production PPO. The gradient
   matched autodiff and the fixture crossed the fit/evaluation boundary.
   All 281 script and 60 Observatory tests passed. Production hash matched.
+- At 07:49, the live fit completed with four distinct scored
+  outbreaks and 52 sampled ability target decisions. Official scores
+  were 8.46%, 9.25%, 9.83%, and a 10.70% clear. It learned candidate
+  2a29db14a2a96fd9 with update norm 0.0117941. The retained report
+  `analysis/coverage-team-d6931e4e15/target-fit.json` matches the
+  actual difference from frozen reference f0fbb68332c444bb.
+  Exactly ten coefficients changed, all in the target matrix.
+  Both frozen arms reached planning on all four copies in wave two.
+  Official comparison results are pending.
+
 - Seed 178952 finished at 07:40 with eight scored battles, one native
   clear at 29.17%, and no reserved evaluation. Sampled target mode
   averaged 9.33% across four distinct outbreaks and picked 15 of 50
