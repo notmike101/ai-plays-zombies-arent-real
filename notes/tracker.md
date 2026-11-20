@@ -2,6 +2,36 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 185952 launched at 09:11 Central on D:, operator PID 72040,
+  directory `analysis/coverage-team-0ce9d6bea2`, log
+  `analysis/coverage-layout-free-185952-drive-d.log`. Uses the same
+  four discovery copies and separate reserves, with 14.40 GiB RAM
+  and 18.92 GiB disk available at launch. Commit e162fdb tests sampling
+  legal sites after the policy chooses Garrison (25% uniform mix);
+  the policy stays in control of building type and timing. Records
+  verified pre-READY embedded payloads and occupancy. 289 script and
+  60 Observatory tests, parity, graph and crossed assignment passed.
+  Live receipts show 21 Garrisons with nine in occupied shelters on
+  control inst15, and 16 with seven on sampled inst16. First scored
+  results were 7.66% and 9.75% on different native outbreaks.
+- Seed 184952 ended at 09:10. The eight games used eight different
+  native outbreaks. The model built three MLRS on both of that
+  candidate's trials, and two Gas Mortars on both trials of the other.
+  MLRS scored 4.85% and 7.15%, Gas Mortar 9.75% and 7.77%. The
+  Garrison reference averaged 10.27%, with a native clear at 26.70%.
+  The MLRS kill counters were 2,678 and 2,832. These results
+  demonstrate placement and activity, without isolating a causal
+  survival effect. No discovery policy qualified.
+- Wider preparation exploration is regression-tested in memory on D:
+  using four existing idle-or-owned rosters and four mock waves. It
+  proposes a less-explored equipped unit alongside a wall, gate,
+  corridor or hold, varying order around the shelter preference.
+  Twelve distinct combinations were scheduled without changing any
+  battle weights. It retains a rotating reference trial and official
+  survival selection. Actual traps, barriers and evacuation geometry
+  will have separate native READY receipts. Neither the code nor any
+  reward has been changed during the ongoing site comparison.
+
 - At 08:59 Central, read-only live native state on seed 184952
   confirmed three MLRS on inst16 and two Gas Mortars on inst18 at
   53.17 and 52.23 simulated seconds respectively. None of those units
