@@ -39,8 +39,10 @@ def episode(job):
     env = zar_boot.boot(operator.owned_copy(copy), discard_dump_states=True)
     try:
         policy = SpatialPolicy if arm == 'shared' else trainer.PolicyNet2
-        return trainer.run_episode((env.pid, weights, False, tag,
-                                   dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')), policy_factory=policy,
+        options = dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')
+        if arm in ('standard', 'balanced'):
+            options.update(fixed_speed='speed_1', fixed_clock=True)
+        return trainer.run_episode((env.pid, weights, False, tag, options), policy_factory=policy,
                                    telemetry=False)
     finally:
         zar_boot.stop(env)
@@ -108,6 +110,7 @@ def main():
             config['comparison'] = 'missile_civilian_credit'
         if args.compare_phase_balance:
             config['comparison'] = 'phase_balance'
+            config['fixed_speed'] = 'speed_1'
         first_round = 0
         source = trainer.policy_id(baseline)
         if args.resume:

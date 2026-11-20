@@ -28,6 +28,11 @@ class StateTests(unittest.TestCase):
                 self.assertEqual(run.call_args.args[0][4],
                                  dict(start_kind='fresh', seed=123, missile_credit=enabled))
                 self.assertIs(run.call_args.kwargs['policy_factory'], train.PolicyNet2)
+            for arm in ('standard', 'balanced'):
+                compare_spatial.episode(('inst13', arm, {}, 123, 'test'))
+                self.assertEqual(run.call_args.args[0][4],
+                                 dict(start_kind='fresh', seed=123, missile_credit=True,
+                                      fixed_speed='speed_1', fixed_clock=True))
 
     def test_missile_civilian_loss_is_charged_at_native_impact(self):
         events = [

@@ -619,6 +619,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     mu[TOOLS.index(name)] = 0
                 if state['phase'] == 'playing' and state['mult'] != SPEED_TICKS[fixed_speed]:
                     raise ZAREnvError(f'Expected {fixed_speed}, observed native speed {state["mult"]}')
+            if options.get('fixed_clock'):
+                mu[TOOLS.index('pause_toggle')] = 0
             x = torch.tensor([[f]], dtype=torch.float32)
             with torch.no_grad():
                 if net is None:
