@@ -2,6 +2,26 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:06 Central, crossed timing wave had six official scores.
+  Preference cleared at 10.54% on matched outbreak 429480045
+  versus 7.59% standard in wave one. Crossed standard retried
+  at 8.89% on a new inst14 seed, so that board is not a native
+  matched pair. Two results still pending. Operator 70860 live.
+- Added bounded observation receipts to the queued footprint run.
+  Both arms record the selected Missile target's native civilian
+  and zombie counts, occupied perimeter overlap, decision clock,
+  world position and stock before/after, with separately logged
+  impact coordinates, direct kills and truncation status. They
+  use exactly the same observation calculation as the candidate
+  preference. Missing context stays unknown. New patch
+  analysis/coverage-portable314/tmp/missile-footprint-observations.patch
+  passes all 308 isolated script tests and applies cleanly. It
+  keeps the same experiment, masking and rewards. Only the
+  waiting helper was replaced, now PID 69248 waiting on exact
+  operator 70860. Handoff log
+  analysis/coverage-missile-observations-handoff.log. The
+  current runtime was left intact.
+
 - At 12:03 Central, 191952 first timing wave finished. Standard
   ce5b191516c37f99 scored 7.59% at retry and 27.00% on a clear
   (mean 17.30%); in-flight preference 15980ab215b7253e scored
