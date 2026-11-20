@@ -2,6 +2,44 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 15:01 Central, completed all six 203952 training rounds
+  and four frozen reserve pairs. Training scored 4.56% over
+  six scores baseline and 4.81% over eight stronger. Ten
+  training attempts timed out in planning. One stronger-arm
+  training breach gave the verified differential; another
+  breach was observed in frozen play. Frozen baseline had
+  four planning timeouts; stronger had two fresh retries at
+  9.52% and 7.90% and two planning timeouts. No eligible
+  natural finish. Data analysis/coverage-shelter-defense-5a6cd57795.
+  Chose the stronger policy adbd1b60ade03d21 only as the
+  next experiment parent, since it produced occupied
+  reserves and a confirmed deployment.
+- Deployed 3181fd7 at the idle boundary. 341 isolated tests
+  passed. The combined patch retains valid earlier signal
+  evidence across resumes and excludes the interrupted batch.
+  Replayed the two 203952 result journals against their paired
+  snapshots: 24 committed training rows, one stronger-arm
+  treatment, zero rate mismatches. Synthetic target filtering
+  took about 0.18 ms in a four-tool probe and admitted no
+  outside cells; this is a mask benchmark, not live throughput.
+- Launched battle experiment 204952 under PID 25136 with
+  matching preparation and game reward, temperature 1.0 vs
+  1.5 on legal battle-cast choices only. Data
+  analysis/coverage-battle-exploration-e0fb64952f, console
+  analysis/coverage-battle-exploration-204952-drive-d.log.
+  Verified protocol 3 model-only on inst13 73460, inst14
+  75480, inst15 77628 and inst16 64096. PID 64096 is now
+  an owned game and differs from the exited prior operator.
+  Production checkpoint hash and Observatory PID 21012 checked.
+- At 15:03 Central, 204952 first batch checkpointed successfully.
+  Both arms had one planning timeout. Baseline retried at
+  8.56%, candidate at 4.63%. Candidate outbreak 399105103
+  had three legal SeekDestroy choices, all with changed
+  distributions. Mean same-state variation 0.198. Its one
+  selected SeekDestroy reached dispatch but no stock change
+  or deployment was recorded. The diagnostic reports verified
+  treatment and insufficient frozen outcomes. Round two live.
+
 - At 14:55 Central, breach study 203952 had three complete
   training rounds. The first two completed under PID 6692.
   Original round index 1, inst15, outbreak 583346097 had 5.16%
