@@ -2,6 +2,10 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 12:56 Central, the first zone exploration reserve pair retried
+  at 9.52% baseline and 8.44% challenger. Both had zero coverage
+  and zero tempered choices on fresh, distinct outbreaks.
+
 - At 12:55 Central, all 16 zone exploration training attempts
   finished, each on a distinct outbreak. Baseline averaged 4.74%
   saved and challenger 5.99% (eight each). Three were native
