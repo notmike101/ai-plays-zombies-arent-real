@@ -33,7 +33,7 @@ try:
 except ImportError:
     Observer = None
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, extra_cell_label
-from policy_mechanics import Mechanics, PLACEMENTS, SPEED_TICKS, embedded_defenses, extra_masks
+from policy_mechanics import Mechanics, PLACEMENTS, SPEED_TICKS, embedded_defenses, extra_masks, preparation_counts
 MODEL = os.path.join(ROOT, 'sessions', 'nn_policy4.pt')
 HIST = os.path.join(ROOT, 'analysis', 'nn_hist4.jsonl')
 NOBS, HID = 332+len(EXTRA_LABELS), 128
@@ -673,7 +673,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         opening_loadout = (opening_loadout_options(dict(st, rules={**st['rules'], **initial.get('counts', {})}))
                            if options.get('placement_feedback') else {})
         ready_loadout = {}
-        ready_paint_mode = ready_paint_tiles = ready_embedded_defenses = None
+        ready_paint_mode = ready_paint_tiles = ready_embedded_defenses = ready_preparation = None
         plan = initial
         net = None if eps_rand else (policy_factory or PolicyNet2)().eval()
         if net is not None:
@@ -911,6 +911,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         ready_paint_tiles = dict(spikes=int(np.count_nonzero(paint == 1)),
                                                  oil=int(np.count_nonzero(paint == 2)))
                         ready_embedded_defenses = embedded_defenses(st['native'])
+                        ready_preparation = preparation_counts(st['native'])
                     state = ready_once(env)
                     battle_start = time.monotonic()
                     d = dict(initial)
@@ -1137,7 +1138,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     ready_stats=footer.get('ready_stats') if footer else None,
                     opening_loadout=opening_loadout, ready_loadout=ready_loadout,
                     ready_paint_mode=ready_paint_mode, ready_paint_tiles=ready_paint_tiles,
-                    ready_embedded_defenses=ready_embedded_defenses,
+                    ready_embedded_defenses=ready_embedded_defenses, ready_preparation=ready_preparation,
                     special_activations=special_activations,
                     reward_components=rewards, outside_playarea_actions=outside_actions,
                     outside_targets=outside_targets, battle_actions=battle_actions,

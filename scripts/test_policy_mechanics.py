@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import numpy as np
 
 from native_state import WALL, EVAC, HELI, VEHICLE, MEDEVAC, PATCH, MOSH
-from policy_mechanics import observation, unit_names, embedded_defenses, nearest_per_cell, pan_room, extra_masks, SELECTORS, Mechanics
+from policy_mechanics import observation, unit_names, embedded_defenses, preparation_counts, nearest_per_cell, pan_room, extra_masks, SELECTORS, Mechanics
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, GLOBAL_LABELS, GRID_CHANNELS
 
 
@@ -41,6 +41,18 @@ class MechanicsTests(unittest.TestCase):
                          {'GasMortar': {'total': 2, 'inside_occupied': 1},
                           'Garrison': {'total': 1, 'inside_occupied': 0},
                           'MLRS': {'total': 1, 'inside_occupied': 1}})
+
+    def test_ready_preparation_receipts_include_non_building_defenses(self):
+        snapshot = fixture()
+        snapshot['walls'] = np.zeros(4, dtype=WALL)
+        snapshot['gates'] = [(1, 2)]
+        snapshot['evac'] = np.zeros(3, dtype=EVAC)
+        snapshot['evac']['kind'][:] = (0, 1, 0)
+        snapshot['units']['kind'] = np.array([8, 10])
+        snapshot['unit_maps']['trap_kind'][10] = 1
+        self.assertEqual(preparation_counts(snapshot),
+                         dict(wall_segments=4, gates=1, corridors=2, holds=1,
+                              other_units={'ChemMine': 1, 'Battleship': 1}))
 
     def test_overview_only_allows_panning_back_toward_center(self):
         overview = np.array([[15, 10], [85, 10], [85, 60], [15, 60]])

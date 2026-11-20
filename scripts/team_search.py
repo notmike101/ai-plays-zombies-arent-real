@@ -1,6 +1,7 @@
 """Population search over planning sequences and battle targeting on real game copies."""
 import argparse
 import campaign_fitness as fitness
+from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from copy import deepcopy
 import hashlib
@@ -373,6 +374,39 @@ def available_placement_neighbors(parent, rosters, rng, *, buildings_only=False)
         child['plan'][slot]['tool'] = int(tool)
         children.append(child)
     return children
+
+
+def preparation_variants(parent, roster, usage, rng):
+    plan = parent['plan']
+    placements = [i for i, step in enumerate(plan)
+                  if step['family'] == 0 and step['tool'] in tr.PLACEMENTS and step['tool'] != GARRISON]
+    placements.sort(key=lambda i: tr.PLACEMENTS[plan[i]['tool']] in roster)
+    shelter = next((i for i, step in enumerate(plan) if step['tool'] == ZONE_RECT), None)
+    if len(placements) < 2 or shelter is None:
+        return
+    unit_slot, support_slot = placements[:2]
+    units = [tool for tool, name in tr.PLACEMENTS.items()
+             if name in roster and tool != GARRISON]
+    supports = [tr.TOOLS.index(name) for name in ('wall', 'gate', 'corridor', 'hold')]
+    combinations = [(unit, support, after) for unit in units for support in supports
+                    for after in (False, True)]
+    ordered = rng.permutation(len(combinations))
+    for index in sorted(ordered, key=lambda i: (usage[combinations[i]],
+                        usage[combinations[i][0]], usage[combinations[i][1]])):
+        unit, support, after = combinations[index]
+        unit_step = dict(plan[unit_slot], tool=unit)
+        support_step = dict(plan[support_slot], family=1, tool=support)
+        changed = []
+        for i, step in enumerate(plan):
+            if i == unit_slot and not after:
+                changed.append(unit_step)
+            if i not in (unit_slot, support_slot):
+                changed.append(step)
+            if i == shelter:
+                if after:
+                    changed.append(unit_step)
+                changed.append(support_step)
+        yield dict(parent, plan=changed), (unit, support, after)
 
 
 def live_cast_update(parent, trials, *, learn_tools=False):
@@ -906,6 +940,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                ready_paint_mode=row.get('ready_paint_mode'),
                                ready_paint_tiles=row.get('ready_paint_tiles'),
                                ready_embedded_defenses=row.get('ready_embedded_defenses'),
+                               ready_preparation=row.get('ready_preparation'),
                                opening_loadout=row.get('opening_loadout', {}),
                                ready_loadout=row.get('ready_loadout', {}),
                                timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
@@ -1213,6 +1248,8 @@ def main():
     neighbors = parser.add_mutually_exclusive_group()
     neighbors.add_argument('--placement-neighbors', action='store_true',
                            help='Compare two equipped placement preferences in the same plan slot')
+    neighbors.add_argument('--prep-diversity', action='store_true',
+                           help='Explore equipped units with barriers and evacuation plans on fresh boards')
     neighbors.add_argument('--defense-neighbors', action='store_true',
                            help='Compare two equipped building-unit preferences against the same model')
     neighbors.add_argument('--garrison-site-sampling', action='store_true',
@@ -1277,6 +1314,8 @@ def main():
         parser.error('Use two paired waves, or three for cast learning on separate copy pairs')
     if args.goal_margin and not args.click_start:
         parser.error('Goal-margin ranking requires the controlled fresh L1 start')
+    if args.prep_diversity and (not args.click_start or not args.holdout_copies):
+        parser.error('Preparation exploration requires the controlled L1 start and separate reserve copies')
     if args.click_start and not args.continue_layout_free:
         parser.error('Click-mode baseline requires layout-free continuation')
     if args.fast_boot and not args.continue_layout_free:
@@ -1549,11 +1588,34 @@ def main():
                             f.write(json.dumps(result)+'\n')
                         print('cnn',result['cnn'],result.get('error'),[(r['end'],r['saved']) for r in result['levels']],flush=True)
                 return
+            prep_usage = Counter()
+            prep_seen = set()
             for generation in range(args.generations):
                 fit_targets = learn_targets and generation == 0
                 fit_trials = []
                 alternate_teams = None
-                if fit_targets:
+                prep_assignments = {}
+                if args.prep_diversity:
+                    control = generation % len(copies)
+                    reference = leader if generation else proposal
+                    population = [reference] * len(copies)
+                    for i, copy in enumerate(copies):
+                        if i == control:
+                            continue
+                        settings = operator.owned_copy(copy) / 'steam_cloud/settings.ini'
+                        roster = operator.planning_roster(settings.read_text(encoding='utf-8-sig'))
+                        candidate = next(((child, combination) for child, combination in
+                                          preparation_variants(proposal, roster, prep_usage, rng)
+                                          if team_id(child) not in prep_seen), None)
+                        if candidate is None:
+                            raise ValueError(f'{copy} has no additional eligible preparation combinations')
+                        population[i], combination = candidate
+                        unit, support, after = combination
+                        prep_usage.update((combination, unit, support))
+                        prep_seen.add(team_id(population[i]))
+                        prep_assignments[copy] = dict(unit=tr.PLACEMENTS[unit],
+                                                     support=tr.TOOLS[support], after_shelter=after)
+                elif fit_targets:
                     population = [training_parent] * len(copies)
                 elif learn_targets or retest_fit:
                     pairs = [target_fits[target_folds[copy]][0] if learn_targets else policy_arms
@@ -1603,6 +1665,8 @@ def main():
                     team=job[2]
                     key=team_id(team) if team else 'control'
                     result.update(view_revision=view_revision,generation=generation,team_id=key,team=team,start_stage=start_stage)
+                    if args.prep_diversity:
+                        result['prep_proposal'] = prep_assignments.get(job[0])
                     if fit_targets:
                         fit_trials.append(result)
                     if (observed_seed := fitness.l1_outbreak_seed(result)) is not None:

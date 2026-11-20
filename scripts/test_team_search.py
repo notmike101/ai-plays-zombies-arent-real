@@ -534,6 +534,32 @@ class SearchTests(unittest.TestCase):
             original = dict(child, plan=[dict(child['plan'][0], tool=absent)])
             self.assertEqual(original, parent)
 
+    def test_preparation_variants_rotate_role_combinations_and_preserve_battle(self):
+        from collections import Counter
+
+        rng = np.random.default_rng(73)
+        parent = search.random_team(rng)
+        absent = search.tr.TOOLS.index('place_ChemMine')
+        step = dict(search.gene(rng), family=0, tool=absent)
+        zone = dict(step, family=1, tool=search.ZONE_RECT)
+        parent['plan'] = [step, step, zone]
+        roster = ('Garrison', 'Oil', 'Sniper', 'Nest')
+        variants = list(search.preparation_variants(parent, roster, Counter(), rng))
+        self.assertEqual(len(variants), 24)
+        self.assertEqual(len({search.team_id(t) for t, _ in variants}), 24)
+        for team, (unit, support, after) in variants:
+            self.assertIn(search.tr.PLACEMENTS[unit], ('Oil', 'Sniper', 'Nest'))
+            self.assertEqual(dict(team, plan=parent['plan']), parent)
+            self.assertEqual(sum(g['duration'] for g in team['plan']), sum(g['duration'] for g in parent['plan']))
+            tools = [g['tool'] for g in team['plan']]
+            self.assertGreater(tools.index(support), tools.index(search.ZONE_RECT))
+            self.assertEqual(tools.index(unit) > tools.index(search.ZONE_RECT), after)
+        first = variants[0][1]
+        usage = Counter({first: 1, first[0]: 1, first[1]: 1})
+        _, replacement = next(search.preparation_variants(parent, roster, usage, rng))
+        self.assertNotEqual(replacement[0], first[0])
+        self.assertNotEqual(replacement[1], first[1])
+
     def test_garrison_sampling_preserves_legal_cells_and_policy_identity(self):
         mask = torch.zeros(search.tr.NC, dtype=torch.bool)
         mask[[0, 5]] = True

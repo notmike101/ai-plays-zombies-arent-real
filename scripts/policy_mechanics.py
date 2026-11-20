@@ -1,5 +1,6 @@
 """Native observations and player gestures for the appended policy actions."""
 import math
+from collections import Counter
 
 import numpy as np
 
@@ -159,6 +160,16 @@ def embedded_defenses(snapshot):
     return {str(name): dict(total=int((names == name).sum()),
                             inside_occupied=int(((names == name) & sheltered).sum()))
             for name in np.unique(names) if name}
+
+
+def preparation_counts(snapshot):
+    units = snapshot['units']
+    other = np.isin(units['kind'], (8, 9, 10))
+    names = unit_names(units, snapshot['unit_maps'])[other]
+    return dict(wall_segments=len(snapshot['walls']), gates=len(snapshot['gates']),
+                corridors=int((snapshot['evac']['kind'] == 0).sum()),
+                holds=int((snapshot['evac']['kind'] == 1).sum()),
+                other_units=dict(Counter(str(name) for name in names if name)))
 
 
 def observation(snapshot, roster, perks, hud, paint_mode, legal, land_fraction, width, height,
