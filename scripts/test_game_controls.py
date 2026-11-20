@@ -2,11 +2,26 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from game_controls import Controls, wait_until, unit_choices
+from game_controls import Controls, UIFrameTimeout, wait_until, unit_choices
 from game_mechanics import UNITS
 
 
 class ControlsTests(unittest.TestCase):
+    def test_overview_can_defer_a_camera_frame_timeout_without_masking_other_errors(self):
+        import numpy as np
+        env = Mock(cw=1920, ch=1200)
+        env.scalar.return_value = 0
+        env.game_state.return_value = {'phase': 'playing'}
+        controls = Controls(env)
+        controls.play_bounds = np.array([[0, 0], [1000, 1000]])
+        controls.key_action = Mock(side_effect=UIFrameTimeout('lagged camera'))
+        with patch('spatial.overview_geometry', return_value=(1., np.array([.5, 0.]))):
+            self.assertFalse(controls.rest_view())
+            controls.key_action.assert_called_once()
+            controls.key_action.side_effect = RuntimeError('different error')
+            with self.assertRaisesRegex(RuntimeError, 'different error'):
+                controls.rest_view()
+
     def test_slow_ui_can_confirm_two_frames_without_resending_input(self):
         env = Mock()
         env.scalar.side_effect = [10, 10, 10, 12]

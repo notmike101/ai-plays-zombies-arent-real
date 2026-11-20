@@ -23,14 +23,18 @@ class PickerNavigationError(ZAREnvError):
     """The picker did not reach a row and no confirmation was sent."""
 
 
-def wait_until(predicate, description, timeout=.8):
+class UIFrameTimeout(ZAREnvError):
+    """The game did not publish enough new UI frames before the deadline."""
+
+
+def wait_until(predicate, description, timeout=.8, *, timeout_error=ZAREnvError):
     end = time.monotonic()+timeout
     while True:
         result = predicate()
         if result:
             return result
         if time.monotonic() >= end:
-            raise ZAREnvError('Timed out waiting for '+description)
+            raise timeout_error('Timed out waiting for '+description)
         time.sleep(.005)
 
 
@@ -47,7 +51,8 @@ class Controls:
 
     def frames(self, count=2):
         frame = self.env.scalar(0x68e590, '<Q')
-        wait_until(lambda: self.env.scalar(0x68e590, '<Q') >= frame+count, 'UI frames', timeout=2.)
+        wait_until(lambda: self.env.scalar(0x68e590, '<Q') >= frame+count, 'UI frames',
+                   timeout=2., timeout_error=UIFrameTimeout)
 
     def rest_view(self):
         """Return the playable boundary to the world viewport using ordinary camera inputs."""
@@ -67,14 +72,17 @@ class Controls:
             camera=[e.scalar(r,'<f') for r in (0x6553ac,0x6553b0,0x6553b4)]
             points=project(self.play_bounds,camera,*size)/size
             fill,offset=overview_geometry(points)
-            if fill>OVERVIEW_MAX_FILL or fill<.83:
-                self.zoom(-1 if fill>OVERVIEW_MAX_FILL else 1,(e.cw//2,e.ch//2))
-                self.frames(5)
-            elif max(abs(offset))>OVERVIEW_CENTER_TOLERANCE:
-                axis=int(np.argmax(abs(offset)))
-                name=(('pan_left','pan_right'),('pan_up','pan_down'))[axis][int(offset[axis]>0)]
-                self.key_action(name,pan_hold=float(np.clip(abs(offset[axis])*.7,.01,.15)))
-            else:return True
+            try:
+                if fill>OVERVIEW_MAX_FILL or fill<.83:
+                    self.zoom(-1 if fill>OVERVIEW_MAX_FILL else 1,(e.cw//2,e.ch//2))
+                    self.frames(5)
+                elif max(abs(offset))>OVERVIEW_CENTER_TOLERANCE:
+                    axis=int(np.argmax(abs(offset)))
+                    name=(('pan_left','pan_right'),('pan_up','pan_down'))[axis][int(offset[axis]>0)]
+                    self.key_action(name,pan_hold=float(np.clip(abs(offset[axis])*.7,.01,.15)))
+                else:return True
+            except UIFrameTimeout:
+                return False  # Camera input was released; the caller refreshes native geometry.
         return False
 
     def tool_active(self):
