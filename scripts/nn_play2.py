@@ -450,13 +450,18 @@ def _rule(counts, name, suffix, *, default=0.0):
     return default
 
 
+def ability_effect_delay(rules, name, default=math.nan):
+    suffix = {'Missile': '_flight_seconds', 'Nuke': '_delay_seconds'}.get(name, '_arrival_seconds')
+    return _rule(rules, name, suffix, default=default)
+
+
 def opening_loadout_options(st):
     offers = {}
     for name, cost in st['costs'].items():
         if name not in st['unlocked'] or not 0 < cost <= st['sp']:
             continue
         unlock = _rule(st['rules'], name, '_unlock_seconds', default=math.nan)
-        arrival = _rule(st['rules'], name, '_arrival_seconds', default=math.nan)
+        arrival = ability_effect_delay(st['rules'], name)
         if (math.isfinite(unlock) and unlock >= 0
                 and math.isfinite(arrival) and arrival >= 0):
             offers[name] = {'cost': cost, 'first_effect': unlock + arrival}
@@ -818,7 +823,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     ulp, clp = -math.log(mu.sum()), -math.log(mc.sum())
                 else:
                     if (getattr(net,'cast_timing',None) is not None or getattr(net,'missile_reserve',0.)
-                            or getattr(net,'missile_followup',0.) or getattr(net,'firebomb_line_targeting',False)
+                            or getattr(net,'missile_followup',0.) or getattr(net,'line_casts',())
                             or getattr(net,'opening_cast_bias',0.)):
                         net.set_cast_targets(st, mu, mc, env.cw, env.ch)
                     if st['planning'] and getattr(net, 'garrison_coverage_weight', 0.):
@@ -951,9 +956,11 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     for slot in st['deck']:
                         slot['charges'] = slot['max_charges'] = stock[slot['name']]
                     if placement_feedback:
-                        ready_loadout = {slot['name']: slot['unlock'] + slot['arrival'] for slot in st['deck']
-                                         if slot['key'] and slot['charges'] > 0
-                                         and math.isfinite(slot['unlock'] + slot['arrival'])}
+                        for slot in st['deck']:
+                            delay = ability_effect_delay(st['rules'], slot['name'], slot['arrival'])
+                            first_effect = slot['unlock'] + delay
+                            if slot['key'] and slot['charges'] > 0 and math.isfinite(first_effect):
+                                ready_loadout[slot['name']] = first_effect
                 elif 34 <= u < 72:
                     name = DECK_ORDER[(u-34) % 19]
                     delta = 1 if u < 53 else -1
@@ -1106,6 +1113,14 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                      end=(event.get('to') or {}).get('world'))
                 for event in events
                 if event.get('ev') == 'deploy' and event.get('what') == 'fire_bomb']
+            police_lines = []
+            for event in events:
+                if event.get('ev') == 'deploy' and event.get('what') == 'paratroopers':
+                    trail = event.get('trail') or ()
+                    if trail:
+                        police_lines.append(dict(sim=event.get('sim'), count=event.get('count'),
+                                                 start=trail[0].get('world'), end=trail[-1].get('world')))
+            battle_actions['paratrooper_lines'] = police_lines
             battle_actions['firebomb_impacts'] = sum(
                 event.get('ev') == 'bomb' and event.get('what') == 'fire_bomb' for event in events)
         battle_actions['deploy_sim_seconds']=footer.get('deploy_sim_seconds') if footer else None
@@ -1175,6 +1190,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     outbreak=footer.get('outbreak') if footer else None,
                     ready_stats=footer.get('ready_stats') if footer else None,
                     opening_loadout=opening_loadout, ready_loadout=ready_loadout,
+                    ready_loadout_sp=footer.get('ready_loadout_sp') if footer and placement_feedback else None,
                     ready_paint_mode=ready_paint_mode, ready_paint_tiles=ready_paint_tiles,
                     ready_embedded_defenses=ready_embedded_defenses, ready_preparation=ready_preparation,
                     special_activations=special_activations,

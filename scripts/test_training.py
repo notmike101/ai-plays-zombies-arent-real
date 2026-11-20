@@ -174,6 +174,20 @@ class LearningTests(unittest.TestCase):
         self.assertEqual(diag['entropy'], 0.)
         self.assertTrue(all(v is None or np.isfinite(v) for v in diag.values()))
 
+    def test_early_loadout_records_native_flight_and_delay_fields(self):
+        rules = dict(police_unlock_seconds=0, police_arrival_seconds=8,
+                     missile_unlock_seconds=30, missile_flight_seconds=2.5,
+                     nuke_unlock_seconds=90, nuke_delay_seconds=45)
+        offers = dict(costs={'Police': 1, 'Missile': 2, 'Nuke': 15},
+                      unlocked={'Police', 'Missile', 'Nuke'}, sp=2, rules=rules)
+        self.assertEqual(train.opening_loadout_options(offers),
+                         {'Police': {'cost': 1, 'first_effect': 8.},
+                          'Missile': {'cost': 2, 'first_effect': 32.5}})
+        self.assertEqual(train.opening_loadout_options(dict(offers, sp=15))['Nuke'],
+                         {'cost': 15, 'first_effect': 135.})
+        del rules['missile_flight_seconds']
+        self.assertNotIn('Missile', train.opening_loadout_options(offers))
+
     def test_loadout_mask_requires_unlocked_affordable_skill_points(self):
         st = dict(planning=True, loadout={'Police': 1}, sp=1,
                   costs={'Police': 1, 'Heli': 2, 'Stungas': 1}, unlocked={'Police', 'Heli'})

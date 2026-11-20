@@ -661,15 +661,20 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(set(sampled), {0, 2})
         torch.testing.assert_close(torch.random.get_rng_state(), state)
 
-    def test_firebomb_line_changes_only_firebomb_endpoint_scores(self):
+    def test_spray_line_changes_only_its_tool_endpoint_scores(self):
+        for tool, flag in [(search.FIREBOMB, 'firebomb_line_targeting'), (search.POLICE, 'police_line_targeting')]:
+            with self.subTest(tool=tool):
+                self.check_line_scores(tool, flag)
+
+    def check_line_scores(self, tool, flag):
         tr = search.tr
         parent = search.random_team(np.random.default_rng(41))
         parent['battle'] = [[0., 1., 0., 0., 0.] for _ in search.CASTS]
-        line = dict(parent, firebomb_line_targeting=True)
+        line = dict(parent, **{flag: True})
         reference, model = search.TeamPolicy(parent), search.TeamPolicy(line)
         tools = np.zeros(tr.NU)
-        tools[search.FIREBOMB] = 1
-        st = dict(planning=False, anchor=(search.FIREBOMB, 8))
+        tools[tool] = 1
+        st = dict(planning=False, anchor=(tool, 8))
         for policy in (reference, model):
             policy.set_cast_targets(st, tools, np.ones(tr.NC), 1000, 1000)
         x = torch.zeros(1, 1, tr.NOBS)
@@ -680,14 +685,14 @@ class SearchTests(unittest.TestCase):
             base_tools, base, _, _ = reference(x)
             new_tools, new, _, _ = model(x)
         expected, actual = base.reshape(tr.NU, tr.NC), new.reshape(tr.NU, tr.NC)
-        self.assertEqual(expected[search.FIREBOMB, 12], 0.)
-        self.assertGreater(actual[search.FIREBOMB, 12], 0.)
-        expected[search.FIREBOMB] = actual[search.FIREBOMB]
+        self.assertEqual(expected[tool, 12], 0.)
+        self.assertGreater(actual[tool, 12], 0.)
+        expected[tool] = actual[tool]
         torch.testing.assert_close(expected, actual)
         torch.testing.assert_close(base_tools, new_tools)
         model.set_cast_targets(dict(planning=False, anchor=(search.MISSILE, 8)),
                                tools, np.ones(tr.NC), 1000, 1000)
-        self.assertIsNone(model.firebomb_segments)
+        self.assertIsNone(model.cast_line)
 
     def test_firebomb_neighbors_change_only_its_target_preferences(self):
         rng = np.random.default_rng(41)
@@ -1058,6 +1063,64 @@ class SearchTests(unittest.TestCase):
         policy.set_special_probe(st,1920,1200)
         self.assertEqual(policy.special_cells,[])
 
+    def test_paired_cast_comparisons_keep_their_discovery_controls_in_reserve(self):
+        for mode, change in [('early-first-cast', {'opening_cast_bias': 2.}),
+                             ('police-line', {'police_line_targeting': True})]:
+            with self.subTest(mode=mode):
+                self.check_cast_comparison(mode, change)
+
+    def test_qualified_holdout_ends_after_an_ineligible_comparison_wave(self):
+        self.check_cast_comparison('police-line', {'police_line_targeting': True}, invalid_reference=True)
+
+    def check_cast_comparison(self, mode, change, *, invalid_reference=False):
+        import json
+        from contextlib import ExitStack, nullcontext
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        baseline = search.random_team(np.random.default_rng(42))
+        challenger = dict(baseline, **change)
+        seed = iter(range(100, 200))
+
+        def completed(pool, jobs, *args, **kwargs):
+            for job in jobs:
+                tested = job[2]
+                outcome = .42 if tested == challenger else .24
+                level = dict(stage=1, end='won', saved=outcome, start_kind='fresh',
+                             outbreak={'seed': next(seed)}, sim=120.)
+                if invalid_reference and job[0] in ('e', 'f') and tested == baseline:
+                    level.update(end='timeout', saved=None)
+                yield job, 1, dict(copy=job[0], levels=[level])
+
+        with TemporaryDirectory() as temp, ExitStack() as stack:
+            root = Path(temp)
+            (root / 'analysis').mkdir()
+            args = ['team_search.py', '--continue-layout-free', str(root / 'resume'),
+                    '--battle-neighbors', mode, '--click-start',
+                    '--generations', '2', '--qualified-holdout-only',
+                    '--copies', 'a', 'b', 'c', 'd', '--holdout-copies', 'e', 'f']
+            stack.enter_context(patch('sys.argv', args))
+            stack.enter_context(patch.object(search.operator, 'ROOT', root))
+            for name, result in [('training_lock', nullcontext()), ('preflight', {'ok': True}),
+                                 ('inventory', []), ('require_idle', None), ('limit_resources', None)]:
+                stack.enter_context(patch.object(search.operator, name, return_value=result))
+            stack.enter_context(patch.object(search, 'restore_layout_free_proposal', return_value=challenger))
+            stack.enter_context(patch.object(search, 'save_frozen_base'))
+            stack.enter_context(patch.object(search, 'ProcessPoolExecutor'))
+            stack.enter_context(patch.object(search, 'completed_rollouts', side_effect=completed))
+            search.main()
+            output = next((root / 'analysis').iterdir())
+            rows = [json.loads(line) for line in (output / 'holdout.jsonl').read_text().splitlines()]
+            waves = 1 if invalid_reference else 6
+            for arm, team in [('candidate', challenger), ('incumbent', baseline)]:
+                self.assertEqual([row['team_id'] for row in rows if row['arm'] == arm],
+                                 [search.team_id(team)] * waves)
+            if invalid_reference:
+                self.assertFalse((output / 'champion.json').exists())
+                return
+            champion = json.loads((output / 'champion.json').read_text())
+            self.assertEqual(champion['holdout_opponent'], search.team_id(baseline))
+
     def test_holdout_rotates_frozen_arms_and_preserves_paired_policy_seeds(self):
         copies=['a','b','c','d']
         a,b={},{'incumbent':True}
@@ -1234,6 +1297,28 @@ class SearchTests(unittest.TestCase):
         row['ready_loadout'].pop('Police')
         row['saved'] = None
         self.assertIsNone(search.early_loadout_candidate(trial, rng))
+
+    def test_loadout_explores_an_affordable_replacement_before_first_breach(self):
+        rng = np.random.default_rng(19)
+        team = search.random_team(rng)
+        police, missile = [search.tr.TOOLS.index('buy_' + name) for name in ('Police', 'Missile')]
+        team['plan'] = [dict(search.gene(rng), tool=police, family=2, duration=1)]
+        row = dict(stage=1, start_kind='fresh', saved=.10, outbreak={'seed': 19},
+                   ready_loadout={'Police': 8.}, ready_loadout_sp=1.,
+                   opening_loadout={'Police': {'cost': 1., 'first_effect': 8.},
+                                    'Missile': {'cost': 2., 'first_effect': 32.5},
+                                    'Bomber': {'cost': 2., 'first_effect': 60.}},
+                   shelter={'first_occupied_breach': 49.9})
+        trial = dict(team=team, levels=[row])
+        candidate = search.early_loadout_candidate(trial, rng)
+        self.assertEqual(candidate, dict(team, plan=[dict(team['plan'][0], tool=missile)]))
+
+        for mutation in (dict(ready_loadout_sp=0.), dict(ready_loadout_sp=None),
+                         dict(shelter={'first_occupied_breach': 32.5}), dict(shelter={})):
+            with self.subTest(mutation=mutation):
+                self.assertIsNone(search.early_loadout_candidate(
+                    dict(trial, levels=[dict(row, **mutation)]), rng))
+        self.assertEqual(team['plan'][0]['tool'], police)
 
     def test_loadout_proposal_is_reproducible_and_preserves_champion(self):
         rng=np.random.default_rng(23)

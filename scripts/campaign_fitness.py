@@ -104,7 +104,7 @@ def l1_outbreak_seed(trial):
     return None
 
 
-def holdout_passed(rows, expected, stage=1, *, discovery_seeds=()):
+def holdout_samples(rows, stage=1, *, discovery_seeds=()):
     arms={'candidate':{},'reference':{}}
     for trial in rows:
         if trial['arm']=='extra':continue
@@ -112,19 +112,25 @@ def holdout_passed(rows, expected, stage=1, *, discovery_seeds=()):
         levels=trial.get('levels',[])
         seed = l1_outbreak_seed(trial)
         if seed is None or seed in discovery_seeds or seed in samples:
-            return False
+            return None
         outcome=(False,0.)
         for index in range(stage):
-            if index>=len(levels):return False
+            if index>=len(levels):return None
             row=levels[index]
-            if row['stage']!=index+1 or row.get('attempt',0):return False
+            if row['stage']!=index+1 or row.get('attempt',0):return None
             saved = row['saved']
             if not isinstance(saved, (int, float)) or not math.isfinite(saved) or not 0 <= saved <= 1:
-                return False
+                return None
             qualified=row['end']=='won' and saved>=.35
             if index+1==stage:outcome=(qualified,saved)
             if not qualified:break
         samples[seed]=outcome
+    return arms
+
+
+def holdout_passed(rows, expected, stage=1, *, discovery_seeds=()):
+    arms = holdout_samples(rows, stage, discovery_seeds=discovery_seeds)
+    if arms is None: return False
     if any(len(s)!=expected for s in arms.values()):return False
     def totals(samples):
         return tuple(map(sum,zip(*samples.values())))

@@ -58,15 +58,22 @@ def read_session(path, started_ms, *, expected_wall=None, capture_events=False):
         if expected_wall is not None and rows[0].get('wall') != expected_wall:
             return None
         outbreak=next((r for r in rows if r.get('ev')=='outbreak'),None)
-        ready = next((r['stats'] for r in rows if r.get('ev') == 'phase'
-                      and r.get('from') == 'planning' and r.get('to') == 'playing'
-                      and r.get('reason') == 'ready' and isinstance(r.get('stats'), dict)), None)
+        ready_index = next((i for i, r in enumerate(rows) if r.get('ev') == 'phase'
+                            and r.get('from') == 'planning' and r.get('to') == 'playing'
+                            and r.get('reason') == 'ready' and isinstance(r.get('stats'), dict)), None)
+        ready = rows[ready_index]['stats'] if ready_index is not None else None
+        points = (next((r.get('sp_unspent') for r in reversed(rows[1:ready_index])
+                        if r.get('ev') == 'loadout' and r.get('phase') == 'planning'), None)
+                  if ready_index is not None else None)
+        if type(points) not in (int, float) or not math.isfinite(points) or points < 0:
+            points = None
         data = {'header': rows[0],
                 'ready_stats': ({'money': ready.get('money'), 'stock': ready.get('stock'),
                                  **{k: ready[k] for k in ('garrisons', 'snipers', 'mortars', 'turrets',
                                                           'mines', 'c4', 'battleships', 'apcs') if k in ready}}
                                 if ready is not None else None),
                 'outbreak': {k:outbreak.get(k) for k in ('seed','safe_zones','civilians_inside_pct')} if outbreak else None,
+                'ready_loadout_sp': points,
                 'deployments': [r.get('what') for r in rows if r.get('ev')=='deploy'],
                 'deploy_sim_seconds': [r.get('sim') for r in rows if r.get('ev')=='deploy'],
                 'footer': next((r for r in reversed(rows) if r.get('ev') == 'footer'), None),
@@ -234,7 +241,7 @@ class ZAREnv:
             if data and data['footer']:
                 footer = dict(data['footer'],deployments=data['deployments'],
                             deploy_sim_seconds=data['deploy_sim_seconds'],outbreak=data['outbreak'],
-                            ready_stats=data['ready_stats'])
+                            ready_stats=data['ready_stats'], ready_loadout_sp=data['ready_loadout_sp'])
                 if capture_events:
                     footer.update(combat_events=data['combat_events'],
                                   combat_events_truncated=data['combat_events_truncated'])

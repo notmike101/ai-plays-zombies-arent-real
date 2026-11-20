@@ -7,6 +7,7 @@ from copy import deepcopy
 import hashlib
 from itertools import chain, combinations
 import json
+import math
 import os
 from pathlib import Path
 from time import monotonic
@@ -41,6 +42,7 @@ ZONE_RECT = tr.TOOLS.index('zone_rect')
 FAST_SPEED = tr.TOOLS.index('speed_4')
 MISSILE_ROW = CASTS.index(MISSILE)
 FIREBOMB = tr.ABILITY_U['Firebomb']
+POLICE = tr.ABILITY_U['Police']
 FIREBOMB_ROW = CASTS.index(FIREBOMB)
 SELECT_BUILDING = tr.TOOLS.index('select_building')
 BUILDING_SPECIALS = {name.removeprefix('panel_'):i for i,name in enumerate(tr.TOOLS)
@@ -107,7 +109,13 @@ def early_loadout_candidate(trial, rng):
         return None
     earliest = min(ready.values())
     purchases = {tr.TOOLS[g['tool']][4:] for g in team['plan'] if g['tool'] in FAMILIES[2]}
+    remaining_sp = first.get('ready_loadout_sp')
+    breach = (first.get('shelter') or {}).get('first_occupied_breach')
+    observed_budget = (type(remaining_sp) in (int, float) and math.isfinite(remaining_sp)
+                       and remaining_sp >= 0)
+    observed_breach = type(breach) in (int, float) and math.isfinite(breach) and breach > earliest
     alternatives = []
+    breach_alternatives = []
     for i, step in enumerate(team['plan']):
         if step['tool'] not in FAMILIES[2]:
             continue
@@ -116,9 +124,15 @@ def early_loadout_candidate(trial, rng):
             continue
         cost = opening[name]['cost']
         for choice, offer in opening.items():
-            if (choice not in purchases and choice not in ready and choice in tr.ABILITY_U
-                    and offer['cost'] <= cost and offer['first_effect'] < earliest):
-                alternatives.append((i, tr.TOOLS.index('buy_' + choice)))
+            if choice in purchases or choice in ready or choice not in tr.ABILITY_U:
+                continue
+            proposal = (i, tr.TOOLS.index('buy_' + choice))
+            if offer['cost'] <= cost and offer['first_effect'] < earliest:
+                alternatives.append(proposal)
+            elif (observed_budget and observed_breach and step['duration'] == 1
+                  and offer['cost'] <= cost + remaining_sp and offer['first_effect'] < breach):
+                breach_alternatives.append(proposal)
+    alternatives = alternatives or breach_alternatives
     if not alternatives:
         return None
     index, tool = alternatives[int(rng.integers(len(alternatives)))]
@@ -545,8 +559,9 @@ class TeamPolicy(tr.PolicyNet2):
         self.cast_timing = team.get('cast_timing')
         self.opening_cast_bias = team.get('opening_cast_bias', 0.)
         self.opening_cast_bonus = 0.
-        self.firebomb_line_targeting = team.get('firebomb_line_targeting', False)
-        self.firebomb_segments = None
+        self.line_casts = {tool for tool, flag in ((FIREBOMB, 'firebomb_line_targeting'),
+                                                   (POLICE, 'police_line_targeting')) if team.get(flag)}
+        self.cast_line = None
         self.garrison_coverage_weight = team.get('garrison_coverage', 0.)
         self.garrison_building_range = team.get('garrison_building_range', False)
         self.garrison_early_coverage = team.get('garrison_early_coverage', False)
@@ -580,8 +595,8 @@ class TeamPolicy(tr.PolicyNet2):
             self.campaign_forecast_id=digest.hexdigest()[:16]
 
     def cast_cell_features(self, tool):
-        if tool == FIREBOMB and self.firebomb_segments is not None:
-            return self.cast_grid[:, self.firebomb_segments].mean(dim=2)
+        if self.cast_line is not None and tool == self.cast_line[0]:
+            return self.cast_grid[:, self.cast_line[1]].mean(dim=2)
         return self.cast_grid
 
     def record_cast_gradient(self, tool, cell, probabilities):
@@ -610,19 +625,20 @@ class TeamPolicy(tr.PolicyNet2):
         self.missile_in_flight = False
         self.occupied_shelter = False
         self.missile_charges = 0.
-        self.firebomb_segments = None
+        self.cast_line = None
         self.opening_cast_bonus = 0.
         if st['planning'] or st.get('dialog'):
             return
         if self.opening_cast_bias and not st.get('first_cast_confirmed'):
             self.opening_cast_bonus = self.opening_cast_bias * max(0., 1. - st['sim'] / 30.)
         if anchor := st.get('anchor'):
-            if self.firebomb_line_targeting and anchor[0] == FIREBOMB and tools[FIREBOMB]:
-                start = np.asarray(tr.battle_point(st, FIREBOMB, anchor[1], width, height))
+            tool, cell = anchor
+            if tool in self.line_casts and tools[tool]:
+                start = np.asarray(tr.battle_point(st, tool, cell, width, height))
                 ends = np.asarray([tr.cell_of_px(cell, width, height) for cell in range(tr.NC)])
                 points = start + (ends[:, None, :] - start) * np.linspace(0., 1., 9)[None, :, None]
-                self.firebomb_segments = torch.from_numpy(
-                    grid_bins(points.reshape(-1, 2), width, height).reshape(tr.NC, 9))
+                bins = grid_bins(points.reshape(-1, 2), width, height).reshape(tr.NC, 9)
+                self.cast_line = (tool, torch.from_numpy(bins))
             return
         boundary = st.get('playarea_boundary')
         if boundary is None:
@@ -824,9 +840,11 @@ class TeamPolicy(tr.PolicyNet2):
             if self.cast_gradients is not None or self.cast_weight_delta is not None:
                 self.cast_grid = grid
             scores = self.battle @ grid
-            if self.firebomb_segments is not None:
-                segments = grid[:, self.firebomb_segments].mean(dim=2)
-                scores[FIREBOMB_ROW] = self.battle[FIREBOMB_ROW] @ segments
+            if self.cast_line is not None:
+                tool, bins = self.cast_line
+                row = CASTS.index(tool)
+                segments = grid[:, bins].mean(dim=2)
+                scores[row] = self.battle[row] @ segments
             cells[CASTS] += scores
         return tools, cells.reshape(1,1,-1), value, h
 
@@ -956,6 +974,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                ready_preparation=row.get('ready_preparation'),
                                opening_loadout=row.get('opening_loadout', {}),
                                ready_loadout=row.get('ready_loadout', {}),
+                               ready_loadout_sp=row.get('ready_loadout_sp'),
                                timeout_reason=row.get('timeout_reason'),planning_blockers=row.get('planning_blockers'),
                                unmatched_layout=remaining_layout(layout,{'_text':row['layout_text']}) if layout else [],
                                layout_receipts=receipts,battle_actions=row['battle_actions'],
@@ -1040,13 +1059,14 @@ def checkpoint_team(record,base):
                 raise ValueError('Invalid special-building probe weight')
         if 'blocked_tool' in obj and (type(obj['blocked_tool'])!=int or obj['blocked_tool'] not in REPAIRS):
             raise ValueError('Invalid campaign recovery action')
-    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','cast_target_mode','sample_loadout','sample_garrison_sites','opening_cast_bias','sample_zone_geometry','firebomb_line_targeting','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
+    fields(team,('plan','battle','cast_bias','idle_bias'),('layout','later_layouts','stage_battle','camera_pause','blocked_tool','refuge','cast_timing','shelter_defense','special_probe','missile_reserve','garrison_relocation','missile_followup','keep_plan_through_gestures','planning_logit_scale','sample_battle','cast_target_mode','sample_loadout','sample_garrison_sites','opening_cast_bias','sample_zone_geometry','firebomb_line_targeting','police_line_targeting','garrison_coverage','garrison_building_range','garrison_early_coverage','zone_population','zone_anchor_lookahead','speed4_penalty'))
     if 'opening_cast_bias' in team:
         weight = team['opening_cast_bias']
         if type(weight) not in (int, float) or not 0 < weight <= 4.:
             raise ValueError('Invalid opening cast bias')
-    if 'firebomb_line_targeting' in team and team['firebomb_line_targeting'] is not True:
-        raise ValueError('Invalid Firebomb line targeting flag')
+    for flag in ('firebomb_line_targeting', 'police_line_targeting'):
+        if flag in team and team[flag] is not True:
+            raise ValueError(f'Invalid {flag} flag')
     if 'keep_plan_through_gestures' in team and team['keep_plan_through_gestures'] is not True:
         raise ValueError('Invalid gesture planning flag')
     if 'sample_battle' in team and team['sample_battle'] is not True:
@@ -1274,7 +1294,7 @@ def main():
     neighbors.add_argument('--loadout-sampling', action='store_true',
                            help='Compare greedy and exploratory choices among legal purchases')
     neighbors.add_argument('--battle-neighbors', nargs='?', const='all',
-                           choices=('all', 'firebomb', 'firebomb-line', 'cast-sampling', 'early-first-cast', 'learn-targets', 'learn-cast-tools', 'retest-fit'),
+                           choices=('all', 'firebomb', 'firebomb-line', 'police-line', 'cast-sampling', 'early-first-cast', 'learn-targets', 'learn-cast-tools', 'retest-fit'),
                            help='Compare battle targeting or learn cast weights from real scores')
     parser.add_argument('--goal-margin', action='store_true',
                         help='Rank unsuccessful discovery battles by survival above the 35 percent target')
@@ -1299,14 +1319,15 @@ def main():
     parser.add_argument('--capture-shadow',action='store_true',help='Record bounded crowd frames and confirmed stock spends for offline analysis')
     args=parser.parse_args()
     battle_target = FIREBOMB_ROW if args.battle_neighbors == 'firebomb' else None
-    compare_line = args.battle_neighbors == 'firebomb-line'
+    line_flag = {'firebomb-line': 'firebomb_line_targeting',
+                 'police-line': 'police_line_targeting'}.get(args.battle_neighbors)
     learn_tools = args.battle_neighbors == 'learn-cast-tools'
     learn_targets = args.battle_neighbors in ('learn-targets', 'learn-cast-tools')
     retest_fit = args.battle_neighbors == 'retest-fit'
     planning_sampling = ('sample_loadout' if args.loadout_sampling else
                          'sample_garrison_sites' if args.garrison_site_sampling else None)
     paired_policy = planning_sampling or args.defense_neighbors or args.battle_neighbors in (
-        'firebomb-line', 'cast-sampling', 'early-first-cast', 'retest-fit')
+        'firebomb-line', 'police-line', 'cast-sampling', 'early-first-cast', 'retest-fit')
     repeat_pair = args.placement_neighbors or battle_target is not None or paired_policy or learn_targets
     copies=args.copies
     cross_fit = learn_targets and args.generations == 3
@@ -1535,10 +1556,10 @@ def main():
         elif learn_targets:
             train_mode = proposal.get('cast_target_mode', 'sample') if learn_tools else 'sample'
             training_parent = dict(proposal, sample_battle=True, cast_target_mode=train_mode)
-        elif compare_line:
+        elif line_flag:
             endpoint = dict(proposal)
-            endpoint.pop('firebomb_line_targeting', None)
-            policy_arms = (endpoint, dict(endpoint, firebomb_line_targeting=True))
+            endpoint.pop(line_flag, None)
+            policy_arms = (endpoint, dict(endpoint, **{line_flag: True}))
         elif args.battle_neighbors == 'early-first-cast':
             standard = dict(proposal)
             standard.pop('opening_cast_bias', None)
@@ -1832,22 +1853,24 @@ def main():
                         population[-2:] = pair
                         require_fresh.update(team_id(team) for team in pair)
             # Frozen arms on fresh boards. The game chooses its own outbreak seeds.
-            distinct=[archive[k] for k in ranked if archive[k]!=prior and
-                      (args.allow_progression or prior is None or
-                       fitness.prefix_id(archive[k],1)!=fitness.prefix_id(prior,1))]
-            qualified=[t for t in distinct if fitness.promote(evidence,t,prior) is t]
+            matched_reference = args.battle_neighbors in ('early-first-cast', 'police-line')
+            reference = policy_arms[0] if matched_reference else prior
+            distinct=[archive[k] for k in ranked if archive[k]!=reference and
+                      (args.allow_progression or reference is None or
+                       fitness.prefix_id(archive[k],1)!=fitness.prefix_id(reference,1))]
+            qualified=[t for t in distinct if fitness.promote(evidence,t,reference) is t]
             if args.qualified_holdout_only and not qualified:
                 print('Reserved evaluation deferred: no discovery policy qualified', flush=True)
                 return
             challenger=next(iter(qualified or distinct),leader)
-            stage=next((i for i in range(1,6 if args.allow_progression else 2) if prior is None or
-                        fitness.prefix_id(challenger,i)!=fitness.prefix_id(prior,i)),1)
+            stage=next((i for i in range(1,6 if args.allow_progression else 2) if reference is None or
+                        fitness.prefix_id(challenger,i)!=fitness.prefix_id(reference,i)),1)
             pairs = len(holdout_copies)//2
             waves = (6+pairs-1)//pairs if challenger in qualified else 1
             seed = args.seed+(args.generations+1)*len(copies)
             evaluation=[]
             for wave in range(waves):
-                jobs,arms = holdout_assignments(holdout_copies,weights,challenger,prior,seed,wave)
+                jobs,arms = holdout_assignments(holdout_copies,weights,challenger,reference,seed,wave)
                 for job,_,result in completed_rollouts(pool,jobs,allow_progression=args.allow_progression,
                                                        capture_shadow=args.capture_shadow, click_start=args.click_start):
                     result.update(arm=arms[job[0]],team_id=team_id(job[2]) if job[2] else 'control',
@@ -1856,11 +1879,15 @@ def main():
                     evaluation.append(result)
                     with (directory/'holdout.jsonl').open('a') as f:
                         f.write(json.dumps(result)+'\n')
+                if args.qualified_holdout_only and fitness.holdout_samples(
+                        evaluation, stage, discovery_seeds=discovery_seeds) is None:
+                    print('Reserve evaluation ended after an ineligible comparison wave; records retained', flush=True)
+                    break
             if challenger in qualified and fitness.holdout_passed(
                     evaluation, pairs*waves, stage, discovery_seeds=discovery_seeds):
                 stages=[fitness.stats(evidence,challenger,i) for i in range(1,6)]
                 record=dict(team_id=team_id(challenger),team=challenger,base=base,generation=generation,
-                            trials=stages[0]['starts'],fresh_stages=stages,holdout_stage=stage,holdout_opponent=team_id(prior) if prior else 'gru')
+                            trials=stages[0]['starts'],fresh_stages=stages,holdout_stage=stage,holdout_opponent=team_id(reference) if reference else 'gru')
                 temp=directory/'champion.tmp'
                 temp.write_text(json.dumps(record))
                 temp.replace(directory/'champion.json')

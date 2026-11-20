@@ -325,6 +325,25 @@ class StateTests(unittest.TestCase):
             path.write_text('\n'.join(map(json.dumps, rows[:2] + rows[3:])))
             self.assertIsNone(env_zar.read_session(path, 100)['ready_stats'])
 
+    def test_ready_skill_points_use_last_native_pre_ready_loadout_receipt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'episode.jsonl'
+            header = dict(ev='header', wall=100, session=dict(sp_unspent=2))
+            ready = {'ev': 'phase', 'from': 'planning', 'to': 'playing', 'reason': 'ready',
+                     'stats': {'money': 1815}}
+            first = dict(ev='loadout', phase='planning', sp_unspent=0)
+            latest = dict(ev='loadout', phase='planning', sp_unspent=1)
+            late = dict(ev='loadout', phase='playing', sp_unspent=2)
+
+            def recorded(rows):
+                path.write_text('\n'.join(map(json.dumps, rows)))
+                return env_zar.read_session(path, 100, expected_wall=100)['ready_loadout_sp']
+
+            self.assertEqual(recorded([header, first, latest, ready, late]), 1)
+            self.assertIsNone(recorded([header, ready, late]))
+            self.assertIsNone(recorded([header, first, dict(latest, sp_unspent=-1), ready]))
+            self.assertIsNone(recorded([header, first, latest]))
+
     def test_retry_evidence_requires_a_fresh_official_snapshot(self):
         env = env_zar.ZAREnv.__new__(env_zar.ZAREnv)
         env.log_started = env.log_header_wall = 100
