@@ -1,6 +1,13 @@
 # ZAR Tracker (live state â€” update EVERY run; guidance lives in ../AGENTS.md)
 
 ## CURRENT STATE (2026-11-18 — campaign search and crowd-forecast comparison)
+- 2026-11-19 19:42 Central. Queued private six-copy PPO missile-credit
+  comparison 140952 behind production seed 140851 (handoff PID 64432).
+  Both arms start from identical schema-4 checkpoint and Adam state, use
+  fresh boards without saved-layout replay and differ only in the impact
+  reward. Two train rounds and four frozen evaluation rounds. Objective:
+  three ten-game held-out L1 blocks averaging at least 35% official saved
+  each, with qualification rate and incomplete outcomes reported.
 - 2026-11-19 19:10 Central. Controlled shadow comparison 138952 completed
   all 18 fresh L1 scores and joined 54/54 native missile impacts across
   6,785 transitions. Control 3/6 qualifying, timing 2/6, targeting 0/6.
