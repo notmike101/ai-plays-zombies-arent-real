@@ -2,6 +2,38 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Seed 174952 started at 06:20 Central on D:, portable trainer PID
+  71516, output `analysis/coverage-team-56e293130a`, and log
+  `analysis/coverage-layout-free-174952-drive-d.log`. Headroom was
+  12.90 GiB RAM and 18.90 GiB disk. Commit df9024f adds two controlled
+  placement-preference neighbors for the selected cast policy. It replaces
+  one unequipped preference with one of the distinct tools shared by
+  the four starting rosters, holding all other weights fixed. Current
+  alternatives are Oil and Spikes. Both variants and both controls move
+  to different owned copies in wave two. The game selects native
+  outbreaks and the model retains the normal legal, budget and
+  targeting decisions. The native starting roster is logged at boot.
+  A fixture verified both waves and their rotation. All 275 script
+  tests passed. Production hash matched.
+- A read-only audit found 122 distinct scored policy/outbreak pairs
+  with verified READY and no layout replay. Garrison was the only
+  building with a confirmed purchase. ChemMine appeared in 240 planning
+  preference entries across those rows but is absent from all four
+  current discovery rosters. All recorded initial sheltered fractions
+  were below 30%, and there were zero 35% outcomes. Tool preferences
+  and model selections are distinct from native placement receipts.
+- Seed 173952 finished at 06:19 with three native clears below 35%,
+  five scored early retries, and no reserved evaluation. Both first-wave
+  cast neighbors started with 21 Garrisons and cleared at 13.53% and
+  12.70%. The learned reference started with 21 and retried at 9.46%.
+  The selected neighbor 0c63192f22089b99 cleared at 26.93% on outbreak
+  852714485 with 21 Garrisons, six Paratrooper deployments, a Firebomb,
+  and first occupied breach at 63.10 sim seconds. It retried at 7.95%
+  on outbreak 1222059323, the same seed as the 9.46% reference retry.
+  Its mean across three distinct discovery outbreaks is 16.14%.
+  The other two second-wave neighbors retried at 7.91% and 8.77%.
+  Observed survival gains did not reproduce across outbreaks.
+
 - D: storage audit at 06:04 Central found about 18.9 GiB free. Consolidated
   84 identical immutable search bases from 11 physical files to one,
   removing 123,906,770 bytes of duplicate checkpoint storage. All
