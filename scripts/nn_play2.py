@@ -541,6 +541,8 @@ def exploration_distribution(ranked, legal, fraction):
 
 
 ZONE_PLACEMENT_TOOLS = {TOOLS.index(name) for name in ('zone_rect', 'zone_begin', 'zone_corner')}
+ZONE_RECT_U = TOOLS.index('zone_rect')
+ZONE_PROBE_LIMIT = 24
 
 
 def battle_cast_choice(st, tool_mask):
@@ -586,6 +588,31 @@ def boundary_removed_probability(tool_logits, cell_logits, tool_mask, rejected):
     cells = selected.masked_fill(~torch.as_tensor(np.stack(references)), -1e9).softmax(dim=-1)
     cell_mass = (cells * torch.as_tensor(np.stack(outside))).sum(dim=-1)
     return float((tool_probabilities * cell_mass).sum())
+
+
+def zone_probe_row(net, cell_logits, tool, mask, decision, money, st, width, height, cell):
+    """Bounded counterfactual receipt for one naturally-selected unanchored
+    zone_rect decision: final effective cell logits, the actual legal mask
+    and selection, and the lookahead gain vector replayed through the
+    production float32 operation order from the same native snapshot. Pure
+    scoring: no forward pass, no RNG, no policy or plan-index mutation.
+    """
+    gain, counterfactual = net.zone_lookahead_counterfactual(st, width, height)
+    replay = cell_logits.clone()
+    replay.reshape(-1, NU, NC)[0, tool] = counterfactual
+    def ranked(logits):
+        probs = cell_distribution(logits, tool, mask).probs
+        best = int(probs.argmax())
+        return best, int((probs == probs[best]).sum())
+    actual_cell, actual_ties = ranked(cell_logits)
+    counter_cell, counter_ties = ranked(replay)
+    return dict(step=decision, tool=int(tool), cell=int(cell),
+                legal=[int(value) for value in np.flatnonzero(np.asarray(mask))],
+                money=float(money or 0.), gain=gain.tolist(),
+                actual_logits=cell_logits.reshape(-1, NU, NC)[0, tool].tolist(),
+                lookahead_logits=counterfactual.tolist(),
+                actual_argmax=actual_cell, actual_ties=actual_ties,
+                lookahead_argmax=counter_cell, lookahead_ties=counter_ties)
 
 
 def ready_once(env):
@@ -1003,6 +1030,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             battle_actions['alternate_target_audit'] = dict(compared=0, different_argmax=0)
         if options.get('audit_cast_tools'):
             battle_actions['alternate_tool_audit'] = dict(compared=0, distance_sum=0.)
+        if options.get('zone_lookahead_probe'):
+            battle_actions['zone_lookahead'] = []
+            battle_actions['zone_lookahead_truncated'] = 0
         legal_casts = {}
         selected_casts = {}
         selected_placements = {}
@@ -1163,6 +1193,13 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         net.set_zone_population(st, mu, mc, env.cw, env.ch)
                     if getattr(net,'special_probe',0.):
                         net.set_special_probe(st,env.cw,env.ch)
+                    if hasattr(net, 'zone_probe'):
+                        net.zone_probe = ({'legal_cells': cell_mask(st, ZONE_RECT_U, mc)}
+                                          if options.get('zone_lookahead_probe')
+                                          and st['planning'] and mu[ZONE_RECT_U]
+                                          and getattr(net, 'zone_population_weight', 0.)
+                                          and not st.get('anchor')
+                                          and not st.get('gesture_anchor') else None)
                     lu, lc, _, h = net(x, h)
                     du = tool_distribution(lu.flatten(), mu, temperature=tool_temperature)
                     if rejected_boundary:
@@ -1219,6 +1256,18 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         c = select_policy_cell(dc, greedy, cell_rng)
                     if ranked_garrison is not None and options.get('collect_garrison_gradient'):
                         net.record_garrison_gradient(c, ranked_garrison, dc.probs)
+                    probe = getattr(net, 'zone_probe', None)
+                    if probe:
+                        receipts = battle_actions.get('zone_lookahead')
+                        if (receipts is not None and u == ZONE_RECT_U and st['planning']
+                                and not st.get('anchor') and 'pre_zone_logits' in probe):
+                            if len(receipts) < ZONE_PROBE_LIMIT:
+                                receipts.append(zone_probe_row(
+                                    net, lc, u, mc, len(rows['obs']), o['money'], st,
+                                    env.cw, env.ch, c))
+                            else:
+                                battle_actions['zone_lookahead_truncated'] += 1
+                        net.zone_probe = None
                     if options.get('audit_cast_targets') and not st['planning'] and u in U2ABILITY:
                         audit = battle_actions['alternate_target_audit']
                         audit['compared'] += 1

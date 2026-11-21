@@ -603,6 +603,49 @@ def shelter_cast_pair(defenders, evidence, rng):
     return None
 
 
+def zone_population_scores(native, legal, anchor_cell, width, height, lookahead):
+    """Shared float32 corner scoring for safe-zone population coverage.
+
+    An anchored decision scores the exact (anchor, cell) rectangles; an
+    unanchored decision credits each corner, only when lookahead is
+    enabled, with the best gain of any complete legal pair through it.
+    Returns (scores, civilians) with float32 scores; production scoring and
+    probe replay share this function so counterfactual candidates match
+    bit-for-bit.
+    """
+    scores = np.zeros(tr.NC, dtype=np.float32)
+    units = native['units']
+    civilians = units['pos'][units['kind'] == 0]
+    if not len(civilians):
+        return scores, 0
+    points = project(civilians, native['camera'], width, height)
+    sheltered = np.zeros(len(civilians), dtype=bool)
+    for zone in native['zones']:
+        if len(zone) >= 3:
+            sheltered |= tr.inside_polygon(civilians, zone)
+    eligible = points[~sheltered]
+    if anchor_cell is not None:
+        pairs = ((anchor_cell, end) for end in legal)
+    elif lookahead:
+        legal_corners = set(legal)
+        pairs = ((a, b) for a, b in combinations(legal, 2)
+                 if a // 8 != b // 8 and a % 8 != b % 8
+                 and a // 8 * 8 + b % 8 in legal_corners
+                 and b // 8 * 8 + a % 8 in legal_corners)
+    else:
+        return scores, len(civilians)
+    for first, second in pairs:
+        start = tr.cell_of_px(first, width, height)
+        end = tr.cell_of_px(second, width, height)
+        low, high = np.minimum(start, end), np.maximum(start, end)
+        inside = ((eligible >= low) & (eligible <= high)).all(axis=1)
+        gain = np.count_nonzero(inside) / len(civilians)
+        scores[second] = max(scores[second], gain)
+        if anchor_cell is None:
+            scores[first] = max(scores[first], gain)
+    return scores, len(civilians)
+
+
 class TeamPolicy(tr.PolicyNet2):
     def __init__(self, team, forecast=None, *, collect_cast_gradients=False,
                  collect_cast_tool_gradients=False, alternate_team=None):
@@ -635,6 +678,7 @@ class TeamPolicy(tr.PolicyNet2):
         self.garrison_gradient_choices = 0
         self.zone_population_weight = team.get('zone_population', 0.)
         self.zone_anchor_lookahead = team.get('zone_anchor_lookahead', False)
+        self.zone_probe = None
         self.zone_population_cells = torch.zeros(tr.NC)
         self.shelter_defense = team.get('shelter_defense',0.)
         self.missile_reserve = team.get('missile_reserve',0.)
@@ -809,36 +853,26 @@ class TeamPolicy(tr.PolicyNet2):
             return
         if (anchor and anchor[0] != ZONE_RECT) or (not anchor and not self.zone_anchor_lookahead):
             return
-        units = native['units']
-        civilians = units['pos'][units['kind'] == 0]
-        if not len(civilians):
-            return
-        points = project(civilians, native['camera'], width, height)
-        sheltered = np.zeros(len(civilians), dtype=bool)
-        for zone in native['zones']:
-            if len(zone) >= 3:
-                sheltered |= tr.inside_polygon(civilians, zone)
-        eligible = points[~sheltered]
         legal = np.flatnonzero(tr.cell_mask(st, ZONE_RECT, cells))
-        if anchor:
-            pairs = ((anchor[1], end) for end in legal)
-        else:
-            legal_corners = set(legal)
-            pairs = ((a, b) for a, b in combinations(legal, 2)
-                     if a // 8 != b // 8 and a % 8 != b % 8
-                     and a // 8 * 8 + b % 8 in legal_corners
-                     and b // 8 * 8 + a % 8 in legal_corners)
-        scores = np.zeros(tr.NC, dtype=np.float32)
-        for first, second in pairs:
-            start = tr.cell_of_px(first, width, height)
-            end = tr.cell_of_px(second, width, height)
-            low, high = np.minimum(start, end), np.maximum(start, end)
-            inside = ((eligible >= low) & (eligible <= high)).all(axis=1)
-            gain = np.count_nonzero(inside) / len(civilians)
-            scores[second] = max(scores[second], gain)
-            if not anchor:
-                scores[first] = max(scores[first], gain)
+        scores, _ = zone_population_scores(
+            native, legal, None if anchor is None else anchor[1], width, height,
+            self.zone_anchor_lookahead)
         self.zone_population_cells.copy_(torch.from_numpy(scores))
+
+    def zone_lookahead_counterfactual(self, st, width, height):
+        """Lookahead candidate logits on the same native snapshot the probed
+        forward just scored, replaying the production float32 operation
+        order (zone bias, then plan grid term, then distance) from the
+        stashed pre-bias logits. Pure scoring: no forward pass, no plan
+        index mutation, no RNG.
+        """
+        probe = self.zone_probe
+        legal = np.flatnonzero(np.asarray(probe['legal_cells']))
+        scores, _ = zone_population_scores(st['native'], legal, None, width, height, True)
+        logits = probe['pre_zone_logits'] + self.zone_population_weight * torch.from_numpy(scores)
+        if 'plan_grid' in probe:
+            logits = logits + probe['plan_grid'] - probe['plan_distance']
+        return scores, logits
 
     def set_special_probe(self, st, width, height):
         self.special_tools = []
@@ -875,6 +909,9 @@ class TeamPolicy(tr.PolicyNet2):
         grid = x[0,0,GRID_START:GRID_START+5*tr.NC].reshape(5,tr.NC)
         cells = cells.reshape(tr.NU,tr.NC)
         if x[0,0,tr.PLANNING_INDEX]:
+            probe = self.zone_probe
+            if probe is not None:
+                probe['pre_zone_logits'] = cells[ZONE_RECT].clone()
             if self.garrison_coverage_weight:
                 cells[GARRISON] += self.garrison_coverage_weight * self.garrison_coverage_cells
             if self.zone_population_weight:
@@ -888,7 +925,10 @@ class TeamPolicy(tr.PolicyNet2):
                 tools[..., g['tool']] += 7
                 px, py = (g['x']+t*g['dx'])%8, (g['y']+t*g['dy'])%5
                 distance = (self.coords%8-px).abs()+(self.coords//8-py).abs()
-                cells = cells + torch.tensor(g['weights']) @ grid - distance
+                plan = torch.tensor(g['weights']) @ grid
+                if probe is not None:
+                    probe.update(plan_grid=plan, plan_distance=distance)
+                cells = cells + plan - distance
                 if not self.team.get('keep_plan_through_gestures') or (
                     x[0,0,GEOMETRY_ANCHOR] < 0 and x[0,0,GESTURE_ANCHOR] < 0
                     and not x[0,0,MODAL_DIALOG]
@@ -961,7 +1001,8 @@ def score(row, *, goal_margin=False):
 def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, observer_interval=.2,
             practice_retry=False, allow_progression=False, capture_shadow=False, fixed_speed=None,
             fast_boot=False, click_start=False, goal_margin=False, collect_cast_gradients=False,
-            collect_cast_tool_gradients=False, alternate_team=None, collect_garrison_gradient=False):
+            collect_cast_tool_gradients=False, alternate_team=None, collect_garrison_gradient=False,
+            zone_lookahead_probe=False):
     timing = {'started': monotonic()}
     if start_stage>1 and not allow_progression:
         raise ValueError('Later-stage starts require explicit campaign progression')
@@ -1039,6 +1080,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
             if fixed_speed:options['fixed_speed']=fixed_speed
             if collect_cast_gradients:options['collect_cast_gradients']=True
             if collect_cast_tool_gradients:options['collect_cast_tool_gradients']=True
+            if zone_lookahead_probe:options['zone_lookahead_probe']=True
             if alternate_team is not None:
                 options['audit_cast_targets'] = alternate_team['battle'] != active['battle']
                 options['audit_cast_tools'] = alternate_team['cast_bias'] != active['cast_bias']
@@ -1325,7 +1367,7 @@ def shadow_variants(champion):
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False,
                        capture_shadow=False, speeds=None, fast_boot=False, click_start=False, goal_margin=False,
                        collect_cast_gradients=False, collect_cast_tool_gradients=False, alternate_teams=None,
-                       collect_garrison_gradient=False):
+                       collect_garrison_gradient=False, zone_lookahead_probe=False):
     if jobs:
         operator.require_resource_headroom(len(jobs))
     if starts is None:starts=[1]*len(jobs)
@@ -1338,6 +1380,7 @@ def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_
                          goal_margin=goal_margin, collect_cast_gradients=collect_cast_gradients,
                          collect_cast_tool_gradients=collect_cast_tool_gradients,
                          collect_garrison_gradient=collect_garrison_gradient,
+                         zone_lookahead_probe=zone_lookahead_probe,
                          alternate_team=(alternate_teams or {}).get(job[0]),
                          fixed_speed=speeds[job[0]] if speeds else None):(job,stage)
              for job,stage in zip(jobs,starts,strict=True)}
