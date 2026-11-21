@@ -901,6 +901,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         ready_delay_cost = options.get('ready_delay_cost')
         snapped_cast_attempts = settled_cast_attempts = 0
         planning_zone_audit = options.get('planning_zone_audit', False)
+        ready_trace = [] if signal_mode and planning_zone_audit and net is not None else None
         if planning_zone_audit:
             rows['planning_action_windows'] = []
             rows['first_legal_cast_sim'] = {}
@@ -1126,6 +1127,17 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         observer.publish(probabilities={'hu': du.probs, 'hc': cp.flatten()},
                                          selected={'hu': u, 'hc': u*NC+c},
                                          phase='planning' if st['planning'] else 'battle')
+            if ready_trace is not None and st['planning']:
+                native = st.get('native', {})
+                legal_tools = np.flatnonzero(mu).tolist()
+                probabilities = du.probs.tolist()
+                ready_trace.append(dict(
+                    decision=len(rows['obs']), ready_legal=bool(mu[1]),
+                    tool=u, cell=c, money=float(o['money']),
+                    closed_zones=len(native.get('zones', ())),
+                    draft_vertices=len(native.get('selection', {}).get('polygon', ())),
+                    pending_gesture=bool(st.get('anchor') or st.get('gesture_anchor')),
+                    legal_tools=legal_tools, probabilities=[probabilities[i] for i in legal_tools]))
             if (signal_mode or ready_delay_cost is not None) and st['planning'] and mu[1]:
                 ready_legal_steps += 1
                 ready_probability_sum += float(du.probs[1]) if net is not None else 1. / np.count_nonzero(mu)
@@ -1534,6 +1546,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 legal_steps=ready_legal_steps, declined_steps=len(ready_declined_steps), ready_step=ready_step,
                 blocked_steps=planning_steps - ready_legal_steps,
                 mean_probability=ready_probability_sum / ready_legal_steps if ready_legal_steps else None)
+            if ready_trace is not None:
+                rows['ready_choices']['preparation_trace'] = ready_trace
             coverage = verified_ready_coverage(footer, ready_step, rows['rews'])
             battle_steps = len(rows['obs']) - planning_steps
             rows['experiment_signal'] = dict(

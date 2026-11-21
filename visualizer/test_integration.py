@@ -115,6 +115,8 @@ class IntegrationTests(unittest.TestCase):
         game.roster = lambda: ['Police', *(['-'] * 6)]
         game.loadout_levels = lambda: {'Police': 1}
         game.battle_stock = lambda: {'Police': 1}
+        original_scalar = game.scalar
+        game.scalar = lambda rva, fmt: 0 if rva == 0x665160 else original_scalar(rva, fmt)
         source = self.globals
         width = len(source['OPENING_TIMING_LABELS'])
         captured = []
@@ -127,18 +129,37 @@ class IntegrationTests(unittest.TestCase):
                 captured.append(x.detach().clone())
                 return super().forward(x, h)
 
-        overrides = dict(Observer=None, PLAN_STEPS=1, BATTLE_T=.1, Mechanics=FakeMechanics,
-                         load_bind_keys=lambda env: ['1'], time=FakeClock(game))
+        class AuditedMechanics(FakeMechanics):
+            def refresh(self, st):
+                super().refresh(st)
+                if st['planning']:
+                    st['native'] = {'paint': {'kind': torch.empty(0).numpy()}, 'selection': {'polygon': []}}
+                else:
+                    st.pop('native', None)
+
+        clock = FakeClock(game)
+        clock.time_ns = lambda: int(clock.now * 1e9)
+        overrides = dict(Observer=None, PLAN_STEPS=1, BATTLE_T=.1, Mechanics=AuditedMechanics,
+                         load_bind_keys=lambda env: ['1'], time=clock,
+                         extra_masks=lambda st: torch.zeros(source['NU'] - 72, source['NC']).numpy(),
+                         embedded_defenses=lambda native: {}, preparation_counts=lambda native: {},
+                         preparation_fingerprint=lambda native: 'fixture')
         with patch.dict(source, overrides), patch.dict(sys.modules, {
                 'env_zar': SimpleNamespace(ZAREnv=lambda pid: game, ZAREnvError=RuntimeError)}):
             with patch.object(torch.distributions.Categorical, 'sample',
                               side_effect=[torch.tensor(v) for v in (1, 0, 0, 0)]):
                 model = OpeningPolicy()
                 result = self.run_episode((-1, model.state_dict(), False, 'opening-timing',
-                                           dict(opening_timing_input=True, experiment_signal='receipts')),
+                                           dict(opening_timing_input=True, experiment_signal='receipts',
+                                                planning_zone_audit=True)),
                                           policy_factory=OpeningPolicy)
         self.assertNotIn('err', result)
         self.assertTrue(result['experiment_signal']['receipts']['opening_timing_input'])
+        trace, = result['ready_choices']['preparation_trace']
+        self.assertEqual((trace['decision'], trace['ready_legal'], trace['tool']), (0, True, 1))
+        self.assertAlmostEqual(sum(trace['probabilities']), 1., places=6)
+        self.assertAlmostEqual(trace['probabilities'][trace['legal_tools'].index(1)],
+                               result['ready_choices']['mean_probability'])
         self.assertEqual(result['opening_ready_preview'], {'Police': {'unlock_scaled': 0., 'delay_scaled': 8/60}})
         torch.testing.assert_close(captured[0][0, 0, -width:][:3], torch.tensor([1., 0., 8/60]))
         self.assertFalse(captured[1][..., -width:].any())
