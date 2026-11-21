@@ -144,6 +144,21 @@ placement and occupancy at READY. Retain rejected outside-playarea tool and
 cell counts alongside reward components. Use the game receipts and frozen official
 outcomes to assess whether the model learned to build useful shelters.
 
+## Battle boundary filtering
+
+`--compare-battle-boundary` evaluates the existing native polygon filter
+before sampling battle click, drag and ability targets. Both arms retain the
+final dispatch guard, planning rules, rewards and evaluation criteria. The
+candidate masks the known rejected cells. The control uses the existing
+behavior and measures the same potential exclusions.
+
+The journal reports the reference policy's joint tool-and-cell probability
+on cells that the filter would remove, holding the forward outputs and other
+masks fixed. A positive value in the control measures exposure. A positive
+value in the candidate verifies that its sampling support changed. Actual
+outside rejections are recorded by battle tool and cell, separately from
+confirmed deployments and official survival.
+
 ## Examples from completed runs
 
 - Shelter-defense study 198952 had no occupied breach in any valid training

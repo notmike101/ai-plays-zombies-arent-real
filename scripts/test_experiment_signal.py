@@ -14,6 +14,7 @@ class SignalTests(unittest.TestCase):
                     shelter_duration_rate_by_arm={'reference': 0., 'candidate': .01},
                     shelter_input_by_arm={'reference': False, 'candidate': True},
                     shelter_geometry_by_arm={'reference': False, 'candidate': True},
+                    battle_boundary_by_arm={'reference': False, 'candidate': True},
                     ready_delay_cost_by_arm={'reference': 0., 'candidate': .002})
 
     def report(self, kind, rows, *, complete=0):
@@ -107,6 +108,14 @@ class SignalTests(unittest.TestCase):
         self.assertEqual(report['advisory'], 'treatment_observed')
         self.assertAlmostEqual(report['arms']['candidate']['reward_difference_sum'], .04)
         self.assertEqual(report['outcome_evidence'], 'insufficient_independent_natural_finishes')
+
+    def test_boundary_audit_distinguishes_candidate_filter_from_reference_measurement(self):
+        rows = self.rows({'battle_boundary': True}, {})
+        report = self.report('battle_boundary', rows)
+        self.assertEqual(report['advisory'], 'treatment_observed')
+        self.assertEqual(report['arms']['reference']['mechanism_episodes'], 4)
+        self.assertEqual(report['arms']['reference']['treatment_episodes'], 0)
+        self.assertEqual(report['arms']['candidate']['treatment_episodes'], 4)
 
     def test_geometry_observation_differs_only_in_the_visible_arm(self):
         rows = self.rows({'shelter_geometry_input': False}, {})

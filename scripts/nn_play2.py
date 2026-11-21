@@ -342,6 +342,17 @@ def battle_geometry_masks(st, width, height):
     return masks
 
 
+def boundary_rejected_cells(st, geometry, tools, cells):
+    rejected = {}
+    for tool, inside in geometry.items():
+        if tools[tool]:
+            reference = cell_mask(st, tool, cells).astype(bool)
+            outside = reference & ~inside
+            if outside.any():
+                rejected[tool] = (reference, outside)
+    return rejected
+
+
 def update_geometry_masks(st, width, height, *, placement_feedback, planning_audit, battle_audit=False):
     if st['planning'] and (placement_feedback or planning_audit):
         st['geometry_cells'] = planning_geometry_masks(st, width, height)
@@ -495,6 +506,19 @@ def cell_distribution(logits, tool, mask, *, temperature=None):
         selected = selected / torch.as_tensor(temperature, dtype=selected.dtype).reshape(-1, 1)
     selected = selected.masked_fill(torch.as_tensor(mask) == 0, -1e9)
     return torch.distributions.Categorical(logits=selected.squeeze(0) if len(tools) == 1 else selected)
+
+
+def boundary_removed_probability(tool_logits, cell_logits, tool_mask, rejected):
+    """Joint probability the reference policy assigns to known rejected actions."""
+    tools = [tool for tool in rejected if tool_mask[tool]]
+    if not tools:
+        return 0.
+    references, outside = zip(*(rejected[tool] for tool in tools))
+    tool_probabilities = tool_distribution(tool_logits, tool_mask).probs[tools]
+    selected = cell_logits.reshape(NU, NC)[tools]
+    cells = selected.masked_fill(~torch.as_tensor(np.stack(references)), -1e9).softmax(dim=-1)
+    cell_mass = (cells * torch.as_tensor(np.stack(outside))).sum(dim=-1)
+    return float((tool_probabilities * cell_mass).sum())
 
 
 def ready_once(env):
@@ -880,6 +904,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                           map=session.get('map'), board=board_id, tools=TOOLS)
         outside_actions = 0
         outside_targets = {}
+        battle_outside_targets = {}
+        battle_boundary_filter = options.get('battle_boundary_filter')
+        boundary_checks = boundary_affected = 0
+        boundary_removed = 0.
         special_activations = {}
         picker_rejections = {}
         picker_retry_at = {}
@@ -944,6 +972,15 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                                   planning_audit=planning_zone_audit,
                                   battle_audit=signal_mode in ('battle_tools', 'target_settle', 'ready_delay'))
             mu, mc = masks_for(st)
+            rejected_boundary = {}
+            if battle_boundary_filter is not None and not st['planning'] and st.get('playarea_boundary') is not None:
+                reference_tools = mu.copy()
+                geometry = battle_geometry_masks(st, env.cw, env.ch)
+                rejected_boundary = boundary_rejected_cells(st, geometry, reference_tools, mc)
+                boundary_checks += 1
+                if battle_boundary_filter:
+                    st['geometry_cells'] = geometry
+                    mu, mc = masks_for(st)
             if debt_cancel_retry is not None:
                 balance, deadline = debt_cancel_retry
                 if (len(rows['obs']) < deadline and o['money'] == balance
@@ -990,6 +1027,15 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         net.set_special_probe(st,env.cw,env.ch)
                     lu, lc, _, h = net(x, h)
                     du = tool_distribution(lu.flatten(), mu, temperature=tool_temperature)
+                    if rejected_boundary:
+                        if fixed_speed:
+                            for name in SPEED_TICKS:
+                                reference_tools[TOOLS.index(name)] = 0
+                        if options.get('fixed_clock'):
+                            reference_tools[TOOLS.index('pause_toggle')] = 0
+                        probability = boundary_removed_probability(lu.flatten(), lc, reference_tools, rejected_boundary)
+                        boundary_removed += probability
+                        boundary_affected += int(probability > 0.)
                     u = int(du.probs.argmax() if greedy else du.sample())
                     if (loadout_rng is not None and greedy and st['planning']
                             and BUY_TOOLS.start <= u < BUY_TOOLS.stop
@@ -1109,6 +1155,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 st['outside_retries'].setdefault(u,set()).add(c)
                 target = f'{TOOLS[u]}/{c+1}'
                 outside_targets[target] = outside_targets.get(target,0)+1
+                if battle_boundary_filter is not None and not st['planning']:
+                    battle_outside_targets[target] = battle_outside_targets.get(target, 0) + 1
             elif u in PLACEMENTS:
                 cx,cy=cell_of_px(c,env.cw,env.ch)
                 if u in BUILDING_PLACEMENTS:
@@ -1438,6 +1486,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     occupied_duration=bool(shelter.occupant_seconds) if shelter.duration_intervals else None,
                     shelter_occupancy_input=bool(shelter_occupancy_peak) if shelter_occupancy_peak is not None else None,
                     shelter_geometry_input=bool(shelter_geometry_peak) if shelter_geometry_peak is not None else None,
+                    battle_boundary=bool(boundary_affected) if boundary_checks else None,
                     occupied_ready=coverage > 0 if coverage is not None else None,
                     below_ready_target=coverage < READY_COVERAGE_SHORTFALL_TARGET if coverage is not None else None,
                     missile_civilian_loss=missile_losses['confirmed'] > 0 if missile_losses is not None else None,
@@ -1449,6 +1498,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     legal_ready_declined=bool(ready_declined_steps)),
                 shelter_occupancy_peak=shelter_occupancy_peak,
                 shelter_geometry_peak=shelter_geometry_peak, geometry_anchored_decisions=geometry_anchored,
+                battle_boundary=dict(sampled=boundary_checks, affected=boundary_affected,
+                                     reference_rejected_probability_sum=boundary_removed,
+                                     battle_rejections=battle_outside_targets)
+                    if battle_boundary_filter is not None else None,
                 reward_components=rewards.copy(),
                 reward_bases=dict(
                     occupied_breach=-shelter.breach_exposures / civ0 if shelter.next_sample else None,

@@ -91,6 +91,63 @@ class StateTests(unittest.TestCase):
         self.assertAlmostEqual(gain[9], 1 / 3)
         self.assertFalse(train.shelter_rectangle_gain(st, width, height, allowed & False).any())
 
+    def test_boundary_pair_uses_the_same_policy_setup_except_filter(self):
+        import compare_spatial as comp
+        with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \
+                patch.object(comp.zar_boot, 'stop'), patch.object(train, 'run_episode') as run:
+            for training in (True, False):
+                controls = []
+                for arm, filter_enabled in comp.BATTLE_BOUNDARY_BY_ARM.items():
+                    comp.episode(('inst13', arm, {}, 123, 'test', training))
+                    options = run.call_args.args[0][4].copy()
+                    self.assertEqual(options.pop('battle_boundary_filter'), filter_enabled)
+                    self.assertIs(run.call_args.kwargs['policy_factory'], train.PolicyNet2)
+                    controls.append(options)
+                self.assertEqual(*controls)
+
+    def test_boundary_filter_uses_snapped_demolition_targets_then_checks_the_endpoint(self):
+        import numpy as np
+
+        tool = train.TOOLS.index('demolition')
+        targets = [None] * train.NC
+        targets[0] = (1000, 200)
+        targets[7] = (300, 200)
+        st = dict(planning=False, playarea_boundary=[(0, 0), (500, 0), (500, 1000), (0, 1000)],
+                  sim=60, battle_targets={tool: targets},
+                  deck=[dict(name='Demolition', key='1', charges=1, unlock=0, pending=False)])
+        start = train.battle_geometry_masks(st, 1920, 1200)[tool]
+        self.assertFalse(start[0])
+        self.assertTrue(start[7])
+        self.assertTrue(train.outside_playarea(st, tool, 0, 1920, 1200))
+        self.assertFalse(train.outside_playarea(st, tool, 7, 1920, 1200))
+        st['anchor'] = (tool, 7)
+        completion = train.battle_geometry_masks(st, 1920, 1200)[tool]
+        self.assertTrue(completion[0])
+        self.assertFalse(completion[7])
+        expected = [not train.outside_playarea(st, tool, cell, 1920, 1200) for cell in range(train.NC)]
+        np.testing.assert_array_equal(completion, expected)
+
+    def test_boundary_audit_measures_joint_rejected_mass_without_missing_partial_cells(self):
+        import numpy as np
+        torch = train.torch
+        cast = train.TOOLS.index('firebomb')
+        click = train.TOOLS.index('right_click_world')
+        tools = np.zeros(train.NU, dtype=bool)
+        tools[[0, cast, click]] = True
+        cells = np.zeros(train.NC, dtype=bool)
+        cells[[0, 1]] = True
+        reference = cells.copy()
+        outside = np.zeros(train.NC, dtype=bool)
+        outside[0] = True
+        rejected = {cast: (reference, outside), click: (reference, reference)}
+        value = train.boundary_removed_probability(torch.zeros(train.NU), torch.zeros(train.NU * train.NC),
+                                                   tools, rejected)
+        self.assertAlmostEqual(value, .5)
+        tools[click] = False
+        value = train.boundary_removed_probability(torch.zeros(train.NU), torch.zeros(train.NU * train.NC),
+                                                   tools, rejected)
+        self.assertAlmostEqual(value, .25)
+
     def test_private_ppo_retries_both_arms_after_transient_native_map_change(self):
         from compare_spatial import collect_pairs
         from unittest.mock import Mock

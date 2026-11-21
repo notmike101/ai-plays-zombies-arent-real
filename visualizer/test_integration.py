@@ -162,6 +162,22 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(inside['reward_components']['outside_playarea'], 0.)
 
     def test_greedy_episode_tries_the_next_target_after_one_rejection(self):
+        result, casts = self.battle_boundary_episode(False)
+        self.assertEqual(result['outside_targets'], {'missile/8': 1})
+        self.assertEqual(result['cs'][1:3], [7, 0])
+        self.assertEqual(len(casts), 1)
+
+    def test_battle_boundary_filter_prevents_the_same_rejected_choice(self):
+        result, casts = self.battle_boundary_episode(True)
+        self.assertEqual(result['outside_targets'], {})
+        self.assertEqual(result['cs'][1], 0)
+        self.assertEqual(len(casts), 1)
+        signal = result['experiment_signal']
+        self.assertTrue(signal['receipts']['battle_boundary'])
+        self.assertGreater(signal['battle_boundary']['reference_rejected_probability_sum'], .9)
+        self.assertEqual(signal['battle_boundary']['battle_rejections'], {})
+
+    def battle_boundary_episode(self, enable_filter):
         game=FakeGame(-1)
         casts=[]
         game.cast=lambda key,x,y: casts.append((key,x,y))
@@ -188,12 +204,11 @@ class IntegrationTests(unittest.TestCase):
                            dict(name='Missile',key='1',charges=1,unlock=0,arrival=0,pending=False)])
         with patch.dict(source,overrides), patch.dict(sys.modules, {
                 'env_zar':SimpleNamespace(ZAREnv=lambda pid:game,ZAREnvError=RuntimeError)}):
-            result=self.run_episode((-1,self.model.state_dict(),False,'repeat-reject',dict(greedy=True)),
-                                    policy_factory=GreedyPolicy)
-        self.assertNotIn('err',result)
-        self.assertEqual(result['outside_targets'],{'missile/8':1})
-        self.assertEqual(result['cs'][1:3],[7,0])
-        self.assertEqual(len(casts),1)
+            options = dict(greedy=True, battle_boundary_filter=enable_filter, experiment_signal='receipts')
+            result = self.run_episode((-1, self.model.state_dict(), False, 'repeat-reject', options),
+                                      policy_factory=GreedyPolicy)
+        self.assertNotIn('err', result)
+        return result, casts
 
     def test_special_activation_receipts_credit_unique_buildings_and_cap_bonus(self):
         result=self.episode(None,special_receipts=[None,(0,5),(0,5),(1,5),(2,5),(3,5)])

@@ -47,6 +47,7 @@ READY_CREDITS = {'coverage_baseline': 0., 'coverage_credit': .30}
 ZONE_TEMPERATURES = {'zone_baseline': 1., 'zone_exploration': 1.5}
 PLANNING_TEMPERATURES = {'planning_baseline': 1., 'planning_exploration': 1.35}
 BATTLE_TEMPERATURES = {'battle_baseline': 1., 'battle_exploration': 1.5}
+BATTLE_BOUNDARY_BY_ARM = {'boundary_control': False, 'boundary_filtered': True}
 TARGET_SETTLE = {'target_baseline': False, 'target_settle': True}
 READY_DELAY_COSTS = {'ready_delay_baseline': 0., 'ready_delay_cost': .002}
 PLANNING_ENTROPY_BONUSES = {'entropy_baseline': 0., 'planning_entropy': .045}
@@ -83,6 +84,7 @@ def extend_shelter_model(source, optimizer, *, geometry=False):
 def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=False):
     copy, arm, weights, seed, tag, *phase = job
     battle_study = arm in BATTLE_TEMPERATURES
+    boundary_study = arm in BATTLE_BOUNDARY_BY_ARM
     target_study = arm in TARGET_SETTLE
     ready_study = arm in READY_DELAY_COSTS
     duration_study = arm in SHELTER_DURATION_RATES
@@ -95,7 +97,7 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
         env = None
         if (arm in BREACH_COSTS or arm in READY_CREDITS or arm in ZONE_TEMPERATURES
                 or planning_study or arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS
-                or duration_study or input_study):
+                or duration_study or input_study or boundary_study):
             try:
                 env = zar_boot.boot(copy_dir, welcome_wait=15, discard_dump_states=True)
             except ZAREnvError as exc:
@@ -154,6 +156,12 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
             options.update(fixed_speed='speed_1', fixed_clock=True, ready_coverage_credit=.30,
                            planning_zone_audit=True, experiment_signal='receipts',
                            shelter_duration_rate=SHELTER_DURATION_RATES[arm])
+            if phase == [True]:
+                options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
+        if boundary_study:
+            options.update(fixed_speed='speed_1', fixed_clock=True, ready_coverage_credit=.30,
+                           planning_zone_audit=True, experiment_signal='receipts',
+                           battle_boundary_filter=BATTLE_BOUNDARY_BY_ARM[arm])
             if phase == [True]:
                 options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
         if input_study:
@@ -343,6 +351,8 @@ def main():
                             help='Compare bounded credit for civilians spending time in intact shelters')
     comparison.add_argument('--compare-shelter-input', action='store_true',
                             help='Compare a private policy input for exact civilian shelter occupancy')
+    comparison.add_argument('--compare-battle-boundary', action='store_true',
+                            help='Compare filtering known out-of-bounds battle targets before sampling')
     comparison.add_argument('--compare-shelter-geometry', action='store_true',
                             help='Compare a private planning input for projected shelter rectangle coverage')
     parser.add_argument('--observe', action='store_true',
@@ -365,7 +375,7 @@ def main():
     coverage_study = (args.compare_ready_coverage or args.compare_zone_exploration
                       or planning_study or args.compare_shelter_defense
                       or args.compare_ready_shortfall or args.compare_shelter_duration
-                      or args.compare_shelter_input or args.compare_shelter_geometry)
+                      or args.compare_shelter_input or args.compare_shelter_geometry or args.compare_battle_boundary)
     shelter_study = args.compare_breach_cost or coverage_study
     paired_weights = args.compare_missile_credit or args.compare_phase_balance or shelter_study
     if args.warm_start and not paired_weights:
@@ -395,7 +405,8 @@ def main():
         if args.compare_shelter_input or args.compare_shelter_geometry:
             baseline, adam = extend_shelter_model(baseline, adam, geometry=args.compare_shelter_geometry)
         if paired_weights:
-            labels = (tuple(SHELTER_GEOMETRY_BY_ARM) if args.compare_shelter_geometry else
+            labels = (tuple(BATTLE_BOUNDARY_BY_ARM) if args.compare_battle_boundary else
+                      tuple(SHELTER_GEOMETRY_BY_ARM) if args.compare_shelter_geometry else
                       tuple(SHELTER_INPUT_BY_ARM) if args.compare_shelter_input else
                       tuple(SHELTER_DURATION_RATES) if args.compare_shelter_duration else
                       tuple(READY_SHORTFALL_COSTS) if args.compare_ready_shortfall else
@@ -484,6 +495,10 @@ def main():
             config.update(comparison='shelter_geometry', fixed_speed='speed_1', ready_coverage_credit=.30,
                           training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
                           shelter_geometry_by_arm=SHELTER_GEOMETRY_BY_ARM)
+        if args.compare_battle_boundary:
+            config.update(comparison='battle_boundary', fixed_speed='speed_1', ready_coverage_credit=.30,
+                          training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
+                          battle_boundary_by_arm=BATTLE_BOUNDARY_BY_ARM)
         first_round = 0
         prior_signal_rows = []
         source = trainer.policy_id(baseline)
@@ -506,7 +521,8 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        experiment = ('shelter-geometry' if args.compare_shelter_geometry else
+        experiment = ('battle-boundary' if args.compare_battle_boundary else
+                      'shelter-geometry' if args.compare_shelter_geometry else
                       'shelter-input' if args.compare_shelter_input else
                       'shelter-duration' if args.compare_shelter_duration else
                       'ready-shortfall' if args.compare_ready_shortfall else
@@ -597,12 +613,13 @@ def main():
                             summary['ready_coverage_reward'] = row.get('reward_components', {}).get('ready_coverage')
                     if (args.compare_zone_exploration or planning_study
                             or args.compare_shelter_defense or args.compare_ready_shortfall
-                            or args.compare_shelter_duration or args.compare_shelter_input or args.compare_shelter_geometry):
+                            or args.compare_shelter_duration or args.compare_shelter_input
+                            or args.compare_shelter_geometry or args.compare_battle_boundary):
                         summary['planning_zone_receipts'] = row.get('planning_zone_receipts')
                         for key in ('ready_embedded_defenses', 'ready_preparation', 'ready_loadout',
                                     'first_legal_cast_sim', 'timeout_preparation'):
                             summary[key] = row.get(key)
-                    if args.compare_shelter_geometry:
+                    if args.compare_shelter_geometry or args.compare_battle_boundary:
                         summary['outside_playarea_targets'] = row.get('outside_targets')
                     if args.compare_zone_exploration:
                         summary['tempered_zone_decisions'] = sum(
