@@ -4,6 +4,20 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- Follow-up audit reproduced a selection defect after 1bc34ef:
+  reporting native counts beside a gate built from replacement
+  rows still let the replacement displace an original attempt.
+  b68d27a derives the gate from scheduled physical order, joins
+  native receipts using episode/attempt IDs, keeps unresolved
+  schedules incomplete, and records policy ID, start kind, win
+  and error. Example: one initial failure plus 30 later 40%
+  results now yields 29 qualifying and one incomplete in the
+  first 30, failing the gate. Replacing the failure with an
+  actual 1% finish yields a 1% minimum and first block 36.1%,
+  preserving the existing block-mean rule. 379 tests passed.
+  Prior trials lacked this contract and are historical evidence.
+  No live evaluation under the new ledger yet.
+
 - At 20:20 Central, exact actor 2e654bf5875b7089 finished
   eight validation attempts without a natural finish:
   five retries and three planning timeouts, no discovery
