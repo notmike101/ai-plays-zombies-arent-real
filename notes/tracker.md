@@ -4,6 +4,23 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 20:32 Central, preparation trace validation finished.
+  Both pairs reached READY and then retried (7.79%, 8.18%,
+  9.99%, 8.07%). Matching policy seeds led to identical
+  preparation choices within each pair; native outbreak
+  seeds were distinct. The two distinct preparation traces
+  contain 30 legal READY decisions; gate had the highest
+  probability at 24, wall at five, refund at one. All four
+  started with zero sheltered civilians and no closed
+  shelters in the native preparation summary. Native
+  placement receipts link the two apparent zones per
+  game to two-point walls. Fixed the trace's closed-zone
+  count to match native three-vertex rule (d84a108);
+  12 integration tests passed, including a wall and polygon
+  fixture. Original journal retained; treat its closed-zone
+  trace field as raw zone-record count. Faster READY alone
+  cannot address the observed preparation failure.
+
 - At 20:29 Central, validation-only preparation trace 286127
   launched as PID 34416 on inst19/20 (two frozen pairs).
   The previous 12 frozen exact-actor attempts had seven
