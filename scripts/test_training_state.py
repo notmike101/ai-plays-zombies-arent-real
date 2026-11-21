@@ -312,18 +312,55 @@ class StateTests(unittest.TestCase):
             self.assertIn('Native map changed', (Path(directory)/'interface-retries.jsonl').read_text())
 
     def test_private_ppo_retries_picker_close_once_from_fresh_games(self):
-        from compare_spatial import collect_pairs
+        from compare_spatial import collect_pairs, previous_outbreak_seeds
         from unittest.mock import Mock
         jobs = [('inst13', 'standard', {}, 123, 'first'),
                 ('inst14', 'balanced', {}, 123, 'second')]
         pool = Mock()
         failure = {'err': 'Timed out waiting for picker closed'}
-        pool.map.side_effect = [[{'saved_frac': .3}, failure], [failure, {'saved_frac': .34}]]
+        pool.map.side_effect = [[{'end': 'lost', 'saved_frac': .3, 'outbreak': {'seed': 77}}, failure], [failure, {'saved_frac': .34}]]
         with tempfile.TemporaryDirectory() as directory:
-            self.assertEqual(collect_pairs(pool, jobs, Path(directory)), [failure, {'saved_frac': .34}])
+            run = Path(directory)/'coverage-retry-test'
+            run.mkdir()
+            self.assertEqual(collect_pairs(pool, jobs, run),
+                             [dict(failure, prior_attempt_seeds=[77]), {'saved_frac': .34, 'prior_attempt_seeds': [77]}])
             self.assertEqual(pool.map.call_count, 2)
-            logged = json.loads((Path(directory)/'interface-retries.jsonl').read_text())
-            self.assertEqual(logged, {'pair': ['first', 'second'], 'errors': [failure['err']]})
+            logged = json.loads((run/'interface-retries.jsonl').read_text())
+            self.assertEqual(logged['pair'], ['first', 'second'])
+            self.assertEqual(logged['errors'], [failure['err']])
+            first, second = logged['original_attempts']
+            self.assertEqual((first['outbreak_seed'], first['saved_frac']), (77, .3))
+            self.assertEqual((second['copy'], second['err']), ('inst14', failure['err']))
+            self.assertEqual(previous_outbreak_seeds(Path(directory)), {77})
+
+    def test_private_ppo_retries_preserve_seed_and_denominator_on_interruption(self):
+        from compare_spatial import collect_pairs, heldout_consistency, previous_outbreak_seeds
+        from unittest.mock import Mock
+        jobs = [('inst19', 'control', {}, 123, 'left'),
+                ('inst20', 'candidate', {}, 123, 'right')]
+        pool = Mock()
+        pool.map.side_effect = [
+            [{'end': 'won', 'saved_frac': .4, 'outbreak': {'seed': 77}},
+             {'err': 'Timed out waiting for picker closed'}],
+            KeyboardInterrupt,
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run = root/'coverage-interruption'
+            run.mkdir()
+            with self.assertRaises(KeyboardInterrupt):
+                collect_pairs(pool, jobs, run)
+            ledger = [json.loads(line) for line in (run/'attempts.jsonl').read_text().splitlines()]
+            self.assertEqual([(e['attempt'], e['status']) for e in ledger],
+                             [(0,'scheduled'), (0,'scheduled'), (0,'finished'), (0,'finished'),
+                              (1,'scheduled'), (1,'scheduled')])
+            self.assertEqual(previous_outbreak_seeds(root), {77})
+
+        row = dict(phase='evaluation', policy_id='frozen', start_kind='fresh', end='won',
+                   saved_frac=.4, outbreak_seed=77, prior_attempt_seeds=[77])
+        self.assertEqual(heldout_consistency([row], 'frozen')['complete'], 0)
+        result = heldout_consistency([dict(row,outbreak_seed=78)], 'frozen')
+        self.assertEqual((result['complete'], result['minimum'], result['mean']), (1,.4,.4))
 
     def test_private_ppo_splits_the_existing_cpu_allowance_and_restores_the_worker(self):
         import compare_spatial as comp

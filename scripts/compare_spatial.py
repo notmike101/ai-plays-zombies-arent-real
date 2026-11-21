@@ -254,7 +254,27 @@ def collect_pairs(pool, jobs, directory, *, observe=False, separate_policy_cpus=
     worker = partial(episode, observe=observe, audit_signal=True)
     if separate_policy_cpus:
         worker = partial(worker, separate_policy_cpus=True)
-    results = list(pool.map(worker, jobs))
+    def collect(attempt_jobs, attempt):
+        identities = [dict(copy=job[0], arm=job[1], policy_seed=job[3], episode=job[4],
+                           attempt=attempt, phase='train' if len(job) > 5 and job[5] else 'evaluation')
+                      for job in attempt_jobs]
+        with (directory/'attempts.jsonl').open('a', encoding='utf-8') as journal:
+            for identity in identities:
+                journal.write(json.dumps(dict(identity, status='scheduled'))+'\n')
+            journal.flush()
+            os.fsync(journal.fileno())
+            rows = []
+            for identity, row in zip(identities, pool.map(worker, attempt_jobs), strict=True):
+                journal.write(json.dumps(dict(identity, status='finished', err=row.get('err'),
+                                              end=row.get('end'), saved_frac=row.get('saved_frac'),
+                                              log_started=row.get('log_started'),
+                                              outbreak_seed=(row.get('outbreak') or {}).get('seed')))+'\n')
+                journal.flush()
+                os.fsync(journal.fileno())
+                rows.append(row)
+        return rows
+
+    results = collect(jobs, 0)
     transient = ('Timed out waiting for UI frames', 'Stale native HUD frame',
                  'No consistent HUD observer frame', 'Native map changed during read',
                  'failed at injection: argument 1: OverflowError', 'Timed out waiting for picker closed')
@@ -262,9 +282,19 @@ def collect_pairs(pool, jobs, directory, *, observe=False, separate_policy_cpus=
         pair = slice(start, start + 2)
         errors = [r['err'] for r in results[pair] if 'err' in r]
         if errors and all(any(reason in error for reason in transient) for error in errors):
-            with (directory/'interface-retries.jsonl').open('a') as f:
-                f.write(json.dumps(dict(pair=[job[4] for job in jobs[pair]], errors=errors))+'\n')
-            results[pair] = list(pool.map(worker, jobs[pair]))
+            attempts = [
+                dict(copy=job[0], arm=job[1], seed=job[3], tag=job[4],
+                     end=row.get('end'), saved_frac=row.get('saved_frac'), err=row.get('err'),
+                     log_started=row.get('log_started'),
+                     outbreak_seed=(row.get('outbreak') or {}).get('seed'))
+                for job, row in zip(jobs[pair], results[pair], strict=True)
+            ]
+            with (directory/'interface-retries.jsonl').open('a', encoding='utf-8') as f:
+                f.write(json.dumps(dict(pair=[job[4] for job in jobs[pair]], errors=errors,
+                                        original_attempts=attempts))+'\n')
+            replacements = collect(jobs[pair], 1)
+            prior = [entry['outbreak_seed'] for entry in attempts if type(entry['outbreak_seed']) is int]
+            results[pair] = [dict(row, prior_attempt_seeds=prior) for row in replacements] if prior else replacements
     return results
 
 
@@ -304,6 +334,13 @@ def previous_outbreak_seeds(analysis):
         if paired.is_file():
             seeds.update(seed for row in records(paired)
                          if type(seed := row.get('outbreak_seed')) is int)
+        attempts = run/'attempts.jsonl'
+        if attempts.is_file():
+            seeds.update(seed for row in records(attempts) if type(seed := row.get('outbreak_seed')) is int)
+        retries = run/'interface-retries.jsonl'
+        if retries.is_file():
+            seeds.update(seed for row in records(retries) for attempt in row.get('original_attempts', ())
+                         if type(seed := attempt.get('outbreak_seed')) is int)
         for name in ('trials.jsonl', 'holdout.jsonl', 'extra-trials.jsonl',
                      'forecast-comparison.jsonl', 'speed-comparison.jsonl'):
             journal = run/name
@@ -316,7 +353,7 @@ def previous_outbreak_seeds(analysis):
 
 def training_outbreak_seeds(rows):
     return {seed for row in rows if row.get('phase') == 'train'
-            and type(seed := row.get('outbreak_seed')) is int}
+            for seed in (row.get('outbreak_seed'), *row.get('prior_attempt_seeds', ())) if type(seed) is int}
 
 
 def heldout_consistency(rows, policy_id, *, discovery_seeds=()):
@@ -324,11 +361,12 @@ def heldout_consistency(rows, policy_id, *, discovery_seeds=()):
     cohort = [r for r in rows if r['phase']=='evaluation' and r['policy_id']==policy_id][:30]
     training_seeds = training_outbreak_seeds(rows).union(discovery_seeds)
     seen = set(training_seeds)
-    means = []
+    means, scores = [], []
     qualifying = incomplete = discovery_overlap = complete = 0
     for start in range(0, len(cohort), 10):
         block = []
         for row in cohort[start:start+10]:
+            seen.update(row.get('prior_attempt_seeds', ()))
             outbreak = row.get('outbreak_seed')
             score = row.get('saved_frac')
             discovery_overlap += type(outbreak) is int and outbreak in training_seeds
@@ -339,6 +377,7 @@ def heldout_consistency(rows, policy_id, *, discovery_seeds=()):
                 seen.add(outbreak)
             if valid:
                 block.append(score)
+                scores.append(score)
                 complete += 1
                 qualifying += bool(row.get('win') and score >= .35)
             else:
@@ -346,6 +385,7 @@ def heldout_consistency(rows, policy_id, *, discovery_seeds=()):
         if len(block)==10:
             means.append(math.fsum(block)/10)
     return dict(attempts=len(cohort), complete=complete, incomplete=incomplete, qualifying=qualifying, block_means=means,
+                minimum=min(scores, default=None), mean=math.fsum(scores)/len(scores) if scores else None,
                 discovery_overlap=discovery_overlap, passed=len(means)==3 and min(means)>=.35)
 
 
@@ -657,6 +697,13 @@ def main():
             evaluation = {arm: heldout_consistency(
                 [row for row in summaries if row['arm'] == arm], trainer.policy_id(net),
                 discovery_seeds=discovery_seeds) for arm, net in models.items()}
+            journal = directory/'attempts.jsonl'
+            if journal.is_file():
+                counts = Counter((row['arm'], row['status']) for row in records(journal)
+                                 if row['phase'] == 'evaluation')
+                for arm, result in evaluation.items():
+                    result['scheduled_native_attempts'] = counts[arm, 'scheduled']
+                    result['finished_native_attempts'] = counts[arm, 'finished']
             rows = [*prior_signal_rows, *summaries]
             earliest = min((row['round'] for row in rows if row['phase'] == 'train'), default=first_round)
             report = summarize_signal(rows, config, models, evaluation, start_round=earliest)
@@ -689,6 +736,8 @@ def main():
                                    outbreak_seed=(row.get('outbreak') or {}).get('seed'),
                                    decisions=len(row.get('obs', [])), batch_seconds=batch_seconds,
                                    experiment_signal=row.get('experiment_signal'), ready_choices=row.get('ready_choices'))
+                    if row.get('prior_attempt_seeds'):
+                        summary['prior_attempt_seeds'] = row['prior_attempt_seeds']
                     summary['battle_actions'] = dict(Counter(
                         trainer.TOOLS[u] for u, obs in zip(row.get('us', []), row.get('obs', []))
                         if not obs[trainer.PLANNING_INDEX]))
