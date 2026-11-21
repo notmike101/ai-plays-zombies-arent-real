@@ -508,7 +508,7 @@ def main():
     comparison.add_argument('--compare-preparation-credit', action='store_true',
                             help='Compare native-save preparation targets with shaped episode returns')
     parser.add_argument('--audit-phase-gradients', action='store_true',
-                        help='Measure planning and battle gradient alignment on one episode per arm and round')
+                        help='Audit sampled action replay before updates and on frozen games; measure training phase gradients')
     parser.add_argument('--observe', action='store_true',
                         help='Publish read-only Observatory decisions at up to 1 Hz per worker')
     parser.add_argument('--separate-policy-cpus', action='store_true',
@@ -845,6 +845,15 @@ def main():
                 if any(not trainer.valid_trajectory(row) for row in results):
                     report_signal()
                     raise RuntimeError('Invalid trajectory; see trial results')
+                if not training and args.audit_phase_gradients:
+                    with (directory/'frozen-replay.jsonl').open('a', encoding='utf-8') as evidence:
+                        for arm, net in models.items():
+                            episodes = [row for job, row in zip(jobs, results, strict=True)
+                                        if job[1] == arm and row.get('obs')]
+                            if episodes:
+                                replay = trainer.ppo_update(net, episodes, None, epochs=0, audit_phases=True)
+                                evidence.write(json.dumps(dict(round=rnd, arm=arm, policy_id=policies[arm],
+                                                               preupdate_replay=replay['preupdate_replay']))+'\n')
                 if training:
                     discovery_seeds.update(training_outbreak_seeds(summaries[-len(jobs):]))
                     for arm, net in models.items():
