@@ -2,6 +2,46 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 19:08 Central, boundary 239417 checkpointed eight rounds.
+  Control had 259 outside battle rejections over 3701 decisions;
+  candidate zero over 4802. Both had two occupied READY starts.
+  Control 14 retries/two timeouts and 17 confirmed spends;
+  candidate 13 retries/two timeouts/one native win and 12
+  confirmed spends. Frozen pair started, operator 41668 live.
+- Round 5 candidate 016d28234009ea3a had a fresh native Boston
+  L1 win at 12.65% on outbreak 136603147, sim 207.15 s. No
+  occupied shelter, one Mortar, three Nests and one C4. Police
+  first legal at sim .133 s. Seven confirmed drops at .87,
+  9.80, 19.73, 29.00, 38.20, 47.17 and 56.00 s. It was first
+  outnumbered after 39.37 s. Board fingerprint 82741f7030906174.
+  Exact pre-update actor was overwritten by the existing
+  runner; retained and verified its post-update private
+  successor 6e0aabcdfcdd8ada and Adam in analysis/
+  coverage-battle-boundary-63a02e027d/
+  filtered-successor-after-native-win-round5.pt. The native
+  session was overwritten on the copy's next launch. Journal
+  retains the verified session-bound result and placements.
+  One adaptive training win below 35%, no qualification.
+- Across the first 24 distinct battles, 12 had no legal cast
+  recorded; ten first had one after sim 5 s, two by 5 s. Both
+  early-legal boards deployed. Median first outnumbered was
+  18.35 s without a legal cast, 19.08 s late, 29.43 s early.
+  Descriptive with only two early cases. Bounded passive
+  defense audit retained zero occupied samples during its
+  window and gives no conclusion about defensive firing.
+- Added staged native freeform start/corner receipts as well
+  as closing receipts, to distinguish an unconsumed corner
+  from a draft the policy abandons. Retain the exact highest
+  measured native win actor before its PPO update in each
+  arm, with optimizer, discovery exclusions and episode IDs.
+  Mock tests verify retries do not create a win archive and
+  the saved weights match the winning actor. 109 focused
+  tests passed and apply check confirmed. Latest patch
+  analysis/coverage-portable314/tmp/rectangle-receipts-239417/
+  rectangle-receipts.patch SHA256
+  5D13617E75C50585688212CC6E91E1DA8F5BBB4CB5C90D12D37868549F7E028C.
+  Current comparison source untouched during frozen play.
+
 - At 19:02 Central, expanded staged shelter receipts to cover
   freeform perimeter gestures as well as rectangle commands.
   Explicit freeform finish validates at least three finite
