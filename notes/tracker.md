@@ -4,6 +4,15 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 21:38 Central, 321541 retained the second usable
+  discovery result, seed 3108809352, 28.95% sheltered,
+  13 gradient choices, 0.089894 gradient, 99.87% of
+  credited civilians exposed and 9.64% retry. Both
+  discovery seeds distinct and prior-clear. Replayed
+  exact fit with two eligible rows; correctly no candidate
+  before the four-row minimum. Third attempt scheduled
+  under live PID 74708. Preserve six-attempt budget.
+
 - At 21:35 Central, defense fit PID 74708 retained its
   first usable discovery attempt: clearance seed 2954798872,
   28.95% sheltered, 13 sampled Garrison gradient choices,
