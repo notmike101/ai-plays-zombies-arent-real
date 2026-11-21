@@ -79,9 +79,12 @@ class FakePool:
 
 
 class Fixture:
-    def __init__(self, root, script, archive_status='archived', headroom_fail_at=None):
+    def __init__(self, root, script, archive_status='archived', headroom_fail_at=None,
+                 profile='timing'):
         self.root = Path(root)
         self.script = script
+        self.profile = profile
+        self.S = tta.PROFILES[profile]['seed']
         self.archive_status = archive_status
         self.headroom_fail_at = headroom_fail_at
         self.launches = []
@@ -106,7 +109,21 @@ class Fixture:
             [dict(team_id=tta.INCUMBENT_ID, copy=copy, initial_planning_roster=ARCHIVED[copy])
              for copy in tta.COPIES]
             + [dict(team_id=tta.CHALLENGER_ID, copy='inst21', initial_planning_roster=['x'])])),
-            encoding='utf-8')
+                                                   encoding='utf-8')
+        if profile != 'timing':
+            prior = self.root / 'analysis' / 'coverage-team-timing-342571'
+            prior.mkdir()
+            (prior / 'outcomes.jsonl').write_text('\n'.join(lines(
+                [dict(team_id=tta.INCUMBENT_ID, copy=copy,
+                      initial_planning_roster=ARCHIVED[copy],
+                      levels=[dict(stage=1, outbreak={'seed': seed})])
+                 for copy, seed in zip(tta.COPIES, (4001, 4002))]
+                + [dict(team_id=tta.CHALLENGER_ID, copy=copy,
+                        levels=[dict(stage=1, outbreak={'seed': seed})])
+                   for copy, seed in zip(tta.COPIES, (4003, 4004))])), encoding='utf-8')
+            (prior / 'attempts.jsonl').write_text('\n'.join(lines(
+                [dict(status='finished', outbreak_seed=seed) for seed in (4001, 4002, 4003, 4004)])),
+                                                   encoding='utf-8')
         for copy in tta.COPIES:
             settings = self.owned_copy(copy) / 'steam_cloud'
             settings.mkdir(parents=True)
@@ -121,7 +138,7 @@ class Fixture:
 
     def rollouts(self, pool, jobs, *, click_start, speeds):
         copy, weights, team, seed = jobs[0]
-        journal = (self.root / 'analysis' / f'coverage-team-timing-{S}' / 'attempts.jsonl')
+        journal = (self.root / 'analysis' / f'coverage-team-timing-{self.S}' / 'attempts.jsonl')
         rows = [json.loads(line) for line in journal.read_text(encoding='utf-8').splitlines()] \
             if journal.is_file() else []
         if not click_start or speeds != {copy: 'speed_1'} or not any(
@@ -143,6 +160,8 @@ class Fixture:
                      win=spec['end'] == 'won', log_started=spec.get('log_started', 1000),
                      battle_actions={'deploy_sim_seconds': [1.0, 2.0, 3.0]},
                      outbreak={} if spec.get('outbreak') is None else {'seed': spec['outbreak']})
+        if 'ready_zones' in spec:
+            level['ready_zones'] = spec['ready_zones']
         yield 'job', 'stage', dict(levels=[level])
 
     def archive(self, copy_dir, run_dir, tag, copy, started_ms):
@@ -151,6 +170,8 @@ class Fixture:
 
     def run(self, argv_run=True):
         argv = ['team_timing_ablation.py'] + (['--run'] if argv_run else [])
+        if self.profile != 'timing':
+            argv += ['--profile', self.profile]
         saved = (sys.argv, tta.ROOT, tta.SOURCE, tta.PREVIOUS, tta.ProcessPoolExecutor,
                  search.operator, search.completed_rollouts, compare.archive_native_session)
         sys.argv = argv
@@ -174,7 +195,7 @@ class Fixture:
 
     @property
     def directory(self):
-        return self.root / 'analysis' / f'coverage-team-timing-{S}'
+        return self.root / 'analysis' / f'coverage-team-timing-{self.S}'
 
 
 def win(outbreak, saved=0.8):
@@ -435,6 +456,128 @@ class TimingAblationTests(unittest.TestCase):
         rows[0] = dict(rows[0], end='won', saved=None)
         self.assertTrue(tta.gate(rows)['unknowns'])
         self.assertFalse(tta.gate(rows)['advance'])
+
+    SQUARE = [[0., 0.], [10., 0.], [10., 10.], [0., 10.]]
+    SQUARE_ROTATED = [[10., 10.], [0., 10.], [0., 0.], [10., 0.]]
+    SQUARE_REVERSED = [[0., 10.], [10., 10.], [10., 0.], [0., 0.]]
+    OTHER = [[100., 0.], [110., 0.], [110., 10.]]
+    WALL = [[0., 0.], [5., 5.]]
+    POP_SEED = tta.PROFILES['population-weight']['seed']
+
+    def population_script(self, incumbent_zones, challenger_zones, pair_two=True):
+        script = {('inst19', self.POP_SEED): dict(end='lost', saved=0.3, outbreak=5101,
+                                                  ready_zones=[incumbent_zones]),
+                  ('inst20', self.POP_SEED): dict(end='lost', saved=0.2, outbreak=5102,
+                                                  ready_zones=[challenger_zones])}
+        if pair_two:
+            script.update({('inst19', self.POP_SEED + 1): dict(end='lost', saved=0.4,
+                                                               outbreak=5104,
+                                                               ready_zones=[incumbent_zones]),
+                           ('inst20', self.POP_SEED + 1): dict(end='lost', saved=0.5,
+                                                               outbreak=5103,
+                                                               ready_zones=[incumbent_zones])})
+        return script
+
+    def test_population_bundle_is_single_gene_registered(self):
+        weights, incumbent, challenger = tta.bundle('population-weight')
+        self.assertEqual(search.team_id(incumbent), tta.INCUMBENT_ID)
+        self.assertEqual(search.team_id(challenger), tta.POP_CHALLENGER_ID)
+        self.assertEqual(incumbent['zone_population'], tta.POP_ZONE_POPULATION[0])
+        self.assertEqual(challenger['zone_population'], tta.POP_ZONE_POPULATION[1])
+        changed = ({key for key in set(challenger) ^ set(incumbent)}
+                   | {key for key in set(challenger) & set(incumbent)
+                      if challenger[key] != incumbent[key]})
+        self.assertEqual(changed, {'zone_population'})
+        self.assertEqual({key: value for key, value in incumbent.items()
+                          if key != 'zone_population'},
+                         {key: value for key, value in challenger.items()
+                          if key != 'zone_population'})
+
+    def test_canonical_closed_zones_rotation_winding_and_walls(self):
+        canonical = tta.canonical_closed_zones
+        self.assertEqual(canonical([self.SQUARE]), canonical([self.SQUARE_ROTATED]))
+        self.assertEqual(canonical([self.SQUARE]), canonical([self.SQUARE_REVERSED]))
+        self.assertEqual(canonical([self.SQUARE + [self.SQUARE[0]]]), canonical([self.SQUARE]))
+        self.assertEqual(canonical([self.WALL]), [])
+        self.assertEqual(canonical([self.SQUARE, self.WALL, self.OTHER]),
+                         canonical([self.SQUARE, self.OTHER]))
+        self.assertNotEqual(canonical([self.SQUARE]), canonical([self.OTHER]))
+        self.assertIsNone(canonical(None))
+        self.assertEqual(canonical([]), [])
+
+    def test_geometry_verdict_distinguishes_missing_unchanged_changed(self):
+        self.assertEqual(tta.geometry_verdict(None, [self.SQUARE]), 'unknown')
+        self.assertEqual(tta.geometry_verdict([self.SQUARE], None), 'unknown')
+        self.assertEqual(tta.geometry_verdict([], []), 'unchanged')
+        self.assertEqual(tta.geometry_verdict([self.SQUARE], [self.SQUARE_ROTATED]), 'unchanged')
+        self.assertEqual(tta.geometry_verdict([], [self.SQUARE]), 'changed')
+        self.assertEqual(tta.geometry_verdict([self.SQUARE], [self.OTHER]), 'changed')
+        self.assertEqual(tta.geometry_verdict([self.WALL], []), 'unchanged')
+
+    def test_population_first_pair_unchanged_stops_before_second_pair(self):
+        fixture = Fixture(self.root, self.population_script(self.SQUARE, self.SQUARE_ROTATED),
+                          profile='population-weight')
+        fixture.run()
+        self.assertEqual(len(fixture.launches), 2)
+        check = json.loads((fixture.directory / 'geometry-check.json').read_text(encoding='utf-8'))
+        self.assertEqual(check['verdict'], 'unchanged')
+        decision = json.loads((fixture.directory / 'decision.json').read_text(encoding='utf-8'))
+        self.assertFalse(decision['advance'])
+        self.assertEqual(decision['geometry_verdict'], 'unchanged')
+        self.assertIsNone(decision['screen'])
+        audit = json.loads((fixture.directory / 'exclusion-audit.json').read_text(encoding='utf-8'))
+        self.assertTrue({4001, 4002, 4003, 4004} <= set(audit['seeds']))
+        manifest = json.loads((fixture.directory / 'frozen-manifest.json').read_text(encoding='utf-8'))
+        self.assertEqual(manifest['prior_timing_seeds'], [4001, 4002, 4003, 4004])
+        self.assertEqual(manifest['only_delta'], 'zone_population 8.649016304182014 -> 4.0')
+        self.assertEqual(manifest['challenger'], tta.POP_CHALLENGER_ID)
+        self.assertEqual(manifest['seed'], self.POP_SEED)
+        finished = [row for row in fixture.attempts() if row['status'] == 'finished']
+        self.assertEqual(len(finished), 2)
+        self.assertEqual(finished[0]['ready_zones'], [self.SQUARE])
+        restoration = json.loads((fixture.directory / 'roster-restoration.json')
+                                 .read_text(encoding='utf-8'))
+        self.assertEqual([state['verified'] for state in restoration.values()], [True, True])
+        self.rosters_intact()
+
+    def test_population_first_pair_changed_runs_second_pair(self):
+        fixture = Fixture(self.root, self.population_script(self.SQUARE, self.OTHER),
+                          profile='population-weight')
+        fixture.run()
+        self.assertEqual(len(fixture.launches), 4)
+        check = json.loads((fixture.directory / 'geometry-check.json').read_text(encoding='utf-8'))
+        self.assertEqual(check['verdict'], 'changed')
+        decision = json.loads((fixture.directory / 'decision.json').read_text(encoding='utf-8'))
+        self.assertEqual(decision['geometry_verdict'], 'changed')
+        self.assertFalse(decision['advance'])
+        self.rosters_intact()
+
+    def test_population_unknown_geometry_stops_fail_closed_with_restoration(self):
+        script = {('inst19', self.POP_SEED): dict(end='lost', saved=0.3, outbreak=5101,
+                                                  ready_zones=[self.SQUARE]),
+                  ('inst20', self.POP_SEED): dict(end='lost', saved=0.2, outbreak=5102)}
+        fixture = Fixture(self.root, script, profile='population-weight')
+        with self.assertRaisesRegex(RuntimeError, 'unknown closed-zone geometry'):
+            fixture.run()
+        self.assertEqual(len(fixture.launches), 2)
+        check = json.loads((fixture.directory / 'geometry-check.json').read_text(encoding='utf-8'))
+        self.assertEqual(check['verdict'], 'unknown')
+        decision = json.loads((fixture.directory / 'decision.json').read_text(encoding='utf-8'))
+        self.assertEqual(decision['geometry_verdict'], 'unknown')
+        self.assertFalse(decision['advance'])
+        restoration = json.loads((fixture.directory / 'roster-restoration.json')
+                                 .read_text(encoding='utf-8'))
+        self.assertEqual([state['verified'] for state in restoration.values()], [True, True])
+        self.rosters_intact()
+
+    def test_population_requires_prior_timing_journal(self):
+        fixture = Fixture(self.root, self.population_script(self.SQUARE, self.OTHER),
+                          profile='population-weight')
+        (Path(self.root) / 'analysis' / 'coverage-team-timing-342571'
+         / 'outcomes.jsonl').unlink()
+        with self.assertRaises(FileNotFoundError):
+            fixture.run()
+        self.assertEqual(fixture.launches, [])
 
 
 if __name__ == '__main__':

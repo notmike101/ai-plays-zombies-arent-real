@@ -941,6 +941,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         ready_loadout = {}
         opening_ready_preview = None
         ready_paint_mode = ready_paint_tiles = ready_embedded_defenses = ready_preparation = None
+        ready_zones = None
         plan = initial
         net = None if eps_rand else (policy_factory or PolicyNet2)().eval()
         if net is not None:
@@ -1351,6 +1352,13 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         ready_embedded_defenses = embedded_defenses(st['native'])
                         ready_preparation = preparation_counts(st['native'])
                         ready_preparation['layout_id'] = preparation_fingerprint(st['native'])
+                        # READY closed-zone truth comes from the native snapshot at the
+                        # ready decision, not from place events that a later cancel could
+                        # undo. Recorded only; never fed back into action selection.
+                        snapshot_zones = st['native'].get('zones')
+                        ready_zones = (None if snapshot_zones is None else
+                                       [[[round(float(v), 3) for v in vertex]
+                                         for vertex in zone] for zone in snapshot_zones])
                     if opening_timing_input is not None:
                         opening_ready_preview = {
                             name: {'unlock_scaled': opening[3*i+1], 'delay_scaled': opening[3*i+2]}
@@ -1767,6 +1775,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     ready_loadout_sp=footer.get('ready_loadout_sp') if footer and placement_feedback else None,
                     ready_paint_mode=ready_paint_mode, ready_paint_tiles=ready_paint_tiles,
                     ready_embedded_defenses=ready_embedded_defenses, ready_preparation=ready_preparation,
+                    ready_zones=ready_zones,
                     special_activations=special_activations,
                     reward_components=rewards, outside_playarea_actions=outside_actions,
                     outside_targets=outside_targets, shelter_dispatch=shelter_dispatch,
