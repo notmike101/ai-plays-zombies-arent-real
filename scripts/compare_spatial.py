@@ -394,7 +394,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--copies', nargs='+', required=True)
     parser.add_argument('--seed', type=int, default=81251)
-    parser.add_argument('--train-rounds', type=int, default=1)
+    parser.add_argument('--train-rounds', type=int, default=1, help='Use zero to evaluate an exact warm-start actor without updates')
     parser.add_argument('--eval-rounds', type=int, default=2)
     parser.add_argument('--eval-copies', nargs='+', help='Separate owned copies for frozen evaluation')
     source_args = parser.add_mutually_exclusive_group()
@@ -446,8 +446,10 @@ def main():
                         help='Use the last two CPUs of the existing allowance for policy workers')
     args = parser.parse_args()
     copies = args.copies
-    if args.train_rounds < 1 or args.eval_rounds < 2 or args.eval_rounds % 2:
-        parser.error('Use positive training rounds and an even number of evaluation rounds')
+    if args.train_rounds < 0 or args.eval_rounds < 2 or args.eval_rounds % 2:
+        parser.error('Use nonnegative training rounds and an even number of evaluation rounds')
+    if args.train_rounds == 0 and not (args.warm_start and args.compare_battle_boundary):
+        parser.error('Frozen-only evaluation requires --warm-start and --compare-battle-boundary')
     if len(copies) not in (2, 4, 6, 8) or len(set(copies)) != len(copies):
         parser.error('Use two to eight distinct copies in pairs')
     evaluation_copies = args.eval_copies or copies
@@ -645,6 +647,10 @@ def main():
         tag = 'coverage-' + experiment + '-' + uuid.uuid4().hex[:10]
         directory = Path(operator.ROOT, 'analysis', tag)
         directory.mkdir()
+        if not args.train_rounds:
+            manifest = dict(config=config, actors={arm: trainer.policy_id(net) for arm, net in models.items()},
+                            discovery_seeds=sorted(discovery_seeds))
+            (directory/'frozen-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
         summaries = []
         best_natural = dict.fromkeys(models, -1.)
         def report_signal():

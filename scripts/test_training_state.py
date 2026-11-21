@@ -772,6 +772,14 @@ class StateTests(unittest.TestCase):
             self.assertTrue(run.call_args.kwargs['telemetry'])
             self.assertEqual(run.call_args.args[0][4]['observer_interval'], 1.)
 
+    def test_frozen_baseline_requires_an_explicit_compatible_actor(self):
+        import compare_spatial as comp
+        with patch('sys.argv', ['compare_spatial', '--copies', 'a', 'b', '--train-rounds', '0']), \
+                patch.object(comp.operator, 'training_lock') as lock:
+            with self.assertRaises(SystemExit):
+                comp.main()
+            lock.assert_not_called()
+
     def test_reserved_ppo_copies_refuse_overlap_before_taking_lock(self):
         import compare_spatial
         with patch('sys.argv', ['compare_spatial', '--copies', 'a', 'b', '--eval-copies', 'a', 'c']), \
