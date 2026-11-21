@@ -2,6 +2,39 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 19:52 Central, capacity comparison 263207 launched under
+  PID 76248 (19:52:10). Both arms start from exact natural
+  actor 2e654bf5875b7089 and its Adam. 128 vs 192 recurrent
+  units, same schema-4 observations, target filter, rewards
+  and planning sampling. Four owned copies, split policy
+  CPUs, normal game speed, below-normal priority, reserves
+  inst19–20. Launch headroom 12.40 GiB RAM and 16.05 GiB D:.
+  376 script tests and 68 Observatory tests passed, plus
+  actual model verifier and graph assertions. Capacity
+  implementation a0ba99e. Production weight hash verified;
+  Observatory remains PID 21012. Analysis journal
+  analysis/coverage-recurrent-capacity-551f9d64f2, console
+  analysis/coverage-recurrent-capacity-263207-drive-d.log.
+- At 19:50 Central, opening timing 254119 completed.
+  Each arm had 13 retries and three planning timeouts in
+  training, zero natural finishes and three occupied starts.
+  Confirmed spends 3 control and 13 candidate. Frozen
+  evaluation had five retries, three planning timeouts,
+  zero eligible natural finishes and no occupied starts.
+  Both arms made eight confirmed spends in frozen games.
+  No basis to promote the extra inputs for gameplay.
+- Actual Observatory planning frames matched 4946 input
+  labels while only the timing-aware arm received nonzero
+  additions. Replay reproduced real logits and masked tool
+  probabilities from the saved round-3 policy in eight
+  retained frames. Holding native observations and input
+  memory fixed, zeroing the immediate timing inputs shifted
+  0.93 percentage points of legal probability mass at
+  median across four candidate decisions (max 1.40 points).
+  READY shifted at most 0.083 points. Four control frames
+  unchanged. This measures immediate policy use, with no
+  estimate of total gameplay or preparation benefit.
+
 - At 19:36 Central, opening-timing comparison 254119 has
   checkpointed two rounds under PID 77320 (19:31:47).
   Four owned training copies inst13–16, frozen inst19–20,
