@@ -175,6 +175,28 @@ class StateTests(unittest.TestCase):
         st['planning'] = False
         self.assertFalse(any(train.opening_timing_features(st, mask)))
 
+    def test_private_preparation_targets_leave_battle_and_battle_timeout_unchanged(self):
+        values = [.1, .2, .3]
+        adv, ret = [0., 0., .7], [0., 0., 1.]
+        observed = dict(end='aborted', saved_frac=.095, rews=[-.02, .1, -.8])
+        train.apply_preparation_targets(observed, [True, True, False], values, adv, ret)
+        self.assertAlmostEqual(ret[0], .555)
+        self.assertAlmostEqual(ret[1], .575)
+        self.assertAlmostEqual(adv[0], .455)
+        self.assertEqual((adv[2], ret[2]), (.7, 1.))
+        before = (adv.copy(), ret.copy())
+        timeout = dict(end='timeout', timeout_phase='playing', saved_frac=None, rews=[.1,0.,0.])
+        train.apply_preparation_targets(timeout, [True, True, False], values, adv, ret)
+        self.assertEqual((adv, ret), before)
+        train.apply_preparation_targets(dict(timeout, timeout_phase='planning'),
+                                        [True]*3, values, adv, ret)
+        self.assertAlmostEqual(ret[0], -.4)
+        self.assertAlmostEqual(ret[2], -.5)
+        train.apply_preparation_targets(dict(end='won', saved_frac=.4, rews=[-.02, .1, 2.]),
+                                        [True]*3, values, adv, ret)
+        self.assertAlmostEqual(ret[0], 2.08)
+        self.assertEqual(ret[2], 2.)
+
     def test_phase_gradient_audit_distinguishes_conflict_without_setting_gradients(self):
         torch = train.torch
         net = torch.nn.Module()

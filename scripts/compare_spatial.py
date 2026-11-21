@@ -59,6 +59,7 @@ SHELTER_INPUT_BY_ARM = {'shelter_grid': False, 'shelter_exact': True}
 SHELTER_GEOMETRY_BY_ARM = {'geometry_control': False, 'geometry_visible': True}
 OPENING_TIMING_BY_ARM = {'opening_control': False, 'opening_visible': True}
 CAPACITY_BY_ARM = {'recurrent_standard': trainer.HID, 'recurrent_wide': 192}
+PREPARATION_CREDIT_BY_ARM = {'preparation_control': False, 'preparation_credit': True}
 
 
 def widen_recurrence(source, optimizer):
@@ -131,6 +132,7 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
     battle_study = arm in BATTLE_TEMPERATURES
     boundary_study = arm in BATTLE_BOUNDARY_BY_ARM
     capacity_study = arm in CAPACITY_BY_ARM
+    preparation_credit_study = arm in PREPARATION_CREDIT_BY_ARM
     target_study = arm in TARGET_SETTLE
     ready_study = arm in READY_DELAY_COSTS
     duration_study = arm in SHELTER_DURATION_RATES
@@ -144,7 +146,8 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
         env = None
         if (arm in BREACH_COSTS or arm in READY_CREDITS or arm in ZONE_TEMPERATURES
                 or planning_study or arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS
-                or duration_study or input_study or boundary_study or opening_study or capacity_study):
+                or duration_study or input_study or boundary_study or opening_study or capacity_study
+                or preparation_credit_study):
             try:
                 env = zar_boot.boot(copy_dir, welcome_wait=15, discard_dump_states=True)
             except ZAREnvError as exc:
@@ -205,13 +208,15 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
                            shelter_duration_rate=SHELTER_DURATION_RATES[arm])
             if phase == [True]:
                 options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
-        if boundary_study or capacity_study:
+        if boundary_study or capacity_study or preparation_credit_study:
             options.update(fixed_speed='speed_1', fixed_clock=True, ready_coverage_credit=.30,
                            planning_zone_audit=True, experiment_signal='receipts',
                            battle_boundary_filter=BATTLE_BOUNDARY_BY_ARM.get(arm, True))
             if capacity_study:
                 policy = partial(trainer.PolicyNet2, hidden_size=CAPACITY_BY_ARM[arm])
                 options['experiment_signal'] = 'recurrent_capacity'
+            if preparation_credit_study:
+                options['experiment_signal'] = 'preparation_credit'
             if phase == [True]:
                 options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
         if opening_study:
@@ -493,6 +498,8 @@ def main():
                             help='Compare a private planning input for projected ability timing')
     comparison.add_argument('--compare-recurrent-capacity', action='store_true',
                             help='Compare 128 and warm-expanded 192 recurrent units with identical inputs')
+    comparison.add_argument('--compare-preparation-credit', action='store_true',
+                            help='Compare native-save preparation targets with shaped episode returns')
     parser.add_argument('--audit-phase-gradients', action='store_true',
                         help='Measure planning and battle gradient alignment on one episode per arm and round')
     parser.add_argument('--observe', action='store_true',
@@ -518,7 +525,8 @@ def main():
                       or planning_study or args.compare_shelter_defense
                       or args.compare_ready_shortfall or args.compare_shelter_duration
                       or args.compare_shelter_input or args.compare_shelter_geometry
-                      or args.compare_battle_boundary or args.compare_opening_timing or args.compare_recurrent_capacity)
+                      or args.compare_battle_boundary or args.compare_opening_timing or args.compare_recurrent_capacity
+                      or args.compare_preparation_credit)
     shelter_study = args.compare_breach_cost or coverage_study
     paired_weights = args.compare_missile_credit or args.compare_phase_balance or shelter_study
     if args.warm_start and not paired_weights:
@@ -549,7 +557,8 @@ def main():
             baseline, adam = extend_private_model(baseline, adam, geometry=args.compare_shelter_geometry,
                                                   opening_timing=args.compare_opening_timing)
         if paired_weights:
-            labels = (tuple(CAPACITY_BY_ARM) if args.compare_recurrent_capacity else
+            labels = (tuple(PREPARATION_CREDIT_BY_ARM) if args.compare_preparation_credit else
+                      tuple(CAPACITY_BY_ARM) if args.compare_recurrent_capacity else
                       tuple(OPENING_TIMING_BY_ARM) if args.compare_opening_timing else
                       tuple(BATTLE_BOUNDARY_BY_ARM) if args.compare_battle_boundary else
                       tuple(SHELTER_GEOMETRY_BY_ARM) if args.compare_shelter_geometry else
@@ -659,6 +668,11 @@ def main():
             config.update(comparison='recurrent_capacity', fixed_speed='speed_1', ready_coverage_credit=.30,
                           training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
                           battle_boundary_filter=True, recurrent_width_by_arm=CAPACITY_BY_ARM)
+        if args.compare_preparation_credit:
+            config.update(comparison='preparation_credit', fixed_speed='speed_1', ready_coverage_credit=.30,
+                          training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
+                          battle_boundary_filter=True, preparation_credit_by_arm=PREPARATION_CREDIT_BY_ARM,
+                          planning_timeout_training_return=trainer.PLANNING_TIMEOUT_RETURN)
         first_round = 0
         prior_signal_rows = []
         source = trainer.policy_id(baseline)
@@ -681,7 +695,8 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        experiment = ('recurrent-capacity' if args.compare_recurrent_capacity else
+        experiment = ('preparation-credit' if args.compare_preparation_credit else
+                      'recurrent-capacity' if args.compare_recurrent_capacity else
                       'opening-timing' if args.compare_opening_timing else
                       'battle-boundary' if args.compare_battle_boundary else
                       'shelter-geometry' if args.compare_shelter_geometry else
@@ -796,7 +811,7 @@ def main():
                             or args.compare_shelter_defense or args.compare_ready_shortfall
                             or args.compare_shelter_duration or args.compare_shelter_input
                             or args.compare_shelter_geometry or args.compare_battle_boundary or args.compare_opening_timing
-                            or args.compare_recurrent_capacity):
+                            or args.compare_recurrent_capacity or args.compare_preparation_credit):
                         summary['planning_zone_receipts'] = row.get('planning_zone_receipts')
                         summary['shelter_dispatch'] = row.get('shelter_dispatch')
                         for key in ('ready_embedded_defenses', 'ready_preparation', 'ready_loadout',
@@ -833,7 +848,8 @@ def main():
                         update = trainer.ppo_update(net, [row for job,row in zip(jobs,results) if job[1]==arm],
                                            optimizers[arm], balance_phases=arm=='balanced',
                                            planning_tool_entropy_bonus=PLANNING_ENTROPY_BONUSES.get(arm, 0.),
-                                           audit_phases=args.audit_phase_gradients)
+                                           audit_phases=args.audit_phase_gradients,
+                                           preparation_credit=PREPARATION_CREDIT_BY_ARM.get(arm, False))
                         if args.audit_phase_gradients:
                             with (directory/'phase-gradients.jsonl').open('a') as experiment:
                                 experiment.write(json.dumps(dict(round=rnd, arm=arm, source_policy=policies[arm],

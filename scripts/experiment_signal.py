@@ -19,6 +19,7 @@ _OTHER = {'planning_entropy': 'planning_entropy',
           'battle_boundary': 'battle_boundary',
           'opening_timing': 'opening_timing_input',
           'recurrent_capacity': 'recurrent_capacity',
+          'preparation_credit': 'preparation_credit',
           'target_settle': 'snapped_cast'}
 
 
@@ -94,6 +95,7 @@ def summarize_signal(rows, config, arms, evaluation, *, start_round, minimum=4):
                     occurrence = observed is True
                 difference = occurrence and (
                     design == 'recurrent_capacity' and observed != config['recurrent_width_by_arm'][arms[0]]
+                    or design == 'preparation_credit' and config['preparation_credit_by_arm'][arm]
                     or design == 'planning_entropy' and config['planning_tool_entropy_bonus_by_arm'][arm] > 0
                     or design == 'phase_balance' and arm == 'balanced'
                     or design == 'shelter_input' and config['shelter_input_by_arm'][arm]

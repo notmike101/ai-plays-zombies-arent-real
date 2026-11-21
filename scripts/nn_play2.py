@@ -1564,6 +1564,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     planning_entropy=planning_entropy_observed,
                     phase_balance=planning_steps > 0 and battle_steps > 0 and planning_steps != battle_steps,
                     spatial_cells=spatial_cells_observed,
+                    preparation_credit=(bool(planning_steps and (saved is not None or state['phase'] == 'planning'))
+                                        if signal_mode == 'preparation_credit' else None),
                     recurrent_capacity=(net.gru.hidden_size if signal_mode == 'recurrent_capacity'
                                         and net is not None and rows['obs'] else None),
                     snapped_cast=bool(snapped_cast_attempts),
@@ -1787,8 +1789,26 @@ def phase_gradient_alignment(net, step_loss, planning):
     return report
 
 
+PLANNING_TIMEOUT_RETURN = -SAVED_REWARD_SCALE * RETRY_CIVILIAN_FRACTION
+
+
+def apply_preparation_targets(trajectory, planning, values, advantages, returns):
+    """Use official saves and the remaining rewards from planning decisions."""
+    end = trajectory['end']
+    if end == 'timeout' and trajectory['timeout_phase'] != 'planning':
+        return
+    terminal = outcome_reward(trajectory['saved_frac'], end)
+    target = PLANNING_TIMEOUT_RETURN if end == 'timeout' else terminal
+    last = len(planning) - 1
+    for step in range(last, -1, -1):
+        if planning[step]:
+            target += trajectory['rews'][step] - (terminal if step == last else 0.)
+            returns[step] = target
+            advantages[step] = target - values[step]
+
+
 def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
-               balance_phases=False, planning_tool_entropy_bonus=0., audit_phases=False):
+               balance_phases=False, planning_tool_entropy_bonus=0., audit_phases=False, preparation_credit=False):
     seqs = []
     for t in trajs:
         X = torch.tensor(np.array(t['obs'], dtype=np.float32)).unsqueeze(0)
@@ -1803,8 +1823,11 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
         with torch.no_grad():
             _, _, v, _ = net(X)
         vals = v.squeeze(0).numpy()
+        planning = X[0, :, PLANNING_INDEX].bool().tolist()
         adv, ret = gae(list(RW), list(vals), bootstrap=t.get('bootstrap', 0.0),
-                       planning=X[0, :, PLANNING_INDEX].bool().tolist(), sim_elapsed=t['sim_elapsed'])
+                       planning=planning, sim_elapsed=t['sim_elapsed'])
+        if preparation_credit:
+            apply_preparation_targets(t, planning, vals, adv, ret)
         temperature = t.get('cell_temperatures')
         seqs.append((X, U, C, ULP, CLP, MU,
                      torch.tensor(adv, dtype=torch.float32),
