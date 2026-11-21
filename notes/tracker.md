@@ -2,6 +2,40 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 18:23 Central, shelter duration 227683 checkpointed all eight
+  training rounds. Each arm had 16 distinct observed outbreaks,
+  16 retries, and four occupied READY starts with protected
+  civilian-seconds. Candidate earned .19518485 extra reward in
+  four games with zero mismatches. Standard/candidate selected
+  rectangles in four/five games. In final round, baseline had
+  19.21% and 38.90% occupied starts and candidate had one 10.17%
+  start. The 38.90% board recorded 3176 exposed people at its
+  first breach, sim 42.90 s, then retried at 9.96% saved by sim
+  72.10. A confirmed Seek & Destroy and one Garrison outside
+  the occupied shelter were logged. Candidate's occupied board
+  had two confirmed Stun Gas casts and a Mortar outside the
+  occupied shelter, breached at sim 49.70 and retried at sim
+  85.37. Distinct outbreaks and layouts, so these are mechanism
+  observations. First frozen pair active under PID 71548.
+- Active duration journals show median outside-playarea penalties
+  -.26 baseline and -.24 candidate. In the five occupied games
+  from rounds 0-3, the individual penalties range -.18 to -.62
+  versus candidate duration additions .01481 to .08192.
+  Existing action guard prevents these rejections reaching the
+  game. Preserve the returned rejected tool/cell map in the
+  upcoming geometry logs to locate the source of the losses.
+- Extended the staged geometry observation tests through the real
+  episode loop with a fake game. Red test reproduced a stale
+  geometry suffix on the planning-timeout critic input. Fixed by
+  recomputing geometry from the final refreshed board and current
+  masks, with zero suffix during battle and in the control.
+  97 isolated tests passed. Patch apply check confirmed. New
+  SHA256 9EB39A7744809A9EC420191390EAFBEC49CC604F14DD4E3F9F58EDCA33DE2AB3.
+  Source remains isolated until live training ends. Seed 232741
+  window checked against the archive with zero overlaps. Favor
+  the earlier schema-4 source 1c3be633f44497fc for the geometry
+  comparison so it does not inherit duration-treatment updates.
+
 - At 18:18 Central, shelter duration 227683 checkpointed five
   rounds. Both arms entered all ten battles and reached retry
   each time. Baseline measured two episodes with protected time.
