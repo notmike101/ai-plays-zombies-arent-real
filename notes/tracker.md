@@ -2,6 +2,51 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 18:12 Central, shelter duration 227683 checkpointed its
+  first round. Warm source 1c3be633f44497fc and matching Adam from
+  analysis/coverage-shelter-duration-0e7fdfc762/paired.pt, arm
+  duration_baseline. All 20 planned sampling seeds checked
+  against earlier comparison journals with zero collisions.
+  Both arms model-controlled with the same stock 1x clock,
+  split CPUs, exploration, .30 READY credit and .10 occupied
+  breach cost. Only duration rate differs, 0 vs .01.
+  With sampling seed 227684 both arms reached READY with one
+  closed shelter and 9.95% of civilians inside, on distinct
+  native outbreaks and layouts. Baseline recorded 43888.63
+  protected civilian-seconds and no extra reward. Candidate
+  recorded 39170.98 protected civilian-seconds and .04810977
+  added reward. Occupied breaches at sim 56.27 and 50.23 s,
+  with 810 and 811 civilians exposed. Both confirmed helicopter
+  deployments, and both retried. All four first-round games
+  reached retry. This verifies reward exposure on a previously
+  unused sampling seed before the first PPO update. It is not
+  evidence of a learned improvement.
+  Data analysis/coverage-shelter-duration-996c3bfe17; console
+  analysis/coverage-shelter-duration-227683-drive-d.log.
+  Operator 71548 (18:09:48), second round active. Read-only
+  payload mismatch diagnostic wraps this run. Production SHA
+  and Observatory PID 21012 verified at transition.
+- At 18:09, phase balance 216952 ended normally. All eight
+  frozen games retried with zero occupancy and zero eligible
+  natural finishes. Discovery overlaps one standard and
+  three balanced. Private policies and Adam retained. At
+  idle cf08431 added true closed counts to READY preparation
+  records using the existing native snapshot. 358 isolated
+  script tests passed and all four duration records contain
+  the new count, matching the measured coverage cases.
+- Isolated exact rectangle geometry prototype matched direct
+  counting for all 2304 endpoint pairs, including duplicate
+  edges, outside points and empty sets. Tested three client
+  sizes. Two read-only frozen planning captures from PIDs
+  50372 and 75428 were byte-identical at 8142 civilians. On
+  that real board the direct scan took about 122 ms and
+  the optimized calculation .29 ms median, including point
+  binning and all pair queries. No legality or survival
+  prediction. Private replay and timings under
+  analysis/coverage-portable314/tmp/rectangle-coverage-geometry-216952*.
+  The prototype remains isolated. Use as an observation
+  candidate for a policy that learns its own geometry choices.
+
 - At 18:00 Central, phase balance 216952 checkpointed all
   eight training rounds. Both arms had 16 battle starts, 16
   retries and zero occupied shelters at READY. Standard vs
