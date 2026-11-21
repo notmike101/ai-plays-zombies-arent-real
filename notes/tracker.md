@@ -4,6 +4,22 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 20:20 Central, exact actor 2e654bf5875b7089 finished
+  eight validation attempts without a natural finish:
+  five retries and three planning timeouts, no discovery
+  overlaps in the final result ledger. Neither arm qualified.
+  Verified the trainer exited and owned copies were idle.
+- Commit 1bc34ef preserves scheduled and finished native
+  attempts, including retries and the original companion.
+  Known discarded seeds enter future exclusion scans and
+  matched retry checks. Consistency reports now include
+  eligible minimum/mean and scheduled/finished native
+  counts alongside the existing policy gate. Interruption
+  regression confirms original seed recovery and the two
+  pending replacements. All 378 script tests passed.
+  Production checkpoint untouched. No new live run launched
+  while audit remediation is underway.
+
 - At 20:17 Central, exact-actor validation PID 66728 remained
   live. First pair retried at 5.23% and 9.97%;
   native seeds 2683730523 and 2580444902. Archived layout-free
