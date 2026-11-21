@@ -65,6 +65,10 @@ from scripts.mechanic_contract import EXTRA_LABELS
 INPUT_LABELS += EXTRA_LABELS
 
 SHELTER_OCCUPANCY_LABEL = 'Living civilians inside closed safe zones (fraction)'
+SHELTER_GEOMETRY_LABELS = [
+    f'Rectangle shelter cell {cell}: projected additional living civilians (fraction)'
+    for cell in range(1, 49)
+]
 
 
 def validate(nobs=None, labels=None):

@@ -52,6 +52,23 @@ def inside_polygon(points, vertices):
     return inside
 
 
+def rectangle_counts(points, width, height):
+    """Count projected points for every pair of integer grid corners."""
+    x = (XF * width).astype(int)
+    y = (YF * height).astype(int)
+    # Separate exact edges from open intervals so both boundary edges count.
+    def buckets(axis, values):
+        return np.searchsorted(axis, values, side='left') + np.searchsorted(axis, values, side='right')
+    nx, ny = 2 * len(x) + 1, 2 * len(y) + 1
+    bins = buckets(y, points[:, 1]) * nx + buckets(x, points[:, 0])
+    counts = np.bincount(bins, minlength=ny * nx).reshape(ny, nx)
+    integral = np.pad(counts, ((1, 0), (1, 0))).cumsum(axis=0).cumsum(axis=1)
+    row, col = np.indices((len(y), len(x))).reshape(2, -1)
+    left, right = 2 * np.minimum.outer(col, col) + 1, 2 * np.maximum.outer(col, col) + 2
+    top, bottom = 2 * np.minimum.outer(row, row) + 1, 2 * np.maximum.outer(row, row) + 2
+    return integral[bottom, right] - integral[top, right] - integral[bottom, left] + integral[top, left]
+
+
 def features(points, kinds, rectangles, zones, width, height):
     xy = centers(width, height)
     counts = np.zeros((5, NC), dtype=np.float32)

@@ -13,6 +13,18 @@ class SpatialTests(unittest.TestCase):
         expected=np.abs(points[:,1:]/1200-spatial.YF).argmin(1)*8+np.abs(points[:,:1]/1920-spatial.XF).argmin(1)
         np.testing.assert_array_equal(spatial.grid_bins(points,1920,1200),expected)
 
+    def test_rectangle_counts_match_inclusive_projection_bounds(self):
+        rng = np.random.default_rng(9)
+        for width, height in ((1280, 800), (1920, 1200), (3840, 2160)):
+            grid = spatial.centers(width, height).astype(int)
+            random = rng.uniform((-10, -10), (width + 10, height + 10), (100, 2))
+            points = np.concatenate((grid, grid, random, [[np.nan, 0.]]))
+            lower = np.minimum(grid[:, None], grid[None, :])
+            upper = np.maximum(grid[:, None], grid[None, :])
+            expected = ((points >= lower[:, :, None]) & (points <= upper[:, :, None])).all(axis=-1).sum(axis=-1)
+            np.testing.assert_array_equal(spatial.rectangle_counts(points, width, height), expected)
+            self.assertFalse(spatial.rectangle_counts(np.empty((0, 2)), width, height).any())
+
     def test_world_y_projects_up_and_dpi_is_not_applied_twice(self):
         px = spatial.project(np.array([[1829.2, 1972.4]]), (1631., 1318.6, .5795), 1920, 1200)
         np.testing.assert_allclose(px[0], [1074.8569, 221.1229], atol=.01)

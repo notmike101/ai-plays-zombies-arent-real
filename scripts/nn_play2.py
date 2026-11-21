@@ -29,7 +29,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT)
 try:
     from visualizer.observer import Observer
-    from visualizer.labels import INPUT_LABELS, SHELTER_OCCUPANCY_LABEL, validate as validate_labels
+    from visualizer.labels import (INPUT_LABELS, SHELTER_OCCUPANCY_LABEL, SHELTER_GEOMETRY_LABELS,
+                                   validate as validate_labels)
 except ImportError:
     Observer = None
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, extra_cell_label
@@ -80,7 +81,7 @@ TOOLS += EXTRA_TOOLS
 CELL_LABELS += [extra_cell_label(tool,c) for tool in EXTRA_TOOLS for c in range(NC)]
 PLANNING_U = list(range(11)) + [15, 16, 17, 18]
 BATTLE_GEOMETRY = {12, 20, 22, 24, 27, 28, 30, 33}
-from spatial import XF, YF, inside_polygon
+from spatial import XF, YF, inside_polygon, project, rectangle_counts
 from shelter_reward import Shelter, CREDIT as SHELTER_CREDIT, BREACH_COST
 WORLD_CELLS = np.repeat(YF < .70, len(XF))  # The last grid row overlaps the 1920x1200 HUD.
 # resizes itself after tiling (probe: client 1920x1200 despite SetWindowPos),
@@ -96,9 +97,10 @@ def cell_of_px(c, cw, ch):
 
 
 class PolicyNet2(nn.Module):
-    def __init__(self, *, shelter_occupancy=False):
+    def __init__(self, *, shelter_occupancy=False, shelter_geometry=False):
         super().__init__()
-        self.gru = nn.GRU(NOBS+int(shelter_occupancy), HID, 1, batch_first=True)
+        inputs = NOBS + int(shelter_occupancy) + NC * int(shelter_geometry)
+        self.gru = nn.GRU(inputs, HID, 1, batch_first=True)
         self.hu = nn.Linear(HID, NU)
         self.hc = nn.Linear(HID, NU * NC)
         self.val = nn.Linear(HID, 1)
@@ -145,6 +147,8 @@ def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
     base.extend(st.get('mechanics_features', [0.]*len(EXTRA_LABELS)))
     if 'shelter_occupancy_input' in st:
         base.append(st['shelter_occupancy_fraction'] if st['shelter_occupancy_input'] else 0.)
+    if 'shelter_geometry_values' in st:
+        base.extend(st['shelter_geometry_values'])
     return base
 
 
@@ -243,6 +247,37 @@ def blocked_placement_cells(st, retries, decision):
     return blocked
 
 
+def planning_rectangle_pairs(inside):
+    rows, cols = np.divmod(np.arange(NC), 8)
+    corners = inside[rows[:, None] * 8 + cols[None, :]]
+    return (inside[:, None] & inside[None, :] & corners & corners.T
+            & (rows[:, None] != rows[None, :]) & (cols[:, None] != cols[None, :]))
+
+
+def shelter_rectangle_gain(st, width, height, allowed):
+    """Projected newly sheltered share per model-selectable grid corner."""
+    if not allowed.any():
+        return np.zeros(NC, dtype=np.float32)
+    native = st['native']
+    units = native['units']
+    living = units['pos'][units['kind'] == 0]
+    if not len(living):
+        return np.zeros(NC, dtype=np.float32)
+    sheltered = np.zeros(len(living), dtype=bool)
+    for zone in native['zones']:
+        if len(zone) >= 3:
+            sheltered |= inside_polygon(living, zone)
+    counts = rectangle_counts(project(living[~sheltered], native['camera'], width, height), width, height)
+    anchor = st.get('anchor')
+    if anchor:
+        gain = counts[anchor[1]] * allowed
+    else:
+        centers = [cell_of_px(cell, width, height) for cell in range(NC)]
+        inside = inside_polygon(centers, st['playarea_boundary']) & st.get('world_cells', WORLD_CELLS)
+        gain = np.where(planning_rectangle_pairs(inside), counts, 0).max(axis=1) * allowed
+    return (gain / len(living)).astype(np.float32)
+
+
 def planning_geometry_masks(st, width, height):
     boundary = st.get('playarea_boundary')
     if not st['planning'] or boundary is None or st.get('dialog') or st.get('gesture_anchor'):
@@ -258,9 +293,7 @@ def planning_geometry_masks(st, width, height):
             candidates &= ((rows != rows[anchor]) & (cols != cols[anchor])
                            & inside[rows[anchor] * 8 + cols] & inside[rows * 8 + cols[anchor]])
         return {tool: candidates}
-    corners = inside[rows[:, None] * 8 + cols[None, :]]
-    rectangles = (inside[:, None] & inside[None, :] & corners & corners.T
-                  & (rows[:, None] != rows[None, :]) & (cols[:, None] != cols[None, :]))
+    rectangles = planning_rectangle_pairs(inside)
     segments = inside & (inside.sum() >= 2)
     targets = st.get('build_targets', ())
     snapped = np.zeros(NC, dtype=bool)
@@ -338,6 +371,12 @@ def cell_mask(st, u, mc):
     if exact_geometry is not None:
         result *= exact_geometry
     return result
+
+
+def shelter_geometry_observation(st, width, height, tools, cells):
+    if st['planning'] and tools[10] and st.get('playarea_boundary') is not None:
+        return shelter_rectangle_gain(st, width, height, cell_mask(st, 10, cells).astype(bool))
+    return np.zeros(NC, dtype=np.float32)
 
 
 def base_cell_mask(st, u, mc):
@@ -593,9 +632,14 @@ def refresh_battle_state(st, dump):
                 slot['pending'] = False
 
 
-def checkpoint_schema(*, shelter_occupancy=False):
+def checkpoint_schema(*, shelter_occupancy=False, shelter_geometry=False):
+    if shelter_occupancy and shelter_geometry:
+        raise ValueError('Choose one private shelter observation contract')
     labels = INPUT_LABELS + [SHELTER_OCCUPANCY_LABEL] if shelter_occupancy else INPUT_LABELS
-    return dict(version=5 if shelter_occupancy else 4, inputs=labels, tools=TOOLS, cells=CELL_LABELS)
+    if shelter_geometry:
+        labels = labels + SHELTER_GEOMETRY_LABELS
+    return dict(version=6 if shelter_geometry else 5 if shelter_occupancy else 4,
+                inputs=labels, tools=TOOLS, cells=CELL_LABELS)
 
 
 def learning_config(*, legacy=False):
@@ -759,6 +803,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         st = dict(t=0., planning=True, spend_frac=0., deck=[], sim=0., mult=8., shelter=shelter_tracker)
         shelter_occupancy_input = options.get('shelter_occupancy_input')
         shelter_occupancy_peak = None
+        shelter_geometry_input = options.get('shelter_geometry_input')
+        shelter_geometry_peak = None
+        geometry_anchored = 0
         if shelter_occupancy_input is not None:
             st['shelter_occupancy_input'] = shelter_occupancy_input
         config = initial.get('config', {})
@@ -780,7 +827,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 if session['scenario']>1 and os.path.isfile(path):load_pretrained(net,path)
             if Observer is not None and telemetry:
                 observer = Observer(net, pid, tag, interval=options.get('observer_interval', .2), labels={
-                    'input': checkpoint_schema(shelter_occupancy=shelter_occupancy_input is not None)['inputs'],
+                    'input': checkpoint_schema(shelter_occupancy=shelter_occupancy_input is not None,
+                                               shelter_geometry=shelter_geometry_input is not None)['inputs'],
                     'hu': TOOLS, 'hc': CELL_LABELS})
         rows = {k: [] for k in ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'sim_elapsed')}
         planning_tool_temperature = options.get('planning_tool_temperature')
@@ -888,7 +936,6 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             if not st['planning'] and rows['rews']:
                 rows['rews'][-1] += st['shelter'].observe(st.get('native'),st['sim'])
             blobs = []
-            f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
             if shelter_occupancy_input is not None:
                 shelter_occupancy_peak = max(shelter_occupancy_peak or 0., st['shelter_occupancy_fraction'])
             update_outside_retries(st,env.cw,env.ch)
@@ -913,6 +960,12 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     raise ZAREnvError(f'Expected {fixed_speed}, observed native speed {state["mult"]}')
             if options.get('fixed_clock'):
                 mu[TOOLS.index('pause_toggle')] = 0
+            if shelter_geometry_input is not None:
+                geometry = shelter_geometry_observation(st, env.cw, env.ch, mu, mc)
+                geometry_anchored += int(bool(st.get('anchor')) and bool(geometry.any()))
+                shelter_geometry_peak = max(shelter_geometry_peak or 0., float(geometry.max()))
+                st['shelter_geometry_values'] = geometry.tolist() if shelter_geometry_input else [0.] * NC
+            f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
             x = torch.tensor([[f]], dtype=torch.float32)
             cell_temperature = 1.
             cast_choice = signal_mode == 'battle_tools' and battle_cast_choice(st, mu)
@@ -1317,6 +1370,15 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             st['t'] = time.monotonic()-(battle_start or start)
             mechanics.refresh(st)
             st['sim'] = state['sim']
+            if shelter_geometry_input is not None:
+                st['shelter_geometry_values'] = [0.] * NC
+                if shelter_geometry_input and st['planning']:
+                    update_outside_retries(st, env.cw, env.ch)
+                    st['placement_blocked'] = blocked_placement_cells(st, placement_retry_at, len(rows['obs']))
+                    update_geometry_masks(st, env.cw, env.ch, placement_feedback=placement_feedback,
+                                          planning_audit=planning_zone_audit)
+                    st['shelter_geometry_values'] = shelter_geometry_observation(
+                        st, env.cw, env.ch, *masks_for(st)).tolist()
             f = make_obs(st, o, o['civ']/civ0, trend, slope, [], prev_u, prev_c, succ)
             with torch.no_grad():
                 _, _, value, _ = net(torch.tensor([[f]], dtype=torch.float32), h)
@@ -1375,6 +1437,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     occupied_exposure=bool(shelter.breach_exposures) if shelter.next_sample else None,
                     occupied_duration=bool(shelter.occupant_seconds) if shelter.duration_intervals else None,
                     shelter_occupancy_input=bool(shelter_occupancy_peak) if shelter_occupancy_peak is not None else None,
+                    shelter_geometry_input=bool(shelter_geometry_peak) if shelter_geometry_peak is not None else None,
                     occupied_ready=coverage > 0 if coverage is not None else None,
                     below_ready_target=coverage < READY_COVERAGE_SHORTFALL_TARGET if coverage is not None else None,
                     missile_civilian_loss=missile_losses['confirmed'] > 0 if missile_losses is not None else None,
@@ -1385,6 +1448,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     target_pointer_settled=bool(settled_cast_attempts),
                     legal_ready_declined=bool(ready_declined_steps)),
                 shelter_occupancy_peak=shelter_occupancy_peak,
+                shelter_geometry_peak=shelter_geometry_peak, geometry_anchored_decisions=geometry_anchored,
                 reward_components=rewards.copy(),
                 reward_bases=dict(
                     occupied_breach=-shelter.breach_exposures / civ0 if shelter.next_sample else None,

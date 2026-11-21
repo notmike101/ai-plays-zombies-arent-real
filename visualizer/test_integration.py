@@ -106,6 +106,48 @@ class IntegrationTests(unittest.TestCase):
             self.assertAlmostEqual(sum(frame['probabilities']['hu']), 1, places=6)
         self.assertFalse(list(Path(self.temp.name).glob('*.json')))
 
+    def test_geometry_input_is_recomputed_at_planning_timeout(self):
+        import numpy as np
+
+        game = FakeGame(-1)
+        source = self.globals
+        observations = []
+
+        class GeometryMechanics(FakeMechanics):
+            refreshes = 0
+            def refresh(self, st):
+                super().refresh(st)
+                self.refreshes += 1
+                point = [0., 140.] if self.refreshes == 1 else [3000., 3000.]
+                st.update(playarea_boundary=[(0, 0), (1920, 0), (1920, 1200), (0, 1200)],
+                          native=dict(camera=(0., 0., 1.), zones=[],
+                                      units=dict(pos=np.array([point]), kind=np.array([0]))))
+
+        class RecordingPolicy(source['PolicyNet2']):
+            def __init__(self):
+                super().__init__(shelter_geometry=True)
+
+            def forward(self, x, h=None):
+                observations.append(x.detach().clone())
+                return super().forward(x, h)
+
+        overrides = dict(Observer=None, PLAN_STEPS=1, Mechanics=GeometryMechanics,
+                         load_bind_keys=lambda env: [], time=FakeClock(game),
+                         extra_masks=lambda st: np.zeros((source['NU'] - 72, source['NC'])))
+        with patch.dict(source, overrides), patch.dict(sys.modules, {
+                'env_zar': SimpleNamespace(ZAREnv=lambda pid: game, ZAREnvError=RuntimeError)}):
+            with patch.object(torch.distributions.Categorical, 'sample',
+                              side_effect=[torch.tensor(0), torch.tensor(0)]):
+                model = RecordingPolicy()
+                result = self.run_episode((-1, model.state_dict(), False, 'geometry-timeout',
+                                           dict(shelter_geometry_input=True)),
+                                          policy_factory=RecordingPolicy)
+        self.assertNotIn('err', result)
+        self.assertEqual(result['end'], 'timeout')
+        self.assertEqual(len(observations), 2)
+        self.assertTrue(observations[0][..., -source['NC']:].any())
+        self.assertFalse(observations[1][..., -source['NC']:].any())
+
     def test_outside_missile_penalizes_transition_without_spending_charge(self):
         outside = self.episode(None, missile_cell=7)
         self.assertNotIn('err', outside)

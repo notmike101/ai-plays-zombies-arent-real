@@ -32,34 +32,64 @@ class StateTests(unittest.TestCase):
         optimizer = torch.optim.Adam(old.parameters())
         old.gru.weight_ih_l0.grad = torch.ones_like(old.gru.weight_ih_l0)
         optimizer.step()
-        net, moments = comp.extend_shelter_model(old, optimizer.state_dict())
-        new = torch.optim.Adam(net.parameters()); new.load_state_dict(moments)
         x = torch.randn(1, 2, train.NOBS)
-        with torch.no_grad():
-            old_output = old(x)
-            new_output = net(torch.cat((x, torch.full((1, 2, 1), .75)), dim=-1))
-        for left, right in zip(old_output, new_output):
-            torch.testing.assert_close(left, right, rtol=0., atol=2e-6)
-        for name in ('exp_avg', 'exp_avg_sq'):
-            original = optimizer.state[old.gru.weight_ih_l0][name]
-            expanded = new.state[net.gru.weight_ih_l0][name]
-            torch.testing.assert_close(original, expanded[:, :-1], rtol=0., atol=0.)
-            self.assertFalse(expanded[:, -1].any())
+        for geometry, suffix in ((False, 1), (True, train.NC)):
+            with self.subTest(geometry=geometry):
+                net, moments = comp.extend_shelter_model(old, optimizer.state_dict(), geometry=geometry)
+                new = torch.optim.Adam(net.parameters()); new.load_state_dict(moments)
+                with torch.no_grad():
+                    old_output = old(x)
+                    new_output = net(torch.cat((x, torch.full((1, 2, suffix), .75)), dim=-1))
+                for left, right in zip(old_output, new_output):
+                    torch.testing.assert_close(left, right, rtol=0., atol=2e-6)
+                for name in ('exp_avg', 'exp_avg_sq'):
+                    original = optimizer.state[old.gru.weight_ih_l0][name]
+                    expanded = new.state[net.gru.weight_ih_l0][name]
+                    torch.testing.assert_close(original, expanded[:, :-suffix], rtol=0., atol=0.)
+                    self.assertFalse(expanded[:, -suffix:].any())
 
     def test_shelter_input_pair_changes_only_whether_the_input_is_visible(self):
         import compare_spatial as comp
         with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \
                 patch.object(comp.zar_boot, 'stop'), patch.object(train, 'run_episode') as run:
-            for training in (True, False):
-                options = []
-                for arm, visible in comp.SHELTER_INPUT_BY_ARM.items():
-                    comp.episode(('inst13', arm, {}, 123, 'test', training), observe=True)
-                    settings = run.call_args.args[0][4].copy()
-                    self.assertEqual(settings.pop('shelter_occupancy_input'), visible)
-                    self.assertEqual(run.call_args.kwargs['policy_factory']().gru.input_size, train.NOBS+1)
-                    self.assertTrue(run.call_args.kwargs['telemetry'])
-                    options.append(settings)
-                self.assertEqual(*options)
+            variants = ((comp.SHELTER_INPUT_BY_ARM, 'shelter_occupancy_input', 1),
+                        (comp.SHELTER_GEOMETRY_BY_ARM, 'shelter_geometry_input', train.NC))
+            for arms, option, suffix in variants:
+                for training in (True, False):
+                    options = []
+                    for arm, visible in arms.items():
+                        comp.episode(('inst13', arm, {}, 123, 'test', training), observe=True)
+                        settings = run.call_args.args[0][4].copy()
+                        self.assertEqual(settings.pop(option), visible)
+                        self.assertEqual(run.call_args.kwargs['policy_factory']().gru.input_size, train.NOBS + suffix)
+                        self.assertTrue(run.call_args.kwargs['telemetry'])
+                        options.append(settings)
+                    self.assertEqual(*options)
+
+    def test_shelter_rectangle_gain_uses_camera_anchor_masks_and_existing_coverage(self):
+        import numpy as np
+        from spatial import XF, YF
+        width, height = 1920, 1200
+        pixel = lambda c: np.array([int(XF[c % 8] * width), int(YF[c // 8] * height)])
+        world = lambda p: (p - [width / 2, height / 2]) * [1., -1.]
+        covered = world((pixel(0) + pixel(9)) / 2)
+        outside = world(pixel(47))
+        anchor = world(pixel(0))
+        zone = covered + np.array([(-5., -5.), (5., -5.), (5., 5.), (-5., 5.)])
+        st = dict(native=dict(units=dict(kind=np.array([0, 0, 0, 1]),
+                                         pos=np.array([covered, outside, anchor, anchor])),
+                              camera=(0., 0., 1.), zones=[zone, zone.copy()]),
+                  playarea_boundary=np.array([[0, 0], [width, 0], [width, height], [0, height]]))
+        allowed = np.zeros(train.NC, dtype=bool)
+        allowed[[0, 9, 47]] = True
+        gain = train.shelter_rectangle_gain(st, width, height, allowed)
+        np.testing.assert_allclose(gain[[0, 9, 47]], [1 / 3, 1 / 3, 0.])
+        st['anchor'] = (train.TOOLS.index('zone_rect'), 0)
+        allowed[[0, 47]] = False
+        gain = train.shelter_rectangle_gain(st, width, height, allowed)
+        self.assertEqual(np.count_nonzero(gain), 1)
+        self.assertAlmostEqual(gain[9], 1 / 3)
+        self.assertFalse(train.shelter_rectangle_gain(st, width, height, allowed & False).any())
 
     def test_private_ppo_retries_both_arms_after_transient_native_map_change(self):
         from compare_spatial import collect_pairs

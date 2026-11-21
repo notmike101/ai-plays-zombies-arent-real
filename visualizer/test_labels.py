@@ -10,7 +10,7 @@ import unittest
 import torch
 from torch import nn
 
-from labels import INPUT_LABELS, SHELTER_OCCUPANCY_LABEL, validate
+from labels import INPUT_LABELS, SHELTER_GEOMETRY_LABELS, SHELTER_OCCUPANCY_LABEL, validate
 
 ROOT = Path(__file__).resolve().parent
 _TR = {}
@@ -24,6 +24,21 @@ def trainer():
 
 
 class ShelterInputLabels(unittest.TestCase):
+    def test_geometry_labels_and_observation_have_the_same_grid_order(self):
+        tr = trainer()
+        schema = tr['checkpoint_schema'](shelter_geometry=True)
+        self.assertEqual(schema['version'], 6)
+        inputs = schema['inputs']
+        self.assertEqual(inputs[:-48], INPUT_LABELS)
+        self.assertEqual(inputs[-48:], SHELTER_GEOMETRY_LABELS)
+        self.assertEqual(inputs[-48], 'Rectangle shelter cell 1: projected additional living civilians (fraction)')
+        self.assertEqual(inputs[-1], 'Rectangle shelter cell 48: projected additional living civilians (fraction)')
+        self.assertEqual(tr['PolicyNet2'](shelter_geometry=True).gru.input_size, len(inputs))
+        args = (PROBE_O, 1., 0., 0., [], 0., 0., 0.)
+        added = [cell / 48 for cell in range(48)]
+        state = dict(PROBE_ST, shelter_geometry_values=added)
+        self.assertEqual(tr['make_obs'](state, *args), [*tr['make_obs'](PROBE_ST, *args), *added])
+
     def test_private_shelter_input_is_appended_with_the_exact_label(self):
         tr = trainer()
         labels = tr['checkpoint_schema'](shelter_occupancy=True)['inputs']

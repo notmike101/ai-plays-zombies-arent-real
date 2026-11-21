@@ -118,6 +118,32 @@ same-state replay can zero the input while holding the policy, observation,
 incoming memory and mask fixed to measure changes in the action distribution.
 Action distributions and official survival each require their own evidence.
 
+## Projected rectangle coverage input
+
+`--compare-shelter-geometry` widens both private policies by 48 inputs, one
+per grid cell. For a legal rectangle start, the feature gives the largest
+projected civilian gain among geometrically valid endpoints for each start.
+After the policy chooses a start, it measures the gain for each selectable
+endpoint. It excludes civilians already inside any closed shelter and
+uses the fraction of all living civilians as the unit. The estimate uses
+current native positions and camera projection. Native placement receipts
+still determine the actual result. Cost, debt, land allowance, later
+movement and protection against zombies are outside the estimate.
+
+Both arms use the same sequence, masks, rewards and warm-start Adam state.
+The control receives zeros and the candidate receives the measured values.
+Extra input weights and optimizer moments initialize to zero in both arms.
+The feature is zero during battle. It supplies information to the policy
+and makes no geometry choices for it. Schema 6 identifies the private
+input contract. The official evaluation gate and production schema 4
+continue through their existing paths.
+
+Report the availability of a positive input, how many decisions had a
+positive endpoint estimate after the model chose an anchor, native closed
+placement and occupancy at READY. Retain rejected outside-playarea tool and
+cell counts alongside reward components. Use the game receipts and frozen official
+outcomes to assess whether the model learned to build useful shelters.
+
 ## Examples from completed runs
 
 - Shelter-defense study 198952 had no occupied breach in any valid training
