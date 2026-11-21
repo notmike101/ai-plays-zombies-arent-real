@@ -1810,6 +1810,8 @@ def apply_preparation_targets(trajectory, planning, values, advantages, returns)
 def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
                balance_phases=False, planning_tool_entropy_bonus=0., audit_phases=False, preparation_credit=False):
     seqs = []
+    replay = {phase: dict(decisions=0, tool_max_abs=0., cell_max_abs=0.)
+              for phase in ('planning', 'battle')} if audit_phases else None
     for t in trajs:
         X = torch.tensor(np.array(t['obs'], dtype=np.float32)).unsqueeze(0)
         U = torch.tensor(t['us'])
@@ -1820,10 +1822,24 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
                                    dtype=np.float32))
         MC = torch.tensor(np.array([m[1] for m in t['masks']], dtype=np.float32))
         RW = np.array(t['rews'], dtype=np.float32)
+        mask = X[0, :, PLANNING_INDEX].bool()
         with torch.no_grad():
-            _, _, v, _ = net(X)
+            lu, lc, v, _ = net(X)
+            if replay is not None:
+                tools = tool_distribution(lu.squeeze(0), MU, temperature=t.get('tool_temperatures'))
+                cells = cell_distribution(lc, U, MC, temperature=t.get('cell_temperatures'))
+                tool_error, cell_error = (tools.log_prob(U) - ULP).abs(), (cells.log_prob(C) - CLP).abs()
+                if not (tool_error.isfinite().all() and cell_error.isfinite().all()):
+                    raise ValueError('Non-finite sampled action replay before PPO update')
+                for phase, selected in (('planning', mask), ('battle', ~mask)):
+                    count = int(selected.sum())
+                    if count:
+                        report = replay[phase]
+                        report['decisions'] += count
+                        report['tool_max_abs'] = max(report['tool_max_abs'], float(tool_error[selected].max()))
+                        report['cell_max_abs'] = max(report['cell_max_abs'], float(cell_error[selected].max()))
         vals = v.squeeze(0).numpy()
-        planning = X[0, :, PLANNING_INDEX].bool().tolist()
+        planning = mask.tolist()
         adv, ret = gae(list(RW), list(vals), bootstrap=t.get('bootstrap', 0.0),
                        planning=planning, sim_elapsed=t['sim_elapsed'])
         if preparation_credit:
@@ -1889,6 +1905,7 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
                for key in ('loss', 'approx_kl', 'clip_fraction', 'entropy', 'explained_variance')}
     if audit_phases:
         summary['phase_gradients'] = phase_audit
+        summary['preupdate_replay'] = replay
     print('ppo diagnostics', json.dumps(summary), flush=True)
     return summary
 

@@ -860,7 +860,8 @@ def main():
                         if args.audit_phase_gradients:
                             with (directory/'phase-gradients.jsonl').open('a') as experiment:
                                 experiment.write(json.dumps(dict(round=rnd, arm=arm, source_policy=policies[arm],
-                                                                 audit=update['phase_gradients']))+'\n')
+                                                                 audit=update['phase_gradients'],
+                                                                 preupdate_replay=update['preupdate_replay']))+'\n')
                         torch.save(net.state_dict(), directory/(arm+'.pt'))
                     temp = directory/'paired.tmp'
                     torch.save(dict(next_round=rnd+1, source=source, config=config,

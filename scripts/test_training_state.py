@@ -239,6 +239,21 @@ class StateTests(unittest.TestCase):
                                   epochs=1, audit_phases=True)
         self.assertEqual(result['phase_gradients']['planning_decisions'], 1)
         self.assertEqual(result['phase_gradients']['battle_decisions'], 2)
+        self.assertEqual(result['preupdate_replay']['planning']['decisions'], 1)
+        self.assertEqual(result['preupdate_replay']['battle']['decisions'], 2)
+        with torch.no_grad():
+            model = deepcopy(audited)
+            lu, lc, _, _ = model(torch.tensor(states).unsqueeze(0))
+            tools = train.tool_distribution(lu.squeeze(0), np.array([m[0] for m in masks]))
+            cells = train.cell_distribution(lc, torch.tensor(actions[0]), np.array([m[1] for m in masks]))
+            ulps = tools.log_prob(torch.tensor(actions[0])).tolist()
+            clps = cells.log_prob(torch.tensor(actions[1])).tolist()
+        clps[0] += .125
+        replay = train.ppo_update(model, [dict(trajectory, ulps=ulps, clps=clps)],
+                                  torch.optim.Adam(model.parameters()), epochs=0, audit_phases=True)['preupdate_replay']
+        self.assertAlmostEqual(replay['planning']['cell_max_abs'], .125)
+        self.assertEqual(replay['planning']['tool_max_abs'], 0.)
+        self.assertEqual(replay['battle']['cell_max_abs'], 0.)
         for name, tensor in baseline.state_dict().items():
             torch.testing.assert_close(audited.state_dict()[name], tensor, atol=0, rtol=0)
 
