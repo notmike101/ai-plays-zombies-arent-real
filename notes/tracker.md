@@ -4,6 +4,25 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 20:25 Central, ran a native validation-only smoke test
+  of the chronological ledger. Seed 282119 in analysis/
+  coverage-battle-boundary-ddd9fb4b96 used exact frozen
+  actor 2e654bf5875b7089 at normal speed on inst19/20.
+  PID 78584 exited after four planning timeouts. Ledger
+  confirmed four scheduled and four finished attempts,
+  bound to the actor. Report counted two incomplete slots
+  per arm, null eligible minimum/mean and no promotion.
+  No interface retry in this cohort; interruption/retry
+  behavior remains covered by the isolated regression.
+- Offline categorical history prototype mapped the old
+  recurrent input weights into 185 tool and 48 cell
+  channels while zeroing the old raw-ID weights. On eight
+  retained real planning frames, maximum absolute error
+  across recurrent output, action logits and value was
+  1.02e-6. Feasibility only: no optimizer migration,
+  observation schema change, or efficacy test deployed.
+  Audit follow-up prioritizes preparation and evaluation.
+
 - Follow-up audit reproduced a selection defect after 1bc34ef:
   reporting native counts beside a gate built from replacement
   rows still let the replacement displace an original attempt.
