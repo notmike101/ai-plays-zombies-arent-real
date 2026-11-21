@@ -2,6 +2,34 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 18:00 Central, phase balance 216952 checkpointed all
+  eight training rounds. Both arms had 16 battle starts, 16
+  retries and zero occupied shelters at READY. Standard vs
+  balanced median planning decisions 8 vs 8.5 and median
+  remaining money $2772 vs $2960. Four vs three episodes had
+  confirmed stock spends. One native payload-map failure at
+  0x650988 in round 7 triggered the existing pair replay.
+  The replay completed and the atomic next_round=8 checkpoint
+  was verified. No failed trajectory contributed a PPO update.
+  First frozen pair inst19/20 launched, operator 61372 live.
+- Matched the round-7 actors to 13 captured legal rectangle
+  states using the same features, incoming GRU memory and mask.
+  Captured and replayed logits and tool probabilities matched
+  exactly. All-policy comparison uses 21 legal states from
+  eight games across rounds 6-7. Median rectangle probability
+  fell from 1.346% in the common source to .863% in final
+  standard and .474% in final balanced. Median READY was
+  7.800%, 10.968% and 8.892%, respectively. This is same-state
+  response, not independence or a gameplay effect. The retained
+  shelter-duration source 1c3be633f44497fc gave 1.334% rectangle
+  probability on these same states and still has stronger
+  recorded occupied exposure than either phase arm.
+  Private evidence analysis/coverage-portable314/tmp/
+  phase-216952-planning-replay.jsonl and replay-phase-216952-round8.log.
+  Read-only map probe prepared for the next private launch.
+  Keep native count validation active until contradictory table
+  contents can be identified against synchronized live units.
+
 - At 17:53 Central, phase balance 216952 checkpointed six
   rounds. All 24 training games reached battle and retried,
   with zero occupied shelters at READY. The seventh batch
