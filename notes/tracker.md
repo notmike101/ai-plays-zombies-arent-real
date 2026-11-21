@@ -2,6 +2,45 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 18:53 Central, battle boundary 239417 checkpointed its
+  first round. Control saw 14 actual outside battle rejections
+  over 381 decisions. Candidate saw zero over 398 decisions,
+  with 386 decisions having positive reference mass on filtered
+  cells. Mean excluded probability was 6.17% per candidate
+  battle decision from the same candidate outputs without the
+  candidate mask. Guards remained. Zero control native spends
+  vs one candidate; all four went to retry with no occupied
+  shelters at READY. Distinct outbreaks and no natural outcome
+  inference. Model 1c3be633f44497fc and private Adam shared at
+  start. Both normal speed, split CPU, same planning/rewards.
+  Fresh Observatory frames from all four games had 4889 inputs.
+  Operator PID 41668 (18:50:58), second batch active. Data
+  analysis/coverage-battle-boundary-63a02e027d; console
+  analysis/coverage-battle-boundary-239417-drive-d.log.
+- Geometry 232741 finished at 18:50. Training control had
+  16 retries, six occupied starts and 22 confirmed spends.
+  Candidate had 15 retries, one planning timeout, two occupied
+  starts and ten confirmed spends. At timeout, the candidate
+  declined all 32 legal READY decisions, had 28 blocked steps,
+  and ended $237.91 in debt with two closed polygons covering
+  22.92% of civilians. Official outcome remains missing.
+  All eight frozen games retried, zero discovery overlaps
+  and zero eligible natural finishes. Each arm had one
+  occupied start (3.46% control / 6.17% candidate). Frozen
+  control f6031fe960faf0fe and candidate 9e1587b3424b16ca
+  with private Adam retained. No promotion.
+- Final geometry candidate suffix norm 1.17526 vs control
+  zero. Replaying five earlier real planning observations
+  with the final policy and the captured memory/mask, median
+  .002141 and max .003280 total variation from the input
+  alone. READY and rectangle deltas small with mixed signs.
+  This confirms a measured single-decision response.
+- At idle deployed 7650a97, exact battle mask comparison.
+  Added regression for actual snapped Demolition origins and
+  separate endpoints. 365 full script and 65 Observatory tests
+  passed. Archived evidence, production checkpoint SHA and
+  Observatory PID 21012 verified across the transition.
+
 - At 18:42 Central, geometry 232741 checkpointed six rounds,
   24 battle starts and 24 retries. Four occupied READY starts
   in control, two candidate. Round 4 paired starts both had
