@@ -60,6 +60,7 @@ SHELTER_GEOMETRY_BY_ARM = {'geometry_control': False, 'geometry_visible': True}
 OPENING_TIMING_BY_ARM = {'opening_control': False, 'opening_visible': True}
 CAPACITY_BY_ARM = {'recurrent_standard': trainer.HID, 'recurrent_wide': 192}
 PREPARATION_CREDIT_BY_ARM = {'preparation_control': False, 'preparation_credit': True}
+PLANNING_POLYGON_MASK = {'mask_screen': False, 'mask_polygon': True}
 
 
 def widen_recurrence(source, optimizer):
@@ -139,6 +140,7 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
     opening_study = arm in OPENING_TIMING_BY_ARM
     geometry_study = arm in SHELTER_GEOMETRY_BY_ARM
     input_study = arm in SHELTER_INPUT_BY_ARM or geometry_study
+    mask_study = arm in PLANNING_POLYGON_MASK
     planning_study = (arm in PLANNING_TEMPERATURES or arm in PLANNING_ENTROPY_BONUSES
                       or battle_study or target_study or ready_study)
     try:
@@ -147,7 +149,7 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
         if (arm in BREACH_COSTS or arm in READY_CREDITS or arm in ZONE_TEMPERATURES
                 or planning_study or arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS
                 or duration_study or input_study or boundary_study or opening_study or capacity_study
-                or preparation_credit_study):
+                or preparation_credit_study or mask_study):
             try:
                 env = zar_boot.boot(copy_dir, welcome_wait=15, discard_dump_states=True)
             except ZAREnvError as exc:
@@ -180,6 +182,8 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
             options.update(fixed_speed='speed_1', fixed_clock=True)
         if arm in BREACH_COSTS:
             options.update(fixed_speed='speed_2', fixed_clock=True, occupied_breach_cost=BREACH_COSTS[arm])
+        if mask_study:
+            options['planning_polygon_mask'] = PLANNING_POLYGON_MASK[arm]
         if arm in READY_CREDITS:
             options.update(fixed_speed='speed_2', fixed_clock=True, ready_coverage_credit=READY_CREDITS[arm])
         if arm in ZONE_TEMPERATURES:
@@ -505,6 +509,8 @@ def main():
                             help='Compare filtering known out-of-bounds battle targets before sampling')
     comparison.add_argument('--compare-shelter-geometry', action='store_true',
                             help='Compare a private planning input for projected shelter rectangle coverage')
+    comparison.add_argument('--compare-planning-masks', action='store_true',
+                            help='Compare the existing planning polygon masks alone against the screen-only planning cell mask')
     comparison.add_argument('--compare-opening-timing', action='store_true',
                             help='Compare a private planning input for projected ability timing')
     comparison.add_argument('--compare-recurrent-capacity', action='store_true',
@@ -549,7 +555,7 @@ def main():
                       or args.compare_shelter_input or args.compare_shelter_geometry
                       or args.compare_battle_boundary or args.compare_opening_timing or args.compare_recurrent_capacity
                       or args.compare_preparation_credit)
-    shelter_study = args.compare_breach_cost or coverage_study
+    shelter_study = args.compare_breach_cost or args.compare_planning_masks or coverage_study
     paired_weights = (args.compare_missile_credit or args.compare_phase_balance or shelter_study
                       or args.frozen_single)
     if args.warm_start and not paired_weights:
@@ -597,6 +603,7 @@ def main():
                       tuple(PLANNING_TEMPERATURES) if args.compare_planning_exploration else
                       tuple(ZONE_TEMPERATURES) if args.compare_zone_exploration else
                       tuple(READY_CREDITS) if args.compare_ready_coverage else
+                      tuple(PLANNING_POLYGON_MASK) if args.compare_planning_masks else
                       tuple(BREACH_COSTS) if args.compare_breach_cost else
                       ('standard', 'balanced') if args.compare_phase_balance else ('unshaped', 'missile_credit'))
             models = {labels[0]: baseline, labels[1]: deepcopy(baseline)}
@@ -639,6 +646,9 @@ def main():
         if args.compare_breach_cost:
             config.update(comparison='occupied_breach_cost', fixed_speed='speed_2',
                           occupied_breach_cost_by_arm=BREACH_COSTS)
+        if args.compare_planning_masks:
+            config.update(comparison='planning_polygon_mask',
+                          planning_polygon_mask_by_arm=PLANNING_POLYGON_MASK)
         if args.compare_ready_coverage:
             config.update(comparison='ready_coverage', fixed_speed='speed_2',
                           ready_coverage_credit_by_arm=READY_CREDITS)
@@ -742,6 +752,7 @@ def main():
                       'planning-exploration' if args.compare_planning_exploration else
                       'zone-exploration' if args.compare_zone_exploration else
                       'ready-coverage' if args.compare_ready_coverage else
+                      'planning-masks' if args.compare_planning_masks else
                       'breach-cost' if args.compare_breach_cost else
                       'phase-balance' if args.compare_phase_balance else
                       'missile-credit' if args.compare_missile_credit else 'spatial')
@@ -854,7 +865,8 @@ def main():
                     if args.compare_opening_timing:
                         summary['opening_ready_preview'] = row.get('opening_ready_preview')
                     if (args.compare_shelter_geometry or args.compare_battle_boundary
-                            or args.compare_opening_timing or args.compare_recurrent_capacity):
+                            or args.compare_opening_timing or args.compare_recurrent_capacity
+                            or args.compare_planning_masks):
                         summary['outside_playarea_targets'] = row.get('outside_targets')
                     if args.compare_zone_exploration:
                         summary['tempered_zone_decisions'] = sum(

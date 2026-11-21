@@ -399,8 +399,9 @@ def boundary_rejected_cells(st, geometry, tools, cells):
     return rejected
 
 
-def update_geometry_masks(st, width, height, *, placement_feedback, planning_audit, battle_audit=False):
-    if st['planning'] and (placement_feedback or planning_audit):
+def update_geometry_masks(st, width, height, *, placement_feedback, planning_audit, planning_mask=False,
+                          battle_audit=False):
+    if st['planning'] and (placement_feedback or planning_audit or planning_mask):
         st['geometry_cells'] = planning_geometry_masks(st, width, height)
     elif placement_feedback or (battle_audit and not st['planning']):
         st['geometry_cells'] = battle_geometry_masks(st, width, height)
@@ -944,6 +945,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         ready_delay_cost = options.get('ready_delay_cost')
         snapped_cast_attempts = settled_cast_attempts = 0
         planning_zone_audit = options.get('planning_zone_audit', False)
+        planning_polygon_mask = options.get('planning_polygon_mask', False)
+        planning_polygon_applied = False
         ready_trace = [] if signal_mode and planning_zone_audit and net is not None else None
         gate_receipts = [] if options.get('gate_receipts') else None
         gate_pending = None
@@ -1060,8 +1063,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             update_outside_retries(st,env.cw,env.ch)
             st['placement_blocked'] = blocked_placement_cells(st, placement_retry_at, len(rows['obs']))
             update_geometry_masks(st, env.cw, env.ch, placement_feedback=placement_feedback,
-                                  planning_audit=planning_zone_audit,
+                                  planning_audit=planning_zone_audit, planning_mask=planning_polygon_mask,
                                   battle_audit=signal_mode in ('battle_tools', 'target_settle', 'ready_delay'))
+            if planning_polygon_mask and st['planning'] and st.get('geometry_cells'):
+                planning_polygon_applied = True
             mu, mc = masks_for(st)
             rejected_boundary = {}
             if battle_boundary_filter is not None and not st['planning'] and st.get('playarea_boundary') is not None:
@@ -1573,7 +1578,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     update_outside_retries(st, env.cw, env.ch)
                     st['placement_blocked'] = blocked_placement_cells(st, placement_retry_at, len(rows['obs']))
                     update_geometry_masks(st, env.cw, env.ch, placement_feedback=placement_feedback,
-                                          planning_audit=planning_zone_audit)
+                                          planning_audit=planning_zone_audit,
+                                          planning_mask=planning_polygon_mask)
                     st['shelter_geometry_values'] = shelter_geometry_observation(
                         st, env.cw, env.ch, *masks_for(st)).tolist()
             if opening_timing_input is not None:
@@ -1654,6 +1660,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                                         and net is not None and rows['obs'] else None),
                     snapped_cast=bool(snapped_cast_attempts),
                     target_pointer_settled=bool(settled_cast_attempts),
+                    planning_polygon_mask=bool(planning_polygon_mask and planning_polygon_applied),
                     legal_ready_declined=bool(ready_declined_steps)),
                 shelter_occupancy_peak=shelter_occupancy_peak,
                 shelter_geometry_peak=shelter_geometry_peak, geometry_anchored_decisions=geometry_anchored,

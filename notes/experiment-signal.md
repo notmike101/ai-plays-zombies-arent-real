@@ -220,3 +220,15 @@ their own block. The new links into the original units and existing output
 heads start at zero and can learn. A matching width receipt verifies the
 architecture used for a decision. Frozen, independent results determine
 whether the additional capacity improves play.
+
+## Planning polygon masks alone
+
+`--compare-planning-masks` keeps both arms on the same archived actor and
+Adam state and changes only planning-time cell legality. The control keeps
+the existing screen and HUD heuristic. The candidate multiplies the planning
+cell mask by the already-computed exact projected-polygon masks for the
+planning geometry tools, with no audit, feedback, battle, READY or reward
+change. Both arms use normal speed, the same dispatch guard and the same
+battle masks. Each training row retains rejected tool and cell counts, the
+legal-READY choice summary and shelter occupancy at READY. A mask receipt
+marks episodes where the exact mask actually constrained a planning choice.
