@@ -4,6 +4,25 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 20:35 Central, bounded preparation-credit pilot 290371
+  launched under PID 76752 (20:34:46). Same exact actor
+  2e654bf5875b7089, Adam, actions, rewards and battle target
+  formula in both arms. Candidate planning target credits
+  native saved score and remaining preparation rewards,
+  with training-only -.5 at planning timeout. Battle
+  timeout keeps default bootstrapping. Shared PPO means
+  other parts of the learned policy may still change.
+  Four training pairs on inst13/14 and two frozen pairs on
+  inst19/20, below-normal priority, normal speed. No
+  follow-on triggered unless candidate produces occupied
+  starts on at least two fresh distinct outbreaks across
+  the pilot and does not enter fewer battles than control.
+  This is an exposure screen, not a promotion comparison.
+  Interface or attribution failures stop interpretation.
+  fe70e5b passed 380 script tests, including a terminal-on-
+  READY no-double-count case. Logs analysis/
+  coverage-preparation-credit-290371.log and .err.
+
 - At 20:32 Central, preparation trace validation finished.
   Both pairs reached READY and then retried (7.79%, 8.18%,
   9.99%, 8.07%). Matching policy seeds led to identical
