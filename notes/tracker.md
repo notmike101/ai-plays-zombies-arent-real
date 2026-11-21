@@ -4,6 +4,18 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 20:29 Central, validation-only preparation trace 286127
+  launched as PID 34416 on inst19/20 (two frozen pairs).
+  The previous 12 frozen exact-actor attempts had seven
+  planning timeouts, five without a reported final blocker.
+  Commit 16e2f41 now records each audited planning decision
+  with legal tool probabilities, selection, READY legality,
+  budget, closed zones and draft/gesture state. Native
+  preparation outcomes remain separate. 379 script and
+  68 Observatory tests passed. No policy training, reward
+  change or qualification change in this validation.
+  Console analysis/coverage-ready-trace-286127.log.
+
 - At 20:25 Central, ran a native validation-only smoke test
   of the chronological ledger. Seed 282119 in analysis/
   coverage-battle-boundary-ddd9fb4b96 used exact frozen
