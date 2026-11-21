@@ -1,4 +1,6 @@
 """No live PIDs: planning budget feature edges, extend prefix, bins, archive, signal."""
+from contextlib import nullcontext
+from copy import deepcopy
 import json
 import tempfile
 import unittest
@@ -230,6 +232,106 @@ class PlanningBudgetSignalTests(unittest.TestCase):
         self.assertEqual(signal['arms']['budget_countdown']['mechanism_episodes'], 1)
         self.assertEqual(signal['arms']['budget_countdown']['treatment_episodes'], 1)
         self.assertEqual(signal['advisory'], 'treatment_observed')
+
+
+
+class PlanningBudgetSummaryProjectionTests(unittest.TestCase):
+    '''The real summary projection reads the payload from experiment_signal as the
+    producer journals it, retaining both arms' values through serialization.'''
+
+    CONTROL_BINS = {'early': {'decisions': 12, 'ready_probability_mean': 0.0297837119239072,
+                              'ready_choices': 1},
+                    'mid': {'decisions': 0, 'ready_probability_mean': None, 'ready_choices': 0},
+                    'late': {'decisions': 0, 'ready_probability_mean': None, 'ready_choices': 0}}
+    COUNTDOWN_BINS = {'early': {'decisions': 14, 'ready_probability_mean': 0.012541370932012796,
+                                'ready_choices': 0},
+                      'mid': {'decisions': 3, 'ready_probability_mean': 0.041015625,
+                              'ready_choices': 1},
+                      'late': {'decisions': 0, 'ready_probability_mean': None, 'ready_choices': 0}}
+    CONTROL_OBSERVATIONS = {'ready': {'wall_segments': 0, 'gates': 0, 'closed_zones': 0,
+                                      'corridors': 0, 'holds': 0, 'other_units': {},
+                                      'civilian_zone_fraction': 0.0, 'money': 2705.39990234375},
+                            'timeout': None}
+    COUNTDOWN_OBSERVATIONS = {'ready': None,
+                              'timeout': {'wall_segments': 54, 'gates': 1, 'closed_zones': 1,
+                                          'corridors': 0, 'holds': 0, 'other_units': {},
+                                          'money': 1390.28125,
+                                          'civilian_zone_fraction': 0.25448292802751166,
+                                          'embedded_defenses': {}}}
+    NATIVE = {'status': 'archived', 'header_wall': 1795251990242, 'expected_wall': 1795251990242}
+
+    @classmethod
+    def _episode(cls, job):
+        countdown = job[1] == 'budget_countdown'
+        row = dict(end='timeout' if countdown else 'aborted',
+                   saved_frac=None if countdown else .0999, bootstrap=0.0,
+                   win=False, advance=False, sim=0.0 if countdown else 33.799827575683594,
+                   t=15.67233629990369 if countdown else 100.65187820000574,
+                   board_id='c6f9fa75237ad12a',
+                   log_started=1795252212157 if countdown else 1795251990242,
+                   start_kind='fresh', outbreak=None if countdown else {'seed': 836399025},
+                   us=[], obs=[], battle_actions={}, reward_components={},
+                   ready_choices=None, ready_stats=None, shelter=None,
+                   experiment_signal=dict(
+                       receipts=dict(planning_budget_input=countdown),
+                       planning_budget_bins=deepcopy(cls.COUNTDOWN_BINS if countdown
+                                                     else cls.CONTROL_BINS),
+                       budget_observations=deepcopy(cls.COUNTDOWN_OBSERVATIONS if countdown
+                                                    else cls.CONTROL_OBSERVATIONS)))
+        if not countdown:
+            row['native_session'] = dict(cls.NATIVE)
+        return row
+
+    def test_projection_retains_both_arms_through_the_serialized_summary(self):
+        import compare_spatial as comp
+        torch = train.torch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'analysis').mkdir()
+            net = train.PolicyNet2()
+            adam = torch.optim.Adam(train.PolicyNet2().parameters(), lr=3e-4).state_dict()
+            with patch('sys.argv', ['compare_spatial', '--copies', 'inst13', 'inst14',
+                                    '--eval-copies', 'inst17', 'inst18', '--seed', '336571',
+                                    '--train-rounds', '1', '--eval-rounds', '2',
+                                    '--compare-planning-budget', '--warm-start', 'paired.pt',
+                                    'preparation_control']), \
+                    patch.object(comp.operator, 'ROOT', root), \
+                    patch.object(comp.operator, 'training_lock', return_value=nullcontext()), \
+                    patch.object(comp.operator, 'inventory', return_value=[]), \
+                    patch.object(comp.operator, 'require_idle'), \
+                    patch.object(comp.operator, 'preflight', return_value={'ok': True}), \
+                    patch.object(comp.operator, 'limit_resources'), \
+                    patch.object(comp.operator, 'require_resource_headroom'), \
+                    patch.object(comp, 'ProcessPoolExecutor', return_value=nullcontext()), \
+                    patch.object(comp, 'load_warm_start',
+                                 return_value=(net.state_dict(), adam, {123},
+                                               {'arm': 'preparation_control', 'sha256': 'a' * 64})), \
+                    patch.object(comp.trainer, 'ppo_update', lambda *args, **kwargs: {}), \
+                    patch.object(comp, 'retain_natural_win', lambda *args: -1.), \
+                    patch.object(comp, 'collect_pairs',
+                                 side_effect=lambda pool, jobs, run, **kwargs:
+                                 [self._episode(job) for job in jobs]):
+                comp.main()
+            run, = (root / 'analysis').iterdir()
+            self.assertTrue(run.name.startswith('coverage-planning-budget-'))
+            rows = [json.loads(line)
+                    for line in (run / 'results.jsonl').read_text(encoding='utf-8').splitlines()]
+            self.assertEqual(len(rows), 6)
+            for arm, bins, observations, receipt in (
+                    ('budget_control', self.CONTROL_BINS, self.CONTROL_OBSERVATIONS, False),
+                    ('budget_countdown', self.COUNTDOWN_BINS, self.COUNTDOWN_OBSERVATIONS, True)):
+                chosen = [row for row in rows if row['arm'] == arm]
+                self.assertEqual(len(chosen), 3)
+                self.assertEqual({row['phase'] for row in chosen}, {'train', 'evaluation'})
+                self.assertEqual({row['end'] for row in chosen},
+                                 {'timeout'} if receipt else {'aborted'})
+                for row in chosen:
+                    self.assertEqual(row['planning_budget_bins'], bins)
+                    self.assertEqual(row['budget_observations'], observations)
+                    self.assertIs(row['experiment_signal']['receipts']['planning_budget_input'],
+                                  receipt)
+                    self.assertEqual(row['native_session'],
+                                     None if receipt else self.NATIVE)
 
 
 if __name__ == '__main__':

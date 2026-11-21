@@ -931,8 +931,9 @@ def main():
                     if args.compare_opening_timing:
                         summary['opening_ready_preview'] = row.get('opening_ready_preview')
                     if args.compare_planning_budget:
-                        summary['planning_budget_bins'] = row.get('planning_budget_bins')
-                        summary['budget_observations'] = row.get('budget_observations')
+                        budget = row.get('experiment_signal') or {}
+                        summary['planning_budget_bins'] = budget.get('planning_budget_bins')
+                        summary['budget_observations'] = budget.get('budget_observations')
                         summary['native_session'] = row.get('native_session')
                     if (args.compare_shelter_geometry or args.compare_battle_boundary
                             or args.compare_opening_timing or args.compare_recurrent_capacity
