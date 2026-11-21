@@ -2,6 +2,7 @@
 from contextlib import redirect_stderr
 import io
 import itertools
+import json
 from pathlib import Path
 import runpy
 import sys
@@ -294,6 +295,23 @@ class IntegrationTests(unittest.TestCase):
         self.assertNotIn('saved_frac', result)
         self.assertTrue(game.closed_log and game.closed)
         self.assertNotIn(0x20, game.keys)
+
+    def test_wider_recurrent_policy_has_exact_labeled_activations(self):
+        source = self.globals
+        net = source['PolicyNet2'](hidden_size=192).eval()
+        observer = Observer(net, -1, labels={'input': source['INPUT_LABELS']}, directory=self.temp.name)
+        try:
+            with torch.no_grad():
+                *_, hidden = net(torch.zeros(1, 1, source['NOBS']))
+            frame = observer.snapshot(phase='planning')
+        finally:
+            observer.close()
+        self.assertEqual(frame['values']['gru'], hidden.flatten().tolist())
+        self.assertEqual(frame['values']['memory'], [0.] * 192)
+        layer = next(layer for layer in frame['graph']['layers'] if layer['id'] == 'input')
+        self.assertEqual(layer['labels'], source['INPUT_LABELS'])
+        self.assertNotIn('label_warning', frame['graph'])
+        self.assertLess(len(json.dumps(frame).encode('utf-8')), 8 * 1024 * 1024)
 
     def test_episode_failure_still_closes_observer(self):
         result = self.episode(self.factory, fail=True)

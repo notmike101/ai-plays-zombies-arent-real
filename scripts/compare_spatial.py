@@ -58,6 +58,49 @@ SHELTER_DURATION_RATES = {'duration_baseline': 0., 'duration_credit': .01}
 SHELTER_INPUT_BY_ARM = {'shelter_grid': False, 'shelter_exact': True}
 SHELTER_GEOMETRY_BY_ARM = {'geometry_control': False, 'geometry_visible': True}
 OPENING_TIMING_BY_ARM = {'opening_control': False, 'opening_visible': True}
+CAPACITY_BY_ARM = {'recurrent_standard': trainer.HID, 'recurrent_wide': 192}
+
+
+def widen_recurrence(source, optimizer):
+    before, after = source.gru.hidden_size, CAPACITY_BY_ARM['recurrent_wide']
+    if before != trainer.HID or source.gru.input_size != trainer.NOBS:
+        raise ValueError('Recurrent expansion requires the original hidden and input widths')
+    net = trainer.PolicyNet2(hidden_size=after)
+    previous = source.state_dict()
+    expanded = net.state_dict()
+
+    def copy_weights(name, src, dst):
+        if name.startswith('gru.'):
+            for gate in range(3):
+                old = slice(gate * before, (gate + 1) * before)
+                new = slice(gate * after, gate * after + before)
+                if name == 'gru.weight_hh_l0':
+                    dst[new, :before] = src[old]
+                    dst[new, before:] = 0.
+                else:
+                    dst[new] = src[old]
+        elif name.endswith('.weight'):
+            dst[:, :before] = src
+            dst[:, before:] = 0.
+        else:
+            dst.copy_(src)
+        return dst
+
+    for name, value in expanded.items():
+        copy_weights(name, previous[name], value)
+    net.load_state_dict(expanded)
+    optimizer = deepcopy(optimizer)
+    groups = optimizer['param_groups']
+    if len(groups) != 1 or len(groups[0]['params']) != len(previous):
+        raise ValueError('Unexpected Adam parameter order for recurrent expansion')
+    for name, parameter in zip(previous, groups[0]['params']):
+        moments = optimizer['state'].get(parameter, {})
+        for field, value in moments.items():
+            if field in ('exp_avg', 'exp_avg_sq', 'max_exp_avg_sq'):
+                if value.shape != previous[name].shape:
+                    raise ValueError(f'Unexpected Adam shape for {name}')
+                moments[field] = copy_weights(name, value, value.new_zeros(expanded[name].shape))
+    return net, optimizer
 
 
 def extend_private_model(source, optimizer, *, geometry=False, opening_timing=False):
@@ -87,6 +130,7 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
     copy, arm, weights, seed, tag, *phase = job
     battle_study = arm in BATTLE_TEMPERATURES
     boundary_study = arm in BATTLE_BOUNDARY_BY_ARM
+    capacity_study = arm in CAPACITY_BY_ARM
     target_study = arm in TARGET_SETTLE
     ready_study = arm in READY_DELAY_COSTS
     duration_study = arm in SHELTER_DURATION_RATES
@@ -100,7 +144,7 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
         env = None
         if (arm in BREACH_COSTS or arm in READY_CREDITS or arm in ZONE_TEMPERATURES
                 or planning_study or arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS
-                or duration_study or input_study or boundary_study or opening_study):
+                or duration_study or input_study or boundary_study or opening_study or capacity_study):
             try:
                 env = zar_boot.boot(copy_dir, welcome_wait=15, discard_dump_states=True)
             except ZAREnvError as exc:
@@ -161,10 +205,13 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
                            shelter_duration_rate=SHELTER_DURATION_RATES[arm])
             if phase == [True]:
                 options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
-        if boundary_study:
+        if boundary_study or capacity_study:
             options.update(fixed_speed='speed_1', fixed_clock=True, ready_coverage_credit=.30,
                            planning_zone_audit=True, experiment_signal='receipts',
-                           battle_boundary_filter=BATTLE_BOUNDARY_BY_ARM[arm])
+                           battle_boundary_filter=BATTLE_BOUNDARY_BY_ARM.get(arm, True))
+            if capacity_study:
+                policy = partial(trainer.PolicyNet2, hidden_size=CAPACITY_BY_ARM[arm])
+                options['experiment_signal'] = 'recurrent_capacity'
             if phase == [True]:
                 options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
         if opening_study:
@@ -389,6 +436,8 @@ def main():
                             help='Compare a private planning input for projected shelter rectangle coverage')
     comparison.add_argument('--compare-opening-timing', action='store_true',
                             help='Compare a private planning input for projected ability timing')
+    comparison.add_argument('--compare-recurrent-capacity', action='store_true',
+                            help='Compare 128 and warm-expanded 192 recurrent units with identical inputs')
     parser.add_argument('--audit-phase-gradients', action='store_true',
                         help='Measure planning and battle gradient alignment on one episode per arm and round')
     parser.add_argument('--observe', action='store_true',
@@ -412,7 +461,7 @@ def main():
                       or planning_study or args.compare_shelter_defense
                       or args.compare_ready_shortfall or args.compare_shelter_duration
                       or args.compare_shelter_input or args.compare_shelter_geometry
-                      or args.compare_battle_boundary or args.compare_opening_timing)
+                      or args.compare_battle_boundary or args.compare_opening_timing or args.compare_recurrent_capacity)
     shelter_study = args.compare_breach_cost or coverage_study
     paired_weights = args.compare_missile_credit or args.compare_phase_balance or shelter_study
     if args.warm_start and not paired_weights:
@@ -443,7 +492,8 @@ def main():
             baseline, adam = extend_private_model(baseline, adam, geometry=args.compare_shelter_geometry,
                                                   opening_timing=args.compare_opening_timing)
         if paired_weights:
-            labels = (tuple(OPENING_TIMING_BY_ARM) if args.compare_opening_timing else
+            labels = (tuple(CAPACITY_BY_ARM) if args.compare_recurrent_capacity else
+                      tuple(OPENING_TIMING_BY_ARM) if args.compare_opening_timing else
                       tuple(BATTLE_BOUNDARY_BY_ARM) if args.compare_battle_boundary else
                       tuple(SHELTER_GEOMETRY_BY_ARM) if args.compare_shelter_geometry else
                       tuple(SHELTER_INPUT_BY_ARM) if args.compare_shelter_input else
@@ -469,6 +519,11 @@ def main():
         if paired_weights:
             for opt in optimizers.values():
                 opt.load_state_dict(deepcopy(adam))
+        if args.compare_recurrent_capacity:
+            arm = 'recurrent_wide'
+            models[arm], expanded_adam = widen_recurrence(baseline, adam)
+            optimizers[arm] = torch.optim.Adam(models[arm].parameters())
+            optimizers[arm].load_state_dict(expanded_adam)
         config = dict(seed=args.seed, copies=copies, train_rounds=args.train_rounds,
                       eval_rounds=args.eval_rounds, schema=trainer.checkpoint_schema(
                           shelter_occupancy=args.compare_shelter_input, shelter_geometry=args.compare_shelter_geometry,
@@ -543,6 +598,10 @@ def main():
             config.update(comparison='opening_timing', fixed_speed='speed_1', ready_coverage_credit=.30,
                           training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
                           battle_boundary_filter=True, opening_timing_by_arm=OPENING_TIMING_BY_ARM)
+        if args.compare_recurrent_capacity:
+            config.update(comparison='recurrent_capacity', fixed_speed='speed_1', ready_coverage_credit=.30,
+                          training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
+                          battle_boundary_filter=True, recurrent_width_by_arm=CAPACITY_BY_ARM)
         first_round = 0
         prior_signal_rows = []
         source = trainer.policy_id(baseline)
@@ -565,7 +624,8 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        experiment = ('opening-timing' if args.compare_opening_timing else
+        experiment = ('recurrent-capacity' if args.compare_recurrent_capacity else
+                      'opening-timing' if args.compare_opening_timing else
                       'battle-boundary' if args.compare_battle_boundary else
                       'shelter-geometry' if args.compare_shelter_geometry else
                       'shelter-input' if args.compare_shelter_input else
@@ -660,7 +720,8 @@ def main():
                     if (args.compare_zone_exploration or planning_study
                             or args.compare_shelter_defense or args.compare_ready_shortfall
                             or args.compare_shelter_duration or args.compare_shelter_input
-                            or args.compare_shelter_geometry or args.compare_battle_boundary or args.compare_opening_timing):
+                            or args.compare_shelter_geometry or args.compare_battle_boundary or args.compare_opening_timing
+                            or args.compare_recurrent_capacity):
                         summary['planning_zone_receipts'] = row.get('planning_zone_receipts')
                         summary['shelter_dispatch'] = row.get('shelter_dispatch')
                         for key in ('ready_embedded_defenses', 'ready_preparation', 'ready_loadout',
@@ -668,7 +729,8 @@ def main():
                             summary[key] = row.get(key)
                     if args.compare_opening_timing:
                         summary['opening_ready_preview'] = row.get('opening_ready_preview')
-                    if args.compare_shelter_geometry or args.compare_battle_boundary or args.compare_opening_timing:
+                    if (args.compare_shelter_geometry or args.compare_battle_boundary
+                            or args.compare_opening_timing or args.compare_recurrent_capacity):
                         summary['outside_playarea_targets'] = row.get('outside_targets')
                     if args.compare_zone_exploration:
                         summary['tempered_zone_decisions'] = sum(

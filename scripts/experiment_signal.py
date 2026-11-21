@@ -18,6 +18,7 @@ _OTHER = {'planning_entropy': 'planning_entropy',
           'shelter_geometry': 'shelter_geometry_input',
           'battle_boundary': 'battle_boundary',
           'opening_timing': 'opening_timing_input',
+          'recurrent_capacity': 'recurrent_capacity',
           'target_settle': 'snapped_cast'}
 
 
@@ -85,9 +86,15 @@ def summarize_signal(rows, config, arms, evaluation, *, start_round, minimum=4):
             else:
                 receipts_seen = signal.get('receipts') or {}
                 observed = receipts_seen.get(_OTHER[design])
-                occurrence = observed is True
+                if design == 'recurrent_capacity':
+                    if observed != config['recurrent_width_by_arm'][arm]:
+                        observed = None
+                    occurrence = observed is not None
+                else:
+                    occurrence = observed is True
                 difference = occurrence and (
-                    design == 'planning_entropy' and config['planning_tool_entropy_bonus_by_arm'][arm] > 0
+                    design == 'recurrent_capacity' and observed != config['recurrent_width_by_arm'][arms[0]]
+                    or design == 'planning_entropy' and config['planning_tool_entropy_bonus_by_arm'][arm] > 0
                     or design == 'phase_balance' and arm == 'balanced'
                     or design == 'shelter_input' and config['shelter_input_by_arm'][arm]
                     or design == 'shelter_geometry' and config['shelter_geometry_by_arm'][arm]

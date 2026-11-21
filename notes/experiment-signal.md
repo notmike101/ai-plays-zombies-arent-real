@@ -211,3 +211,12 @@ fresh natural survival criteria alongside deployment changes.
   Seven fresh reserve outcomes remained after exclusions, with only one
   natural finish. Shelter outcomes alone do not prove whether the optimizer
   term was exercised. Historical records lack the new effect diagnostic.
+
+`--compare-recurrent-capacity` compares the original 128-unit GRU against
+a warm-expanded 192-unit GRU. Both use the same input and action labels,
+legal masks, and reward configuration. Expansion preserves the original
+forward path and Adam entries. New recurrent units initially feed only
+their own block. The new links into the original units and existing output
+heads start at zero and can learn. A matching width receipt verifies the
+architecture used for a decision. Frozen, independent results determine
+whether the additional capacity improves play.

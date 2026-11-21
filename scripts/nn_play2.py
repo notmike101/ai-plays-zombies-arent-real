@@ -97,14 +97,14 @@ def cell_of_px(c, cw, ch):
 
 
 class PolicyNet2(nn.Module):
-    def __init__(self, *, shelter_occupancy=False, shelter_geometry=False, opening_timing=False):
+    def __init__(self, *, shelter_occupancy=False, shelter_geometry=False, opening_timing=False, hidden_size=HID):
         super().__init__()
         inputs = NOBS + int(shelter_occupancy) + NC * int(shelter_geometry)
         inputs += len(OPENING_TIMING_LABELS) * int(opening_timing)
-        self.gru = nn.GRU(inputs, HID, 1, batch_first=True)
-        self.hu = nn.Linear(HID, NU)
-        self.hc = nn.Linear(HID, NU * NC)
-        self.val = nn.Linear(HID, 1)
+        self.gru = nn.GRU(inputs, hidden_size, 1, batch_first=True)
+        self.hu = nn.Linear(hidden_size, NU)
+        self.hc = nn.Linear(hidden_size, NU * NC)
+        self.val = nn.Linear(hidden_size, 1)
 
     def forward(self, x, h=None):
         out, h = self.gru(x, h)
@@ -1550,6 +1550,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     planning_entropy=planning_entropy_observed,
                     phase_balance=planning_steps > 0 and battle_steps > 0 and planning_steps != battle_steps,
                     spatial_cells=spatial_cells_observed,
+                    recurrent_capacity=(net.gru.hidden_size if signal_mode == 'recurrent_capacity'
+                                        and net is not None and rows['obs'] else None),
                     snapped_cast=bool(snapped_cast_attempts),
                     target_pointer_settled=bool(settled_cast_attempts),
                     legal_ready_declined=bool(ready_declined_steps)),

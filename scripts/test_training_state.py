@@ -25,6 +25,66 @@ class StateTests(unittest.TestCase):
         self.assertEqual(phase_loss_ledger([planning], balanced=True)['planning_loss_weight_share'], 1.)
         self.assertIsNone(phase_loss_ledger([], balanced=True)['planning_loss_weight_share'])
 
+    def test_warm_recurrent_capacity_keeps_prediction_and_adam_prefix(self):
+        import compare_spatial as comp
+        torch = train.torch
+        source = train.PolicyNet2()
+        optimizer = torch.optim.Adam(source.parameters())
+        for parameter in source.parameters():
+            parameter.grad = torch.ones_like(parameter)
+        optimizer.step()
+        wide, moments = comp.widen_recurrence(source, optimizer.state_dict())
+        expanded = torch.optim.Adam(wide.parameters())
+        expanded.load_state_dict(moments)
+        old_width, new_width = source.gru.hidden_size, wide.gru.hidden_size
+        self.assertGreater(new_width, old_width)
+        x = torch.randn(1, 4, train.NOBS)
+        h = torch.randn(1, 1, old_width)
+        with torch.no_grad():
+            old_outputs = source(x, h)
+            new_outputs = wide(x, torch.nn.functional.pad(h, (0, new_width - old_width)))
+            for left, right in zip(old_outputs, (*new_outputs[:3], new_outputs[3][..., :old_width])):
+                torch.testing.assert_close(left, right, rtol=0., atol=3e-6)
+
+        for name, old_param in source.named_parameters():
+            new_param = dict(wide.named_parameters())[name]
+            for field in ('exp_avg', 'exp_avg_sq'):
+                before = optimizer.state[old_param][field]
+                after = expanded.state[new_param][field]
+                self.assertEqual(before.count_nonzero(), after.count_nonzero())
+                if name.startswith('gru.'):
+                    for gate in range(3):
+                        section = after[gate * new_width:gate * new_width + old_width]
+                        if name == 'gru.weight_hh_l0':
+                            section = section[:, :old_width]
+                        torch.testing.assert_close(section, before[gate * old_width:(gate + 1) * old_width])
+                elif name.endswith('.weight'):
+                    torch.testing.assert_close(after[:, :old_width], before)
+                else:
+                    torch.testing.assert_close(after, before)
+        expanded.zero_grad(set_to_none=True)
+        wide(x)[0].sum().backward()
+        self.assertTrue(wide.hu.weight.grad[:, old_width:].any())
+        expanded.step()
+        self.assertTrue(wide.hu.weight[:, old_width:].any())
+
+    def test_recurrent_capacity_changes_width_only_at_rollout(self):
+        import compare_spatial as comp
+        with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \
+                patch.object(comp.zar_boot, 'stop'), patch.object(train, 'run_episode') as run:
+            for training in (True, False):
+                options = []
+                for arm, width in comp.CAPACITY_BY_ARM.items():
+                    comp.episode(('inst13', arm, {}, 123, 'test', training), observe=True)
+                    settings = run.call_args.args[0][4]
+                    net = run.call_args.kwargs['policy_factory']()
+                    self.assertEqual(net.gru.input_size, train.NOBS)
+                    self.assertEqual(net.gru.hidden_size, width)
+                    self.assertEqual(settings['experiment_signal'], 'recurrent_capacity')
+                    self.assertTrue(settings['battle_boundary_filter'])
+                    options.append(settings)
+                self.assertEqual(*options)
+
     def test_shelter_input_starts_with_identical_policy_and_adam(self):
         import compare_spatial as comp
         torch = train.torch
