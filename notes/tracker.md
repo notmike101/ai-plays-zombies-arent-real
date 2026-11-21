@@ -4,6 +4,19 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 22:05 Central, reserved screen 325301 launched operator PID 83288,
+  reference inst19 PID 80044 first, same frozen policies with fresh paired
+  policy seeds and four sequential attempts. The exclusion manifest includes
+  1905105404 and identifies the prior unknown inst20 welcome failure.
+  Collect sampled Garrison choice counts on both arms. Driver SHA256
+  52B8B36E56B7855E2B4AF670A84D56DD32EC10561DC6D4373B323A660B7AA962.
+  Earlier 323197 stopped after the native 14.63% fitted win and an invalid
+  client rectangle at the reference welcome screen, before a verified world.
+  Verified both saved roster restorations directly. A separate standard,
+  one-copy inst20 boot (PID 84700) reached fresh planning with three valid,
+  matching 1920x1200 window checks and stopped cleanly. The original fault
+  did not reproduce. Preserve both 323197 physical attempts as inconclusive.
+
 - At 22:01 Central, the first reserved attempt in 323197 ended in a
   native win at 14.63% saved (footer verified, 358.33 simulated seconds).
   Fitted team 7ac03fec264dcd6f, outbreak 1905105404, prior-clear and
