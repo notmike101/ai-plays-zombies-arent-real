@@ -483,6 +483,36 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(int(dist.probs.argmax()), 0)
         self.assertEqual(model.alternate_cast_argmax(search.FIREBOMB, dist, legal), 1)
 
+    def test_sampled_garrison_gradient_matches_uniform_mixture(self):
+        import torch
+        net = object.__new__(search.TeamPolicy)
+        net.garrison_coverage_cells = torch.tensor([.2, .9, .1])
+        net.garrison_placement_gradient = 0.
+        net.garrison_gradient_choices = 0
+        weight = torch.tensor(1., requires_grad=True)
+        legal = torch.tensor([True, True, False])
+        ranked = (weight * net.garrison_coverage_cells).masked_fill(~legal, -torch.inf).softmax(0)
+        sampled = .75 * ranked + .25 * legal / legal.sum()
+        sampled[1].log().backward()
+        net.record_garrison_gradient(1, ranked.detach(), sampled.detach())
+        self.assertAlmostEqual(net.garrison_placement_gradient, weight.grad.item())
+        self.assertEqual(net.garrison_gradient_choices, 1)
+
+    def test_garrison_fit_requires_four_discovery_seeds_and_excludes_holdout(self):
+        parent = {'garrison_coverage': 8.}
+        samples = [dict(phase='discovery', team_id=search.team_id(parent), levels=[dict(
+            stage=1, start_kind='fresh', end='aborted', saved=.1 + seed / 100.,
+            outbreak={'seed': seed}, shelter={'credited_civilians': 100, 'exposed_civilians': 90 - seed},
+            battle_actions={'garrison_placement_gradient': float(seed), 'garrison_gradient_choices': 2})])
+                   for seed in range(1, 5)]
+        candidate, report = search.fit_garrison_coverage(parent, samples)
+        self.assertGreater(candidate['garrison_coverage'], parent['garrison_coverage'])
+        self.assertLessEqual(candidate['garrison_coverage'], parent['garrison_coverage'] + 2.)
+        self.assertEqual(len(report['samples']), 4)
+        self.assertIsNone(search.fit_garrison_coverage(parent, samples, {1})[0])
+        trials = [*samples[:-1], dict(samples[-1], phase='holdout'), samples[0]]
+        self.assertIsNone(search.fit_garrison_coverage(parent, trials)[0])
+
     def test_live_cast_gradient_matches_autodiff_on_legal_cells(self):
         model = search.TeamPolicy(search.random_team(np.random.default_rng(42)), collect_cast_gradients=True)
         tool = search.FIREBOMB

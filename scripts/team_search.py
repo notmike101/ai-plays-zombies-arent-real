@@ -159,6 +159,53 @@ def missile_trial_reference(trial):
     return saved, trial
 
 
+def fit_garrison_coverage(parent, trials, discovery_exclusions=()):
+    """Fit one placement preference on discovery costs and native outcomes."""
+    seen = set(discovery_exclusions)
+    samples = []
+    for trial in trials:
+        if trial.get('phase') != 'discovery' or trial.get('team_id') != team_id(parent) or trial.get('error'):
+            continue
+        levels = trial.get('levels', ())
+        if len(levels) != 1:
+            continue
+        level, = levels
+        seed = fitness.l1_outbreak_seed(trial)
+        if (type(seed) is not int or seed in seen or level.get('start_kind') != 'fresh'
+                or level.get('end') not in ('aborted', 'won', 'lost')):
+            continue
+        seen.add(seed)
+        shelter = level.get('shelter') or {}
+        covered, exposures = shelter.get('credited_civilians'), shelter.get('exposed_civilians')
+        actions = level.get('battle_actions') or {}
+        gradient, score = actions.get('garrison_placement_gradient'), level.get('saved')
+        if (type(covered) is not int or covered <= 0 or type(exposures) is not int
+                or not 0 <= exposures <= covered or not actions.get('garrison_gradient_choices')
+                or type(gradient) not in (int, float) or not math.isfinite(gradient)
+                or type(score) not in (int, float) or not 0 <= score <= 1):
+            continue
+        exposure = exposures / covered
+        samples.append(dict(seed=seed, saved=score, exposure=exposure, gradient=gradient,
+                            objective=score - .35 * exposure))
+    weight = parent['garrison_coverage']
+    report = dict(samples=samples, input_weight=weight, fitted_weight=None)
+    if len(samples) < 4:
+        return None, report
+    scores = np.array([sample['objective'] for sample in samples])
+    centered = scores - scores.mean()
+    gradients = np.array([sample['gradient'] for sample in samples])
+    norm = np.linalg.norm(centered) * np.linalg.norm(gradients)
+    if norm <= 1e-8:
+        return None, report
+    # Normalize the update and limit one discovery step to two logit-weight units.
+    direction = float(centered @ gradients / norm)
+    updated = float(np.clip(weight + 2. * direction, .01, 16.))
+    if abs(updated - weight) < 1e-3:
+        return None, report
+    report['fitted_weight'] = updated
+    return dict(deepcopy(parent), garrison_coverage=updated), report
+
+
 def defense_placement_candidate(parent, rng):
     if len(parent['plan']) > 62:
         return None
@@ -584,6 +631,8 @@ class TeamPolicy(tr.PolicyNet2):
         self.garrison_building_range = team.get('garrison_building_range', False)
         self.garrison_early_coverage = team.get('garrison_early_coverage', False)
         self.garrison_coverage_cells = torch.zeros(tr.NC)
+        self.garrison_placement_gradient = 0.
+        self.garrison_gradient_choices = 0
         self.zone_population_weight = team.get('zone_population', 0.)
         self.zone_anchor_lookahead = team.get('zone_anchor_lookahead', False)
         self.zone_population_cells = torch.zeros(tr.NC)
@@ -621,6 +670,13 @@ class TeamPolicy(tr.PolicyNet2):
         if self.cast_line is not None and tool == self.cast_line[0]:
             return self.cast_grid[:, self.cast_line[1]].mean(dim=2)
         return self.cast_grid
+
+    def record_garrison_gradient(self, cell, ranked, sampled):
+        # The sampled distribution mixes the actor with 25% legal uniform exploration.
+        features = self.garrison_coverage_cells
+        responsibility = .75 * ranked[cell] / sampled[cell]
+        self.garrison_placement_gradient += float(responsibility * (features[cell] - features @ ranked))
+        self.garrison_gradient_choices += 1
 
     def record_cast_gradient(self, tool, cell, probabilities):
         row = CASTS.index(tool)
@@ -905,7 +961,7 @@ def score(row, *, goal_margin=False):
 def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, observer_interval=.2,
             practice_retry=False, allow_progression=False, capture_shadow=False, fixed_speed=None,
             fast_boot=False, click_start=False, goal_margin=False, collect_cast_gradients=False,
-            collect_cast_tool_gradients=False, alternate_team=None):
+            collect_cast_tool_gradients=False, alternate_team=None, collect_garrison_gradient=False):
     timing = {'started': monotonic()}
     if start_stage>1 and not allow_progression:
         raise ValueError('Later-stage starts require explicit campaign progression')
@@ -978,6 +1034,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                          sample_loadout=bool((active or {}).get('sample_loadout')),
                          sample_garrison_sites=bool((active or {}).get('sample_garrison_sites')),
                          sample_zone_geometry=bool((active or {}).get('sample_zone_geometry')))
+            if collect_garrison_gradient:options['collect_garrison_gradient']=True
             if capture_shadow:options['capture_shadow']=True
             if fixed_speed:options['fixed_speed']=fixed_speed
             if collect_cast_gradients:options['collect_cast_gradients']=True
@@ -1266,7 +1323,8 @@ def shadow_variants(champion):
 
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False,
                        capture_shadow=False, speeds=None, fast_boot=False, click_start=False, goal_margin=False,
-                       collect_cast_gradients=False, collect_cast_tool_gradients=False, alternate_teams=None):
+                       collect_cast_gradients=False, collect_cast_tool_gradients=False, alternate_teams=None,
+                       collect_garrison_gradient=False):
     if jobs:
         operator.require_resource_headroom(len(jobs))
     if starts is None:starts=[1]*len(jobs)
@@ -1278,6 +1336,7 @@ def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_
                          capture_shadow=capture_shadow, fast_boot=fast_boot, click_start=click_start,
                          goal_margin=goal_margin, collect_cast_gradients=collect_cast_gradients,
                          collect_cast_tool_gradients=collect_cast_tool_gradients,
+                         collect_garrison_gradient=collect_garrison_gradient,
                          alternate_team=(alternate_teams or {}).get(job[0]),
                          fixed_speed=speeds[job[0]] if speeds else None):(job,stage)
              for job,stage in zip(jobs,starts,strict=True)}

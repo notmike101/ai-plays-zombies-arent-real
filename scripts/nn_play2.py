@@ -1104,10 +1104,12 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         record_distribution_signal(distribution_signal, dc, reference)
                     if signal_mode == 'spatial_cells' and not spatial_cells_observed:
                         spatial_cells_observed = np.count_nonzero(mc) > 1
+                    ranked_garrison = None
                     cell_rng = zone_rng if st['planning'] and TOOLS[u] == 'zone_rect' else None
                     if (garrison_rng is not None and greedy and st['planning']
                             and TOOLS[u] == 'garrison' and mc.sum() > 1):
-                        dc = exploration_distribution(dc.probs, torch.as_tensor(mc, dtype=torch.bool), 0.25)
+                        ranked_garrison = dc.probs
+                        dc = exploration_distribution(ranked_garrison, torch.as_tensor(mc, dtype=torch.bool), 0.25)
                         cell_rng = garrison_rng
                     if cast_target_mode and not st['planning'] and u in U2ABILITY:
                         c = select_policy_cell(dc, cast_target_mode == 'greedy', cast_target_rng)
@@ -1116,6 +1118,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                             net.record_cast_gradient(u, c, dc.probs)
                     else:
                         c = select_policy_cell(dc, greedy, cell_rng)
+                    if ranked_garrison is not None and options.get('collect_garrison_gradient'):
+                        net.record_garrison_gradient(c, ranked_garrison, dc.probs)
                     if options.get('audit_cast_targets') and not st['planning'] and u in U2ABILITY:
                         audit = battle_actions['alternate_target_audit']
                         audit['compared'] += 1
@@ -1441,6 +1445,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         battle_actions['logged_deployments']=footer.get('deployments') if footer else None
         battle_actions['logged_kills'] = (footer.get('stats') or {}).get('kills') if footer else None
         battle_actions['zombie_kill_timing'] = footer.get('zombie_kill_timing') if footer else None
+        if options.get('collect_garrison_gradient'):
+            battle_actions['garrison_placement_gradient'] = net.garrison_placement_gradient
+            battle_actions['garrison_gradient_choices'] = net.garrison_gradient_choices
         if options.get('collect_cast_gradients'):
             battle_actions['cast_target_gradients'] = net.cast_gradients.tolist()
         if options.get('collect_cast_tool_gradients'):
