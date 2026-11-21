@@ -2,6 +2,50 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 18:59 Central, boundary 239417 checkpointed four rounds.
+  Both arms had six retries and two planning timeouts. Control
+  recorded 64 outside battle selections in 1242 decisions.
+  Filtered recorded zero in 1294. One vs two confirmed spends,
+  zero occupied READY starts, and zero eligible natural finishes.
+  Fifth batch active under 41668 and Observatory 21012 still live.
+- Investigated the reported failed safe-zone finalization on
+  the recent games. In round 2, inst15 control had a confirmed
+  rectangle later edited to one closed polygon covering 10.34%,
+  $314.67 left and no final READY blocker. It declined all 51
+  legal READY opportunities. Inst16 filtered had two closed
+  polygons covering 19.71%, ended $84.31 in debt, and declined
+  all 47 legal READY opportunities. Native action 57 for
+  zone_rect also deleted a four-corner polygon, replaced it
+  with a five-corner polygon, and placed a new four-corner
+  polygon. This establishes an unexpected modification in a
+  rectangle gesture. The user's screen view was not uniquely
+  matched to a worker. Other planning timeouts in round 1
+  also ended with closed occupied polygons and debt.
+- Staged a rectangle driver and receipt fix. Check the armed
+  draft starts empty, verify each corner increments the native
+  draft exactly once with committed polygons unchanged, and
+  confirm one new native four-corner zone after Enter. Journal
+  dispatch status with both requested points and the decision
+  index. Stop further corner clicks on mismatch and preserve
+  the board for the policy to recover. 16 controls tests
+  passed, including interrupted drafts and hidden edits.
+  No live trainer edits. Apply check passed for analysis/
+  coverage-portable314/tmp/rectangle-receipts-239417/
+  rectangle-receipts.patch SHA256
+  0100192069C46B87F854FBA9F5E45E76B9C28AC10DCA15FF0C4A81F28E33B9EB.
+  Next natural launch should corroborate draft increments and
+  final status against the actual game's placement receipts.
+- Defense follow-up: across 16 distinct occupied training
+  outbreaks in duration and geometry, 12 had no defensive
+  building inside an occupied polygon and 11 of those breached.
+  Four had at least one embedded defender and three breached.
+  Small different layouts and outbreaks, with limited coverage
+  of outside defenders. Measure perimeter proximity and
+  verified firing/kills by actual native structure kind before
+  choosing a bounded defense reward. Early passive collector
+  did not retain verified samples. Building count alone
+  cannot establish defense effectiveness.
+
 - At 18:53 Central, battle boundary 239417 checkpointed its
   first round. Control saw 14 actual outside battle rejections
   over 381 decisions. Candidate saw zero over 398 decisions,
