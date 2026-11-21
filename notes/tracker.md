@@ -2,6 +2,45 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 19:21 Central, 247105 checkpointed five training rounds
+  under PID 63632, sixth active. 17 retries and three planning
+  timeouts, zero occupied READY starts. Control 113 outside
+  rejections in 1819 battle decisions vs filtered zero in
+  1653. Native spends three vs seven. No natural finishes.
+- Live shelter verification confirmed two rectangle commits,
+  decisions 48 on round 1 inst15 and 42 on round 3 inst14,
+  each matched to a four-corner native placement event.
+  Both timed out after placement. First ended $312.81 in debt
+  with 9.99% of civilians covered and no embedded defenders.
+  Second ended with an unfinished later gesture and $429.10
+  remaining, 5.18% covered and no embedded defenders. This
+  verifies the rectangle receipt path and separates closure
+  from READY failure. Freeform completion remains unexercised.
+- Ten mixed episodes audited through round 4. Memory cosine
+  range -.0434 to +.1604, median +.0138; actor -.0339 to
+  +.0118, median -.0017. Median battle/planning norm ratio
+  7.78 for recurrence and 2.54 for actor. No large sustained
+  directional conflict in this sample. Preparation receives
+  smaller updates. Continue measuring before testing split
+  heads. Preserve shared recurrent memory across READY.
+- Staged private opening timing observation comparison. Current
+  preparation observes acquired ability levels but initializes
+  the live battle deck only at READY. Candidate sees whether
+  an ability is purchased and keyed, plus nominal unlock and
+  configured effect delay for equipped or currently buyable
+  abilities. Preserve live cast stock and legality. Both arms
+  use the battle boundary filter and equal warm weights/Adam
+  with zero new columns. 92 isolated tests passed. Replayed
+  retained real native config: Police unlock 0 / delay 8 s,
+  Heli 30 / 10, Missile 30 / 2.5 and Nuke 90 / 45. Quick
+  Deploy applied the native 33% unlock cut; measured prep
+  alone .041 ms. This is configured timing, not actual
+  deployment evidence. Apply check passed for analysis/
+  coverage-portable314/tmp/opening-input-247105/
+  opening-timing-input.patch SHA256
+  E1F94744E2412D53F37C373116584CF720B2E4EA6D6F2CBB5733315F3B5E6153.
+  Do not apply while 247105 is active.
+
 - At 19:15 Central, boundary comparison 247105 checkpointed its
   first round under PID 63632 (19:13:44). Warm starts both from
   private successor 6e0aabcdfcdd8ada and its original Adam.
