@@ -9,6 +9,13 @@ import env_zar
 import nn_play2 as train
 
 
+def completed_future(result):
+    from concurrent.futures import Future
+    future = Future()
+    future.set_result(result)
+    return future
+
+
 class StateTests(unittest.TestCase):
     def test_phase_loss_ledger_reports_actual_weight_mass_for_uneven_episodes(self):
         from compare_spatial import phase_loss_ledger
@@ -325,12 +332,13 @@ class StateTests(unittest.TestCase):
                 ('inst14', 'balanced', {}, 123, 'second')]
         pool = Mock()
         paired = [{'saved_frac': .31}, {'saved_frac': .34}]
-        pool.map.side_effect = [[{'saved_frac': .3}, {'err': 'Native map changed during read'}], paired]
+        pool.submit.side_effect = [completed_future(row) for row in
+                                   [{'saved_frac': .3}, {'err': 'Native map changed during read'}, *paired]]
         with tempfile.TemporaryDirectory() as directory:
             self.assertEqual(collect_pairs(pool, jobs, Path(directory), observe=True), paired)
-            self.assertEqual(pool.map.call_args.args[1], jobs)
-            self.assertEqual(pool.map.call_args.args[0].keywords, {'observe': True, 'audit_signal': True})
-            self.assertIs(pool.map.call_args_list[0].args[0], pool.map.call_args.args[0])
+            self.assertEqual([call.args[1] for call in pool.submit.call_args_list], jobs * 2)
+            self.assertEqual(pool.submit.call_args.args[0].keywords, {'observe': True, 'audit_signal': True})
+            self.assertIs(pool.submit.call_args_list[0].args[0], pool.submit.call_args.args[0])
             self.assertIn('Native map changed', (Path(directory)/'interface-retries.jsonl').read_text())
 
     def test_private_ppo_retries_picker_close_once_from_fresh_games(self):
@@ -340,13 +348,14 @@ class StateTests(unittest.TestCase):
                 ('inst14', 'balanced', {}, 123, 'second')]
         pool = Mock()
         failure = {'err': 'Timed out waiting for picker closed'}
-        pool.map.side_effect = [[{'end': 'lost', 'saved_frac': .3, 'outbreak': {'seed': 77}}, failure], [failure, {'saved_frac': .34}]]
+        pool.submit.side_effect = [completed_future(row) for row in (
+            {'end': 'lost', 'saved_frac': .3, 'outbreak': {'seed': 77}}, failure, failure, {'saved_frac': .34})]
         with tempfile.TemporaryDirectory() as directory:
             run = Path(directory)/'coverage-retry-test'
             run.mkdir()
             self.assertEqual(collect_pairs(pool, jobs, run),
                              [dict(failure, prior_attempt_seeds=[77]), {'saved_frac': .34, 'prior_attempt_seeds': [77]}])
-            self.assertEqual(pool.map.call_count, 2)
+            self.assertEqual(pool.submit.call_count, 4)
             logged = json.loads((run/'interface-retries.jsonl').read_text())
             self.assertEqual(logged['pair'], ['first', 'second'])
             self.assertEqual(logged['errors'], [failure['err']])
@@ -361,9 +370,9 @@ class StateTests(unittest.TestCase):
         jobs = [('inst19', 'control', {}, 123, 'left'),
                 ('inst20', 'candidate', {}, 123, 'right')]
         pool = Mock()
-        pool.map.side_effect = [
-            [{'end': 'won', 'saved_frac': .4, 'outbreak': {'seed': 77}},
-             {'err': 'Timed out waiting for picker closed'}],
+        pool.submit.side_effect = [
+            completed_future({'end': 'won', 'saved_frac': .4, 'outbreak': {'seed': 77}}),
+            completed_future({'err': 'Timed out waiting for picker closed'}),
             KeyboardInterrupt,
         ]
         with tempfile.TemporaryDirectory() as directory:
@@ -386,6 +395,29 @@ class StateTests(unittest.TestCase):
         self.assertEqual(heldout_consistency([row], 'frozen')['complete'], 0)
         result = heldout_consistency([dict(row,outbreak_seed=78)], 'frozen')
         self.assertEqual((result['complete'], result['minimum'], result['mean']), (1,.4,.4))
+
+    def test_later_worker_completion_is_durable_before_earlier_worker_returns(self):
+        import compare_spatial as comp
+        from concurrent.futures import Future
+        from unittest.mock import Mock
+        jobs = [('inst19','control',{},123,'left'), ('inst20','candidate',{},123,'right')]
+        pool = Mock()
+        ready = completed_future({'end':'won','saved_frac':.4,'outbreak':{'seed':77}})
+        pool.submit.side_effect = [Future(), ready]
+
+        def interrupt_after_completion(_):
+            yield ready
+            raise KeyboardInterrupt
+
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(comp, 'as_completed', side_effect=interrupt_after_completion):
+            path = Path(directory)
+            with self.assertRaises(KeyboardInterrupt):
+                comp.collect_pairs(pool, jobs, path)
+            earlier, later = comp.physical_attempts(path/'attempts.jsonl')
+            self.assertEqual((earlier['episode'], earlier['status']), ('left','scheduled'))
+            self.assertEqual((later['episode'], later['status'], later['outbreak_seed']),
+                             ('right','finished',77))
 
     def test_native_consistency_counts_original_attempt_before_replacement(self):
         from compare_spatial import heldout_consistency, physical_attempts

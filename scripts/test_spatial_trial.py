@@ -1,5 +1,6 @@
 """Offline checks for the experimental cell scorer used in live comparisons."""
 import unittest
+from concurrent.futures import Future
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock
@@ -11,11 +12,15 @@ class SpatialTargetTest(unittest.TestCase):
     def test_transient_failure_repeats_only_its_matched_pair(self):
         jobs = [('copy', 'arm', None, 1, str(i)) for i in range(4)]
         pool = Mock()
-        pool.map.side_effect = [[{}, {}, {'err':'Timed out waiting for UI frames'}, {}],
-                                [{'ok':1}, {'ok':2}]]
+        futures = []
+        for row in ({}, {}, {'err':'Timed out waiting for UI frames'}, {}, {'ok':1}, {'ok':2}):
+            future = Future()
+            future.set_result(row)
+            futures.append(future)
+        pool.submit.side_effect = futures
         with TemporaryDirectory() as directory:
             self.assertEqual(collect_pairs(pool, jobs, Path(directory)), [{}, {}, {'ok':1}, {'ok':2}])
-        self.assertEqual(pool.map.call_args.args[1], jobs[2:])
+        self.assertEqual([call.args[1] for call in pool.submit.call_args_list], jobs + jobs[2:])
 
     def test_swapping_cells_swaps_every_tools_scores(self):
         model = SpatialPolicy()

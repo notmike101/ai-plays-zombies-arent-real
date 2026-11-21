@@ -9,7 +9,7 @@ import uuid
 from collections import Counter
 from copy import deepcopy
 from functools import partial
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 import torch
@@ -268,8 +268,15 @@ def collect_pairs(pool, jobs, directory, *, observe=False, separate_policy_cpus=
                 journal.write(json.dumps(dict(identity, status='scheduled'))+'\n')
             journal.flush()
             os.fsync(journal.fileno())
-            rows = []
-            for identity, row in zip(identities, pool.map(worker, attempt_jobs), strict=True):
+            rows = [None] * len(attempt_jobs)
+            futures = {pool.submit(worker, job): index for index, job in enumerate(attempt_jobs)}
+            for future in as_completed(futures):
+                index = futures[future]
+                identity = identities[index]
+                try:
+                    row = future.result()
+                except Exception as error:
+                    row = {'err': f'{type(error).__name__}: {error}'}
                 journal.write(json.dumps(dict(identity, status='finished', err=row.get('err'),
                                               end=row.get('end'), saved_frac=row.get('saved_frac'),
                                               log_started=row.get('log_started'), win=row.get('win'),
@@ -277,7 +284,7 @@ def collect_pairs(pool, jobs, directory, *, observe=False, separate_policy_cpus=
                                               outbreak_seed=(row.get('outbreak') or {}).get('seed')))+'\n')
                 journal.flush()
                 os.fsync(journal.fileno())
-                rows.append(row)
+                rows[index] = row
         return rows
 
     results = collect(jobs, 0)
