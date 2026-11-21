@@ -4,6 +4,26 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 21:29:41 Central, defense fit 321541 launched PID 74708.
+  Six sequential real discovery attempts on inst13/14 using
+  the archived-roster contract and sampled team 0d1d56160623a3a1.
+  5.70 GiB available and 15.84 GiB disk at initial check;
+  selected one active game after two-copy headroom refusal.
+  Log only actual sampled Garrison score gradients with the
+  legal-uniform mixture derivative. Fit requires four distinct
+  prior-clear occupied outbreaks with variation. Uses native
+  saved score minus .35 times exposed fraction among credited
+  civilians, one bounded coverage-weight update. Discovery
+  retry scores are training observations, never qualification.
+  No PPO or production writes. No candidate if fit unexercised.
+  Any fitted actor needs a separate frozen baseline with same
+  sampler and new native seeds. Restore both original roster
+  rows and verify after exit. 351ba8e passed 383 script tests,
+  including analytic/autodiff parity and holdout exclusion.
+  Driver analysis/coverage-portable314/tmp/team-defense-fit-321541.py
+  SHA256 9F725D163B279BEE06925F0F0F5193F25A3956FD201A602B9C9970181C8C98E2.
+  Run analysis/coverage-team-defense-fit-321541.
+
 - At 21:25 Central, 314807 finished; both planning roster
   values verified back on disk against the pre-run manifest.
   Both sampled layouts produced fresh distinct occupied
