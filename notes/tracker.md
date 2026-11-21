@@ -11,7 +11,10 @@
   0x650988 in round 7 triggered the existing pair replay.
   The replay completed and the atomic next_round=8 checkpoint
   was verified. No failed trajectory contributed a PPO update.
-  First frozen pair inst19/20 launched, operator 61372 live.
+  At 18:03 the first frozen pair on inst19/20 reached retry
+  at 9.68% and 10.00%, both without occupied shelters or
+  confirmed stock spends. Second pair started. Operator 61372
+  and Observatory 21012 still active.
 - Matched the round-7 actors to 13 captured legal rectangle
   states using the same features, incoming GRU memory and mask.
   Captured and replayed logits and tool probabilities matched
