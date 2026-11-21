@@ -1069,6 +1069,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
                                ready_paint_tiles=row.get('ready_paint_tiles'),
                                ready_embedded_defenses=row.get('ready_embedded_defenses'),
                                ready_preparation=row.get('ready_preparation'),
+                               ready_zones=row.get('ready_zones'),
                                opening_loadout=row.get('opening_loadout', {}),
                                ready_loadout=row.get('ready_loadout', {}),
                                ready_loadout_sp=row.get('ready_loadout_sp'),
