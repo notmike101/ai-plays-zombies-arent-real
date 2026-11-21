@@ -4,6 +4,23 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 20:43 Central, preparation-credit pilot 290371 completed.
+  All eight training plus four evaluation attempts are journaled.
+  Candidate four battle starts, control five, one occupied
+  outbreak each. Both occupied starts sheltered 1,570 and
+  breached near 47 simulated seconds, exposing 1,564 candidate
+  and 1,561 control. Neither arm had a natural finish. Frozen
+  two planning timeouts and two retries, no occupied starts.
+  Missed both expansion criteria. Do not extend or promote.
+- 5ed5bb2 records completed worker results as they arrive, while
+  retaining scheduled order for evaluation and job order for PPO.
+  Full 381 tests passed after updating the old map-based fixture.
+  Interrupted workers without receipts remain unknown. e4a92f0
+  adds opt-in pre-update replay audit for every sequence, split
+  by phase and sampled tool/cell. It detects deliberately altered
+  cell log probability without changing updates. Full 381 tests
+  passed. Native pre-update evidence is pending a targeted run.
+
 - At 20:39 Central, preparation pilot PID 76752 still live.
   First two pairs journaled. Initial same-actor candidate
   timed out with 51 legal declines; baseline retried with
