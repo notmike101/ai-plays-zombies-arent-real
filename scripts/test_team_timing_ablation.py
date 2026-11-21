@@ -113,7 +113,8 @@ class Fixture:
             + [dict(team_id=tta.CHALLENGER_ID, copy='inst21', initial_planning_roster=['x'])])),
                                                    encoding='utf-8')
         if profile != 'timing':
-            prior = self.root / 'analysis' / 'coverage-team-timing-342571'
+            prior = self.root / 'analysis' / Path(
+                tta.PROFILES[profile]['previous_dir']).name
             prior.mkdir()
             (prior / 'outcomes.jsonl').write_text('\n'.join(lines(
                 [dict(team_id=tta.INCUMBENT_ID, copy=copy,
@@ -146,7 +147,8 @@ class Fixture:
 
     def rollouts(self, pool, jobs, *, click_start, speeds):
         copy, weights, team, seed = jobs[0]
-        spec = self.script.pop((copy, seed))
+        spec = (self.script.pop(('slot', len(self.launches)))
+                if self.profile == 'population' else self.script.pop((copy, seed)))
         journal = (self.root / 'analysis' / f'coverage-team-timing-{self.S}' / 'attempts.jsonl')
         rows = [json.loads(line) for line in journal.read_text(encoding='utf-8').splitlines()] \
             if journal.is_file() else []
@@ -713,6 +715,158 @@ class TimingAblationTests(unittest.TestCase):
             fixture.run()
         self.assertEqual(fixture.launches, [])
         self.assertFalse((fixture.directory / 'attempts.jsonl').is_file())
+
+
+class PopulationGenerationTests(unittest.TestCase):
+    """Tracker 350571: three frozen battle-vector-only children join the
+    parent for two mirrored waves on paired policy seeds, both copies per
+    candidate, no automatic screen, no replacement ever."""
+    S = tta.POP_SEED
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = self.temporary.name
+
+    def rosters_intact(self):
+        for copy in tta.COPIES:
+            text = (Path(self.root) / 'copies' / copy / 'steam_cloud' /
+                    'settings.ini').read_text(encoding='utf-8')
+            plan, battle = ORIGINALS[copy].split('|')
+            self.assertEqual(text, SETTINGS.format(plan, battle))
+
+    def finished(self, fixture):
+        return [row for row in fixture.attempts() if row['status'] == 'finished']
+
+    def test_children_frozen_on_shared_rng(self):
+        first = tta.population_arms('population')[1]
+        second = tta.population_arms('population')[1]
+        self.assertEqual([(label, identifier) for label, identifier, _ in first],
+                         [(label, identifier) for label, identifier, _ in second])
+        self.assertEqual([label for label, _, _ in first], list(tta.POP_ORDER))
+        self.assertEqual(first[0][1], tta.TEAM_ID)
+        self.assertEqual(len({identifier for _, identifier, _ in first}), 4)
+        parent = first[0][2]
+        for _, _, child in first[1:]:
+            changed = ({key for key in set(child) ^ set(parent)}
+                       | {key for key in set(child) & set(parent)
+                          if child[key] != parent[key]})
+            self.assertEqual(changed, {'battle', 'cast_bias'})
+
+    def happy(self):
+        script = {('slot', 0): lost(5101, .2), ('slot', 1): win(5102, .36),
+                  ('slot', 2): lost(5103, .1), ('slot', 3): lost(5104, .15),
+                  ('slot', 4): lost(5105, .12), ('slot', 5): lost(5106, .11),
+                  ('slot', 6): win(5107, .4), ('slot', 7): lost(5108, .3)}
+        fixture = Fixture(self.root, script, profile='population')
+        fixture.run()
+        return fixture
+
+    def test_happy_waves_ids_copies_and_no_screen(self):
+        fixture = self.happy()
+        identifiers = {label: identifier for label, identifier, _
+                       in tta.population_arms('population')[1]}
+        self.assertEqual(len(fixture.launches), 8)
+        self.assertEqual(fixture.probe_failures, [])
+        self.assertEqual(set(fixture.script), set())
+        self.assertEqual([(row['arm'], row['copy'], row['policy_seed'])
+                          for row in self.finished(fixture)],
+                         [('parent', 'inst19', self.S), ('child1', 'inst20', self.S),
+                          ('child2', 'inst19', self.S), ('child3', 'inst20', self.S),
+                          ('child3', 'inst19', self.S + 1),
+                          ('child2', 'inst20', self.S + 1),
+                          ('child1', 'inst19', self.S + 1),
+                          ('parent', 'inst20', self.S + 1)])
+        for row in self.finished(fixture):
+            self.assertEqual(row['policy_id'], identifiers[row['arm']])
+        for label in tta.POP_ORDER:
+            self.assertEqual({row['copy'] for row in self.finished(fixture)
+                              if row['arm'] == label}, set(tta.COPIES))
+        decision = json.loads((fixture.directory / 'decision.json')
+                              .read_text(encoding='utf-8'))
+        self.assertEqual(decision['replication_candidates'], ['child1'])
+        self.assertEqual(decision['unknowns'], [])
+        self.assertFalse(decision['advance'])
+        self.assertIsNone(decision['screen'])
+        self.assertEqual(len(decision['order']), 8)
+        self.assertEqual({row['phase'] for row in fixture.attempts()}, {'discovery'})
+        self.assertAlmostEqual(decision['arms']['child1']['mean_saved'], (.36 + .4) / 2)
+        arms_file = json.loads((fixture.directory / 'generation-arms.json')
+                               .read_text(encoding='utf-8'))
+        self.assertEqual([entry['label'] for entry in arms_file['arms']],
+                         list(tta.POP_ORDER))
+        self.assertEqual([entry['team_id'] for entry in arms_file['arms']],
+                         [identifiers[label] for label in tta.POP_ORDER])
+        manifest = json.loads((fixture.directory / 'frozen-manifest.json')
+                              .read_text(encoding='utf-8'))
+        self.assertEqual(manifest['budget'], dict(discovery=8, screen=0,
+                                                  max_physical=8, replacements=0))
+        self.assertEqual(sorted(json.loads((fixture.directory / 'consistency.json')
+                             .read_text(encoding='utf-8'))),
+                         sorted(identifiers.values()))
+        self.rosters_intact()
+
+    def test_partial_failure_stops_without_replacement(self):
+        fixture = Fixture(self.root, {('slot', 0): lost(5101), ('slot', 1): lost(5102),
+                                      ('slot', 2): lost(5103), ('slot', 3): 'raise'},
+                         profile='population')
+        with self.assertRaises(RuntimeError):
+            fixture.run()
+        self.assertEqual(len(fixture.launches), 4)
+        self.assertEqual([row['arm'] for row in self.finished(fixture)],
+                         list(tta.POP_ORDER))
+        self.assertIn('boom', self.finished(fixture)[-1]['err'])
+        decision = json.loads((fixture.directory / 'decision.json')
+                              .read_text(encoding='utf-8'))
+        self.assertEqual(sorted(decision['unknowns']), sorted(tta.POP_ORDER))
+        self.assertEqual(decision['replication_candidates'], [])
+        self.rosters_intact()
+
+    def test_slot_zero_boot_failure_journalizes_one_start(self):
+        fixture = Fixture(self.root, {('slot', 0): {'welcome_fail': True}},
+                         profile='population')
+        with self.assertRaises(RuntimeError):
+            fixture.run()
+        self.assertEqual(len(fixture.launches), 1)
+
+    def test_duplicate_outbreak_stops_fail_closed(self):
+        fixture = Fixture(self.root, {('slot', 0): lost(5101),
+                                      ('slot', 1): lost(5101)}, profile='population')
+        with self.assertRaises(RuntimeError):
+            fixture.run()
+        self.assertEqual(len(fixture.launches), 2)
+        self.assertIn('duplicate outbreak seed 5101', self.finished(fixture)[-1]['err'])
+
+    def test_prior_outbreak_rejects_first_slot(self):
+        fixture = Fixture(self.root, {('slot', 0): lost(4002)}, profile='population')
+        with self.assertRaises(RuntimeError):
+            fixture.run()
+        self.assertEqual(len(fixture.launches), 1)
+        self.assertIn('duplicate outbreak seed 4002',
+                      self.finished(fixture)[-1]['err'])
+
+    def test_retry_chain_in_result_is_rejected(self):
+        chain = [dict(attempt=0, end='aborted', saved=.05, log_started=1000,
+                      outbreak={'seed': 5101}),
+                 dict(attempt=1, end='lost', saved=.1, log_started=2000,
+                      outbreak={'seed': 5102})]
+        fixture = Fixture(self.root, {('slot', 0): {'chain': chain}},
+                         profile='population')
+        with self.assertRaises(RuntimeError):
+            fixture.run()
+        self.assertEqual(len(fixture.launches), 1)
+        self.assertIn('unexpected retry chain', self.finished(fixture)[-1]['err'])
+
+    def test_missing_prior_seed_rows_refuse_launch(self):
+        fixture = Fixture(self.root, {}, profile='population')
+        journal = (fixture.root / 'analysis' / 'coverage-team-timing-348571' /
+                   'outcomes.jsonl')
+        rows = journal.read_text(encoding='utf-8').splitlines()
+        journal.write_text('\n'.join(rows[:2]), encoding='utf-8')
+        with self.assertRaisesRegex(ValueError, 'Prior registered discovery seeds'):
+            fixture.run(argv_run=False)
+        self.assertFalse((fixture.root / 'analysis' /
+                          'coverage-team-timing-350571').exists())
 
 
 if __name__ == '__main__':

@@ -31,6 +31,22 @@ gate and budgets as 342571. Every finished attempt records its canonical
 READY closed-zone geometry; unknown geometry stops fail-closed while a
 coincident (equal) geometry never stops. Outbreak 804943993 (probe seed
 346571) is a hard-bound exclusion seed.
+
+population (seed 350571, tracker line 30): private population discovery on
+the archived parent bf3fc52369fc3746 itself (no sampled-site overlay) and the
+same pinned GRU. Three children are frozen before any game by three
+successive offspring(parent,parent,rng) draws on one shared
+default_rng(350571); each keeps only its battle/cast_bias vector changes,
+every other parent field identical, no redraw or seed search. Two waves
+(parent,A,B,C then C,B,A,parent), policy seeds 350571/350572, inst19/20
+alternating per slot so every candidate uses both copies. Eight physical
+starts maximum INCLUDING any in-rollout retry start: a result carrying more
+than one fresh attempt is rejected fail-closed (retries=0, nothing
+substituted). Fresh normal L1, speed_1, layout-free, model READY, no
+training, no promotion, no automatic screen: every slot is reported and
+ranking (two natural wins, one at least 35%, higher all-slot mean than the
+parent) only guides later private replication. Prior exclusions must contain
+all four 348571 discovery seeds.
 """
 import argparse
 from concurrent.futures import ProcessPoolExecutor
@@ -47,6 +63,7 @@ from contextlib import nullcontext
 ROOT = Path.cwd()
 sys.path[:0] = [str(ROOT / 'scripts'), str(ROOT)]
 
+import numpy as np
 import psutil
 import torch
 import compare_spatial as compare
@@ -69,6 +86,12 @@ ZONE_SEED = 348571
 ZONE_CHALLENGER_ID = '4adeb6fa1e286fa0'
 ZONE_BOUND_SEED = 804943993
 COPIES = ['inst19', 'inst20']
+POP_SEED = 350571
+POP_CHILD_SEED = 350571
+POP_CHILDREN = 3
+POP_ORDER = ('parent', 'child1', 'child2', 'child3')
+POP_WAVE_SEEDS = (350571, 350572)
+POP_MAX_PHYSICAL = 8
 MAX_PHYSICAL = 12
 NATURAL = ('won', 'lost')
 ROSTERS = {'plan': re.compile(rb'(?m)^roster_plan([ \t]*=[ \t]*)([^\r\n]*)'),
@@ -91,6 +114,21 @@ PROFILES = {
         prior_seeds=True, geometry_stop=False, geometry_record=True,
         bound_seed=ZONE_BOUND_SEED,
         only_delta='sample_zone_geometry absent -> True', gate=GATE_TEXT),
+    'population': dict(
+        seed=POP_SEED, incumbent=INCUMBENT_ID, challenger=TEAM_ID,
+        journal='outcomes.jsonl',
+        previous_dir='analysis/coverage-team-timing-348571',
+        prior_seeds=True, geometry_stop=False, arms='population',
+        child_seed=POP_CHILD_SEED, discovery_slots=POP_MAX_PHYSICAL,
+        max_physical=POP_MAX_PHYSICAL, wave_seeds=POP_WAVE_SEEDS,
+        only_delta='children change only battle/cast_bias vectors from three '
+                   'successive offspring(parent,parent,rng) draws on one '
+                   'shared default_rng(350571); all other parent fields '
+                   'identical',
+        gate='report every slot; rank for private replication only (two '
+             'wins, one >=35%, higher all-slot mean than parent); no '
+             'automatic screen',
+    ),
 }
 
 
@@ -194,6 +232,34 @@ def bundle(profile_id='timing'):
     if search.team_id(challenger) != profile['challenger']:
         raise ValueError('Arm identity does not match the registration')
     return weights, incumbent, challenger
+
+
+def population_arms(profile_id='population'):
+    """Parent plus three frozen battle-vector-only offspring on one RNG."""
+    profile = PROFILES[profile_id]
+    team = json.loads(read_verified('provisional.json', PROVISIONAL_SHA))['team']
+    base = read_verified('base.pt', BASE_SHA)
+    weights = torch.load(BytesIO(base), map_location='cpu', weights_only=True)
+    policy = trainer.PolicyNet2()
+    policy.load_state_dict(weights)
+    if (search.team_id(team) != TEAM_ID or trainer.policy_id(policy) != BASE_ID
+            or any(team.get(key) for key in ('layout', 'later_layouts'))):
+        raise ValueError('Frozen bundle identity or layout mismatch')
+    rng = np.random.default_rng(profile['child_seed'])
+    arms = [('parent', TEAM_ID, team)]
+    for number in range(POP_CHILDREN):
+        child = search.offspring(team, team, rng)
+        arm = dict(team, battle=child['battle'], cast_bias=child['cast_bias'])
+        changed = ({key for key in set(arm) ^ set(team)}
+                   | {key for key in set(arm) & set(team) if arm[key] != team[key]})
+        if changed != {'battle', 'cast_bias'}:
+            raise ValueError('Generated child changed more than the battle vectors')
+        arm_id = search.team_id(arm)
+        if arm_id in [identifier for _, identifier, _ in arms]:
+            raise ValueError('Generated child duplicates a frozen arm identity')
+        search.checkpoint_team(dict(base=BASE_ID, team_id=arm_id, team=arm), BASE_ID)
+        arms.append((f'child{number + 1}', arm_id, arm))
+    return weights, arms
 
 
 def canonical_closed_zones(zones):
@@ -305,6 +371,38 @@ def gate(rows, per_arm=2):
                              and challenger_mean > incumbent_mean))
 
 
+def population_report(rows, arms):
+    """Report every slot; rank only for later private replication. This
+    table never schedules an evaluation screen."""
+    per_arm = {}
+    for label in POP_ORDER:
+        identifier, _ = arms[label]
+        slot_rows = [row for row in rows if row['arm'] == label]
+        scores = [row['saved'] for row in slot_rows if finite(row.get('saved'))]
+        per_arm[label] = dict(
+            team_id=identifier,
+            slots=[dict(copy=row['copy'], policy_seed=row['policy_seed'],
+                        end=row.get('end'), saved=row.get('saved'),
+                        outbreak_seed=row.get('outbreak_seed'),
+                        native_status=(row.get('native_session') or {}).get('status'),
+                        err=row.get('err')) for row in slot_rows],
+            wins=sum(row.get('end') == 'won' for row in slot_rows),
+            mean_saved=(sum(scores) / len(scores)) if len(scores) == 2 else None,
+            max_saved=max(scores) if scores else None,
+            unknown=len(slot_rows) != 2 or len(scores) != 2)
+    parent = per_arm['parent']
+    replication = [label for label in POP_ORDER[1:]
+                   if not per_arm[label]['unknown'] and not parent['unknown']
+                   and per_arm[label]['wins'] == 2
+                   and per_arm[label]['max_saved'] >= .35
+                   and per_arm[label]['mean_saved'] > parent['mean_saved']]
+    return dict(order=[label for wave in (POP_ORDER, POP_ORDER[::-1])
+                       for label in wave],
+                arms=per_arm, replication_candidates=replication,
+                unknowns=[label for label in POP_ORDER if per_arm[label]['unknown']],
+                advance=False, screen='none: no automatic evaluation phase')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--profile', choices=sorted(PROFILES), default='timing',
@@ -313,9 +411,16 @@ def main():
                         help='Run the registered twelve-attempt serial plan; default is offline validation only')
     args = parser.parse_args()
     profile = PROFILES[args.profile]
-    weights, incumbent, challenger = bundle(args.profile)
-    arms = {'incumbent': (profile['incumbent'], incumbent),
-            'challenger': (profile['challenger'], challenger)}
+    generation = profile.get('arms') == 'population'
+    if generation:
+        weights, arm_list = population_arms(args.profile)
+        arms = {label: (identifier, team) for label, identifier, team in arm_list}
+        order = [label for wave in (POP_ORDER, POP_ORDER[::-1]) for label in wave]
+    else:
+        weights, incumbent, challenger = bundle(args.profile)
+        arms = {'incumbent': (profile['incumbent'], incumbent),
+                'challenger': (profile['challenger'], challenger)}
+        order = None
     seeds, counts, family = exclusion_audit(ROOT / 'analysis')
     prior_seeds = []
     if profile['prior_seeds']:
@@ -331,20 +436,29 @@ def main():
     if bound is not None and bound not in set(seeds):
         raise ValueError(f'Hard-bound exclusion seed {bound} missing from the audit')
     if not args.run:
-        print(json.dumps(dict(profile=args.profile, incumbent=profile['incumbent'],
-                              challenger=profile['challenger'],
-                              only_delta=profile['only_delta'],
-                              geometry_stop=profile['geometry_stop'],
-                              geometry_record=profile.get('geometry_record', False),
-                              bound_seed=profile.get('bound_seed'),
-                              prior_timing_seeds=prior_seeds,
-                              exclusion_sha256=hashlib.sha256(
-                                  json.dumps(seeds).encode()).hexdigest(),
-                              exclusion_total=len(seeds), journals=len(counts),
-                              diagnostic_family=family,
-                              plan=dict(discovery=4, screen=8, max_physical=MAX_PHYSICAL,
-                                        policy_seeds=list(range(profile['seed'],
-                                                                profile['seed'] + 6)))), indent=2))
+        plan = dict(profile=args.profile, incumbent=profile['incumbent'],
+                    only_delta=profile['only_delta'],
+                    geometry_stop=profile['geometry_stop'],
+                    geometry_record=profile.get('geometry_record', False),
+                    bound_seed=profile.get('bound_seed'),
+                    prior_timing_seeds=prior_seeds,
+                    exclusion_sha256=hashlib.sha256(
+                        json.dumps(seeds).encode()).hexdigest(),
+                    exclusion_total=len(seeds), journals=len(counts),
+                    diagnostic_family=family)
+        if generation:
+            plan['arms'] = [dict(label=label, team_id=identifier)
+                            for label, identifier, _ in arm_list]
+            plan['order'] = order
+            plan['plan'] = dict(discovery=POP_MAX_PHYSICAL, screen=0,
+                                max_physical=POP_MAX_PHYSICAL, replacements=0,
+                                wave_seeds=list(POP_WAVE_SEEDS))
+        else:
+            plan['challenger'] = profile['challenger']
+            plan['plan'] = dict(discovery=4, screen=8, max_physical=MAX_PHYSICAL,
+                                policy_seeds=list(range(profile['seed'],
+                                                        profile['seed'] + 6)))
+        print(json.dumps(plan, indent=2))
         return
     directory = ROOT / f"analysis/coverage-team-timing-{profile['seed']}"
     directory.mkdir()
@@ -366,7 +480,10 @@ def main():
             speed='speed_1', click_start=True, training=False, layout_replay=False,
             exclusion_sha256=hashlib.sha256(json.dumps(seeds).encode()).hexdigest(),
             exclusion_total=len(seeds), diagnostic_family=family,
-            budget=dict(discovery=4, screen=8, max_physical=MAX_PHYSICAL, replacements=0),
+            budget=(dict(discovery=POP_MAX_PHYSICAL, screen=0,
+                         max_physical=POP_MAX_PHYSICAL, replacements=0) if generation
+                    else dict(discovery=4, screen=8, max_physical=MAX_PHYSICAL,
+                              replacements=0)),
             gate=profile['gate'], geometry_stop=profile['geometry_stop'],
             geometry_record=profile.get('geometry_record', False),
             bound_seed=profile.get('bound_seed'),
@@ -378,6 +495,12 @@ def main():
                                               .read_bytes()).hexdigest()
                          for name in ('team_search.py', 'nn_play2.py', 'compare_spatial.py',
                                       'team_timing_ablation.py')}), indent=2), encoding='utf-8')
+        if generation:
+            (directory / 'generation-arms.json').write_text(json.dumps(dict(
+                base=BASE_ID, child_seed=profile['child_seed'], order=order,
+                arms=[dict(label=label, team_id=identifier, team=team)
+                      for label, identifier, team in arm_list]),
+                indent=2), encoding='utf-8')
         settings = {copy: operator.owned_copy(copy) / 'steam_cloud/settings.ini' for copy in COPIES}
         originals = {copy: roster_lines(path) for copy, path in settings.items()}
         restoration_path = directory / 'roster-restoration.json'
@@ -409,9 +532,10 @@ def main():
                 used = set()
                 def attempt(index, phase, seed):
                     nonlocal physical
-                    if physical >= MAX_PHYSICAL:
+                    if physical >= profile.get('max_physical', MAX_PHYSICAL):
                         raise RuntimeError('Physical budget exceeded')
-                    arm = 'incumbent' if (index // 2 + index) % 2 == 0 else 'challenger'
+                    arm = order[index] if generation else (
+                        'incumbent' if (index // 2 + index) % 2 == 0 else 'challenger')
                     policy_id, team = arms[arm]
                     copy = COPIES[index % 2]
                     tag = f"team-timing-{profile['seed']}_{phase}_{index}_{arm}"
@@ -433,6 +557,10 @@ def main():
                             pass
                         level, chain, error = official(result)
                         observed = chain[-1] if chain else None
+                        if (generation and error is None and (len(chain) != 1
+                                or len(result.get('levels') or ()) != 1)):
+                            error = ('unexpected retry chain under retries=0 '
+                                     '(every physical start must be journaled)')
                         if error is None:
                             for consumed in chain:
                                 if consumed in exclusion or consumed in used:
@@ -477,8 +605,10 @@ def main():
                                     outbreak_seed=observed, discovery_overlap=observed in exclusion,
                                     native_session=session), outcomes)
                 geometry = None
-                for index in range(4):
-                    attempt(index, 'discovery', profile['seed'] + index // 2)
+                for index in range(profile.get('discovery_slots', 4)):
+                    attempt(index, 'discovery',
+                            POP_WAVE_SEEDS[index // 4] if generation
+                            else profile['seed'] + index // 2)
                     if pool_errors:
                         break
                     if profile['geometry_stop'] and index == 1:
@@ -495,7 +625,9 @@ def main():
                             break
                         if geometry == 'unchanged':
                             break
-                decision = gate([row for row in rows if row['phase'] == 'discovery'])
+                decision = (population_report(rows, arms) if generation
+                            else gate([row for row in rows
+                                       if row['phase'] == 'discovery']))
                 if profile['geometry_stop']:
                     decision = dict(decision, geometry_verdict=geometry,
                                     advance=bool(decision['advance'] and geometry == 'changed'))
@@ -517,7 +649,9 @@ def main():
             native = compare.physical_attempts(directory / 'attempts.jsonl')
             (directory / 'consistency.json').write_text(json.dumps({
                 actor: compare.heldout_consistency(native, actor, discovery_seeds=exclusion)
-                for actor in (profile['incumbent'], profile['challenger'])},
+                for actor in ([identifier for _, identifier, _ in arm_list]
+                              if generation else
+                              (profile['incumbent'], profile['challenger']))},
                 indent=2), encoding='utf-8')
         finally:
             restoration = {}
