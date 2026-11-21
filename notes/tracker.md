@@ -2,6 +2,12 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 20:06 Central, capacity study finished eight training batches.
+  Standard 128 had 14 retries and two timeouts. Wide 192 had eight
+  retries and eight timeouts. Neither had a natural finish. PID
+  76248 launched the first frozen pair on reserved inst19/20.
+  Hold follow-up deployment for the separate full-stack audit.
+
 - At 20:04 Central, capacity trainer PID 76248 and four owned
   game copies verified live. Six batches journaled, 24 training
   attempts, zero natural finishes. Standard: ten retries, two
