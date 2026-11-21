@@ -2,6 +2,36 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 18:42 Central, geometry 232741 checkpointed six rounds,
+  24 battle starts and 24 retries. Four occupied READY starts
+  in control, two candidate. Round 4 paired starts both had
+  24.85% sheltered and one confirmed spend. First occupied
+  breach at sim 49.00 s control and 44.73 s candidate. Outcomes
+  remain incomplete. Seventh batch live under PID 71988.
+  Rejections now total 352, with at least 315 in battle.
+- Read-only replay used nine sampled battle click/drag decisions
+  from six actual games in 232741, matched to the native map by
+  game PID and projected using the recorded policy camera.
+  Reconstructed filter removed candidates in all nine and kept
+  an available option in each. Median 58.23% of conditional
+  cell probability within the selected tool lay outside the
+  projected boundary. Four selected outside. Three matched
+  the completed per-tool/cell rejection log and one game was
+  still pending. Small sampled set. No claim about the overall
+  battle rejection rate, deployment or survival. Evidence
+  analysis/coverage-portable314/tmp/geometry-232741-battle-boundary.jsonl.
+- Batched the staged boundary same-state probability audit.
+  Matched the reference sum to within 1e-7 for an eight-tool
+  fixture on recorded native geometry. Median probability
+  calculation .121 ms vs .815 ms before batching, benchmark
+  excludes native reads and policy forward. All 86 focused
+  tests passed again. Apply check passed, patch SHA256
+  32675E510A606A2B224D66A636B227AE040EEEC5F742452A032EB6E37398F6EC.
+  Leave current source unchanged until geometry evaluation ends.
+  Seed 239417 and the 20-draw window checked with zero archive
+  sampling-seed overlap. Use retained schema-4 1c3be633f44497fc
+  so the mask comparison is independent of the geometry input.
+
 - At 18:38 Central, geometry 232741 checkpointed four rounds
   with 16 retries and no eligible natural finishes. Control
   three occupied READY starts, candidate one. Matching round 2
