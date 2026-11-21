@@ -25,6 +25,13 @@ class SpatialTests(unittest.TestCase):
             np.testing.assert_array_equal(spatial.rectangle_counts(points, width, height), expected)
             self.assertFalse(spatial.rectangle_counts(np.empty((0, 2)), width, height).any())
 
+    def test_simple_polygon_accepts_concavity_and_rejects_crossing_or_retraced_edges(self):
+        self.assertTrue(spatial.simple_polygon([(0, 0), (4, 0), (2, 2), (4, 4), (0, 4)]))
+        self.assertTrue(spatial.simple_polygon([(0, 0), (2, 0), (4, 0), (4, 4), (0, 4)]))
+        self.assertFalse(spatial.simple_polygon([(0, 0), (5, 4), (0, 4), (4, 0)]))
+        self.assertFalse(spatial.simple_polygon([(0, 0), (4, 0), (2, 0), (4, 4), (0, 4)]))
+        self.assertFalse(spatial.simple_polygon([(0, 0), (4, 0), (0, 0), (0, 4)]))
+
     def test_world_y_projects_up_and_dpi_is_not_applied_twice(self):
         px = spatial.project(np.array([[1829.2, 1972.4]]), (1631., 1318.6, .5795), 1920, 1200)
         np.testing.assert_allclose(px[0], [1074.8569, 221.1229], atol=.01)

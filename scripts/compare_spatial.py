@@ -311,6 +311,28 @@ def load_warm_start(path, arm):
             {'arm': arm, 'sha256': fingerprint})
 
 
+def retain_natural_win(directory, arm, net, optimizer, config, discovery_seeds, rows, best):
+    """Keep the exact pre-update actor for the best native win in each private arm."""
+    winner = max((row for row in rows if row['arm'] == arm and row['end'] == 'won'
+                  and row['win'] is True and row.get('start_kind') == 'fresh'
+                  and type(row.get('outbreak_seed')) is int and row.get('saved_frac') is not None),
+                 key=lambda row: row['saved_frac'], default=None)
+    if winner is None or winner['saved_frac'] <= best:
+        return best
+    policy = trainer.policy_id(net)
+    if policy != winner['policy_id']:
+        raise ValueError('Natural win must be saved with its exact actor')
+    path = directory / f'{arm}-best-natural.pt'
+    temporary = path.with_suffix('.tmp')
+    torch.save(dict(config=config, discovery_seeds=sorted(discovery_seeds),
+                    weights={arm: net.state_dict()}, optimizers={arm: optimizer.state_dict()},
+                    actor_round=winner['round'], policy_id=policy,
+                    outcome={key: winner.get(key) for key in ('outbreak_seed', 'saved_frac', 'board_id', 'log_started')}),
+               temporary)
+    temporary.replace(path)
+    return winner['saved_frac']
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--copies', nargs='+', required=True)
@@ -355,6 +377,8 @@ def main():
                             help='Compare filtering known out-of-bounds battle targets before sampling')
     comparison.add_argument('--compare-shelter-geometry', action='store_true',
                             help='Compare a private planning input for projected shelter rectangle coverage')
+    parser.add_argument('--audit-phase-gradients', action='store_true',
+                        help='Measure planning and battle gradient alignment on one episode per arm and round')
     parser.add_argument('--observe', action='store_true',
                         help='Publish read-only Observatory decisions at up to 1 Hz per worker')
     parser.add_argument('--separate-policy-cpus', action='store_true',
@@ -541,6 +565,7 @@ def main():
         directory = Path(operator.ROOT, 'analysis', tag)
         directory.mkdir()
         summaries = []
+        best_natural = dict.fromkeys(models, -1.)
         def report_signal():
             evaluation = {arm: heldout_consistency(
                 [row for row in summaries if row['arm'] == arm], trainer.policy_id(net),
@@ -616,6 +641,7 @@ def main():
                             or args.compare_shelter_duration or args.compare_shelter_input
                             or args.compare_shelter_geometry or args.compare_battle_boundary):
                         summary['planning_zone_receipts'] = row.get('planning_zone_receipts')
+                        summary['shelter_dispatch'] = row.get('shelter_dispatch')
                         for key in ('ready_embedded_defenses', 'ready_preparation', 'ready_loadout',
                                     'first_legal_cast_sim', 'timeout_preparation'):
                             summary[key] = row.get(key)
@@ -640,9 +666,17 @@ def main():
                     discovery_seeds.update(training_outbreak_seeds(summaries[-len(jobs):]))
                     for arm, net in models.items():
                         np.random.seed(args.seed + rnd)
-                        trainer.ppo_update(net, [row for job,row in zip(jobs,results) if job[1]==arm],
+                        best_natural[arm] = retain_natural_win(
+                            directory, arm, net, optimizers[arm], config, discovery_seeds,
+                            summaries[-len(round_copies):], best_natural[arm])
+                        update = trainer.ppo_update(net, [row for job,row in zip(jobs,results) if job[1]==arm],
                                            optimizers[arm], balance_phases=arm=='balanced',
-                                           planning_tool_entropy_bonus=PLANNING_ENTROPY_BONUSES.get(arm, 0.))
+                                           planning_tool_entropy_bonus=PLANNING_ENTROPY_BONUSES.get(arm, 0.),
+                                           audit_phases=args.audit_phase_gradients)
+                        if args.audit_phase_gradients:
+                            with (directory/'phase-gradients.jsonl').open('a') as experiment:
+                                experiment.write(json.dumps(dict(round=rnd, arm=arm, source_policy=policies[arm],
+                                                                 audit=update['phase_gradients']))+'\n')
                         torch.save(net.state_dict(), directory/(arm+'.pt'))
                     temp = directory/'paired.tmp'
                     torch.save(dict(next_round=rnd+1, source=source, config=config,

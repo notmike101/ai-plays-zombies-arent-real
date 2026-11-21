@@ -36,30 +36,82 @@ class ControlsTests(unittest.TestCase):
         c.env.vi.button_down.assert_called_once()
         c.env.vi.button_up.assert_called_once()
 
-    def test_rectangle_confirms_only_a_complete_native_draft(self):
-        for corners, modal, active, confirmed in ((4, False, True, True),
-                (2, False, True, False), (4, True, True, False), (4, False, False, False)):
-            with self.subTest(corners=corners, modal=modal, active=active):
+    def test_rectangle_stops_when_native_draft_or_committed_geometry_diverges(self):
+        import numpy as np
+
+        existing = np.array([(0, 0), (1, 0), (1, 1), (0, 1)])
+        rectangle = existing + 2
+        changed = np.vstack((existing, [0, 2]))
+        for status, stopped_at in (('confirmed', 4), ('commit_unconfirmed', 4),
+                                   ('unexpected_committed_geometry', 4), ('modal', 2),
+                                   ('draft_disarmed', 2), ('draft_vertex_count_mismatch', 2),
+                                   ('draft_not_empty_after_arm', 0),
+                                   ('existing_zone_changed_during_draft', 2)):
+            with self.subTest(status=status):
                 control = Controls(Mock())
+                control.arm = Mock()
                 control.polygon_corner = Mock()
                 control.polygon_finish = Mock()
 
                 def native(rva, fmt):
                     count = control.polygon_corner.call_count
                     if rva == 0x667868:
-                        return modal and count == 4
+                        return status == 'modal' and count == 2
                     if rva == 0x65c488:
-                        return active or count < 4
-                    return corners
+                        return not (status == 'draft_disarmed' and count == 2)
+                    if status == 'draft_not_empty_after_arm':
+                        return 1
+                    return count - int(status == 'draft_vertex_count_mismatch' and count == 2)
+
+                def zones():
+                    if status == 'existing_zone_changed_during_draft' and control.polygon_corner.call_count == 2:
+                        return [changed]
+                    if control.polygon_finish.called:
+                        if status == 'confirmed':
+                            return [rectangle, existing]
+                        if status == 'unexpected_committed_geometry':
+                            return [changed, rectangle]
+                    return [existing]
 
                 control.env.scalar.side_effect = native
-                self.assertEqual(control.zone_rectangle((100, 200), (300, 400)), confirmed)
+                control.env.array.return_value = rectangle
+                self.assertEqual(control.zone_rectangle((100, 200), (300, 400), read_zones=zones), status)
                 self.assertEqual(control.polygon_corner.call_args_list, [
-                    unittest.mock.call((100, 200), begin=True),
-                    unittest.mock.call((300, 200), begin=False),
-                    unittest.mock.call((300, 400), begin=False),
-                    unittest.mock.call((100, 400), begin=False)])
-                self.assertEqual(control.polygon_finish.call_count, int(confirmed))
+                    unittest.mock.call((100, 200)),
+                    unittest.mock.call((300, 200)),
+                    unittest.mock.call((300, 400)),
+                    unittest.mock.call((100, 400))][:stopped_at])
+                control.arm.assert_called_once_with(66, 48)
+                self.assertEqual(control.polygon_finish.call_count, int(stopped_at == 4))
+                control.env.vi.assert_not_called()
+
+    def test_freeform_corner_reports_whether_native_draft_advanced(self):
+        control = Controls(Mock())
+        control.polygon_corner = Mock()
+        control.env.scalar.side_effect = lambda rva, fmt: {0x667868: 0, 0x65c488: 1, 0x65cce0: 1}[rva]
+        point = (120, 341)
+        self.assertEqual(control.append_shelter_corner(point, begin=True, expected=1, read_zones=list),
+                         'draft_vertex_confirmed')
+        self.assertEqual(control.append_shelter_corner(point, begin=False, expected=2, read_zones=list),
+                         'draft_vertex_count_mismatch')
+        self.assertEqual(control.polygon_corner.call_args_list,
+                         [unittest.mock.call(point, begin=True), unittest.mock.call(point, begin=False)])
+
+    def test_freeform_finish_accepts_a_native_concave_five_corner_polygon(self):
+        import numpy as np
+
+        control = Controls(Mock())
+        control.env.scalar.side_effect = lambda rva, fmt: {0x667868: 0, 0x65c488: 1, 0x65cce0: 5}[rva]
+        control.polygon_finish = Mock()
+        polygon = np.array([(0, 0), (4, 0), (2, 2), (4, 4), (0, 4)])
+        control.env.array.return_value = polygon
+        zones = Mock(side_effect=[[], [polygon]])
+        self.assertEqual(control.finish_shelter(zones), 'confirmed')
+        control.polygon_finish.assert_called_once_with()
+        control.polygon_finish.reset_mock()
+        control.env.array.return_value = polygon[[0, 3, 1, 4, 2]]
+        self.assertEqual(control.finish_shelter(zones), 'draft_geometry_not_simple')
+        control.polygon_finish.assert_not_called()
 
     def test_gesture_preserves_selection_and_releases_modifier_on_failure(self):
         c=Controls(Mock());c.frames=Mock();c.cancel=Mock()

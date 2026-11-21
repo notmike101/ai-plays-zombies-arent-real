@@ -91,6 +91,70 @@ class StateTests(unittest.TestCase):
         self.assertAlmostEqual(gain[9], 1 / 3)
         self.assertFalse(train.shelter_rectangle_gain(st, width, height, allowed & False).any())
 
+    def test_phase_gradient_audit_distinguishes_conflict_without_setting_gradients(self):
+        torch = train.torch
+        net = torch.nn.Module()
+        net.gru = torch.nn.Linear(1, 1, bias=False)
+        step = net.gru.weight.reshape(()) * torch.tensor([1., -2.])
+        report = train.phase_gradient_alignment(net, step, torch.tensor([True, False]))
+        self.assertEqual(report['memory'], dict(planning_norm=.5, battle_norm=1., cosine=-1.))
+        self.assertIsNone(report['actor']['cosine'])
+        self.assertIsNone(net.gru.weight.grad)
+
+    def test_phase_gradient_audit_leaves_ppo_weight_updates_identical(self):
+        from copy import deepcopy
+        import numpy as np
+
+        torch = train.torch
+        baseline = train.PolicyNet2()
+        audited = deepcopy(baseline)
+        states = np.zeros((3, train.NOBS), dtype=np.float32)
+        states[0, train.PLANNING_INDEX] = 1.
+        actions = ([1, 0, 0], [0, 0, 0])
+        likelihoods = ([0., 0., 0.], [0., 0., 0.])
+        masks = []
+        for action in actions[0]:
+            tools = np.zeros(train.NU)
+            tools[[action, 2]] = 1.
+            cells = np.zeros(train.NC)
+            cells[:2] = 1.
+            masks.append((tools, cells))
+        trajectory = dict(obs=states, us=actions[0], cs=actions[1], ulps=likelihoods[0], clps=likelihoods[1],
+                          masks=masks, rews=[.2, -.1, .3], sim_elapsed=[0., .5, .5])
+        train.ppo_update(baseline, [trajectory], torch.optim.Adam(baseline.parameters()), epochs=1)
+        result = train.ppo_update(audited, [trajectory], torch.optim.Adam(audited.parameters()),
+                                  epochs=1, audit_phases=True)
+        self.assertEqual(result['phase_gradients']['planning_decisions'], 1)
+        self.assertEqual(result['phase_gradients']['battle_decisions'], 2)
+        for name, tensor in baseline.state_dict().items():
+            torch.testing.assert_close(audited.state_dict()[name], tensor, atol=0, rtol=0)
+
+    def test_private_runner_retains_the_exact_natural_win_actor_before_ppo(self):
+        from compare_spatial import retain_natural_win
+
+        torch = train.torch
+        net = torch.nn.Linear(2, 1)
+        optimizer = torch.optim.Adam(net.parameters())
+        config = {'schema': train.checkpoint_schema()}
+        policy = train.policy_id(net)
+        win = dict(arm='filtered', end='won', win=True, start_kind='fresh', policy_id=policy,
+                   outbreak_seed=413, saved_frac=.1265, round=5, board_id='board')
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            aborted = dict(win, end='aborted')
+            self.assertEqual(retain_natural_win(directory, 'filtered', net, optimizer, config,
+                                               {413}, [aborted], -1.), -1.)
+            self.assertFalse(list(directory.iterdir()))
+            self.assertAlmostEqual(retain_natural_win(directory, 'filtered', net, optimizer, config,
+                                                    {413}, [win], -1.), .1265)
+            saved = torch.load(directory/'filtered-best-natural.pt', weights_only=True)
+            self.assertEqual(saved['policy_id'], policy)
+            self.assertEqual(saved['actor_round'], 5)
+            self.assertEqual(saved['discovery_seeds'], [413])
+            self.assertEqual(saved['outcome']['saved_frac'], .1265)
+            for name, tensor in net.state_dict().items():
+                torch.testing.assert_close(saved['weights']['filtered'][name], tensor)
+
     def test_boundary_pair_uses_the_same_policy_setup_except_filter(self):
         import compare_spatial as comp
         with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \

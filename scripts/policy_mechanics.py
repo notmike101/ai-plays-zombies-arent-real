@@ -434,8 +434,11 @@ class Mechanics:
         if name in ('move_selection','reaim_selection'):return c.move_selection(xy,reaim=name=='reaim_selection')
         if name=='arm_slot':return c.arm(*[(49,2),(50,3),(51,4),(52,5),(53,6),(54,7),(84,20)][cell])
         if name in ('click_world','right_click_world'):return c.gesture(xy,right=name=='right_click_world')
-        if name in ('zone_begin','zone_corner'):return c.polygon_corner(xy,begin=name=='zone_begin')
-        if name=='zone_finish':return c.polygon_finish()
+        if name in ('zone_begin','zone_corner'):
+            begin = name == 'zone_begin'
+            expected = 1 if begin else len(st['native']['selection']['polygon']) + 1
+            return c.append_shelter_corner(xy, begin=begin, expected=expected, read_zones=self.reader.zones)
+        if name=='zone_finish':return c.finish_shelter(self.reader.zones)
         if name=='zone_back':return c.polygon_back()
         if name=='cancel_tool':
             st.pop('anchor',None);st.pop('gesture_anchor',None);st.pop('gesture_point',None);return c.cancel()

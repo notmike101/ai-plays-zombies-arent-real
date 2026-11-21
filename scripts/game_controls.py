@@ -175,20 +175,76 @@ class Controls:
         self.env.vi.key_press(13,sc=28)
         self.frames()
 
-    def zone_rectangle(self, start, end):
+    def append_shelter_corner(self, point, *, begin, expected, read_zones):
+        if self.env.scalar(0x667868, '<B'):
+            return 'modal'
+        before = sorted(zone.tobytes() for zone in read_zones() if len(zone) >= 3)
+        self.polygon_corner(point, begin=begin)
+        if sorted(zone.tobytes() for zone in read_zones() if len(zone) >= 3) != before:
+            return 'existing_zone_changed_during_draft'
+        if self.env.scalar(0x667868, '<B'):
+            return 'modal'
+        if self.env.scalar(0x65c488, '<B') != 1:
+            return 'draft_disarmed'
+        if self.env.scalar(0x65cce0, '<q') != expected:
+            return 'draft_vertex_count_mismatch'
+        return 'draft_vertex_confirmed'
+
+    def zone_rectangle(self, start, end, *, read_zones):
+        """Verify the intended draft and its native commit without retrying input."""
+        before = sorted(zone.tobytes() for zone in read_zones() if len(zone) >= 3)
         x1, y1 = start
         x2, y2 = end
-        for i, point in enumerate(((x1, y1), (x2, y1), (x2, y2), (x1, y2))):
+        corners = ((x1, y1), (x2, y1), (x2, y2), (x1, y2))
+        if self.env.scalar(0x667868, '<B'):
+            return 'modal'
+        self.arm(66, 48)
+        if self.env.scalar(0x667868, '<B'):
+            return 'modal'
+        if self.env.scalar(0x65c488, '<B') != 1:
+            return 'draft_disarmed'
+        if self.env.scalar(0x65cce0, '<q') != 0:
+            return 'draft_not_empty_after_arm'
+        for count, point in enumerate(corners, 1):
+            self.polygon_corner(point)
+            if sorted(zone.tobytes() for zone in read_zones() if len(zone) >= 3) != before:
+                return 'existing_zone_changed_during_draft'
             if self.env.scalar(0x667868, '<B'):
-                return False
-            if i and self.env.scalar(0x65c488, '<B') != 1:
-                return False
-            self.polygon_corner(point, begin=i == 0)
-        if (self.env.scalar(0x667868, '<B') or self.env.scalar(0x65c488, '<B') != 1
-                or self.env.scalar(0x65cce0, '<q') != 4):
-            return False
+                return 'modal'
+            if self.env.scalar(0x65c488, '<B') != 1:
+                return 'draft_disarmed'
+            if self.env.scalar(0x65cce0, '<q') != count:
+                return 'draft_vertex_count_mismatch'
+        return self.finish_shelter(read_zones, expected_vertices=4)
+
+    def finish_shelter(self, read_zones, *, expected_vertices=None):
+        if self.env.scalar(0x667868, '<B'):
+            return 'modal'
+        if self.env.scalar(0x65c488, '<B') != 1:
+            return 'draft_disarmed'
+        count = self.env.scalar(0x65cce0, '<q')
+        draft = self.env.array(0x65ccd8, ('<f4', 2), limit=10000)
+        if count < 3 or len(draft) != count:
+            return 'draft_vertex_count_mismatch'
+        from spatial import simple_polygon
+        if not simple_polygon(draft):
+            return 'draft_geometry_not_simple'
+        old = [zone.tobytes() for zone in read_zones() if len(zone) >= 3]
         self.polygon_finish()
-        return True
+        after = [zone for zone in read_zones() if len(zone) >= 3]
+        added = []
+        for zone in after:
+            signature = zone.tobytes()
+            if signature in old:
+                old.remove(signature)
+            else:
+                added.append(zone)
+        if (not old and len(added) == 1
+                and (expected_vertices is None or len(added[0]) == expected_vertices)):
+            return 'confirmed'
+        if old or added:
+            return 'unexpected_committed_geometry'
+        return 'commit_unconfirmed'
 
     def polygon_back(self):
         if self.env.scalar(0x65c488,'<B') != 1:

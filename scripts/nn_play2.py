@@ -904,6 +904,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                           map=session.get('map'), board=board_id, tools=TOOLS)
         outside_actions = 0
         outside_targets = {}
+        shelter_dispatch = []
         battle_outside_targets = {}
         battle_boundary_filter = options.get('battle_boundary_filter')
         boundary_checks = boundary_affected = 0
@@ -1165,6 +1166,11 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             elif u >= 72:
                 receipt = mechanics.execute(st,TOOLS[u],c)
                 picker_rejected = receipt is False
+                if TOOLS[u] in ('zone_begin', 'zone_corner', 'zone_finish'):
+                    shelter_dispatch.append(dict(decision=len(rows['obs']) - 1, shape='freeform',
+                                                 action=TOOLS[u], cell=c,
+                                                 draft_vertices_before=len(st['native']['selection']['polygon']),
+                                                 status=receipt))
                 if isinstance(receipt,tuple) and TOOLS[u].startswith('panel_building_'):
                     building,ability=receipt
                     if building not in special_activations:
@@ -1208,7 +1214,10 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         x1, y1 = cell_of_px(st.pop('anchor')[1], env.cw, env.ch)
                         x2, y2 = cell_of_px(c, env.cw, env.ch)
                         if u == 10:
-                            mechanics.controls.zone_rectangle((x1, y1), (x2, y2))
+                            status = mechanics.controls.zone_rectangle(
+                                (x1, y1), (x2, y2), read_zones=mechanics.reader.zones)
+                            shelter_dispatch.append(dict(decision=len(rows['obs']) - 1, shape='rectangle',
+                                                         start=[x1, y1], end=[x2, y2], status=status))
                         else:
                             env._arm(*U_HOTKEY[u])
                             mechanics.controls.drag_handles((x1,y1),(x2,y2))
@@ -1541,7 +1550,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     ready_embedded_defenses=ready_embedded_defenses, ready_preparation=ready_preparation,
                     special_activations=special_activations,
                     reward_components=rewards, outside_playarea_actions=outside_actions,
-                    outside_targets=outside_targets, battle_actions=battle_actions,
+                    outside_targets=outside_targets, shelter_dispatch=shelter_dispatch,
+                    battle_actions=battle_actions,
                     selected_placements=selected_placements,
                     paid_buildings=paid_buildings, unconfirmed_buildings=unconfirmed_buildings,
                     building_receipts=building_receipts,
@@ -1684,8 +1694,36 @@ def phase_loss_weights(planning):
     return torch.where(planning, total/(2*count), total/(2*(total-count)))
 
 
+def phase_gradient_alignment(net, step_loss, planning):
+    """Compare the two contributions to the same PPO loss without setting .grad."""
+    named = [(name.split('.')[0], parameter) for name, parameter in net.named_parameters()
+             if name.split('.')[0] in ('gru', 'hu', 'hc', 'cell')]
+    parameters = [parameter for _, parameter in named]
+    left, right = [torch.autograd.grad(step_loss[phase].sum() / len(step_loss), parameters,
+                                      retain_graph=True, allow_unused=True)
+                   for phase in (planning, ~planning)]
+    report = {}
+    for group, layers in (('memory', {'gru'}), ('actor', {'hu', 'hc', 'cell'})):
+        dot = left_sq = right_sq = 0.
+        for (name, _), p_grad, b_grad in zip(named, left, right):
+            if name not in layers:
+                continue
+            if p_grad is not None:
+                p_grad = p_grad.reshape(-1)
+                left_sq += float(p_grad.dot(p_grad))
+            if b_grad is not None:
+                b_grad = b_grad.reshape(-1)
+                right_sq += float(b_grad.dot(b_grad))
+            if p_grad is not None and b_grad is not None:
+                dot += float(p_grad.dot(b_grad))
+        denom = math.sqrt(left_sq * right_sq)
+        report[group] = dict(planning_norm=math.sqrt(left_sq), battle_norm=math.sqrt(right_sq),
+                             cosine=max(-1., min(1., dot / denom)) if denom else None)
+    return report
+
+
 def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
-               balance_phases=False, planning_tool_entropy_bonus=0.):
+               balance_phases=False, planning_tool_entropy_bonus=0., audit_phases=False):
     seqs = []
     for t in trajs:
         X = torch.tensor(np.array(t['obs'], dtype=np.float32)).unsqueeze(0)
@@ -1711,6 +1749,7 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
     alladv = np.concatenate([s[6].numpy() for s in seqs])
     mu_a, sd_a = alladv.mean(), alladv.std() + 1e-8
     diagnostics = []
+    phase_audit = None
     for epoch in range(epochs):
         order = np.random.permutation(len(seqs))
         tot = 0.0
@@ -1722,16 +1761,27 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
             lp = du.log_prob(U) + dc.log_prob(C)
             ratio = torch.exp(lp - (ULP + CLP))
             adv = (ADV - mu_a) / sd_a
-            pg = -(W * torch.min(ratio * adv,
-                                 torch.clamp(ratio, 1 - clip, 1 + clip) * adv)).mean()
-            vf = (W * (v.squeeze(0) - RET) ** 2).mean()
+            surrogate = W * torch.min(ratio * adv, torch.clamp(ratio, 1 - clip, 1 + clip) * adv)
+            value_error = W * (v.squeeze(0) - RET) ** 2
             tool_entropy = du.entropy()
-            loss = pg + c1 * vf - ent * (W * (tool_entropy + dc.entropy())).mean()
+            entropy = W * (tool_entropy + dc.entropy())
+            loss = -surrogate.mean() + c1 * value_error.mean() - ent * entropy.mean()
             if planning_tool_entropy_bonus:
                 planning = X[0, :, PLANNING_INDEX].bool()
                 loss -= planning_tool_entropy_bonus * (planning * tool_entropy).sum() / planning.sum().clamp_min(1)
             if not torch.isfinite(loss):
                 raise ValueError('Non-finite PPO loss; checkpoint not saved')
+            if audit_phases and phase_audit is None and epoch == 0:
+                planning = X[0, :, PLANNING_INDEX].bool()
+                count = int(planning.sum())
+                if 0 < count < len(planning):
+                    step_loss = -surrogate + c1 * value_error - ent * entropy
+                    if planning_tool_entropy_bonus:
+                        step_loss = step_loss - planning_tool_entropy_bonus * (
+                            planning * tool_entropy * (len(planning) / count))
+                    phase_audit = dict(episode_index=int(k), prior_updates=len(diagnostics),
+                                       planning_decisions=count, battle_decisions=len(planning)-count,
+                                       **phase_gradient_alignment(net, step_loss, planning))
             opt.zero_grad()
             loss.backward()
             nn.utils.clip_grad_norm_(net.parameters(), 0.5, error_if_nonfinite=True)
@@ -1749,6 +1799,8 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
     summary = {key: float(np.mean([d[key] for d in diagnostics if d[key] is not None]))
                if any(d[key] is not None for d in diagnostics) else None
                for key in ('loss', 'approx_kl', 'clip_fraction', 'entropy', 'explained_variance')}
+    if audit_phases:
+        summary['phase_gradients'] = phase_audit
     print('ppo diagnostics', json.dumps(summary), flush=True)
     return summary
 

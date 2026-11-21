@@ -52,6 +52,34 @@ def inside_polygon(points, vertices):
     return inside
 
 
+def simple_polygon(points):
+    """Check that a perimeter is closed by non-crossing, non-retraced edges."""
+    points = np.asarray(points, dtype=float)
+    if len(points) < 3 or not np.isfinite(points).all():
+        return False
+    if len(np.unique(points, axis=0)) != len(points):
+        return False
+    def cross(a, b):
+        return a[0] * b[1] - a[1] * b[0]
+    def side(a, b, p):
+        return cross(b - a, p - a)
+    def touches(a, b, p):
+        return side(a, b, p) == 0 and (np.minimum(a, b) <= p).all() and (p <= np.maximum(a, b)).all()
+    edges = np.roll(points, -1, axis=0) - points
+    if sum(cross(point, edge) for point, edge in zip(points, edges)) == 0:
+        return False
+    for i, (a, edge) in enumerate(zip(points, edges)):
+        if cross(edges[i - 1], edge) == 0 and edges[i - 1] @ edge < 0:
+            return False
+        b = a + edge
+        for j in range(i + 2, len(points) - int(i == 0)):
+            c, d = points[j], points[(j + 1) % len(points)]
+            if ((side(a, b, c) * side(a, b, d) < 0 and side(c, d, a) * side(c, d, b) < 0)
+                    or touches(a, b, c) or touches(a, b, d) or touches(c, d, a) or touches(c, d, b)):
+                return False
+    return True
+
+
 def rectangle_counts(points, width, height):
     """Count projected points for every pair of integer grid corners."""
     x = (XF * width).astype(int)
