@@ -2,6 +2,60 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 20:02 Central, reviewed the learning and evidence cascade
+  after the user challenged the overall approach. Replayed
+  layouts account for 410 of 411 archived fresh native-seeded
+  scores at or above 30%; that benchmark addresses a different
+  task from autonomous preparation. The latest 108 actual
+  PPO training episodes through capacity round 2 contained
+  91 retries, 15 planning timeouts and two natural wins
+  (12.65% and 13.01%). 13 of 93 battle starts had occupied
+  shelter and 35 recorded a confirmed deployment. For all
+  15 timeouts, READY was legal and declined a total of 698
+  times. Six had no final blocker; five ended with gestures,
+  four in debt. Before critic bootstrap, median recorded
+  reward sum was 0.000 for planning timeout, -0.448 for
+  retry and -0.209 for a native win. This comparison isolates
+  the observed reward components, not critic targets or cause.
+- Bare PPO trace multiplier at the nominal Firebomb configured
+  12 s delay is .000635, calculated from (.99*.95)^(12/.1).
+  The test candidate (.999*.995)^(12/.1) retains .486 of a
+  later direct residual. At the 18.93 s median from first
+  confirmed deployment to endpoint in the initial recent
+  21 logged examples, current .0000091 vs candidate .320.
+  A trained value function can also bridge the delay.
+- Checkpoint lineage verified. Default production checkpoint
+  remains the November 18 revision-3 checkpoint. Private
+  boundary run used revision 9 and warm successor 6e0aabcdfcdd8ada.
+  Exact subsequent natural actor 2e654bf5875b7089 was forked
+  separately by opening timing and capacity, with matching
+  SHA256 4e03ad82346693489 prefix. The capacity run did not
+  inherit the unsuccessful opening trial. Optimizer diagnostic
+  medians were stable enough to rule out universal blow-up;
+  some updates had negative explained variance and capacity
+  approximate KL reached .0414 in the first four rounds.
+- Staged --compare-credit-recovery against the matched 128
+  control. Candidate separates the preparation target from
+  battle shaping, uses native saved outcomes plus preparation
+  receipts and a planning-only timeout target of -.5, and
+  preserves critic bootstrap at battle truncation. Longer
+  elapsed battle credit and per-phase advantage normalization
+  test the coupled learning strategy. The action rules,
+  official reward components/outcomes and production defaults
+  are shared. 85 focused tests pass, including actual PPO
+  update wiring. Apply check passed for analysis/
+  coverage-portable314/tmp/battle-credit-263207/
+  credit-recovery.patch SHA256
+  45B7CBB22493BF2A76D4A649C2273BD32FD9DCBA53A3300E724B485A50547681.
+  Keep staged until capacity completes. Require real sustained
+  performance evidence before any promotion.
+- The 128 vs 192 capacity comparison checkpointed four paired
+  batches by 20:01: 13 retries, three planning timeouts, zero
+  native finishes. Live verified 128 and 192 hidden activations
+  in both phases with exact 4889 input labels, no label warning.
+  Frame size <=5.19 MB. Fourth trained batch did not establish
+  a gameplay advantage. Leave frozen evaluation to finish.
+
 - At 19:52 Central, capacity comparison 263207 launched under
   PID 76248 (19:52:10). Both arms start from exact natural
   actor 2e654bf5875b7089 and its Adam. 128 vs 192 recurrent
