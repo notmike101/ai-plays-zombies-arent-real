@@ -2,6 +2,47 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 18:31 Central, geometry comparison 232741 checkpointed
+  its first round under PID 71988 (18:29:45). Both candidate
+  games received nonzero geometry and both controls measured
+  it with the input held at zero. No rectangle endpoint
+  decision and no occupied READY start in the first round.
+  All four games retried. Candidate recorded two confirmed
+  stock spends; control zero. Actual fresh Observatory frames
+  have 4937 inputs, exact first/last suffix labels and no
+  warning. Candidate opening frame exposed 12 nonzero cells
+  with peak .50356; control and battle suffixes verified zero.
+  Round 1 active. Source 1c3be633f44497fc and Adam widened to
+  f5d22cc93dfbfa3d, both normal speed, split CPUs, 8 rounds
+  inst13-16 then four frozen pairs inst19/20. Directory
+  analysis/coverage-shelter-geometry-b55866f6aa; console
+  analysis/coverage-shelter-geometry-232741-drive-d.log.
+- New rejection breakdown: 74 outside-playarea decisions in
+  geometry round 0, 67 click/drag controls and seven casts.
+  55 were battle-only by their episode's action histories.
+  Nineteen shift-drag decisions cannot be assigned a phase
+  from these rollup counts. No rejected inputs reached the game.
+  Verify standard mask on these tools as a separate intervention
+  if this persists. Geometry input alone has no survival proof.
+- At 18:28, duration 227683 finished all eight frozen games
+  at retry with zero eligible natural finishes and zero
+  discovery overlaps. One baseline shelter held 25.37% at
+  READY, breached at sim 44.97 s and retried at 9.90% saved.
+  No occupied frozen candidate starts. Keep both private
+  models and Adam. No improvement shown in official evaluation.
+- Deployed d16548f at idle. 361 script and 64 Observatory
+  tests passed, 12 recurrent steps matched the normal 4889
+  input model exactly, and graph assertions passed. Three
+  passive native planning snapshots included two projected
+  boundaries with 160 and 72 ordered valid corner pairs.
+  Fast and direct counts matched for all valid pairs and
+  anchored endpoints. Median feature prep .91-.93 ms on
+  those boards. The third snapshot had camera center 0,0
+  and no geometry candidates; both methods returned zeros.
+  No purchase legality or survival claim from this measure.
+  Production SHA 0B23B6A7C3FF1B56CCB26D016A29CAC45209B6E4622B6428D24CD7DA44BC4D0E
+  and Observatory PID 21012 verified at transition.
+
 - At 18:23 Central, shelter duration 227683 checkpointed all eight
   training rounds. Each arm had 16 distinct observed outbreaks,
   16 retries, and four occupied READY starts with protected
