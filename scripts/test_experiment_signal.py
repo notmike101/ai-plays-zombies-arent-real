@@ -15,6 +15,7 @@ class SignalTests(unittest.TestCase):
                     shelter_input_by_arm={'reference': False, 'candidate': True},
                     shelter_geometry_by_arm={'reference': False, 'candidate': True},
                     battle_boundary_by_arm={'reference': False, 'candidate': True},
+                    opening_timing_by_arm={'reference': False, 'candidate': True},
                     ready_delay_cost_by_arm={'reference': 0., 'candidate': .002})
 
     def report(self, kind, rows, *, complete=0):
@@ -107,6 +108,14 @@ class SignalTests(unittest.TestCase):
         report = self.report('shelter_duration', rows)
         self.assertEqual(report['advisory'], 'treatment_observed')
         self.assertAlmostEqual(report['arms']['candidate']['reward_difference_sum'], .04)
+        self.assertEqual(report['outcome_evidence'], 'insufficient_independent_natural_finishes')
+
+    def test_opening_timing_exposure_does_not_imply_legal_cast_outcomes(self):
+        rows = self.rows({'opening_timing_input': True}, {})
+        report = self.report('opening_timing', rows)
+        self.assertEqual(report['advisory'], 'treatment_observed')
+        self.assertEqual(report['arms']['reference']['treatment_episodes'], 0)
+        self.assertEqual(report['arms']['candidate']['treatment_episodes'], 4)
         self.assertEqual(report['outcome_evidence'], 'insufficient_independent_natural_finishes')
 
     def test_boundary_audit_distinguishes_candidate_filter_from_reference_measurement(self):

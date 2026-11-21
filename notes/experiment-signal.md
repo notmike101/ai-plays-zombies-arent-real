@@ -176,6 +176,28 @@ unchanged. Measure repeated conflict before testing separate preparation
 and battle output heads with shared memory. Evaluate any split on fresh
 outbreaks with independently reported preparation and natural outcomes.
 
+## Opening ability timing input
+
+`--compare-opening-timing` gives the candidate three preparation inputs per
+ability. They indicate whether a purchased ability is bound in the current
+battle roster, its configured unlock time adjusted by the equipped Quick
+Deploy perk, and its configured arrival or effect delay. Timing is visible
+for an equipped or currently buyable ability. Unknown or unavailable timing
+is -1. Timings are divided by 60 seconds and capped at 2. Battle suffixes
+are zero. The control receives an equally wide zero suffix.
+
+Both policies start from the same weights and Adam state, with all new
+columns and moments zeroed. Both apply the same battle-boundary filter
+and preserve the game's legality and timing. Schema 7 identifies this
+private experiment. Production observations remain schema 4.
+
+Preparation features are nominal config and verified equipment inputs.
+Measure actual native availability, deployment receipts and especially
+the timing relative to first civilian-zombie parity. A projected opening
+can still be blocked by terrain, missing targets or live stock. Compare
+closed and occupied shelters, planning timeout and the established
+fresh natural survival criteria alongside deployment changes.
+
 ## Examples from completed runs
 
 - Shelter-defense study 198952 had no occupied breach in any valid training

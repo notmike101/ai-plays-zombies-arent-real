@@ -33,9 +33,11 @@ class StateTests(unittest.TestCase):
         old.gru.weight_ih_l0.grad = torch.ones_like(old.gru.weight_ih_l0)
         optimizer.step()
         x = torch.randn(1, 2, train.NOBS)
-        for geometry, suffix in ((False, 1), (True, train.NC)):
-            with self.subTest(geometry=geometry):
-                net, moments = comp.extend_shelter_model(old, optimizer.state_dict(), geometry=geometry)
+        variants = ((False, False, 1), (True, False, train.NC), (False, True, len(train.OPENING_TIMING_LABELS)))
+        for geometry, opening_timing, suffix in variants:
+            with self.subTest(geometry=geometry, opening_timing=opening_timing):
+                net, moments = comp.extend_private_model(old, optimizer.state_dict(), geometry=geometry,
+                                                        opening_timing=opening_timing)
                 new = torch.optim.Adam(net.parameters()); new.load_state_dict(moments)
                 with torch.no_grad():
                     old_output = old(x)
@@ -53,7 +55,8 @@ class StateTests(unittest.TestCase):
         with patch.object(comp.operator, 'owned_copy'), patch.object(comp.zar_boot, 'boot'), \
                 patch.object(comp.zar_boot, 'stop'), patch.object(train, 'run_episode') as run:
             variants = ((comp.SHELTER_INPUT_BY_ARM, 'shelter_occupancy_input', 1),
-                        (comp.SHELTER_GEOMETRY_BY_ARM, 'shelter_geometry_input', train.NC))
+                        (comp.SHELTER_GEOMETRY_BY_ARM, 'shelter_geometry_input', train.NC),
+                        (comp.OPENING_TIMING_BY_ARM, 'opening_timing_input', len(train.OPENING_TIMING_LABELS)))
             for arms, option, suffix in variants:
                 for training in (True, False):
                     options = []
@@ -90,6 +93,27 @@ class StateTests(unittest.TestCase):
         self.assertEqual(np.count_nonzero(gain), 1)
         self.assertAlmostEqual(gain[9], 1 / 3)
         self.assertFalse(train.shelter_rectangle_gain(st, width, height, allowed & False).any())
+
+    def test_opening_timing_preview_distinguishes_equipped_buyable_missing_and_battle(self):
+        import numpy as np
+        mask = np.zeros(train.NU)
+        mask[train.TOOLS.index('buy_Firebomb')] = 1
+        st = dict(planning=True, loadout={'Police': 1, 'Bomber': 1}, perks=[{'name': 'Quick_Deploy'}],
+                  rules={'police_unlock_seconds': '10', 'police_arrival_seconds': '8',
+                         'bomber_unlock_seconds': '10', 'bomber_arrival_seconds': '9',
+                         'firebomb_unlock_seconds': '40', 'firebomb_arrival_seconds': '200',
+                         'perk_unlock_cut_percent': '50'},
+                  opening_battle_roster=['Police', 'Bomber'], opening_battle_keys=['1', None])
+        values = train.opening_timing_features(st, mask)
+        by_name = {name: values[3*i:3*i+3] for i,name in enumerate(train.DECK_ORDER)}
+        self.assertEqual(by_name['Police'], [1., 5. / 60, 8. / 60])
+        self.assertEqual(by_name['Bomber'], [0., -1., -1.])
+        self.assertEqual(by_name['Firebomb'], [0., 20. / 60, 2.])
+        self.assertEqual(by_name['Tank'], [0., -1., -1.])
+        st['rules'].pop('perk_unlock_cut_percent')
+        self.assertEqual(train.opening_timing_features(st, mask)[:3], [1., -1., 8. / 60])
+        st['planning'] = False
+        self.assertFalse(any(train.opening_timing_features(st, mask)))
 
     def test_phase_gradient_audit_distinguishes_conflict_without_setting_gradients(self):
         torch = train.torch

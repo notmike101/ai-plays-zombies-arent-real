@@ -57,11 +57,13 @@ READY_SHORTFALL_COSTS = {'shortfall_baseline': 0., 'shortfall_penalty': .15}
 SHELTER_DURATION_RATES = {'duration_baseline': 0., 'duration_credit': .01}
 SHELTER_INPUT_BY_ARM = {'shelter_grid': False, 'shelter_exact': True}
 SHELTER_GEOMETRY_BY_ARM = {'geometry_control': False, 'geometry_visible': True}
+OPENING_TIMING_BY_ARM = {'opening_control': False, 'opening_visible': True}
 
 
-def extend_shelter_model(source, optimizer, *, geometry=False):
+def extend_private_model(source, optimizer, *, geometry=False, opening_timing=False):
     """Preserve the original GRU and Adam values when adding zero input columns."""
-    net = trainer.PolicyNet2(shelter_occupancy=not geometry, shelter_geometry=geometry)
+    net = trainer.PolicyNet2(shelter_occupancy=not (geometry or opening_timing),
+                             shelter_geometry=geometry, opening_timing=opening_timing)
     added = net.gru.input_size - source.gru.input_size
     weights = source.state_dict()
     key = 'gru.weight_ih_l0'
@@ -88,6 +90,7 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
     target_study = arm in TARGET_SETTLE
     ready_study = arm in READY_DELAY_COSTS
     duration_study = arm in SHELTER_DURATION_RATES
+    opening_study = arm in OPENING_TIMING_BY_ARM
     geometry_study = arm in SHELTER_GEOMETRY_BY_ARM
     input_study = arm in SHELTER_INPUT_BY_ARM or geometry_study
     planning_study = (arm in PLANNING_TEMPERATURES or arm in PLANNING_ENTROPY_BONUSES
@@ -97,7 +100,7 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
         env = None
         if (arm in BREACH_COSTS or arm in READY_CREDITS or arm in ZONE_TEMPERATURES
                 or planning_study or arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS
-                or duration_study or input_study or boundary_study):
+                or duration_study or input_study or boundary_study or opening_study):
             try:
                 env = zar_boot.boot(copy_dir, welcome_wait=15, discard_dump_states=True)
             except ZAREnvError as exc:
@@ -162,6 +165,13 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
             options.update(fixed_speed='speed_1', fixed_clock=True, ready_coverage_credit=.30,
                            planning_zone_audit=True, experiment_signal='receipts',
                            battle_boundary_filter=BATTLE_BOUNDARY_BY_ARM[arm])
+            if phase == [True]:
+                options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
+        if opening_study:
+            policy = partial(trainer.PolicyNet2, opening_timing=True)
+            options.update(fixed_speed='speed_1', fixed_clock=True, ready_coverage_credit=.30,
+                           planning_zone_audit=True, experiment_signal='receipts',
+                           battle_boundary_filter=True, opening_timing_input=OPENING_TIMING_BY_ARM[arm])
             if phase == [True]:
                 options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
         if input_study:
@@ -377,6 +387,8 @@ def main():
                             help='Compare filtering known out-of-bounds battle targets before sampling')
     comparison.add_argument('--compare-shelter-geometry', action='store_true',
                             help='Compare a private planning input for projected shelter rectangle coverage')
+    comparison.add_argument('--compare-opening-timing', action='store_true',
+                            help='Compare a private planning input for projected ability timing')
     parser.add_argument('--audit-phase-gradients', action='store_true',
                         help='Measure planning and battle gradient alignment on one episode per arm and round')
     parser.add_argument('--observe', action='store_true',
@@ -399,7 +411,8 @@ def main():
     coverage_study = (args.compare_ready_coverage or args.compare_zone_exploration
                       or planning_study or args.compare_shelter_defense
                       or args.compare_ready_shortfall or args.compare_shelter_duration
-                      or args.compare_shelter_input or args.compare_shelter_geometry or args.compare_battle_boundary)
+                      or args.compare_shelter_input or args.compare_shelter_geometry
+                      or args.compare_battle_boundary or args.compare_opening_timing)
     shelter_study = args.compare_breach_cost or coverage_study
     paired_weights = args.compare_missile_credit or args.compare_phase_balance or shelter_study
     if args.warm_start and not paired_weights:
@@ -426,10 +439,12 @@ def main():
             trainer.load_pretrained(baseline, trainer.MODEL)
         if paired_weights and warm_source is None:
             adam = torch.load(trainer.MODEL, weights_only=True)['optimizer']
-        if args.compare_shelter_input or args.compare_shelter_geometry:
-            baseline, adam = extend_shelter_model(baseline, adam, geometry=args.compare_shelter_geometry)
+        if args.compare_shelter_input or args.compare_shelter_geometry or args.compare_opening_timing:
+            baseline, adam = extend_private_model(baseline, adam, geometry=args.compare_shelter_geometry,
+                                                  opening_timing=args.compare_opening_timing)
         if paired_weights:
-            labels = (tuple(BATTLE_BOUNDARY_BY_ARM) if args.compare_battle_boundary else
+            labels = (tuple(OPENING_TIMING_BY_ARM) if args.compare_opening_timing else
+                      tuple(BATTLE_BOUNDARY_BY_ARM) if args.compare_battle_boundary else
                       tuple(SHELTER_GEOMETRY_BY_ARM) if args.compare_shelter_geometry else
                       tuple(SHELTER_INPUT_BY_ARM) if args.compare_shelter_input else
                       tuple(SHELTER_DURATION_RATES) if args.compare_shelter_duration else
@@ -456,7 +471,8 @@ def main():
                 opt.load_state_dict(deepcopy(adam))
         config = dict(seed=args.seed, copies=copies, train_rounds=args.train_rounds,
                       eval_rounds=args.eval_rounds, schema=trainer.checkpoint_schema(
-                          shelter_occupancy=args.compare_shelter_input, shelter_geometry=args.compare_shelter_geometry),
+                          shelter_occupancy=args.compare_shelter_input, shelter_geometry=args.compare_shelter_geometry,
+                          opening_timing=args.compare_opening_timing),
                       learning=trainer.learning_config())
         rollout_options = {'observe': args.observe}
         if args.separate_policy_cpus:
@@ -523,6 +539,10 @@ def main():
             config.update(comparison='battle_boundary', fixed_speed='speed_1', ready_coverage_credit=.30,
                           training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
                           battle_boundary_by_arm=BATTLE_BOUNDARY_BY_ARM)
+        if args.compare_opening_timing:
+            config.update(comparison='opening_timing', fixed_speed='speed_1', ready_coverage_credit=.30,
+                          training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
+                          battle_boundary_filter=True, opening_timing_by_arm=OPENING_TIMING_BY_ARM)
         first_round = 0
         prior_signal_rows = []
         source = trainer.policy_id(baseline)
@@ -545,7 +565,8 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        experiment = ('battle-boundary' if args.compare_battle_boundary else
+        experiment = ('opening-timing' if args.compare_opening_timing else
+                      'battle-boundary' if args.compare_battle_boundary else
                       'shelter-geometry' if args.compare_shelter_geometry else
                       'shelter-input' if args.compare_shelter_input else
                       'shelter-duration' if args.compare_shelter_duration else
@@ -639,13 +660,15 @@ def main():
                     if (args.compare_zone_exploration or planning_study
                             or args.compare_shelter_defense or args.compare_ready_shortfall
                             or args.compare_shelter_duration or args.compare_shelter_input
-                            or args.compare_shelter_geometry or args.compare_battle_boundary):
+                            or args.compare_shelter_geometry or args.compare_battle_boundary or args.compare_opening_timing):
                         summary['planning_zone_receipts'] = row.get('planning_zone_receipts')
                         summary['shelter_dispatch'] = row.get('shelter_dispatch')
                         for key in ('ready_embedded_defenses', 'ready_preparation', 'ready_loadout',
                                     'first_legal_cast_sim', 'timeout_preparation'):
                             summary[key] = row.get(key)
-                    if args.compare_shelter_geometry or args.compare_battle_boundary:
+                    if args.compare_opening_timing:
+                        summary['opening_ready_preview'] = row.get('opening_ready_preview')
+                    if args.compare_shelter_geometry or args.compare_battle_boundary or args.compare_opening_timing:
                         summary['outside_playarea_targets'] = row.get('outside_targets')
                     if args.compare_zone_exploration:
                         summary['tempered_zone_decisions'] = sum(

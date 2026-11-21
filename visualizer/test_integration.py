@@ -106,6 +106,42 @@ class IntegrationTests(unittest.TestCase):
             self.assertAlmostEqual(sum(frame['probabilities']['hu']), 1, places=6)
         self.assertFalse(list(Path(self.temp.name).glob('*.json')))
 
+    def test_opening_preview_is_seen_before_ready_and_zero_in_battle(self):
+        game = FakeGame(-1)
+        original_dump = game.dump
+        game.dump = lambda: dict(original_dump(), config={'police_unlock_seconds': '0',
+                                                         'police_arrival_seconds': '8'})
+        game.roster = lambda: ['Police', *(['-'] * 6)]
+        game.loadout_levels = lambda: {'Police': 1}
+        game.battle_stock = lambda: {'Police': 1}
+        source = self.globals
+        width = len(source['OPENING_TIMING_LABELS'])
+        captured = []
+
+        class OpeningPolicy(source['PolicyNet2']):
+            def __init__(self):
+                super().__init__(opening_timing=True)
+
+            def forward(self, x, h=None):
+                captured.append(x.detach().clone())
+                return super().forward(x, h)
+
+        overrides = dict(Observer=None, PLAN_STEPS=1, BATTLE_T=.1, Mechanics=FakeMechanics,
+                         load_bind_keys=lambda env: ['1'], time=FakeClock(game))
+        with patch.dict(source, overrides), patch.dict(sys.modules, {
+                'env_zar': SimpleNamespace(ZAREnv=lambda pid: game, ZAREnvError=RuntimeError)}):
+            with patch.object(torch.distributions.Categorical, 'sample',
+                              side_effect=[torch.tensor(v) for v in (1, 0, 0, 0)]):
+                model = OpeningPolicy()
+                result = self.run_episode((-1, model.state_dict(), False, 'opening-timing',
+                                           dict(opening_timing_input=True, experiment_signal='receipts')),
+                                          policy_factory=OpeningPolicy)
+        self.assertNotIn('err', result)
+        self.assertTrue(result['experiment_signal']['receipts']['opening_timing_input'])
+        self.assertEqual(result['opening_ready_preview'], {'Police': {'unlock_scaled': 0., 'delay_scaled': 8/60}})
+        torch.testing.assert_close(captured[0][0, 0, -width:][:3], torch.tensor([1., 0., 8/60]))
+        self.assertFalse(captured[1][..., -width:].any())
+
     def test_geometry_input_is_recomputed_at_planning_timeout(self):
         import numpy as np
 

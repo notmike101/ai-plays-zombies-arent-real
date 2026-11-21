@@ -29,7 +29,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT)
 try:
     from visualizer.observer import Observer
-    from visualizer.labels import (INPUT_LABELS, SHELTER_OCCUPANCY_LABEL, SHELTER_GEOMETRY_LABELS,
+    from visualizer.labels import (INPUT_LABELS, SHELTER_OCCUPANCY_LABEL, SHELTER_GEOMETRY_LABELS, OPENING_TIMING_LABELS,
                                    validate as validate_labels)
 except ImportError:
     Observer = None
@@ -97,9 +97,10 @@ def cell_of_px(c, cw, ch):
 
 
 class PolicyNet2(nn.Module):
-    def __init__(self, *, shelter_occupancy=False, shelter_geometry=False):
+    def __init__(self, *, shelter_occupancy=False, shelter_geometry=False, opening_timing=False):
         super().__init__()
         inputs = NOBS + int(shelter_occupancy) + NC * int(shelter_geometry)
+        inputs += len(OPENING_TIMING_LABELS) * int(opening_timing)
         self.gru = nn.GRU(inputs, HID, 1, batch_first=True)
         self.hu = nn.Linear(HID, NU)
         self.hc = nn.Linear(HID, NU * NC)
@@ -149,6 +150,8 @@ def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
         base.append(st['shelter_occupancy_fraction'] if st['shelter_occupancy_input'] else 0.)
     if 'shelter_geometry_values' in st:
         base.extend(st['shelter_geometry_values'])
+    if 'opening_timing_values' in st:
+        base.extend(st['opening_timing_values'])
     return base
 
 
@@ -590,6 +593,27 @@ def opening_loadout_options(st):
     return offers
 
 
+def opening_timing_features(st, legal_tools):
+    if not st['planning']:
+        return [0.] * len(OPENING_TIMING_LABELS)
+    keyed = {name for name, key in zip(st['opening_battle_roster'], st['opening_battle_keys']) if key}
+    rules = st['rules']
+    quick_deploy = any(perk['name'] == 'Quick_Deploy' for perk in st['perks'])
+    cut = _rule(rules, 'Perk', '_unlock_cut_percent', default=math.nan) if quick_deploy else 0.
+    features = []
+    for index, name in enumerate(DECK_ORDER):
+        owned = st['loadout'].get(name, 0) > 0
+        equipped = owned and name in keyed
+        unlock = _rule(rules, name, '_unlock_seconds', default=math.nan)
+        delay = ability_effect_delay(rules, name)
+        can_preview = bool(legal_tools[BUY_TOOLS.start + index]) or equipped
+        unlock = (min(unlock * (1. - cut / 100.) / 60., 2.)
+                  if can_preview and math.isfinite(unlock) and unlock >= 0. and 0. <= cut <= 100. else -1.)
+        delay = min(delay / 60., 2.) if can_preview and math.isfinite(delay) and delay >= 0. else -1.
+        features.extend((float(equipped), unlock, delay))
+    return features
+
+
 def load_bind_keys(env):
     """Battle bar keys READ from this copy's settings.ini (bind_slot1..7:
     '_1' -> '1', 'T' -> 'T'); never assumed (keybind contract)."""
@@ -656,13 +680,15 @@ def refresh_battle_state(st, dump):
                 slot['pending'] = False
 
 
-def checkpoint_schema(*, shelter_occupancy=False, shelter_geometry=False):
-    if shelter_occupancy and shelter_geometry:
-        raise ValueError('Choose one private shelter observation contract')
+def checkpoint_schema(*, shelter_occupancy=False, shelter_geometry=False, opening_timing=False):
+    if sum((shelter_occupancy, shelter_geometry, opening_timing)) > 1:
+        raise ValueError('Choose one private observation contract')
     labels = INPUT_LABELS + [SHELTER_OCCUPANCY_LABEL] if shelter_occupancy else INPUT_LABELS
     if shelter_geometry:
         labels = labels + SHELTER_GEOMETRY_LABELS
-    return dict(version=6 if shelter_geometry else 5 if shelter_occupancy else 4,
+    if opening_timing:
+        labels = labels + OPENING_TIMING_LABELS
+    return dict(version=7 if opening_timing else 6 if shelter_geometry else 5 if shelter_occupancy else 4,
                 inputs=labels, tools=TOOLS, cells=CELL_LABELS)
 
 
@@ -830,6 +856,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         shelter_geometry_input = options.get('shelter_geometry_input')
         shelter_geometry_peak = None
         geometry_anchored = 0
+        opening_timing_input = options.get('opening_timing_input')
+        opening_timing_seen = None
         if shelter_occupancy_input is not None:
             st['shelter_occupancy_input'] = shelter_occupancy_input
         config = initial.get('config', {})
@@ -838,9 +866,12 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                   unlocked=env.unlocked_abilities(),
                   costs={name: _rule({k.removeprefix('loadout_'): v for k, v in config.items()}, name, '_cost')
                          for name in DECK_ORDER})
+        if opening_timing_input is not None:
+            st.update(opening_battle_roster=env.roster(), opening_battle_keys=keys)
         opening_loadout = (opening_loadout_options(dict(st, rules={**st['rules'], **initial.get('counts', {})}))
                            if options.get('placement_feedback') else {})
         ready_loadout = {}
+        opening_ready_preview = None
         ready_paint_mode = ready_paint_tiles = ready_embedded_defenses = ready_preparation = None
         plan = initial
         net = None if eps_rand else (policy_factory or PolicyNet2)().eval()
@@ -852,7 +883,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             if Observer is not None and telemetry:
                 observer = Observer(net, pid, tag, interval=options.get('observer_interval', .2), labels={
                     'input': checkpoint_schema(shelter_occupancy=shelter_occupancy_input is not None,
-                                               shelter_geometry=shelter_geometry_input is not None)['inputs'],
+                                               shelter_geometry=shelter_geometry_input is not None,
+                                               opening_timing=opening_timing_input is not None)['inputs'],
                     'hu': TOOLS, 'hc': CELL_LABELS})
         rows = {k: [] for k in ('obs', 'us', 'cs', 'ulps', 'clps', 'rews', 'masks', 'trail', 'sim_elapsed')}
         planning_tool_temperature = options.get('planning_tool_temperature')
@@ -1003,6 +1035,11 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 geometry_anchored += int(bool(st.get('anchor')) and bool(geometry.any()))
                 shelter_geometry_peak = max(shelter_geometry_peak or 0., float(geometry.max()))
                 st['shelter_geometry_values'] = geometry.tolist() if shelter_geometry_input else [0.] * NC
+            if opening_timing_input is not None:
+                opening = opening_timing_features(st, mu)
+                if st['planning']:
+                    opening_timing_seen = bool(opening_timing_seen or any(v >= 0. for v in opening[1::3]))
+                st['opening_timing_values'] = opening if opening_timing_input else [0.] * len(opening)
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
             x = torch.tensor([[f]], dtype=torch.float32)
             cell_temperature = 1.
@@ -1187,6 +1224,11 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         ready_embedded_defenses = embedded_defenses(st['native'])
                         ready_preparation = preparation_counts(st['native'])
                         ready_preparation['layout_id'] = preparation_fingerprint(st['native'])
+                    if opening_timing_input is not None:
+                        opening_ready_preview = {
+                            name: {'unlock_scaled': opening[3*i+1], 'delay_scaled': opening[3*i+2]}
+                            for i,name in enumerate(DECK_ORDER) if opening[3*i]
+                        }
                     state = ready_once(env)
                     ready_step = len(rows['rews'])
                     battle_start = time.monotonic()
@@ -1207,6 +1249,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     name = DECK_ORDER[(u-34) % 19]
                     delta = 1 if u < 53 else -1
                     picker_rejected = not apply_loadout_action(env, st, name, delta)
+                    if opening_timing_input is not None and not picker_rejected:
+                        st['opening_battle_roster'] = env.roster()
                 elif u in (10, 15, 17, 18):
                     if not st.get('anchor'):
                         st['anchor'] = (u, c)
@@ -1436,6 +1480,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                                           planning_audit=planning_zone_audit)
                     st['shelter_geometry_values'] = shelter_geometry_observation(
                         st, env.cw, env.ch, *masks_for(st)).tolist()
+            if opening_timing_input is not None:
+                st['opening_timing_values'] = (opening_timing_features(st, masks_for(st)[0])
+                                               if opening_timing_input else [0.] * len(OPENING_TIMING_LABELS))
             f = make_obs(st, o, o['civ']/civ0, trend, slope, [], prev_u, prev_c, succ)
             with torch.no_grad():
                 _, _, value, _ = net(torch.tensor([[f]], dtype=torch.float32), h)
@@ -1496,6 +1543,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     shelter_occupancy_input=bool(shelter_occupancy_peak) if shelter_occupancy_peak is not None else None,
                     shelter_geometry_input=bool(shelter_geometry_peak) if shelter_geometry_peak is not None else None,
                     battle_boundary=bool(boundary_affected) if boundary_checks else None,
+                    opening_timing_input=opening_timing_seen,
                     occupied_ready=coverage > 0 if coverage is not None else None,
                     below_ready_target=coverage < READY_COVERAGE_SHORTFALL_TARGET if coverage is not None else None,
                     missile_civilian_loss=missile_losses['confirmed'] > 0 if missile_losses is not None else None,
@@ -1545,6 +1593,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     outbreak=footer.get('outbreak') if footer else None,
                     ready_stats=footer.get('ready_stats') if footer else None,
                     opening_loadout=opening_loadout, ready_loadout=ready_loadout,
+                    opening_ready_preview=opening_ready_preview,
                     ready_loadout_sp=footer.get('ready_loadout_sp') if footer and placement_feedback else None,
                     ready_paint_mode=ready_paint_mode, ready_paint_tiles=ready_paint_tiles,
                     ready_embedded_defenses=ready_embedded_defenses, ready_preparation=ready_preparation,

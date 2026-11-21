@@ -10,7 +10,7 @@ import unittest
 import torch
 from torch import nn
 
-from labels import INPUT_LABELS, SHELTER_GEOMETRY_LABELS, SHELTER_OCCUPANCY_LABEL, validate
+from labels import INPUT_LABELS, OPENING_TIMING_LABELS, SHELTER_GEOMETRY_LABELS, SHELTER_OCCUPANCY_LABEL, validate
 
 ROOT = Path(__file__).resolve().parent
 _TR = {}
@@ -24,6 +24,19 @@ def trainer():
 
 
 class ShelterInputLabels(unittest.TestCase):
+    def test_opening_timing_labels_follow_the_same_ability_order_as_observation(self):
+        tr = trainer()
+        schema = tr['checkpoint_schema'](opening_timing=True)
+        self.assertEqual(schema['version'], 7)
+        self.assertEqual(schema['inputs'], INPUT_LABELS + OPENING_TIMING_LABELS)
+        self.assertEqual(tr['PolicyNet2'](opening_timing=True).gru.input_size, len(schema['inputs']))
+        for index, name in enumerate(tr['DECK_ORDER']):
+            self.assertEqual([x.split(' ', 1)[0] for x in OPENING_TIMING_LABELS[3*index:3*index+3]], [name]*3)
+        suffix = [0., -1., 2.] * len(tr['DECK_ORDER'])
+        args = (PROBE_O, 1., 0., 0., [], 0., 0., 0.)
+        self.assertEqual(tr['make_obs'](dict(PROBE_ST, opening_timing_values=suffix), *args),
+                         tr['make_obs'](PROBE_ST, *args) + suffix)
+
     def test_geometry_labels_and_observation_have_the_same_grid_order(self):
         tr = trainer()
         schema = tr['checkpoint_schema'](shelter_geometry=True)

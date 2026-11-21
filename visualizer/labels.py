@@ -49,9 +49,10 @@ INPUT_LABELS += [f'Grid {channel} cell {i+1} (log1p count)'
                  for channel in ('civilians', 'zombies', 'defenders', 'buildings')
                  for i in range(48)]
 INPUT_LABELS += [f'Grid safe zone cell {i+1} (center inside: 0/1)' for i in range(48)]
-for name in ('Police', 'Bomber', 'Heli', 'Stungas', 'Firebomb', 'CallArms',
+ABILITY_LABEL_ORDER = ('Police', 'Bomber', 'Heli', 'Stungas', 'Firebomb', 'CallArms',
              'APC', 'Demolition', 'Rally', 'SeekDestroy', 'Bus', 'Missile',
-             'Medevac', 'Dozer', 'Cluster', 'Tank', 'AC130', 'Cure', 'Nuke'):
+             'Medevac', 'Dozer', 'Cluster', 'Tank', 'AC130', 'Cure', 'Nuke')
+for name in ABILITY_LABEL_ORDER:
     INPUT_LABELS += [f'{name} loadout level (/ 10)',
                      f'{name} castable (charges / max)',
                      f'{name} pending arrival (remaining sim s / 60)']
@@ -64,6 +65,12 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from scripts.mechanic_contract import EXTRA_LABELS
 INPUT_LABELS += EXTRA_LABELS
 
+OPENING_TIMING_LABELS = [
+    label for name in ABILITY_LABEL_ORDER for label in (
+        f'{name} equipped and purchased for battle (0/1)',
+        f'{name} projected opening unlock (sim s / 60, cap 2; -1 unavailable)',
+        f'{name} configured first effect delay (sim s / 60, cap 2; -1 unavailable)')
+]
 SHELTER_OCCUPANCY_LABEL = 'Living civilians inside closed safe zones (fraction)'
 SHELTER_GEOMETRY_LABELS = [
     f'Rectangle shelter cell {cell}: projected additional living civilians (fraction)'
