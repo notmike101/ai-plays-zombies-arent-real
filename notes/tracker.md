@@ -4,6 +4,16 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 21:20 Central, sampled-site screen PID 53888 live in
+  pair two. First sampled candidate changed placements to
+  16 Garrisons, seven embedded; deterministic reference had
+  19 and nine. Both sheltered 28.95%. Candidate's native
+  seed 1766636122 was discovery-clear and retried at 9.95%.
+  Reference reproduced 1160932729 and retried at 9.75%.
+  No eligible natural finishes. Independent verification
+  ledger 8b2ad96 signed off the native replay evidence.
+  Finish the second pair and confirm roster restoration.
+
 - At 21:14 Central, native frozen replay audit completed.
   All four attempts overlapped discovery as designed. Across
   82 planning and 827 battle decisions, maximum absolute
