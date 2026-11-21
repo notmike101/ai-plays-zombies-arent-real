@@ -2,6 +2,46 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 19:36 Central, opening-timing comparison 254119 has
+  checkpointed two rounds under PID 77320 (19:31:47).
+  Four owned training copies inst13–16, frozen inst19–20,
+  separate policy CPU allocation and below-normal priority.
+  Launch headroom 12.04 GiB RAM and 16.16 GiB on D:.
+  Both arms warm from 2e654bf5875b7089 with original Adam
+  and 57 zero-padded inputs. The padded initial fingerprint
+  is 7a5b610148bd81ae. First eight games retried. Candidate
+  stun gas Quick Deploy preview 20.10 s vs native first
+  legal observation 20.20 s. Control Firebomb Quick Deploy
+  preview 20.10 s vs native first legal observation 20.10 s.
+  Second round exposed an occupied-breach failure in each arm.
+  Control 32.52% protected at READY, 2,427 civilian breach
+  exposures from 43.40 s and an 8.72% retry. Candidate 12.90%
+  protected, 1,056 exposures from 30.53 s and an 8.78% retry.
+  Neither layout had an embedded defender. These outcomes
+  show why initial coverage alone is insufficient evidence.
+  Journals analysis/coverage-opening-timing-9f45ac368a and
+  console analysis/coverage-opening-timing-254119-drive-d.log.
+- Boundary 247105 finished naturally with 8 frozen attempts,
+  5 retries, 3 planning timeouts and zero eligible finishes.
+  One timeout had a completed 17.91%-coverage layout and
+  $45.29 left. The policy passed on the 48 legal READY
+  opportunities in that episode and ended in a gesture.
+  Opening-timing code committed as e3588ec after the idle
+  handoff. 373 script tests, 67 Observatory tests, actual
+  model verifier and graph assertions passed. Both live
+  arms reported 4946 labeled inputs and zero timing channels
+  during battle. Observatory PID 21012 and production
+  checkpoint SHA256 verified across the handoff.
+- Staged a private comparison of 128 vs 192 recurrent units
+  on the same inputs, rewards, and battle target filter.
+  Includes GRU and Adam gate mapping, actual width receipts,
+  two-arm episode dispatch, and a full-size 192-unit Observer
+  check. 94 focused isolated tests passed. Apply check passed
+  for analysis/coverage-portable314/tmp/capacity-comparison-254119/
+  recurrent-capacity.patch SHA256
+  135DE85AE78C28F69732719B6B90EC00EFC55CAEA58C681BBCE4D6603A0D4395.
+  Keep staged while 254119 is active.
+
 - At 19:27 Central, comparison 247105 completed training.
   Filtered round 7 naturally won with 13.01% officially
   saved. Exact actor 2e654bf5875b7089 and its pre-update
