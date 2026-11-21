@@ -2,6 +2,15 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 20:04 Central, capacity trainer PID 76248 and four owned
+  game copies verified live. Six batches journaled, 24 training
+  attempts, zero natural finishes. Standard: ten retries, two
+  timeouts, three occupied starts and 13 confirmed spends. Wide:
+  seven retries, five timeouts, two occupied starts and 11 spends.
+  Frozen comparison is still pending. Independent full-stack audit
+  started in chat 01a1fbd8-17ff-75f3-889d-d8b408575303. Hold the
+  staged credit-recovery change for the audit's recommendations.
+
 - At 20:02 Central, reviewed the learning and evidence cascade
   after the user challenged the overall approach. Replayed
   layouts account for 410 of 411 archived fresh native-seeded
