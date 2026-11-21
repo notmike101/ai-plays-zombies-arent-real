@@ -159,6 +159,23 @@ value in the candidate verifies that its sampling support changed. Actual
 outside rejections are recorded by battle tool and cell, separately from
 confirmed deployments and official survival.
 
+## Preparation and battle gradient alignment
+
+`--audit-phase-gradients` measures how the preparation and battle portions
+of the same PPO loss act on shared recurrent memory and action heads. It
+samples at most one mixed-phase trajectory per arm in the first optimizer
+pass of each round. The journal records the decision counts and any
+preceding updates. An absent measurement means the round had no eligible
+mixed-phase trajectory.
+
+A negative cosine indicates opposing local update directions for that
+parameter group. The two gradient norms show whether one phase contributes
+more strongly to that update. These measurements leave the rollout,
+gradients used by the optimizer, phase transition and official results
+unchanged. Measure repeated conflict before testing separate preparation
+and battle output heads with shared memory. Evaluate any split on fresh
+outbreaks with independently reported preparation and natural outcomes.
+
 ## Examples from completed runs
 
 - Shelter-defense study 198952 had no occupied breach in any valid training
