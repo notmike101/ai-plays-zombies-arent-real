@@ -4,6 +4,14 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 22:11 Central, the first 325301 reference attempt finished with
+  a native win at 20.60% officially saved (footer verified, 229.62 sim s).
+  Outbreak 2566725829 was distinct and prior-clear, with no layout receipt.
+  Native READY counts: 19 Garrisons, seven embedded in occupied shelters;
+  13 sampled Garrison choices, nine verified deployments. First occupied
+  breach at 49.47s; all 2,365 credited civilians exposed. Fitted arm
+  inst20 PID 80168 launched next. No fit-efficacy conclusion from one arm.
+
 - At 22:05 Central, reserved screen 325301 launched operator PID 83288,
   reference inst19 PID 80044 first, same frozen policies with fresh paired
   policy seeds and four sequential attempts. The exclusion manifest includes
