@@ -68,8 +68,10 @@ class MechanicsTests(unittest.TestCase):
         snapshot['evac']['kind'][:] = (0, 1, 0)
         snapshot['units']['kind'] = np.array([8, 10])
         snapshot['unit_maps']['trap_kind'][10] = 1
+        snapshot['zones'] = [np.array([(1., 2.), (6., 2.)]),
+                             np.array([(1., 2.), (6., 2.), (6., 5.)])]
         self.assertEqual(preparation_counts(snapshot),
-                         dict(wall_segments=4, gates=1, corridors=2, holds=1,
+                         dict(wall_segments=4, gates=1, closed_zones=1, corridors=2, holds=1,
                               other_units={'ChemMine': 1, 'Battleship': 1}))
 
     def test_timeout_board_counts_overlap_once_and_preserves_native_debt(self):

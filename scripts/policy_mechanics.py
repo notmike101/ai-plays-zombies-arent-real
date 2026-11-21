@@ -197,6 +197,7 @@ def preparation_counts(snapshot):
     other = np.isin(units['kind'], (8, 9, 10))
     names = unit_names(units, snapshot['unit_maps'])[other]
     return dict(wall_segments=len(snapshot['walls']), gates=len(snapshot['gates']),
+                closed_zones=sum(len(zone) >= 3 for zone in snapshot['zones']),
                 corridors=int((snapshot['evac']['kind'] == 0).sum()),
                 holds=int((snapshot['evac']['kind'] == 1).sum()),
                 other_units=dict(Counter(str(name) for name in names if name)))
@@ -217,7 +218,6 @@ def civilian_zone_fraction(snapshot):
 def planning_timeout_preparation(snapshot, money):
     """Record the final planning board without inventing an outbreak receipt."""
     return dict(preparation_counts(snapshot), money=money,
-                closed_zones=sum(len(zone) >= 3 for zone in snapshot['zones']),
                 civilian_zone_fraction=civilian_zone_fraction(snapshot),
                 embedded_defenses=embedded_defenses(snapshot))
 
