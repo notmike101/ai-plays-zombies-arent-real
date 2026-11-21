@@ -2,6 +2,43 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 19:27 Central, comparison 247105 completed training.
+  Filtered round 7 naturally won with 13.01% officially
+  saved. Exact actor 2e654bf5875b7089 and its pre-update
+  Adam preserved in boundary_filtered-best-natural.pt.
+  This discovery outbreak had no closed shelter, nine wall
+  segments and two verified stun gas deployments (30.57
+  and 42.67 simulated seconds). Control had 15 retries and
+  one timeout. Filtered had 13 retries, two timeouts and one
+  natural win. Only one occupied start per arm in training.
+  Frozen evaluation assesses the final update separately.
+- Passive native defense audit sampled one occupied frozen
+  start six times from 1.23 to 15.77 simulated seconds.
+  Garrison kill counters increased, including a building
+  about 48 world units from the shelter edge (8 to 66 kills
+  from 12.80 to 15.77 s). Later journal recorded no occupied
+  breach and an 8.81% retry score. One layout establishes
+  active defense near the zone, with no causal estimate for
+  its coverage or impact on civilian survival.
+- Opening-timing stage now has 103 passing isolated tests
+  including the real policy episode loop with a fake game.
+  As of this entry the staged patch passed git apply --check,
+  SHA256 DBFEBC7196A73165A56DDFD7A45B4DD3D6E225C565F430D5AE15DE91AE24FD68.
+  Plan to compare the 57 planning inputs using seed 254119
+  after 247105 releases its copies. Use the newly preserved
+  exact natural actor and its Adam for both arms.
+- User authorized increasing model capacity where justified.
+  D-drive offline warm 128-to-192 GRU prototype preserved
+  all logits, value and the original hidden prefix exactly
+  for a 12-step recorded replay. New connections received
+  gradients and mapped Adam state loaded. 3,096,810 to
+  4,677,546 parameters. Median single-thread input tensor
+  preparation plus forward 1.0092 to 1.2964 ms. This excludes
+  native game I/O and observer serialization. No checkpoint
+  written and no evidence yet of better gameplay from width.
+  Test separately so the opening timing comparison isolates
+  the information change.
+
 - At 19:21 Central, 247105 checkpointed five training rounds
   under PID 63632, sixth active. 17 retries and three planning
   timeouts, zero occupied READY starts. Control 113 outside
