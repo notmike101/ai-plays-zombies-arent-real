@@ -4,6 +4,29 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 21:10 Central, 309427 completed and restored both
+  original roster rows, independently verified against the
+  manifest and settings files. Both archived-roster candidate
+  games placed 19 Garrisons, nine embedded, with 28.95%
+  sheltered. Prior seed 249701763 retried at 9.96%; distinct
+  discovery-clear seed 1160932729 retried at 10.00%. Both
+  GRU games timed out on known seeds. No eligible finishes.
+- Across archived and current trials, multiple policy seeds
+  with the same copy and same layout reproduced the native
+  outbreak; the same layout ID yielded different outbreaks
+  between copies. Copy rotation and launcher seeds alone
+  cannot establish independence. Prior 185952 reported eight
+  distinct outbreaks with model-sampled Garrison sites
+  and one 17.51% native finish. Evidence for diversity,
+  not qualification. No extension of repeat panels.
+- At 21:11:29, native pre-update replay validation launched
+  PID 71448, two frozen pairs on inst19/20, seed 286127
+  deliberately reused to exercise prior sampled planning and
+  battle paths. Exclusion ledger retained; not a survival
+  holdout. Checks zero optimizer steps without a checkpoint
+  write. Commit 87f8c9c passed 381 tests. Console
+  analysis/coverage-native-replay-validation.log and .err.
+
 - At 21:05 Central, roster validation PID 58128 live in
   the second pair. Both first-pair native rosters matched
   their archived values. Candidate on inst19 placed 19
