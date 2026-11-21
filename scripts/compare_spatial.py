@@ -928,6 +928,8 @@ def main():
                         for key in ('ready_embedded_defenses', 'ready_preparation', 'ready_loadout',
                                     'first_legal_cast_sim', 'timeout_preparation'):
                             summary[key] = row.get(key)
+                        summary['timeout_bootstrap'] = (
+                            row.get('bootstrap') if row.get('timeout_phase') == 'planning' else None)
                     if args.compare_opening_timing:
                         summary['opening_ready_preview'] = row.get('opening_ready_preview')
                     if args.compare_planning_budget:
@@ -991,6 +993,16 @@ def main():
                                     weights={a:n.state_dict() for a,n in models.items()},
                                     optimizers={a:o.state_dict() for a,o in optimizers.items()}), temp)
                     temp.replace(directory/'paired.pt')
+                    cutoff_receipts = [
+                        dict(round=rnd, arm=job[1], seed=job[3], log_started=row.get('log_started'),
+                             timeout_bootstrap_update='substituted'
+                             if PREPARATION_CREDIT_BY_ARM.get(job[1], False) else 'consumed')
+                        for job, row in zip(jobs, results) if row.get('timeout_phase') == 'planning']
+                    if cutoff_receipts:
+                        # Applied mode is journaled only after every arm's PPO update returned and the checkpoint is durable.
+                        with (directory/'timeout-bootstrap-receipts.jsonl').open('a') as f:
+                            for receipt in cutoff_receipts:
+                                f.write(json.dumps(receipt)+'\n')
                     report_signal()
                     if (directory/'stop-after-round').is_file():
                         print(f'Paused after atomic checkpoint at next_round={rnd + 1}', flush=True)
