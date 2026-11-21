@@ -4,6 +4,21 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 20:52 Central, archived planner operator 81484 remains
+  live. First candidate used current inst19 roster lacking
+  Garrison and produced two occupied shelters without any
+  embedded defenders. In all six archived reserve games for
+  the same team, Garrison was in the initial roster and the
+  model placed 19, nine embedded. The new run therefore
+  measures current-roster transfer. Archived roster differs
+  by copy; both archived rosters recovered and verified
+  across repeats. A roster-controlled validation script is
+  staged at analysis/coverage-portable314/tmp/
+  frozen-team-roster-309427.py. Verify settings edits and
+  restoration in isolation before running; never edit live
+  copies. Archived initial battle roster is unknown.
+  Current pair's GRU result also overlapped discovery.
+
 - At 20:50 Central, layout-free archived planner validation
   281906 is active as PID 81484 (20:47:05). Candidate
   bf3fc52369fc3746 vs original GRU 8a691469a829158d,
