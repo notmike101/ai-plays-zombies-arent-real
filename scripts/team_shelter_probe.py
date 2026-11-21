@@ -96,6 +96,132 @@ def historical_planning_roster():
     return historical
 
 
+def execute(operator, directory, settings, weights, team, policy_id,
+            exclusion, historical, tag):
+    """Run the single registered attempt and persist it fail-closed.
+
+    For every session-bound physical attempt the available passive trace is
+    written BEFORE eligibility rejection, explicitly labelled with the
+    ineligible reason; duplicates and other ineligibility never enter the
+    eligible outcomes journal, never earn a replacement, and never rejoin
+    unbound samples. Both rosters are restored and verified on every exit.
+    """
+    originals = tta.roster_lines(settings)
+    restoration_path = directory / 'roster-restoration.json'
+    state = {'verified': False}
+    try:
+        tta.set_line(settings, originals['plan'], ' '.join(historical).encode())
+        result = dict(copy=COPY, seed=SEED, levels=[], error='pool never yielded')
+        level, session, chain = {}, {}, []
+        with (directory / 'attempts.jsonl').open('x', encoding='utf-8') as attempts:
+            def record(row):
+                attempts.write(json.dumps(row) + '\n')
+                attempts.flush()
+                os.fsync(attempts.fileno())
+
+            record(dict(episode=tag, attempt=0, phase='probe', arm='parent',
+                        copy=COPY, policy_seed=SEED, policy_id=policy_id,
+                        status='scheduled'))
+            try:
+                with ProcessPoolExecutor(1) as pool:
+                    for _, _, result in search.completed_rollouts(
+                            pool, [(COPY, weights, team, SEED)],
+                            click_start=True, speeds={COPY: 'speed_1'},
+                            shelter_opportunity_probe=True):
+                        pass
+                level, chain, error = tta.official(result)
+                if error is None:
+                    for consumed in chain:
+                        if consumed in exclusion:
+                            error = f'duplicate outbreak seed {consumed}'
+                            break
+                session = compare.archive_native_session(
+                    operator.owned_copy(COPY), directory, tag, COPY,
+                    level.get('log_started'))
+                if error is None and session.get('status') != 'archived':
+                    error = f'native session {session.get("status")}'
+            except Exception as failure:
+                level, session, chain = {}, {}, []
+                error = f'launcher failure: {failure}'
+            actions = level.get('battle_actions')
+            samples = list((actions or {}).get('shelter_trace') or ())
+            breaches = list((actions or {}).get('shelter_trace_breaches') or ())
+            gaps = list((actions or {}).get('shelter_trace_gaps') or ())
+            truncated = int((actions or {}).get('shelter_trace_truncated') or 0)
+            gap_dropped = int((actions or {}).get('shelter_trace_gap_dropped') or 0)
+            observed = chain[-1] if chain else None
+            bound = (session.get('status') == 'archived' and observed is not None)
+            eligible = error is None
+            if bound:
+                # Session-bound: the samples belong to this physical attempt,
+                # so they are persisted even when eligibility rejects it.
+                if actions is None or 'shelter_trace' not in actions:
+                    samples_source = 'unlocated'
+                elif not samples:
+                    samples_source = 'journal_present_no_closed_zone_rows'
+                else:
+                    samples_source = 'journal'
+                (directory / 'shelter-trace.jsonl').write_text(
+                    ''.join(json.dumps(row) + '\n' for row in samples),
+                    encoding='utf-8')
+                (directory / 'shelter-trace-summary.json').write_text(json.dumps(dict(
+                    copy=COPY, seed=SEED, outbreak_seed=observed,
+                    board=level.get('board'), log_started=level.get('log_started'),
+                    eligible=eligible, ineligible_reason=error,
+                    samples_source=samples_source,
+                    samples=len(samples),
+                    decisions_stamped=sum(1 for row in samples
+                                          if row.get('decision') is not None),
+                    breach_rows=breaches, gaps=gaps,
+                    truncated=truncated, gap_dropped=gap_dropped,
+                    cap=shelter_reward.ZONE_TRACE_LIMIT),
+                    indent=2), encoding='utf-8')
+            finished = dict(episode=tag, attempt=0, phase='probe', arm='parent',
+                            copy=COPY, policy_seed=SEED, policy_id=policy_id,
+                            status='finished', err=error, eligible=eligible,
+                            ineligible_reason=error, saved=level.get('saved'),
+                            saved_frac=level.get('saved'), win=level.get('win'),
+                            end=level.get('end'), start_kind=level.get('start_kind'),
+                            outbreak_seed=observed,
+                            prior_attempt_seeds=chain[:-1],
+                            native_session=session,
+                            ready_zones=level.get('ready_zones'),
+                            board=level.get('board'),
+                            log_started=level.get('log_started'),
+                            trace_persisted=bound,
+                            trace_samples=len(samples), trace_breach_rows=len(breaches),
+                            trace_gaps=len(gaps), trace_truncated=truncated,
+                            trace_gap_dropped=gap_dropped)
+            record(finished)
+            if error is None:
+                with (directory / 'outcomes.jsonl').open('x', encoding='utf-8') as outcomes:
+                    outcomes.write(json.dumps(dict(
+                        result, arm='parent', team_id=policy_id,
+                        outbreak_seed=observed, native_session=session)) + '\n')
+            if error:
+                raise RuntimeError(f'shelter opportunity probe failed closed (no '
+                                   f'replacement): {tag}: {error}')
+    finally:
+        for kind in ('plan', 'battle'):
+            try:
+                tta.set_line(settings, tta.roster_lines(settings)[kind],
+                             originals[kind].group(2))
+                state[kind] = True
+            except Exception as restore_error:
+                state[kind] = str(restore_error)
+        try:
+            current = tta.roster_lines(settings)
+            state['verified'] = all(
+                current[kind].group(2) == originals[kind].group(2)
+                for kind in ('plan', 'battle'))
+        except Exception as restore_error:
+            state['verified'] = str(restore_error)
+        restoration_path.write_text(json.dumps({COPY: state}, indent=2),
+                                    encoding='utf-8')
+    if state['verified'] is not True:
+        raise RuntimeError('Roster restoration unverified; see roster-restoration.json')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', action='store_true',
@@ -135,108 +261,9 @@ def main():
                                       'team_timing_ablation.py', 'team_shelter_probe.py')}),
             indent=2), encoding='utf-8')
         settings = operator.owned_copy(COPY) / 'steam_cloud/settings.ini'
-        originals = tta.roster_lines(settings)
-        restoration_path = directory / 'roster-restoration.json'
-        tag = f'shelter-opportunity-{SEED}_probe_0_parent'
-        state = {'verified': False}
-        try:
-            historical = historical_planning_roster()
-            tta.set_line(settings, tta.roster_lines(settings)['plan'],
-                         ' '.join(historical).encode())
-            result = dict(copy=COPY, seed=SEED, levels=[], error='pool never yielded')
-            level, session, chain = {}, {}, []
-            with (directory / 'attempts.jsonl').open('x', encoding='utf-8') as attempts:
-                def record(row):
-                    attempts.write(json.dumps(row) + '\n')
-                    attempts.flush()
-                    os.fsync(attempts.fileno())
-
-                record(dict(episode=tag, attempt=0, phase='probe', arm='parent',
-                            copy=COPY, policy_seed=SEED, policy_id=policy_id,
-                            status='scheduled'))
-                try:
-                    with ProcessPoolExecutor(1) as pool:
-                        for _, _, result in search.completed_rollouts(
-                                pool, [(COPY, weights, team, SEED)],
-                                click_start=True, speeds={COPY: 'speed_1'},
-                                shelter_opportunity_probe=True):
-                            pass
-                    level, chain, error = tta.official(result)
-                    if error is None:
-                        for consumed in chain:
-                            if consumed in exclusion:
-                                error = f'duplicate outbreak seed {consumed}'
-                                break
-                    session = compare.archive_native_session(
-                        operator.owned_copy(COPY), directory, tag, COPY,
-                        level.get('log_started'))
-                    if error is None and session.get('status') != 'archived':
-                        error = f'native session {session.get("status")}'
-                except Exception as failure:
-                    level, session, chain = {}, {}, []
-                    error = f'launcher failure: {failure}'
-                actions = level.get('battle_actions') or {}
-                samples = list(actions.get('shelter_trace') or ())
-                breaches = list(actions.get('shelter_trace_breaches') or ())
-                gaps = list(actions.get('shelter_trace_gaps') or ())
-                truncated = int(actions.get('shelter_trace_truncated') or 0)
-                gap_dropped = int(actions.get('shelter_trace_gap_dropped') or 0)
-                observed = chain[-1] if chain else None
-                finished = dict(episode=tag, attempt=0, phase='probe', arm='parent',
-                                copy=COPY, policy_seed=SEED, policy_id=policy_id,
-                                status='finished', err=error, saved=level.get('saved'),
-                                saved_frac=level.get('saved'), win=level.get('win'),
-                                end=level.get('end'), start_kind=level.get('start_kind'),
-                                outbreak_seed=observed,
-                                prior_attempt_seeds=chain[:-1],
-                                native_session=session,
-                                ready_zones=level.get('ready_zones'),
-                                board=level.get('board'),
-                                log_started=level.get('log_started'),
-                                trace_samples=len(samples), trace_breach_rows=len(breaches),
-                                trace_gaps=len(gaps), trace_truncated=truncated,
-                                trace_gap_dropped=gap_dropped)
-                record(finished)
-                if error is None:
-                    with (directory / 'outcomes.jsonl').open('x', encoding='utf-8') as outcomes:
-                        outcomes.write(json.dumps(dict(
-                            result, arm='parent', team_id=policy_id,
-                            outbreak_seed=observed, native_session=session)) + '\n')
-                    (directory / 'shelter-trace.jsonl').write_text(
-                        ''.join(json.dumps(row) + '\n' for row in samples),
-                        encoding='utf-8')
-                    (directory / 'shelter-trace-summary.json').write_text(json.dumps(dict(
-                        copy=COPY, seed=SEED, outbreak_seed=observed,
-                        board=level.get('board'), log_started=level.get('log_started'),
-                        samples=len(samples),
-                        decisions_stamped=sum(1 for row in samples
-                                              if row.get('decision') is not None),
-                        breach_rows=breaches, gaps=gaps,
-                        truncated=truncated, gap_dropped=gap_dropped,
-                        cap=shelter_reward.ZONE_TRACE_LIMIT),
-                        indent=2), encoding='utf-8')
-                if error:
-                    raise RuntimeError(f'shelter opportunity probe failed closed (no '
-                                       f'replacement): {tag}: {error}')
-        finally:
-            for kind in ('plan', 'battle'):
-                try:
-                    tta.set_line(settings, tta.roster_lines(settings)[kind],
-                                 originals[kind].group(2))
-                    state[kind] = True
-                except Exception as restore_error:
-                    state[kind] = str(restore_error)
-            try:
-                current = tta.roster_lines(settings)
-                state['verified'] = all(
-                    current[kind].group(2) == originals[kind].group(2)
-                    for kind in ('plan', 'battle'))
-            except Exception as restore_error:
-                state['verified'] = str(restore_error)
-            restoration_path.write_text(json.dumps({COPY: state}, indent=2),
-                                        encoding='utf-8')
-        if state['verified'] is not True:
-            raise RuntimeError('Roster restoration unverified; see roster-restoration.json')
+        historical = historical_planning_roster()
+    execute(operator, directory, settings, weights, team, policy_id,
+            exclusion, historical, f'shelter-opportunity-{SEED}_probe_0_parent')
 
 
 if __name__ == '__main__':
