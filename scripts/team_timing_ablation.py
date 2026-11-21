@@ -21,6 +21,16 @@ closed-zone polygons are compared canonically from the native READY snapshot
 missing distinct from empty): unchanged stops without pair two and unknown
 stops fail-closed. Same budget, gate, exclusion discipline as 342571, plus
 explicit proof that 342571's four discovery seeds are excluded.
+
+zone-sampling (seed 348571, tracker line 28): the same frozen incumbent
+versus challenger 4adeb6fa1e286fa0 adding only sample_zone_geometry=True:
+T=1 sampling of BOTH rectangle corners from the model's own masked legal
+cell distribution on a dedicated generator (no lookahead, no forcing, no
+READY/GRU/battle changes). Same paired-seed discovery/screen protocol,
+gate and budgets as 342571. Every finished attempt records its canonical
+READY closed-zone geometry; unknown geometry stops fail-closed while a
+coincident (equal) geometry never stops. Outbreak 804943993 (probe seed
+346571) is a hard-bound exclusion seed.
 """
 import argparse
 from concurrent.futures import ProcessPoolExecutor
@@ -32,6 +42,7 @@ import os
 from pathlib import Path
 import re
 import sys
+from contextlib import nullcontext
 
 ROOT = Path.cwd()
 sys.path[:0] = [str(ROOT / 'scripts'), str(ROOT)]
@@ -54,6 +65,9 @@ SEED = 342571
 POP_SEED = 344571
 POP_ZONE_POPULATION = (8.649016304182014, 4.0)
 POP_CHALLENGER_ID = '8d4ed60fdb803689'
+ZONE_SEED = 348571
+ZONE_CHALLENGER_ID = '4adeb6fa1e286fa0'
+ZONE_BOUND_SEED = 804943993
 COPIES = ['inst19', 'inst20']
 MAX_PHYSICAL = 12
 NATURAL = ('won', 'lost')
@@ -71,6 +85,12 @@ PROFILES = {
         journal='outcomes.jsonl', previous_dir='analysis/coverage-team-timing-342571',
         prior_seeds=True, geometry_stop=True,
         only_delta='zone_population 8.649016304182014 -> 4.0', gate=GATE_TEXT),
+    'zone-sampling': dict(
+        seed=ZONE_SEED, incumbent=INCUMBENT_ID, challenger=ZONE_CHALLENGER_ID,
+        journal='outcomes.jsonl', previous_dir='analysis/coverage-team-timing-342571',
+        prior_seeds=True, geometry_stop=False, geometry_record=True,
+        bound_seed=ZONE_BOUND_SEED,
+        only_delta='sample_zone_geometry absent -> True', gate=GATE_TEXT),
 }
 
 
@@ -155,14 +175,21 @@ def bundle(profile_id='timing'):
         challenger = {key: value for key, value in incumbent.items() if key != 'opening_cast_bias'}
         if incumbent.get('opening_cast_bias') != 2.0:
             raise ValueError('Incumbent opening cast bias changed')
-    else:
+        expected = {'opening_cast_bias'}
+    elif profile_id == 'population-weight':
         if incumbent.get('zone_population') != POP_ZONE_POPULATION[0]:
             raise ValueError('Incumbent zone population changed')
         challenger = dict(incumbent, zone_population=POP_ZONE_POPULATION[1])
+        expected = {'zone_population'}
+    else:
+        if incumbent.get('sample_zone_geometry'):
+            raise ValueError('Incumbent already samples zone geometry')
+        challenger = dict(incumbent, sample_zone_geometry=True)
+        expected = {'sample_zone_geometry'}
     changed = ({key for key in set(challenger) ^ set(incumbent)}
                | {key for key in set(challenger) & set(incumbent)
                   if challenger[key] != incumbent[key]})
-    if changed != ({'opening_cast_bias'} if profile_id == 'timing' else {'zone_population'}):
+    if changed != expected:
         raise ValueError('Challenger differs by more than the registered single gene')
     if search.team_id(challenger) != profile['challenger']:
         raise ValueError('Arm identity does not match the registration')
@@ -300,11 +327,16 @@ def main():
                               and type(level['outbreak'].get('seed')) is int})
         if len(prior_seeds) != 4 or not set(prior_seeds) <= set(seeds):
             raise ValueError('Prior registered discovery seeds are not all excluded')
+    bound = profile.get('bound_seed')
+    if bound is not None and bound not in set(seeds):
+        raise ValueError(f'Hard-bound exclusion seed {bound} missing from the audit')
     if not args.run:
         print(json.dumps(dict(profile=args.profile, incumbent=profile['incumbent'],
                               challenger=profile['challenger'],
                               only_delta=profile['only_delta'],
                               geometry_stop=profile['geometry_stop'],
+                              geometry_record=profile.get('geometry_record', False),
+                              bound_seed=profile.get('bound_seed'),
                               prior_timing_seeds=prior_seeds,
                               exclusion_sha256=hashlib.sha256(
                                   json.dumps(seeds).encode()).hexdigest(),
@@ -336,6 +368,8 @@ def main():
             exclusion_total=len(seeds), diagnostic_family=family,
             budget=dict(discovery=4, screen=8, max_physical=MAX_PHYSICAL, replacements=0),
             gate=profile['gate'], geometry_stop=profile['geometry_stop'],
+            geometry_record=profile.get('geometry_record', False),
+            bound_seed=profile.get('bound_seed'),
             prior_timing_seeds=prior_seeds,
             previous_screen=(ROOT / profile['previous_dir']).name if profile['previous_dir']
                             else PREVIOUS.name,
@@ -364,7 +398,9 @@ def main():
                 set_line(path, roster_lines(path)['plan'], ' '.join(historical[copy]).encode())
             with ProcessPoolExecutor(1) as pool, \
                     (directory / 'attempts.jsonl').open('x', encoding='utf-8') as attempts, \
-                    (directory / 'outcomes.jsonl').open('x', encoding='utf-8') as outcomes:
+                    (directory / 'outcomes.jsonl').open('x', encoding='utf-8') as outcomes, \
+                    ((directory / 'ready-geometry.jsonl').open('x', encoding='utf-8')
+                     if profile.get('geometry_record') else nullcontext(None)) as ready_geometry:
                 def record(row, stream):
                     stream.write(json.dumps(row) + '\n')
                     stream.flush()
@@ -404,6 +440,15 @@ def main():
                                     break
                             if error is None:
                                 prior, _ = sorted(used), used.update(chain)
+                        if profile.get('geometry_record') and error is None:
+                            canonical = canonical_closed_zones(level.get('ready_zones'))
+                            record(dict(episode=tag, phase=phase, arm=arm, copy=copy,
+                                        policy_seed=seed, outbreak_seed=observed,
+                                        ready_zones=level.get('ready_zones'),
+                                        canonical=canonical), ready_geometry)
+                            if canonical is None:
+                                error = ('unknown closed-zone geometry at READY '
+                                         '(missing native snapshot)')
                         session = compare.archive_native_session(
                             operator.owned_copy(copy), directory, tag, copy,
                             level.get('log_started'))
@@ -454,6 +499,10 @@ def main():
                 if profile['geometry_stop']:
                     decision = dict(decision, geometry_verdict=geometry,
                                     advance=bool(decision['advance'] and geometry == 'changed'))
+                if profile.get('geometry_record'):
+                    decision = dict(decision, geometry='ready-geometry.jsonl: canonical '
+                                    'READY zones per finished attempt; unknown stops; '
+                                    'equal geometry continues')
                 (directory / 'discovery-gate.json').write_text(
                     json.dumps(decision, indent=2), encoding='utf-8')
                 if decision['advance'] and not pool_errors:

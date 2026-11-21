@@ -10,6 +10,7 @@ Run: python -m unittest test_team_timing_ablation from scripts/.
 """
 import contextlib
 import importlib
+import io
 import json
 import os
 import sys
@@ -80,7 +81,7 @@ class FakePool:
 
 class Fixture:
     def __init__(self, root, script, archive_status='archived', headroom_fail_at=None,
-                 profile='timing'):
+                 profile='timing', bound=True):
         self.root = Path(root)
         self.script = script
         self.profile = profile
@@ -88,6 +89,7 @@ class Fixture:
         self.archive_status = archive_status
         self.headroom_fail_at = headroom_fail_at
         self.launches = []
+        self.genes = []
         self.probe_failures = []
         self.archives = []
         analysis = self.root / 'analysis'
@@ -124,6 +126,12 @@ class Fixture:
             (prior / 'attempts.jsonl').write_text('\n'.join(lines(
                 [dict(status='finished', outbreak_seed=seed) for seed in (4001, 4002, 4003, 4004)])),
                                                    encoding='utf-8')
+        if profile == 'zone-sampling' and bound:
+            bound_run = analysis / 'coverage-zone-lookahead-346571'
+            bound_run.mkdir()
+            (bound_run / 'attempts.jsonl').write_text('\n'.join(lines(
+                [dict(status='finished',
+                      outbreak_seed=tta.PROFILES[profile]['bound_seed'])])), encoding='utf-8')
         for copy in tta.COPIES:
             settings = self.owned_copy(copy) / 'steam_cloud'
             settings.mkdir(parents=True)
@@ -138,6 +146,7 @@ class Fixture:
 
     def rollouts(self, pool, jobs, *, click_start, speeds):
         copy, weights, team, seed = jobs[0]
+        spec = self.script.pop((copy, seed))
         journal = (self.root / 'analysis' / f'coverage-team-timing-{self.S}' / 'attempts.jsonl')
         rows = [json.loads(line) for line in journal.read_text(encoding='utf-8').splitlines()] \
             if journal.is_file() else []
@@ -146,7 +155,7 @@ class Fixture:
                 for row in rows):
             self.probe_failures.append((copy, seed))
         self.launches.append((copy, seed))
-        spec = self.script.pop((copy, seed))
+        self.genes.append((copy, seed, (team or {}).get('sample_zone_geometry')))
         if spec == 'raise':
             raise RuntimeError('boom')
         if spec.get('welcome_fail'):
@@ -578,6 +587,132 @@ class TimingAblationTests(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             fixture.run()
         self.assertEqual(fixture.launches, [])
+
+    ZONE_SEED = tta.PROFILES['zone-sampling']['seed']
+
+    def zone_script(self, with_zones=True):
+        def spec(end, saved, outbreak):
+            row = dict(end=end, saved=saved, outbreak=outbreak)
+            if with_zones:
+                row['ready_zones'] = [self.SQUARE]
+            return row
+        script = {('inst19', self.ZONE_SEED): spec('lost', 0.2, 5101),
+                  ('inst20', self.ZONE_SEED): spec('won', 0.8, 5102),
+                  ('inst19', self.ZONE_SEED + 1): spec('won', 0.75, 5103),
+                  ('inst20', self.ZONE_SEED + 1): spec('lost', 0.3, 5104)}
+        for offset in range(4):
+            script[('inst19', self.ZONE_SEED + 2 + offset)] = spec('lost', 0.2, 6101 + 2 * offset)
+            script[('inst20', self.ZONE_SEED + 2 + offset)] = spec('lost', 0.2, 6102 + 2 * offset)
+        return script
+
+    def ready_geometry(self, fixture):
+        return [json.loads(line) for line in (fixture.directory / 'ready-geometry.jsonl')
+                .read_text(encoding='utf-8').splitlines()]
+
+    def test_zone_bundle_is_single_gene_registered(self):
+        weights, incumbent, challenger = tta.bundle('zone-sampling')
+        self.assertEqual(search.team_id(incumbent), tta.INCUMBENT_ID)
+        self.assertEqual(search.team_id(challenger), tta.ZONE_CHALLENGER_ID)
+        self.assertNotIn('sample_zone_geometry', incumbent)
+        self.assertIs(challenger['sample_zone_geometry'], True)
+        changed = ({key for key in set(challenger) ^ set(incumbent)}
+                   | {key for key in set(challenger) & set(incumbent)
+                      if challenger[key] != incumbent[key]})
+        self.assertEqual(changed, {'sample_zone_geometry'})
+        self.assertEqual({key: value for key, value in incumbent.items()
+                          if key != 'sample_zone_geometry'},
+                         {key: value for key, value in challenger.items()
+                          if key != 'sample_zone_geometry'})
+
+    def test_zone_sampling_offline_plan_binds_registration(self):
+        fixture = Fixture(self.root, {}, profile='zone-sampling')
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            fixture.run(argv_run=False)
+        plan = json.loads(buffer.getvalue())
+        self.assertEqual(plan['challenger'], tta.ZONE_CHALLENGER_ID)
+        self.assertEqual(plan['bound_seed'], tta.ZONE_BOUND_SEED)
+        self.assertTrue(plan['geometry_record'])
+        self.assertFalse(plan['geometry_stop'])
+        self.assertEqual(plan['only_delta'], 'sample_zone_geometry absent -> True')
+        self.assertEqual(plan['plan']['policy_seeds'],
+                         list(range(self.ZONE_SEED, self.ZONE_SEED + 6)))
+        self.assertEqual(fixture.launches, [])
+
+    def test_zone_sampling_selection_options_propagate_per_arm(self):
+        fixture = Fixture(self.root, self.zone_script(), profile='zone-sampling')
+        fixture.run()
+        finished = [row for row in fixture.attempts() if row['status'] == 'finished']
+        self.assertEqual(len(finished), 12)
+        genes = {(copy, seed): gene for copy, seed, gene in fixture.genes}
+        self.assertEqual(len(genes), 12)
+        for row in finished:
+            self.assertEqual(genes[(row['copy'], row['policy_seed'])],
+                             True if row['arm'] == 'challenger' else None, row)
+        decision = json.loads((fixture.directory / 'decision.json').read_text(encoding='utf-8'))
+        self.assertTrue(decision['advance'])
+        self.assertIn('unknown stops; equal geometry continues', decision['geometry'])
+        self.assertFalse((fixture.directory / 'geometry-check.json').exists())
+        self.rosters_intact()
+
+    def test_zone_sampling_equal_geometry_records_every_attempt(self):
+        fixture = Fixture(self.root, self.zone_script(), profile='zone-sampling')
+        fixture.run()
+        rows = self.ready_geometry(fixture)
+        self.assertEqual(len(rows), 12)
+        self.assertEqual({json.dumps(row['canonical']) for row in rows},
+                         {json.dumps(tta.canonical_closed_zones([self.SQUARE]))})
+        self.assertEqual({row['arm'] for row in rows}, {'incumbent', 'challenger'})
+        self.assertTrue(all(row['outbreak_seed'] is not None for row in rows))
+        manifest = json.loads((fixture.directory / 'frozen-manifest.json')
+                              .read_text(encoding='utf-8'))
+        self.assertTrue(manifest['geometry_record'])
+        self.assertEqual(manifest['bound_seed'], tta.ZONE_BOUND_SEED)
+        audit = json.loads((fixture.directory / 'exclusion-audit.json').read_text(encoding='utf-8'))
+        self.assertIn(tta.ZONE_BOUND_SEED, audit['seeds'])
+        self.rosters_intact()
+
+    def test_zone_sampling_unknown_geometry_stops_fail_closed(self):
+        fixture = Fixture(self.root, self.zone_script(with_zones=False),
+                          profile='zone-sampling')
+        with self.assertRaisesRegex(RuntimeError, 'fail-closed'):
+            fixture.run()
+        self.assertEqual(len(fixture.launches), 1)
+        finished = [row for row in fixture.attempts() if row['status'] == 'finished']
+        self.assertEqual(len(finished), 1)
+        self.assertIn('unknown closed-zone geometry', finished[0]['err'])
+        self.assertFalse([row for row in fixture.attempts() if row['phase'] == 'evaluation'])
+        self.assertEqual([row['canonical'] for row in self.ready_geometry(fixture)], [None])
+        self.assertFalse((fixture.directory / 'geometry-check.json').exists())
+        restoration = json.loads((fixture.directory / 'roster-restoration.json')
+                                 .read_text(encoding='utf-8'))
+        self.assertEqual([state['verified'] for state in restoration.values()], [True, True])
+        self.rosters_intact()
+
+    def test_zone_sampling_abort_with_geometry_still_counts_and_continues(self):
+        script = self.zone_script()
+        script[('inst19', self.ZONE_SEED)] = dict(end='aborted', saved=0.55, outbreak=5101,
+                                                  ready_zones=[self.SQUARE])
+        fixture = Fixture(self.root, script, profile='zone-sampling')
+        fixture.run()
+        self.assertEqual(len(fixture.launches), 12)
+        gate = json.loads((fixture.directory / 'discovery-gate.json').read_text(encoding='utf-8'))
+        self.assertEqual(gate['unknowns'], [])
+        self.assertAlmostEqual(gate['incumbent_mean'], (0.55 + 0.3) / 2)
+        self.assertEqual(gate['diagnostics']['aborted']['incumbent'], [0.55])
+        self.assertTrue(gate['advance'])
+        self.assertEqual(len(self.ready_geometry(fixture)), 12)
+        restoration = json.loads((fixture.directory / 'roster-restoration.json')
+                                 .read_text(encoding='utf-8'))
+        self.assertEqual([state['verified'] for state in restoration.values()], [True, True])
+        self.rosters_intact()
+
+    def test_zone_sampling_missing_hard_bound_journal_refuses_launch(self):
+        fixture = Fixture(self.root, self.zone_script(), profile='zone-sampling', bound=False)
+        with self.assertRaisesRegex(ValueError, 'Hard-bound exclusion seed 804943993'):
+            fixture.run()
+        self.assertEqual(fixture.launches, [])
+        self.assertFalse((fixture.directory / 'attempts.jsonl').is_file())
 
 
 if __name__ == '__main__':
