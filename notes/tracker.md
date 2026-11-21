@@ -4,6 +4,22 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 21:25 Central, 314807 finished; both planning roster
+  values verified back on disk against the pre-run manifest.
+  Both sampled layouts produced fresh distinct occupied
+  starts (28.95%, seeds 1766636122 and 3938618203), retries
+  at 9.95% and 9.96%. Both reference outbreaks overlapped
+  discovery and retried (9.75%, 10.00%). Zero natural
+  finishes. Sampling passes the diversity/exposure screen,
+  with no basis to scale this candidate for survival.
+  Both first-pair shelters breached near 50 s and exposed
+  2,350/2,354 of 2,365. Decks had Police only, stock spent
+  by 64.27/46.50 s, population reversed at 156.10/171.67 s.
+  Second sampled shelter exposure 2,266 after five native
+  deployments. Next matched learning trial must share the
+  verified placement sampler in both arms and target defense,
+  not count higher outbreak diversity as survival progress.
+
 - At 21:20 Central, sampled-site screen PID 53888 live in
   pair two. First sampled candidate changed placements to
   16 Garrisons, seven embedded; deterministic reference had
