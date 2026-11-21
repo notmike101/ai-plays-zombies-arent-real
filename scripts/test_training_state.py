@@ -352,7 +352,8 @@ class StateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             self.assertEqual(collect_pairs(pool, jobs, Path(directory), observe=True), paired)
             self.assertEqual([call.args[1] for call in pool.submit.call_args_list], jobs * 2)
-            self.assertEqual(pool.submit.call_args.args[0].keywords, {'observe': True, 'audit_signal': True})
+            self.assertEqual(pool.submit.call_args.args[0].keywords,
+                             {'observe': True, 'audit_signal': True, 'gate_receipts': False})
             self.assertIs(pool.submit.call_args_list[0].args[0], pool.submit.call_args.args[0])
             self.assertIn('Native map changed', (Path(directory)/'interface-retries.jsonl').read_text())
 

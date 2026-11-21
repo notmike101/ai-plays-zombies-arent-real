@@ -127,7 +127,7 @@ def extend_private_model(source, optimizer, *, geometry=False, opening_timing=Fa
     return net, optimizer
 
 
-def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=False):
+def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=False, gate_receipts=False):
     copy, arm, weights, seed, tag, *phase = job
     battle_study = arm in BATTLE_TEMPERATURES
     boundary_study = arm in BATTLE_BOUNDARY_BY_ARM
@@ -160,6 +160,8 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
     try:
         policy = SpatialPolicy if arm == 'shared' else trainer.PolicyNet2
         options = dict(start_kind='fresh', seed=seed, missile_credit=arm!='unshaped')
+        if gate_receipts:
+            options['gate_receipts'] = True
         if observe:
             options['observer_interval'] = 1.
         if target_study:
@@ -255,8 +257,9 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
                 worker.cpu_affinity(inherited_cpus)
 
 
-def collect_pairs(pool, jobs, directory, *, observe=False, separate_policy_cpus=False, policy_ids=None):
-    worker = partial(episode, observe=observe, audit_signal=True)
+def collect_pairs(pool, jobs, directory, *, observe=False, separate_policy_cpus=False, policy_ids=None,
+                  gate_receipts=False, max_attempts=None):
+    worker = partial(episode, observe=observe, audit_signal=True, gate_receipts=gate_receipts)
     if separate_policy_cpus:
         worker = partial(worker, separate_policy_cpus=True)
     def collect(attempt_jobs, attempt):
@@ -294,7 +297,8 @@ def collect_pairs(pool, jobs, directory, *, observe=False, separate_policy_cpus=
     for start in range(0, len(jobs), 2):
         pair = slice(start, start + 2)
         errors = [r['err'] for r in results[pair] if 'err' in r]
-        if errors and all(any(reason in error for reason in transient) for error in errors):
+        if errors and (max_attempts is None or max_attempts > 1) and all(
+                any(reason in error for reason in transient) for error in errors):
             attempts = [
                 dict(copy=job[0], arm=job[1], seed=job[3], tag=job[4],
                      end=row.get('end'), saved_frac=row.get('saved_frac'), err=row.get('err'),
@@ -507,25 +511,36 @@ def main():
                             help='Compare 128 and warm-expanded 192 recurrent units with identical inputs')
     comparison.add_argument('--compare-preparation-credit', action='store_true',
                             help='Compare native-save preparation targets with shaped episode returns')
+    comparison.add_argument('--frozen-single', action='store_true',
+                            help='Diagnostic: one physical attempt per invocation of an exact warm-start actor with identical options and no transient replacement')
     parser.add_argument('--audit-phase-gradients', action='store_true',
                         help='Audit sampled action replay before updates and on frozen games; measure training phase gradients')
     parser.add_argument('--observe', action='store_true',
                         help='Publish read-only Observatory decisions at up to 1 Hz per worker')
+    parser.add_argument('--gate-receipts', action='store_true',
+                        help='Journal passive per-Gate native placement receipts; no policy or input change')
     parser.add_argument('--separate-policy-cpus', action='store_true',
                         help='Use the last two CPUs of the existing allowance for policy workers')
     args = parser.parse_args()
     copies = args.copies
-    if args.train_rounds < 0 or args.eval_rounds < 2 or args.eval_rounds % 2:
-        parser.error('Use nonnegative training rounds and an even number of evaluation rounds')
-    if args.train_rounds == 0 and not (args.warm_start and args.compare_battle_boundary):
-        parser.error('Frozen-only evaluation requires --warm-start and --compare-battle-boundary')
-    if len(copies) not in (2, 4, 6, 8) or len(set(copies)) != len(copies):
-        parser.error('Use two to eight distinct copies in pairs')
     evaluation_copies = args.eval_copies or copies
-    if args.eval_copies and (len(evaluation_copies) not in (2,4,6,8)
-            or len(set(evaluation_copies)) != len(evaluation_copies)
-            or set(evaluation_copies).intersection(copies)):
-        parser.error('Evaluation copies must be distinct, paired and disjoint from training')
+    if args.frozen_single:
+        if not args.warm_start or args.train_rounds != 0:
+            parser.error('A frozen single attempt requires --warm-start and --train-rounds 0')
+        if len(copies) != 1 or evaluation_copies != copies:
+            parser.error('A frozen single attempt runs one attempt on exactly one owned copy')
+        args.eval_rounds = 1
+    else:
+        if args.train_rounds < 0 or args.eval_rounds < 2 or args.eval_rounds % 2:
+            parser.error('Use nonnegative training rounds and an even number of evaluation rounds')
+        if args.train_rounds == 0 and not (args.warm_start and args.compare_battle_boundary):
+            parser.error('Frozen-only evaluation requires --warm-start and --compare-battle-boundary')
+        if len(copies) not in (2, 4, 6, 8) or len(set(copies)) != len(copies):
+            parser.error('Use two to eight distinct copies in pairs')
+        if args.eval_copies and (len(evaluation_copies) not in (2,4,6,8)
+                or len(set(evaluation_copies)) != len(evaluation_copies)
+                or set(evaluation_copies).intersection(copies)):
+            parser.error('Evaluation copies must be distinct, paired and disjoint from training')
     planning_study = (args.compare_planning_exploration or args.compare_planning_entropy
                       or args.compare_battle_exploration or args.compare_target_settle or args.compare_ready_delay)
     coverage_study = (args.compare_ready_coverage or args.compare_zone_exploration
@@ -535,7 +550,8 @@ def main():
                       or args.compare_battle_boundary or args.compare_opening_timing or args.compare_recurrent_capacity
                       or args.compare_preparation_credit)
     shelter_study = args.compare_breach_cost or coverage_study
-    paired_weights = args.compare_missile_credit or args.compare_phase_balance or shelter_study
+    paired_weights = (args.compare_missile_credit or args.compare_phase_balance or shelter_study
+                      or args.frozen_single)
     if args.warm_start and not paired_weights:
         parser.error('Warm starting requires a comparison with the same network in both arms')
     workers = max(len(copies), len(evaluation_copies))
@@ -564,7 +580,8 @@ def main():
             baseline, adam = extend_private_model(baseline, adam, geometry=args.compare_shelter_geometry,
                                                   opening_timing=args.compare_opening_timing)
         if paired_weights:
-            labels = (tuple(PREPARATION_CREDIT_BY_ARM) if args.compare_preparation_credit else
+            labels = (('standard', 'balanced') if args.frozen_single else
+                      tuple(PREPARATION_CREDIT_BY_ARM) if args.compare_preparation_credit else
                       tuple(CAPACITY_BY_ARM) if args.compare_recurrent_capacity else
                       tuple(OPENING_TIMING_BY_ARM) if args.compare_opening_timing else
                       tuple(BATTLE_BOUNDARY_BY_ARM) if args.compare_battle_boundary else
@@ -606,6 +623,12 @@ def main():
         if args.separate_policy_cpus:
             rollout_options['separate_policy_cpus'] = True
             config['separate_policy_cpus'] = True
+        if args.gate_receipts:
+            rollout_options['gate_receipts'] = True
+            config['gate_receipts'] = True
+        if args.frozen_single:
+            rollout_options['max_attempts'] = 1
+            config['frozen_single'] = True
         if args.compare_missile_credit:
             config['comparison'] = 'missile_civilian_credit'
         if args.compare_phase_balance:
@@ -702,7 +725,8 @@ def main():
             for arm, net in models.items():
                 net.load_state_dict(snapshot['weights'][arm])
                 optimizers[arm].load_state_dict(snapshot['optimizers'][arm])
-        experiment = ('preparation-credit' if args.compare_preparation_credit else
+        experiment = ('frozen-single' if args.frozen_single else
+                      'preparation-credit' if args.compare_preparation_credit else
                       'recurrent-capacity' if args.compare_recurrent_capacity else
                       'opening-timing' if args.compare_opening_timing else
                       'battle-boundary' if args.compare_battle_boundary else
@@ -783,6 +807,9 @@ def main():
                     summary['battle_actions'] = dict(Counter(
                         trainer.TOOLS[u] for u, obs in zip(row.get('us', []), row.get('obs', []))
                         if not obs[trainer.PLANNING_INDEX]))
+                    if args.gate_receipts:
+                        summary['gate_receipts'] = row.get('battle_actions', {}).get('gate_receipts')
+                        summary['gate_receipts_dropped'] = row.get('battle_actions', {}).get('gate_receipts_dropped')
                     if training:
                         summary['phase_loss'] = phase_loss_ledger(row.get('obs', ()), balanced=job[1]=='balanced')
                     if args.compare_missile_credit or args.compare_phase_balance or shelter_study:

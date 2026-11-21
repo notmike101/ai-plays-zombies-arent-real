@@ -96,6 +96,49 @@ def cell_of_px(c, cw, ch):
     return (int(XF[c % 8] * cw), int(YF[c // 8] * ch))
 
 
+GATE_RECEIPT_CAP = 64
+GATE_RECEIPT_POINTS = 32
+
+
+def gate_world_point(px, camera, width, height):
+    x, y, zoom = camera
+    return np.array([(px[0] - width / 2) / zoom + x, (px[1] - height / 2) / -zoom + y])
+
+
+def gate_geometry_distances(point, walls, gates):
+    result = dict(wall_distance=None, wall_endpoints=None, gate_distance=None)
+    if len(walls):
+        a = np.asarray(walls['a'], dtype=float)
+        b = np.asarray(walls['b'], dtype=float)
+        segment = b - a
+        projection = np.clip(((point - a) * segment).sum(1)
+                             / np.maximum((segment * segment).sum(1), 1e-9), 0., 1.)
+        distance = np.linalg.norm(a + segment * projection[:, None] - point, axis=1)
+        index = int(np.argmin(distance))
+        result['wall_distance'] = float(distance[index])
+        result['wall_endpoints'] = [a[index].tolist(), b[index].tolist()]
+    if len(gates):
+        result['gate_distance'] = float(np.linalg.norm(np.asarray(gates, float) - point, axis=1).min())
+    return result
+
+
+def gate_receipt_resolution(pending, *, planning, gap, money, camera, walls, gates):
+    """After-action fields for a pending Gate receipt. ``gap`` counts extra observation
+    rows between the Gate dispatch and this snapshot, so status 'late' flags anything
+    captured beyond the very next observation; leaving planning leaves no after-state."""
+    if not planning or gap < 0:
+        return dict(status='unresolved')
+    points = np.asarray(gates, float).reshape(-1, 2)
+    return dict(
+        status='resolved' if gap == 0 else 'late', observation_gap=int(gap),
+        money_after=float(money),
+        camera_after=[float(v) for v in camera],
+        gates_after=points[:GATE_RECEIPT_POINTS].tolist(),
+        gates_count_after=int(len(points)),
+        gate_distance_after=gate_geometry_distances(
+            np.asarray(pending['world']), walls, points)['gate_distance'])
+
+
 class PolicyNet2(nn.Module):
     def __init__(self, *, shelter_occupancy=False, shelter_geometry=False, opening_timing=False, hidden_size=HID):
         super().__init__()
@@ -902,6 +945,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         snapped_cast_attempts = settled_cast_attempts = 0
         planning_zone_audit = options.get('planning_zone_audit', False)
         ready_trace = [] if signal_mode and planning_zone_audit and net is not None else None
+        gate_receipts = [] if options.get('gate_receipts') else None
+        gate_pending = None
         if planning_zone_audit:
             rows['planning_action_windows'] = []
             rows['first_legal_cast_sim'] = {}
@@ -995,6 +1040,18 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     o=env.obs()
                     continue
             mechanics.refresh(st)
+            if gate_receipts is not None and gate_pending is not None:
+                native = st['native']
+                gate_pending.update(gate_receipt_resolution(
+                    gate_pending, planning=st['planning'],
+                    gap=len(rows['obs']) - 1 - gate_pending['decision'],
+                    money=o['money'], camera=native['camera'],
+                    walls=native['walls'], gates=native['gates']))
+                if len(gate_receipts) < GATE_RECEIPT_CAP:
+                    gate_receipts.append(gate_pending)
+                else:
+                    battle_actions['gate_receipts_dropped'] = battle_actions.get('gate_receipts_dropped', 0) + 1
+                gate_pending = None
             if not st['planning'] and rows['rews']:
                 rows['rews'][-1] += st['shelter'].observe(st.get('native'),st['sim'])
             blobs = []
@@ -1292,6 +1349,18 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     env.vi.move_to(cx, cy)
                     env.vi.click()
                     mechanics.controls.frames()
+                    if gate_receipts is not None and u == 16 and gate_pending is None:
+                        native = st['native']
+                        points = np.asarray(native['gates'], float).reshape(-1, 2)
+                        world = gate_world_point((cx, cy), native['camera'], env.cw, env.ch)
+                        gate_pending = dict(
+                            decision=len(rows['obs']) - 1, branch='hotkey_click', cell=int(c),
+                            click_px=[int(cx), int(cy)], world=[float(world[0]), float(world[1])],
+                            camera=[float(v) for v in native['camera']],
+                            money_before=float(before['money']),
+                            gates_before=points[:GATE_RECEIPT_POINTS].tolist(),
+                            gates_count=int(len(points)),
+                            **gate_geometry_distances(world, native['walls'], points))
             elif u in U2ABILITY:
                 slot = next(s for s in st['deck'] if s['name'] == U2ABILITY[u])
                 if u in BATTLE_GEOMETRY and not st.get('anchor'):
@@ -1442,6 +1511,14 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         logging = False
         if planning_zone_audit:
             rows['planning_zone_receipts'] = planning_zone_receipts(rows['planning_action_windows'], footer)
+        if gate_receipts is not None:
+            if gate_pending is not None:
+                gate_pending['status'] = 'unresolved'
+                if len(gate_receipts) < GATE_RECEIPT_CAP:
+                    gate_receipts.append(gate_pending)
+                else:
+                    battle_actions['gate_receipts_dropped'] = battle_actions.get('gate_receipts_dropped', 0) + 1
+            battle_actions['gate_receipts'] = gate_receipts
         battle_actions['logged_deployments']=footer.get('deployments') if footer else None
         battle_actions['logged_kills'] = (footer.get('stats') or {}).get('kills') if footer else None
         battle_actions['zombie_kill_timing'] = footer.get('zombie_kill_timing') if footer else None
