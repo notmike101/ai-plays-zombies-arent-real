@@ -20,7 +20,8 @@ _OTHER = {'planning_entropy': 'planning_entropy',
           'opening_timing': 'opening_timing_input',
           'recurrent_capacity': 'recurrent_capacity',
           'preparation_credit': 'preparation_credit',
-          'target_settle': 'snapped_cast', 'planning_polygon_mask': 'planning_polygon_mask'}
+          'target_settle': 'snapped_cast', 'planning_polygon_mask': 'planning_polygon_mask',
+          'planning_budget': 'planning_budget_input'}
 
 
 def reward_coefficients(config, component, arms):
@@ -104,6 +105,7 @@ def summarize_signal(rows, config, arms, evaluation, *, start_round, minimum=4):
                     or design == 'opening_timing' and config['opening_timing_by_arm'][arm]
                     or design == 'target_settle' and receipts_seen.get('target_pointer_settled') is True
                     or design == 'planning_polygon_mask' and config['planning_polygon_mask_by_arm'][arm]
+                    or design == 'planning_budget' and config['planning_budget_input_by_arm'][arm]
                 )
             if observed is None:
                 unknown += 1

@@ -58,6 +58,13 @@ SHELTER_DURATION_RATES = {'duration_baseline': 0., 'duration_credit': .01}
 SHELTER_INPUT_BY_ARM = {'shelter_grid': False, 'shelter_exact': True}
 SHELTER_GEOMETRY_BY_ARM = {'geometry_control': False, 'geometry_visible': True}
 OPENING_TIMING_BY_ARM = {'opening_control': False, 'opening_visible': True}
+PLANNING_BUDGET_INPUT = {'budget_control': False, 'budget_countdown': True}
+PLANNING_BUDGET_FEATURE = dict(
+    identity='planning-budget-v1', columns=1, plan_limit=60, label=trainer.PLANNING_BUDGET_LABEL,
+    formula='(plan_limit - planning_decisions_so_far) / plan_limit sampled before each planning '
+            'decision; zero for battle decisions and after the cap is reached; clamped to [0, 1]',
+    bootstrap='the terminal planning bootstrap always scores the value as zero',
+    bins='legal READY decisions bucketed by third of the cap: early 0-19, mid 20-39, late 40-59')
 CAPACITY_BY_ARM = {'recurrent_standard': trainer.HID, 'recurrent_wide': 192}
 PREPARATION_CREDIT_BY_ARM = {'preparation_control': False, 'preparation_credit': True}
 PLANNING_POLYGON_MASK = {'mask_screen': False, 'mask_polygon': True}
@@ -105,10 +112,11 @@ def widen_recurrence(source, optimizer):
     return net, optimizer
 
 
-def extend_private_model(source, optimizer, *, geometry=False, opening_timing=False):
+def extend_private_model(source, optimizer, *, geometry=False, opening_timing=False, planning_budget=False):
     """Preserve the original GRU and Adam values when adding zero input columns."""
-    net = trainer.PolicyNet2(shelter_occupancy=not (geometry or opening_timing),
-                             shelter_geometry=geometry, opening_timing=opening_timing)
+    net = trainer.PolicyNet2(shelter_occupancy=not (geometry or opening_timing or planning_budget),
+                             shelter_geometry=geometry, opening_timing=opening_timing,
+                             planning_budget=planning_budget)
     added = net.gru.input_size - source.gru.input_size
     weights = source.state_dict()
     key = 'gru.weight_ih_l0'
@@ -128,8 +136,43 @@ def extend_private_model(source, optimizer, *, geometry=False, opening_timing=Fa
     return net, optimizer
 
 
+def archive_native_session(copy_dir, run_dir, episode_tag, copy, started_ms):
+    """Copy one bound native session log into the run directory before its copy reboots.
+
+    Local only; the name combines the unique episode tag with the copy, the source is
+    never moved or deleted, and an existing destination is never overwritten because
+    creation is exclusive. A header wall-clock mismatch is copied under an explicit
+    suffix and reported, with the observed wall unknown when the header cannot be read.
+    """
+    if started_ms is None:
+        return dict(status='no-session')
+    sessions = sorted((Path(copy_dir) / 'logs').glob('*.jsonl'))
+    if len(sessions) != 1:
+        return dict(status='missing-or-ambiguous', files=[path.name for path in sessions])
+    source = sessions[0]
+    with source.open(encoding='utf-8', errors='replace') as stream:
+        header = stream.readline()
+    try:
+        wall = json.loads(header)['wall']
+    except Exception:
+        wall = None
+    destination = Path(run_dir) / 'native-sessions' / (f'{episode_tag}-{copy}'.replace('/', '_')
+                                                       + ('' if wall == started_ms else '-header-mismatch')
+                                                       + '.jsonl')
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with destination.open('xb') as writer:
+            writer.write(source.read_bytes())
+    except FileExistsError:
+        return dict(status='collision', path=str(destination))
+    return dict(status='header-mismatch' if wall != started_ms else 'archived',
+                path=str(destination), header_wall=wall, expected_wall=started_ms)
+
+
 def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=False, gate_receipts=False):
-    copy, arm, weights, seed, tag, *phase = job
+    copy, arm, weights, seed, tag, *rest = job
+    phase = rest[:1]
+    archive_dir = rest[1] if len(rest) > 1 else None
     battle_study = arm in BATTLE_TEMPERATURES
     boundary_study = arm in BATTLE_BOUNDARY_BY_ARM
     capacity_study = arm in CAPACITY_BY_ARM
@@ -141,6 +184,7 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
     geometry_study = arm in SHELTER_GEOMETRY_BY_ARM
     input_study = arm in SHELTER_INPUT_BY_ARM or geometry_study
     mask_study = arm in PLANNING_POLYGON_MASK
+    budget_study = arm in PLANNING_BUDGET_INPUT
     planning_study = (arm in PLANNING_TEMPERATURES or arm in PLANNING_ENTROPY_BONUSES
                       or battle_study or target_study or ready_study)
     try:
@@ -149,7 +193,7 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
         if (arm in BREACH_COSTS or arm in READY_CREDITS or arm in ZONE_TEMPERATURES
                 or planning_study or arm in DEFENSE_COSTS or arm in READY_SHORTFALL_COSTS
                 or duration_study or input_study or boundary_study or opening_study or capacity_study
-                or preparation_credit_study or mask_study):
+                or preparation_credit_study or mask_study or budget_study):
             try:
                 env = zar_boot.boot(copy_dir, welcome_wait=15, discard_dump_states=True)
             except ZAREnvError as exc:
@@ -225,6 +269,9 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
                 options['experiment_signal'] = 'preparation_credit'
             if phase == [True]:
                 options['planning_tool_temperature'] = PLANNING_TEMPERATURES['planning_exploration']
+        if budget_study:
+            policy = partial(trainer.PolicyNet2, planning_budget=True)
+            options['planning_budget_input'] = PLANNING_BUDGET_INPUT[arm]
         if opening_study:
             policy = partial(trainer.PolicyNet2, opening_timing=True)
             options.update(fixed_speed='speed_1', fixed_clock=True, ready_coverage_credit=.30,
@@ -251,8 +298,12 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
                 raise RuntimeError('Cannot split the inherited game and worker CPU allowance')
             game.cpu_affinity(inherited_cpus[:-2])
             worker.cpu_affinity(inherited_cpus[-2:])
-        return trainer.run_episode((env.pid, weights, False, tag, options), policy_factory=policy,
-                                   telemetry=observe)
+        row = trainer.run_episode((env.pid, weights, False, tag, options), policy_factory=policy,
+                                  telemetry=observe)
+        if archive_dir is not None:
+            row = dict(row, native_session=archive_native_session(
+                copy_dir, archive_dir, tag, copy, row.get('log_started')))
+        return row
     finally:
         try:
             zar_boot.stop(env)
@@ -513,6 +564,8 @@ def main():
                             help='Compare the existing planning polygon masks alone against the screen-only planning cell mask')
     comparison.add_argument('--compare-opening-timing', action='store_true',
                             help='Compare a private planning input for projected ability timing')
+    comparison.add_argument('--compare-planning-budget', action='store_true',
+                            help='Compare a private planning-time observation of remaining decisions before the phase cap')
     comparison.add_argument('--compare-recurrent-capacity', action='store_true',
                             help='Compare 128 and warm-expanded 192 recurrent units with identical inputs')
     comparison.add_argument('--compare-preparation-credit', action='store_true',
@@ -555,11 +608,15 @@ def main():
                       or args.compare_shelter_input or args.compare_shelter_geometry
                       or args.compare_battle_boundary or args.compare_opening_timing or args.compare_recurrent_capacity
                       or args.compare_preparation_credit)
-    shelter_study = args.compare_breach_cost or args.compare_planning_masks or coverage_study
+    shelter_study = (args.compare_breach_cost or args.compare_planning_masks
+                     or args.compare_planning_budget or coverage_study)
     paired_weights = (args.compare_missile_credit or args.compare_phase_balance or shelter_study
                       or args.frozen_single)
     if args.warm_start and not paired_weights:
         parser.error('Warm starting requires a comparison with the same network in both arms')
+    if args.observe and (args.compare_shelter_input or args.compare_shelter_geometry
+                         or args.compare_opening_timing or args.compare_planning_budget):
+        parser.error('The visualizer cannot render private extended observation schemas')
     workers = max(len(copies), len(evaluation_copies))
     with operator.training_lock(operator.LOCK):
         ancestors = [p.pid for p in psutil.Process().parents()]
@@ -585,10 +642,13 @@ def main():
         if args.compare_shelter_input or args.compare_shelter_geometry or args.compare_opening_timing:
             baseline, adam = extend_private_model(baseline, adam, geometry=args.compare_shelter_geometry,
                                                   opening_timing=args.compare_opening_timing)
+        if args.compare_planning_budget:
+            baseline, adam = extend_private_model(baseline, adam, planning_budget=True)
         if paired_weights:
             labels = (('standard', 'balanced') if args.frozen_single else
                       tuple(PREPARATION_CREDIT_BY_ARM) if args.compare_preparation_credit else
                       tuple(CAPACITY_BY_ARM) if args.compare_recurrent_capacity else
+                      tuple(PLANNING_BUDGET_INPUT) if args.compare_planning_budget else
                       tuple(OPENING_TIMING_BY_ARM) if args.compare_opening_timing else
                       tuple(BATTLE_BOUNDARY_BY_ARM) if args.compare_battle_boundary else
                       tuple(SHELTER_GEOMETRY_BY_ARM) if args.compare_shelter_geometry else
@@ -624,7 +684,7 @@ def main():
         config = dict(seed=args.seed, copies=copies, train_rounds=args.train_rounds,
                       eval_rounds=args.eval_rounds, schema=trainer.checkpoint_schema(
                           shelter_occupancy=args.compare_shelter_input, shelter_geometry=args.compare_shelter_geometry,
-                          opening_timing=args.compare_opening_timing),
+                          opening_timing=args.compare_opening_timing, planning_budget=args.compare_planning_budget),
                       learning=trainer.learning_config())
         rollout_options = {'observe': args.observe}
         if args.separate_policy_cpus:
@@ -704,6 +764,10 @@ def main():
             config.update(comparison='opening_timing', fixed_speed='speed_1', ready_coverage_credit=.30,
                           training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
                           battle_boundary_filter=True, opening_timing_by_arm=OPENING_TIMING_BY_ARM)
+        if args.compare_planning_budget:
+            config.update(comparison='planning_budget',
+                          planning_budget_input_by_arm=PLANNING_BUDGET_INPUT,
+                          planning_budget_feature=PLANNING_BUDGET_FEATURE)
         if args.compare_recurrent_capacity:
             config.update(comparison='recurrent_capacity', fixed_speed='speed_1', ready_coverage_credit=.30,
                           training_tool_temperature=PLANNING_TEMPERATURES['planning_exploration'],
@@ -738,6 +802,7 @@ def main():
         experiment = ('frozen-single' if args.frozen_single else
                       'preparation-credit' if args.compare_preparation_credit else
                       'recurrent-capacity' if args.compare_recurrent_capacity else
+                      'planning-budget' if args.compare_planning_budget else
                       'opening-timing' if args.compare_opening_timing else
                       'battle-boundary' if args.compare_battle_boundary else
                       'shelter-geometry' if args.compare_shelter_geometry else
@@ -796,7 +861,8 @@ def main():
                 for i, copy in enumerate(round_copies):
                     arm = tuple(models)[(i+rnd)%2]
                     jobs.append((copy, arm, models[arm].state_dict(), args.seed+rnd*100+i//2,
-                                 f'{tag}/{rnd}/{arm}/{copy}', training))
+                                 f'{tag}/{rnd}/{arm}/{copy}', training,
+                                 directory if args.compare_planning_budget else None))
                 start = time.monotonic()
                 policies = {arm: trainer.policy_id(net) for arm, net in models.items()}
                 try:
@@ -864,6 +930,10 @@ def main():
                             summary[key] = row.get(key)
                     if args.compare_opening_timing:
                         summary['opening_ready_preview'] = row.get('opening_ready_preview')
+                    if args.compare_planning_budget:
+                        summary['planning_budget_bins'] = row.get('planning_budget_bins')
+                        summary['budget_observations'] = row.get('budget_observations')
+                        summary['native_session'] = row.get('native_session')
                     if (args.compare_shelter_geometry or args.compare_battle_boundary
                             or args.compare_opening_timing or args.compare_recurrent_capacity
                             or args.compare_planning_masks):

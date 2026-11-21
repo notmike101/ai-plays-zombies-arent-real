@@ -34,8 +34,9 @@ try:
 except ImportError:
     Observer = None
 from scripts.mechanic_contract import EXTRA_TOOLS, EXTRA_LABELS, extra_cell_label
-from policy_mechanics import (Mechanics, PLACEMENTS, SPEED_TICKS, embedded_defenses, extra_masks,
-                              planning_timeout_preparation, preparation_counts, preparation_fingerprint)
+from policy_mechanics import (Mechanics, PLACEMENTS, SPEED_TICKS, civilian_zone_fraction,
+                              embedded_defenses, extra_masks, planning_timeout_preparation,
+                              preparation_counts, preparation_fingerprint)
 MODEL = os.path.join(ROOT, 'sessions', 'nn_policy4.pt')
 HIST = os.path.join(ROOT, 'analysis', 'nn_hist4.jsonl')
 NOBS, HID = 332+len(EXTRA_LABELS), 128
@@ -89,6 +90,7 @@ WORLD_CELLS = np.repeat(YF < .70, len(XF))  # The last grid row overlaps the 192
 
 
 PLAN_STEPS = 60            # harness bound on planning phase (cap, not strategy)
+PLANNING_BUDGET_LABEL = 'planning_budget_remaining_fraction'
 BATTLE_T = 560.0
 STEP_S = 0.1               # Bounded10 Hz decisions; action receipts can take longer.
 
@@ -138,12 +140,12 @@ def gate_receipt_resolution(pending, *, planning, gap, money, camera, walls, gat
         gate_distance_after=gate_geometry_distances(
             np.asarray(pending['world']), walls, points)['gate_distance'])
 
-
 class PolicyNet2(nn.Module):
-    def __init__(self, *, shelter_occupancy=False, shelter_geometry=False, opening_timing=False, hidden_size=HID):
+    def __init__(self, *, shelter_occupancy=False, shelter_geometry=False, opening_timing=False,
+                 planning_budget=False, hidden_size=HID):
         super().__init__()
         inputs = NOBS + int(shelter_occupancy) + NC * int(shelter_geometry)
-        inputs += len(OPENING_TIMING_LABELS) * int(opening_timing)
+        inputs += len(OPENING_TIMING_LABELS) * int(opening_timing) + int(planning_budget)
         self.gru = nn.GRU(inputs, hidden_size, 1, batch_first=True)
         self.hu = nn.Linear(hidden_size, NU)
         self.hc = nn.Linear(hidden_size, NU * NC)
@@ -195,6 +197,8 @@ def make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ):
         base.extend(st['shelter_geometry_values'])
     if 'opening_timing_values' in st:
         base.extend(st['opening_timing_values'])
+    if 'planning_budget_value' in st:
+        base.append(float(st['planning_budget_value']))
     return base
 
 
@@ -429,6 +433,22 @@ def cell_mask(st, u, mc):
     if exact_geometry is not None:
         result *= exact_geometry
     return result
+
+
+def planning_budget_observation(decision, plan_limit, planning):
+    """Remaining planning decisions as a fraction of the cap; zero in battle or past the cap."""
+    if not planning:
+        return 0.
+    return max(0., (plan_limit - decision) / plan_limit)
+
+
+def ready_budget_bin(decision, plan_limit):
+    """Bucket each legal READY decision by the third of the planning cap it lands in."""
+    if decision < plan_limit / 3:
+        return 'early'
+    if decision < 2 * plan_limit / 3:
+        return 'mid'
+    return 'late'
 
 
 def shelter_geometry_observation(st, width, height, tools, cells):
@@ -724,15 +744,19 @@ def refresh_battle_state(st, dump):
                 slot['pending'] = False
 
 
-def checkpoint_schema(*, shelter_occupancy=False, shelter_geometry=False, opening_timing=False):
-    if sum((shelter_occupancy, shelter_geometry, opening_timing)) > 1:
+def checkpoint_schema(*, shelter_occupancy=False, shelter_geometry=False, opening_timing=False,
+                      planning_budget=False):
+    if sum((shelter_occupancy, shelter_geometry, opening_timing, planning_budget)) > 1:
         raise ValueError('Choose one private observation contract')
     labels = INPUT_LABELS + [SHELTER_OCCUPANCY_LABEL] if shelter_occupancy else INPUT_LABELS
     if shelter_geometry:
         labels = labels + SHELTER_GEOMETRY_LABELS
     if opening_timing:
         labels = labels + OPENING_TIMING_LABELS
-    return dict(version=7 if opening_timing else 6 if shelter_geometry else 5 if shelter_occupancy else 4,
+    if planning_budget:
+        labels = labels + [PLANNING_BUDGET_LABEL]
+    return dict(version=8 if planning_budget else 7 if opening_timing else 6 if shelter_geometry
+                else 5 if shelter_occupancy else 4,
                 inputs=labels, tools=TOOLS, cells=CELL_LABELS)
 
 
@@ -947,6 +971,13 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         planning_zone_audit = options.get('planning_zone_audit', False)
         planning_polygon_mask = options.get('planning_polygon_mask', False)
         planning_polygon_applied = False
+        budget_input = options.get('planning_budget_input')
+        planning_decisions = 0
+        planning_budget_engaged = False
+        budget_bins = None if budget_input is None else {
+            name: dict(decisions=0, probability_sum=0., ready_choices=0)
+            for name in ('early', 'mid', 'late')}
+        budget_observations = None if budget_input is None else dict(ready=None, timeout=None)
         ready_trace = [] if signal_mode and planning_zone_audit and net is not None else None
         gate_receipts = [] if options.get('gate_receipts') else None
         gate_pending = None
@@ -1103,6 +1134,11 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 if st['planning']:
                     opening_timing_seen = bool(opening_timing_seen or any(v >= 0. for v in opening[1::3]))
                 st['opening_timing_values'] = opening if opening_timing_input else [0.] * len(opening)
+            if budget_input is not None:
+                budget_value = planning_budget_observation(planning_decisions, plan_limit, st['planning'])
+                if budget_input:
+                    planning_budget_engaged = planning_budget_engaged or budget_value > 0.
+                st['planning_budget_value'] = budget_value if budget_input else 0.
             f = make_obs(st, o, frac, trend, slope, blobs, prev_u, prev_c, succ)
             x = torch.tensor([[f]], dtype=torch.float32)
             cell_temperature = 1.
@@ -1209,8 +1245,16 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 ready_probability_sum += float(du.probs[1]) if net is not None else 1. / np.count_nonzero(mu)
                 if u != 1:
                     ready_declined_steps.append(len(rows['obs']))
+            if budget_bins is not None and st['planning'] and mu[1]:
+                stats = budget_bins[ready_budget_bin(planning_decisions, plan_limit)]
+                stats['decisions'] += 1
+                stats['probability_sum'] += (float(du.probs[1]) if net is not None
+                                             else 1. / np.count_nonzero(mu))
+                stats['ready_choices'] += int(u == 1)
             for k, v in dict(obs=f, us=u, cs=c, ulps=ulp, clps=clp, masks=(mu, mc)).items():
                 rows[k].append(v)
+            if st['planning']:
+                planning_decisions += 1
             if zone_temperature is not None:
                 rows['cell_temperatures'].append(cell_temperature)
             if 'tool_temperatures' in rows:
@@ -1294,6 +1338,11 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                             special_credit = SPECIAL_ACTIVATION_CREDIT
             elif st['planning']:
                 if u == 1:
+                    if budget_observations is not None:
+                        budget_observations['ready'] = dict(
+                            preparation_counts(st['native']),
+                            civilian_zone_fraction=civilian_zone_fraction(st['native']),
+                            money=o['money'])
                     if placement_feedback or planning_zone_audit:
                         ready_paint_mode = bool(env.scalar(0x665160, '<B'))
                         paint = st['native']['paint']['kind']
@@ -1585,6 +1634,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
             if opening_timing_input is not None:
                 st['opening_timing_values'] = (opening_timing_features(st, masks_for(st)[0])
                                                if opening_timing_input else [0.] * len(OPENING_TIMING_LABELS))
+            if budget_input is not None:
+                st['planning_budget_value'] = 0.
             f = make_obs(st, o, o['civ']/civ0, trend, slope, [], prev_u, prev_c, succ)
             with torch.no_grad():
                 _, _, value, _ = net(torch.tensor([[f]], dtype=torch.float32), h)
@@ -1603,6 +1654,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 planning_blockers.append('unfinished_gesture')
             if planning_zone_audit and net is not None:
                 timeout_preparation = planning_timeout_preparation(st['native'], o['money'])
+            if budget_observations is not None:
+                budget_observations['timeout'] = planning_timeout_preparation(st['native'], o['money'])
         outside_reward = -OUTSIDE_PLAYAREA_COST * outside_actions
         shelter = st['shelter']
         special_reward = SPECIAL_ACTIVATION_CREDIT * min(len(special_activations),MAX_CREDITED_SPECIALS)
@@ -1648,6 +1701,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     shelter_geometry_input=bool(shelter_geometry_peak) if shelter_geometry_peak is not None else None,
                     battle_boundary=bool(boundary_affected) if boundary_checks else None,
                     opening_timing_input=opening_timing_seen,
+                    planning_budget_input=(planning_budget_engaged if budget_input is not None else None),
                     occupied_ready=coverage > 0 if coverage is not None else None,
                     below_ready_target=coverage < READY_COVERAGE_SHORTFALL_TARGET if coverage is not None else None,
                     missile_civilian_loss=missile_losses['confirmed'] > 0 if missile_losses is not None else None,
@@ -1664,6 +1718,13 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                     legal_ready_declined=bool(ready_declined_steps)),
                 shelter_occupancy_peak=shelter_occupancy_peak,
                 shelter_geometry_peak=shelter_geometry_peak, geometry_anchored_decisions=geometry_anchored,
+                planning_budget_bins=(None if budget_bins is None else {
+                    name: dict(decisions=stats['decisions'],
+                               ready_probability_mean=(stats['probability_sum'] / stats['decisions']
+                                                       if stats['decisions'] else None),
+                               ready_choices=stats['ready_choices'])
+                    for name, stats in budget_bins.items()}),
+                budget_observations=budget_observations,
                 battle_boundary=dict(sampled=boundary_checks, affected=boundary_affected,
                                      reference_rejected_probability_sum=boundary_removed,
                                      battle_rejections=battle_outside_targets)

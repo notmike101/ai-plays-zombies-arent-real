@@ -232,3 +232,29 @@ change. Both arms use normal speed, the same dispatch guard and the same
 battle masks. Each training row retains rejected tool and cell counts, the
 legal-READY choice summary and shelter occupancy at READY. A mask receipt
 marks episodes where the exact mask actually constrained a planning choice.
+
+## Planning decision budget observation
+
+`--compare-planning-budget` widens both private policies by exactly one input
+with matching Adam moment padding, preserving the original forward path. The
+candidate observes the planning decisions remaining before the harness cap of
+60 as `(60 - decisions_so_far) / 60`, sampled before each decision and clamped
+to [0, 1]. Battle decisions, the terminal planning bootstrap and the state
+after the cap was reached read zero. The control arm carries the same column
+always at zero. Schema 8 identifies this private experiment; production
+observations and the visualizer stay at schema 4, and the runner refuses
+--observe for private extended observation schemas.
+
+Both arms use the ordinary baseline recipe, identical to the mask-screen
+study: policy-controlled speed, no audit, feedback, coverage credit, boundary
+filter or forced planning temperature, and identical legal masks; only the
+budget observation differs. The pinned config records the feature identity
+planning-budget-v1 (formula, cap and bins) and any resume must reproduce it
+exactly. Each training row retains early, mid and late buckets of legal-READY
+decisions (count, mean READY probability and READY choices) plus the occupancy
+fraction and closed-geometry counts already available from existing native
+observations at READY and at timeout; geometry masks stay off. Bound native
+session logs are copied, never moved, into the run directory's
+native-sessions folder, named by episode and copy, with exclusive creation
+that never overwrites; header wall-clock mismatches are reported under an
+explicit suffix and the source log stays intact for the game's next boot.
