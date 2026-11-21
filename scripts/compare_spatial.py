@@ -963,7 +963,8 @@ def main():
                             if episodes:
                                 replay = trainer.ppo_update(net, episodes, None, epochs=0, audit_phases=True)
                                 evidence.write(json.dumps(dict(round=rnd, arm=arm, policy_id=policies[arm],
-                                                               preupdate_replay=replay['preupdate_replay']))+'\n')
+                                                               preupdate_replay=replay['preupdate_replay'],
+                                                               planning_credit=replay.get('planning_credit')))+'\n')
                 if training:
                     discovery_seeds.update(training_outbreak_seeds(summaries[-len(jobs):]))
                     for arm, net in models.items():
@@ -980,7 +981,8 @@ def main():
                             with (directory/'phase-gradients.jsonl').open('a') as experiment:
                                 experiment.write(json.dumps(dict(round=rnd, arm=arm, source_policy=policies[arm],
                                                                  audit=update['phase_gradients'],
-                                                                 preupdate_replay=update['preupdate_replay']))+'\n')
+                                                                 preupdate_replay=update['preupdate_replay'],
+                                                                 planning_credit=update.get('planning_credit')))+'\n')
                         torch.save(net.state_dict(), directory/(arm+'.pt'))
                     temp = directory/'paired.tmp'
                     torch.save(dict(next_round=rnd+1, source=source, config=config,

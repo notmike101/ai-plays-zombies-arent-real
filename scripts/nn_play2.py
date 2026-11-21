@@ -1962,6 +1962,7 @@ def apply_preparation_targets(trajectory, planning, values, advantages, returns)
 def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
                balance_phases=False, planning_tool_entropy_bonus=0., audit_phases=False, preparation_credit=False):
     seqs = []
+    audit_captures = [] if audit_phases else None
     replay = {phase: dict(decisions=0, tool_max_abs=0., cell_max_abs=0.)
               for phase in ('planning', 'battle')} if audit_phases else None
     for t in trajs:
@@ -1996,6 +1997,8 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
                        planning=planning, sim_elapsed=t['sim_elapsed'])
         if preparation_credit:
             apply_preparation_targets(t, planning, vals, adv, ret)
+        if audit_phases:
+            audit_captures.append((vals, planning))
         temperature = t.get('cell_temperatures')
         seqs.append((X, U, C, ULP, CLP, MU,
                      torch.tensor(adv, dtype=torch.float32),
@@ -2004,6 +2007,27 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
                      temperature, t.get('tool_temperatures')))
     alladv = np.concatenate([s[6].numpy() for s in seqs])
     mu_a, sd_a = alladv.mean(), alladv.std() + 1e-8
+    planning_credit = None
+    if audit_phases:
+        planning_credit = dict(pooled_mean=float(mu_a), pooled_std=float(sd_a), episodes=[])
+        for index, t in enumerate(trajs):
+            raw_adv, raw_ret = seqs[index][6].numpy(), seqs[index][7].numpy()
+            values, planning_flags = audit_captures[index]
+            weight = seqs[index][9]
+            planning_credit['episodes'].append(dict(
+                pid=t.get('pid'), board_id=t.get('board_id'), log_started=t.get('log_started'),
+                end=t.get('end'), bootstrap=float(t.get('bootstrap', 0.0)),
+                decisions=[dict(decision=int(step), tool=int(t['us'][step]),
+                                ready=bool(int(t['us'][step]) == 1),
+                                reward=float(t['rews'][step]),
+                                value=float(values[step]),
+                                raw_return=float(raw_ret[step]),
+                                raw_advantage=float(raw_adv[step]),
+                                normalized_advantage=float((raw_adv[step] - mu_a) / sd_a),
+                                phase_weight=float(weight) if isinstance(weight, float)
+                                else float(weight[step]))
+                           for step in [position for position, flag in enumerate(planning_flags)
+                                        if flag][:64]]))
     diagnostics = []
     phase_audit = None
     for epoch in range(epochs):
@@ -2058,6 +2082,7 @@ def ppo_update(net, trajs, opt, epochs=4, clip=0.2, c1=0.5, ent=0.015, *,
     if audit_phases:
         summary['phase_gradients'] = phase_audit
         summary['preupdate_replay'] = replay
+        summary['planning_credit'] = planning_credit
     print('ppo diagnostics', json.dumps(summary), flush=True)
     return summary
 
