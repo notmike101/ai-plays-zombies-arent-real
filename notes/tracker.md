@@ -4,6 +4,15 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 20:14 Central, exact-actor evaluation 280721 launched under
+  PID 66728. Frozen actor 2e654bf5875b7089 in both arms, normal
+  speed, filter off vs on, four reserved pairs on inst19/20.
+  Zero training rounds, with pre-run actor and discovery manifest
+  in analysis/coverage-battle-boundary-82b30536b3. Source archive
+  hash verified. Runner 39e64df passed 377 script tests.
+  This is an exposure screen. Audit notes propose a separate
+  baseline for the archived layout-free team.
+
 - At 20:12 Central, capacity study 263207 finished all four frozen
   pairs. Seven retries, one wide planning timeout and zero eligible
   natural finishes. All seven battles began with zero sheltered
