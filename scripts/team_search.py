@@ -1002,7 +1002,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
             practice_retry=False, allow_progression=False, capture_shadow=False, fixed_speed=None,
             fast_boot=False, click_start=False, goal_margin=False, collect_cast_gradients=False,
             collect_cast_tool_gradients=False, alternate_team=None, collect_garrison_gradient=False,
-            zone_lookahead_probe=False):
+            zone_lookahead_probe=False, shelter_opportunity_probe=False):
     timing = {'started': monotonic()}
     if start_stage>1 and not allow_progression:
         raise ValueError('Later-stage starts require explicit campaign progression')
@@ -1081,6 +1081,7 @@ def rollout(job, retries=0, start_stage=1, *, training=False, observe=False, obs
             if collect_cast_gradients:options['collect_cast_gradients']=True
             if collect_cast_tool_gradients:options['collect_cast_tool_gradients']=True
             if zone_lookahead_probe:options['zone_lookahead_probe']=True
+            if shelter_opportunity_probe:options['shelter_opportunity_probe']=True
             if alternate_team is not None:
                 options['audit_cast_targets'] = alternate_team['battle'] != active['battle']
                 options['audit_cast_tools'] = alternate_team['cast_bias'] != active['cast_bias']
@@ -1367,7 +1368,8 @@ def shadow_variants(champion):
 def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_progression=False,
                        capture_shadow=False, speeds=None, fast_boot=False, click_start=False, goal_margin=False,
                        collect_cast_gradients=False, collect_cast_tool_gradients=False, alternate_teams=None,
-                       collect_garrison_gradient=False, zone_lookahead_probe=False):
+                       collect_garrison_gradient=False, zone_lookahead_probe=False,
+                       shelter_opportunity_probe=False):
     if jobs:
         operator.require_resource_headroom(len(jobs))
     if starts is None:starts=[1]*len(jobs)
@@ -1381,6 +1383,7 @@ def completed_rollouts(pool,jobs,starts=None,retries=0,training=False, *, allow_
                          collect_cast_tool_gradients=collect_cast_tool_gradients,
                          collect_garrison_gradient=collect_garrison_gradient,
                          zone_lookahead_probe=zone_lookahead_probe,
+                         shelter_opportunity_probe=shelter_opportunity_probe,
                          alternate_team=(alternate_teams or {}).get(job[0]),
                          fixed_speed=speeds[job[0]] if speeds else None):(job,stage)
              for job,stage in zip(jobs,starts,strict=True)}

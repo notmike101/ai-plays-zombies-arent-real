@@ -944,7 +944,8 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         civ0 = max(o['civ'], 1)
         m0 = o['money']
         shelter_tracker = Shelter(civ0, breach_cost=options.get('occupied_breach_cost', BREACH_COST),
-                                  duration_rate=options.get('shelter_duration_rate'))
+                                  duration_rate=options.get('shelter_duration_rate'),
+                                  trace=bool(options.get('shelter_opportunity_probe')))
         st = dict(t=0., planning=True, spend_frac=0., deck=[], sim=0., mult=8., shelter=shelter_tracker)
         shelter_occupancy_input = options.get('shelter_occupancy_input')
         shelter_occupancy_peak = None
@@ -1320,6 +1321,9 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                         rows['first_legal_cast_sim'].setdefault(name, state['sim'])
                 if u in U2ABILITY:
                     selected_casts[TOOLS[u]] = selected_casts.get(TOOLS[u], 0) + 1
+                if st['shelter'].trace:
+                    st['shelter'].stamp(len(rows['obs']) - 1, TOOLS[u], c, available_casts,
+                                        {slot['name']: slot['charges'] for slot in st['deck']})
                 if shadow is not None and not capture.truncated and state['phase'] == 'playing':
                     capture.observe(
                         dict(sim=state['sim'], tick=int(st['native']['tick']), speed=state['mult'],
@@ -1730,6 +1734,12 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
         battle_actions['missile_civilian_losses'] = missile_losses
         battle_actions.update(legal_cast_tools=legal_casts, selected_cast_tools=selected_casts,
                               severe_failure=severe_outcome(saved, end))
+        if shelter.trace:
+            battle_actions['shelter_trace'] = shelter.zone_samples
+            battle_actions['shelter_trace_breaches'] = shelter.breach_rows
+            battle_actions['shelter_trace_gaps'] = shelter.trace_gaps
+            battle_actions['shelter_trace_truncated'] = shelter.trace_dropped
+            battle_actions['shelter_trace_gap_dropped'] = shelter.trace_gap_dropped
         rewards['missile_civilian_loss'] = (-MISSILE_CIVILIAN_COST * missile_losses['assigned'] / civ0
                                             if missile_losses is not None and missile_rewards is rows['rews'] else 0.)
         if 'ready_coverage_credit' in options:
