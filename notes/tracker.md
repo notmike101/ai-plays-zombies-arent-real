@@ -4,6 +4,23 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 20:50 Central, layout-free archived planner validation
+  281906 is active as PID 81484 (20:47:05). Candidate
+  bf3fc52369fc3746 vs original GRU 8a691469a829158d,
+  four frozen pairs at normal speed on inst19/20, rotate
+  copies, no training or layout replay. Manifest pins both
+  archive hashes; scheduled and completed native attempts
+  retained. First candidate outbreak 3727249172 was fresh
+  and discovery-clear, 28.95% sheltered at READY; two
+  closed zones, no embedded defenders. Nine confirmed
+  deployments; occupied breach at 55.30 s exposed 1,964.
+  Retried at 9.38%. GRU at 9.99% retry had a discovery
+  overlap and zero sheltered. Second pair is live.
+  Journal analysis/coverage-team-frozen-281906.
+  Isolated driver analysis/coverage-portable314/tmp/
+  frozen-team-281906.py SHA256
+  82F710B9A9FF2F9CC2F157D315199E19D70E0028B298E761562F741B1C13B236.
+
 - At 20:43 Central, preparation-credit pilot 290371 completed.
   All eight training plus four evaluation attempts are journaled.
   Candidate four battle starts, control five, one occupied
