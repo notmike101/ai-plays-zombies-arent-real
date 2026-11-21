@@ -4,6 +4,20 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 21:35 Central, defense fit PID 74708 retained its
+  first usable discovery attempt: clearance seed 2954798872,
+  28.95% sheltered, 13 sampled Garrison gradient choices,
+  retry at 8.72%. Directly replayed fitter against the
+  current journal and manifest; one usable sample, no
+  candidate. inst14 second attempt scheduled and active.
+- Staged held-out driver team-defense-frozen-323197.py,
+  SHA256 96434FEB265D7F1F1A182040FFD94A2365946858DCC6B5EB9E30931E5B21BCFF.
+  Requires six discovery records and verified restoration,
+  re-derives candidate identically, then can run four
+  sequential reserved attempts with paired draws and copy
+  crossover. Missing-fit dry path verified. Re-evaluate
+  only if fit criteria pass, under the official gate.
+
 - At 21:29:41 Central, defense fit 321541 launched PID 74708.
   Six sequential real discovery attempts on inst13/14 using
   the archived-roster contract and sampled team 0d1d56160623a3a1.
