@@ -4,6 +4,22 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 20:56 Central, current-roster operator 81484 scheduled
+  the fourth pair. Candidate's three recorded games have
+  all retried (9.38%, 7.27%, 7.81%); third repeated its
+  first outbreak. GRU first and second were discovery
+  overlaps, third timed out on a known outbreak. No natural
+  eligible finishes. Verified the archived planning rosters
+  directly in all six old holdout rows. Copied-settings
+  tests proved byte-for-byte roster restoration, refusal of
+  ambiguous keys and restoration of the idle copy when an
+  active sibling must be left alone. Updated isolated driver
+  frozen-team-roster-309427.py hash
+  A52669192930AA0370753E304E32A108A6F4654C08F75E239F06BDBC1177593F.
+  Cleanup records original values and pending work for every
+  copy. Archived starting battle roster remains unknown.
+  No owned settings changed yet.
+
 - At 20:52 Central, archived planner operator 81484 remains
   live. First candidate used current inst19 roster lacking
   Garrison and produced two occupied shelters without any
