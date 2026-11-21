@@ -4,6 +4,26 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 20:39 Central, preparation pilot PID 76752 still live.
+  First two pairs journaled. Initial same-actor candidate
+  timed out with 51 legal declines; baseline retried with
+  no sheltered civilians. After one update each, both
+  reached battle with 19.21% sheltered and then retried.
+  Native seeds 3923563519 and 2563676301 were distinct.
+  One occupied candidate start so far; no natural finishes.
+- Staged earlier persistence of out-of-order worker results
+  to close the ordered pool.map receipt-loss gap. Completion
+  rows flush as futures resolve, evaluation order remains
+  scheduling order, PPO results retain job order. 75 staged
+  tests passed including an interruption with the earlier
+  worker pending and a later worker's seed durable. Patch
+  analysis/coverage-portable314/tmp/unordered-attempts-290371/
+  unordered-attempts.patch SHA256
+  5B9A33FC473781FA6B7B00BBC080210679AFF4D32D0B0A5BB7E838DAC6254A68.
+  Keep isolated until the active pilot ends. A native game
+  that has not returned its result can still have an unknown
+  outbreak. Quarantine affected historical reserve cohorts.
+
 - At 20:35 Central, bounded preparation-credit pilot 290371
   launched under PID 76752 (20:34:46). Same exact actor
   2e654bf5875b7089, Adam, actions, rewards and battle target
