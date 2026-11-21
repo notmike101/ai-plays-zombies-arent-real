@@ -133,7 +133,10 @@ class IntegrationTests(unittest.TestCase):
             def refresh(self, st):
                 super().refresh(st)
                 if st['planning']:
-                    st['native'] = {'paint': {'kind': torch.empty(0).numpy()}, 'selection': {'polygon': []}}
+                    st['native'] = {
+                        'paint': {'kind': torch.empty(0).numpy()}, 'selection': {'polygon': []},
+                        'zones': [[(0, 0), (1, 1)], [(2, 2), (3, 2), (3, 3)]],
+                    }
                 else:
                     st.pop('native', None)
 
@@ -157,6 +160,7 @@ class IntegrationTests(unittest.TestCase):
         self.assertTrue(result['experiment_signal']['receipts']['opening_timing_input'])
         trace, = result['ready_choices']['preparation_trace']
         self.assertEqual((trace['decision'], trace['ready_legal'], trace['tool']), (0, True, 1))
+        self.assertEqual(trace['closed_zones'], 1)
         self.assertAlmostEqual(sum(trace['probabilities']), 1., places=6)
         self.assertAlmostEqual(trace['probabilities'][trace['legal_tools'].index(1)],
                                result['ready_choices']['mean_probability'])

@@ -1134,7 +1134,7 @@ def run_episode(args, *, policy_factory=None, telemetry=True):
                 ready_trace.append(dict(
                     decision=len(rows['obs']), ready_legal=bool(mu[1]),
                     tool=u, cell=c, money=float(o['money']),
-                    closed_zones=len(native.get('zones', ())),
+                    closed_zones=sum(len(zone) >= 3 for zone in native.get('zones', ())),
                     draft_vertices=len(native.get('selection', {}).get('polygon', ())),
                     pending_gesture=bool(st.get('anchor') or st.get('gesture_anchor')),
                     legal_tools=legal_tools, probabilities=[probabilities[i] for i in legal_tools]))
