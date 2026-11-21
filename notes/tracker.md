@@ -2,6 +2,8 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- OMP engineering and training handoff, November 20. Original operator chat archived. Supervisor independently reconciled all four 325301 attempts with held-out rows. In order: reference win 20.60%, fitted win 12.93%, fitted retry 9.94%, reference retry 9.97%. Four distinct outbreaks outside 2,176 prior exclusions. Both saved planning rosters matched actual settings after exit. Neither arm qualified. Keep the fitted candidate private. The first OMP checker proposal was tool-call text, rejected before execution.
+
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
 - At 22:11 Central, the first 325301 reference attempt finished with
