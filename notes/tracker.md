@@ -4,6 +4,26 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 21:05 Central, roster validation PID 58128 live in
+  the second pair. Both first-pair native rosters matched
+  their archived values. Candidate on inst19 placed 19
+  Garrisons, nine embedded, with 28.95% sheltered. It
+  retried on previously seen outbreak 249701763. GRU
+  timed out on previously seen 652928168. This establishes
+  placement recovery with the archived planning roster
+  only. No independent natural finish yet. Restore original
+  roster rows at shutdown and verify separately.
+- Staged a validation-only native replay audit using
+  existing --audit-phase-gradients during frozen rounds
+  and ppo_update with epochs=0, optimizer=None. An isolated
+  normal-runner fixture recorded four audit results and no
+  writes to training checkpoints. Patch under analysis/
+  coverage-portable314/tmp/frozen-replay-audit/
+  frozen-replay.patch SHA256
+  ABBE83E10E56A7EEB65E8DBD52DD15B9A4C6A877B6443799CC416262B8EB6301.
+  Apply only after live roster validation exits.
+  Independent signoff reference notes/boston-l1-verification.md.
+
 - At 20:59 Central, 281906 finished eight frozen attempts.
   Candidate four retries (9.38%, 7.27%, 7.81%, 3.54%) on
   two distinct seeds, 28.95% sheltered; control two retries
