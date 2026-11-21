@@ -2,6 +2,42 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 18:38 Central, geometry 232741 checkpointed four rounds
+  with 16 retries and no eligible natural finishes. Control
+  three occupied READY starts, candidate one. Matching round 2
+  starts had 4.20% sheltered; round 3 control 7.52% and 9.95%.
+  Fifth batch active under PID 71988, Observatory 21012 live.
+- After the third PPO update the 48 geometry columns had norm
+  .74472 in candidate 14b7872c297d9164 and remained zero in
+  control a7ad0acf1cfa6d4f. Replayed five captured positive
+  planning snapshots from the two candidate games in round 3
+  at the actual 1.35 temperature. Incoming memory, mask and
+  policy fixed, and replay matched actual logits/probabilities
+  exactly. Zeroing only the geometry values changed the masked
+  distribution by median .001073 and max .002147 total variation
+  (probability units). Max READY shift .000475, rectangle .000130.
+  Learning through the input was measured, with gameplay benefit
+  unproven. Evidence under coverage-portable314/tmp/
+  geometry-232741-positive-replay*.
+- The first 16 geometry games logged 254 outside guard rejections.
+  227 were click/drag controls, 24 casts and three corner edits.
+  At least 230 were battle decisions, with 21 phase-ambiguous
+  and three known planning from action histories. No input sent
+  for rejected targets. Staged a separate schema-4 boundary
+  mask comparison to test the existing exact battle filter,
+  preserving the dispatch guard, normal rewards and legal choices.
+  Both arms measure reference joint probability on filterable
+  targets; candidate masks them before sampling. Logs distinguish
+  battle rejections from placement, native spends and outcomes.
+  86 isolated tests passed, including the episode-level fake
+  reproduction where the known rejected first missile choice
+  was filtered. Exact boundary and live guard agreed on 1440
+  synthetic tool/cell probes over three recorded native camera
+  states; 1149 were outside. Staged only while current workers
+  active. Apply check passed for analysis/coverage-portable314/tmp/
+  battle-boundary-232741/battle-boundary.patch SHA256
+  349813ED7AEA1B6463B97F6A1DF18293D89B7D31C28E92B8B207225DBE19EB37.
+
 - At 18:31 Central, geometry comparison 232741 checkpointed
   its first round under PID 71988 (18:29:45). Both candidate
   games received nonzero geometry and both controls measured
