@@ -2,6 +2,33 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 19:02 Central, expanded staged shelter receipts to cover
+  freeform perimeter gestures as well as rectangle commands.
+  Explicit freeform finish validates at least three finite
+  vertices and a simple perimeter before Enter. Concave
+  polygons and collinear points along the perimeter are
+  accepted. Self-crossing, repeated or retraced edges are
+  reported without adding an input. Native commit confirmation
+  requires one new closed polygon and preservation of existing
+  polygons. The model retains corner order, undo and recovery.
+  Verification covers shape self-intersection, not overlap
+  between separate shelters. 24 focused tests passed, including
+  an arbitrary concave five-corner shelter. Patch apply check
+  passed. Latest SHA256
+  5F12927066C2B9C784B6AF3C24F99121EFEEDDD873BB016A7A60A438FAC4191F.
+  The live trainers continue with their original code.
+- In five boundary rounds the policy selected freeform start
+  once (round 4 inst13 control), with no freeform corner or
+  finish selection. It separately placed a rectangle and
+  entered battle with 9.95% occupied coverage. Across the
+  40 completed geometry games, no freeform actions appeared.
+  The model rarely exercises freeform perimeter construction.
+  Verify native draft/finish receipts on the next observed
+  policy-authored freeform shape. Boundary totals 156 rejected
+  selections in 2293 control battle decisions vs zero in 2320
+  filtered, and nine vs three confirmed spends. All ended at
+  retry or planning timeout. Sixth training batch live.
+
 - At 18:59 Central, boundary 239417 checkpointed four rounds.
   Both arms had six retries and two planning timeouts. Control
   recorded 64 outside battle selections in 1242 decisions.
