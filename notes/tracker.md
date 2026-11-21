@@ -4,6 +4,14 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 21:43 Central, defense fit 321541 had three distinct prior-clear
+  discovery outbreaks in three physical attempts. The third, inst13 outbreak
+  2251922836, sheltered 28.95%, recorded 13 Garrison placement choices,
+  and retried at 9.94% saved. No natural finishes. Attempt four is scheduled
+  on inst14. The fit still requires at least four eligible occupied starts,
+  verified roster restoration, and a reproducible bounded update before the
+  reserved native comparison can launch.
+
 - At 21:38 Central, 321541 retained the second usable
   discovery result, seed 3108809352, 28.95% sheltered,
   13 gradient choices, 0.089894 gradient, 99.87% of
