@@ -2,6 +2,39 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 19:15 Central, boundary comparison 247105 checkpointed its
+  first round under PID 63632 (19:13:44). Warm starts both from
+  private successor 6e0aabcdfcdd8ada and its original Adam.
+  Fresh sampling window, normal speed and split CPUs.
+  Control 27 outside rejections over 417 battle decisions
+  and three confirmed spends; filtered zero over 384 and six
+  spends. All four retried. No opted-in shelter commit exercised
+  in the first batch. Second batch active. Data analysis/
+  coverage-battle-boundary-3ad2ea83d9; console analysis/
+  coverage-battle-boundary-247105-drive-d.log.
+- First real phase-gradient audit from that round measured one
+  mixed episode before any update per arm. Memory cosines
+  -.0413 control and +.0315 filtered; actor cosines .0030 and
+  .0013. The measured filtered battle gradient magnitude was
+  about 45x planning for memory; control magnitudes were close.
+  Two samples only. No sustained conflict established. Keep
+  shared recurrent memory and measure later rounds before
+  deciding whether separate prep and battle heads are warranted.
+  Audit test proved bit-identical parameters after a PPO update
+  with and without measurement. Journal phase-gradients.jsonl.
+- At 19:12 boundary 239417 completed frozen play with seven
+  retries, one control planning timeout and zero eligible
+  natural finishes; two filtered discovery overlaps.
+  Control 29 outside rejections in 654 battle decisions
+  vs zero in 934 filtered. Confirmed spends three vs ten.
+  Filtered round 10 sheltered 9.26%, first legal Police at
+  .133 s, first confirmed deployment at 1.00 s and seven
+  confirmed spends. Occupied breach 49.37 s, retry 9.75%.
+  No promotion. da4c717 deployed the shelter receipts,
+  exact natural winner retention and phase-gradient audit at
+  idle with 371 script/65 Observatory tests passing.
+  Production hash and Observatory PID 21012 verified.
+
 - At 19:08 Central, boundary 239417 checkpointed eight rounds.
   Control had 259 outside battle rejections over 3701 decisions;
   candidate zero over 4802. Both had two occupied READY starts.
