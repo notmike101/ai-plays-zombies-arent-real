@@ -250,13 +250,13 @@ def episode(job, *, observe=False, audit_signal=False, separate_policy_cpus=Fals
                 worker.cpu_affinity(inherited_cpus)
 
 
-def collect_pairs(pool, jobs, directory, *, observe=False, separate_policy_cpus=False):
+def collect_pairs(pool, jobs, directory, *, observe=False, separate_policy_cpus=False, policy_ids=None):
     worker = partial(episode, observe=observe, audit_signal=True)
     if separate_policy_cpus:
         worker = partial(worker, separate_policy_cpus=True)
     def collect(attempt_jobs, attempt):
         identities = [dict(copy=job[0], arm=job[1], policy_seed=job[3], episode=job[4],
-                           attempt=attempt, phase='train' if len(job) > 5 and job[5] else 'evaluation')
+                           policy_id=(policy_ids or {}).get(job[1]), attempt=attempt, phase='train' if len(job) > 5 and job[5] else 'evaluation')
                       for job in attempt_jobs]
         with (directory/'attempts.jsonl').open('a', encoding='utf-8') as journal:
             for identity in identities:
@@ -267,7 +267,8 @@ def collect_pairs(pool, jobs, directory, *, observe=False, separate_policy_cpus=
             for identity, row in zip(identities, pool.map(worker, attempt_jobs), strict=True):
                 journal.write(json.dumps(dict(identity, status='finished', err=row.get('err'),
                                               end=row.get('end'), saved_frac=row.get('saved_frac'),
-                                              log_started=row.get('log_started'),
+                                              log_started=row.get('log_started'), win=row.get('win'),
+                                              start_kind=row.get('start_kind'),
                                               outbreak_seed=(row.get('outbreak') or {}).get('seed')))+'\n')
                 journal.flush()
                 os.fsync(journal.fileno())
@@ -356,6 +357,20 @@ def training_outbreak_seeds(rows):
             for seed in (row.get('outbreak_seed'), *row.get('prior_attempt_seeds', ())) if type(seed) is int}
 
 
+def physical_attempts(journal):
+    """Reconstruct native attempt order from durable scheduling and completion rows."""
+    attempts = {}
+    for row in records(journal):
+        key = row['episode'], row['attempt']
+        if row['status'] == 'scheduled':
+            if key in attempts:
+                raise ValueError(f'Duplicate scheduled attempt {key}')
+        elif key not in attempts or attempts[key]['status'] != 'scheduled':
+            raise ValueError(f'Completion without one pending attempt {key}')
+        attempts[key] = row
+    return list(attempts.values())
+
+
 def heldout_consistency(rows, policy_id, *, discovery_seeds=()):
     """Measure three chronological blocks of fresh complete results for one frozen policy."""
     cohort = [r for r in rows if r['phase']=='evaluation' and r['policy_id']==policy_id][:30]
@@ -370,7 +385,7 @@ def heldout_consistency(rows, policy_id, *, discovery_seeds=()):
             outbreak = row.get('outbreak_seed')
             score = row.get('saved_frac')
             discovery_overlap += type(outbreak) is int and outbreak in training_seeds
-            valid = (row.get('start_kind')=='fresh' and type(outbreak) is int and outbreak not in seen
+            valid = (not row.get('err') and row.get('start_kind')=='fresh' and type(outbreak) is int and outbreak not in seen
                      and row.get('end') in ('won', 'lost') and isinstance(score, (int, float))
                      and math.isfinite(score) and 0 <= score <= 1)
             if type(outbreak) is int:
@@ -694,16 +709,17 @@ def main():
         summaries = []
         best_natural = dict.fromkeys(models, -1.)
         def report_signal():
-            evaluation = {arm: heldout_consistency(
-                [row for row in summaries if row['arm'] == arm], trainer.policy_id(net),
-                discovery_seeds=discovery_seeds) for arm, net in models.items()}
             journal = directory/'attempts.jsonl'
-            if journal.is_file():
-                counts = Counter((row['arm'], row['status']) for row in records(journal)
-                                 if row['phase'] == 'evaluation')
-                for arm, result in evaluation.items():
-                    result['scheduled_native_attempts'] = counts[arm, 'scheduled']
-                    result['finished_native_attempts'] = counts[arm, 'finished']
+            native = physical_attempts(journal) if journal.is_file() else []
+            evaluation = {}
+            for arm, net in models.items():
+                actor = trainer.policy_id(net)
+                attempts = [row for row in native if row['arm'] == arm and row['phase'] == 'evaluation'
+                            and row['policy_id'] == actor]
+                result = heldout_consistency(attempts, actor, discovery_seeds=discovery_seeds)
+                result['scheduled_native_attempts'] = len(attempts)
+                result['finished_native_attempts'] = sum(row['status'] == 'finished' for row in attempts)
+                evaluation[arm] = result
             rows = [*prior_signal_rows, *summaries]
             earliest = min((row['round'] for row in rows if row['phase'] == 'train'), default=first_round)
             report = summarize_signal(rows, config, models, evaluation, start_round=earliest)
@@ -725,9 +741,13 @@ def main():
                     jobs.append((copy, arm, models[arm].state_dict(), args.seed+rnd*100+i//2,
                                  f'{tag}/{rnd}/{arm}/{copy}', training))
                 start = time.monotonic()
-                results = collect_pairs(pool, jobs, directory, **rollout_options)
-                batch_seconds = time.monotonic() - start
                 policies = {arm: trainer.policy_id(net) for arm, net in models.items()}
+                try:
+                    results = collect_pairs(pool, jobs, directory, policy_ids=policies, **rollout_options)
+                except (Exception, KeyboardInterrupt):
+                    report_signal()
+                    raise
+                batch_seconds = time.monotonic() - start
                 for job, row in zip(jobs, results):
                     summary = {k: row.get(k) for k in ('end','saved_frac','win','advance','sim','t','err','board_id','timeout_phase','log_started')}
                     summary.update(copy=job[0], arm=job[1], seed=job[3], round=rnd,
@@ -801,6 +821,7 @@ def main():
                     summaries.append(summary)
                     print(summary, flush=True)
                 if any(not trainer.valid_trajectory(row) for row in results):
+                    report_signal()
                     raise RuntimeError('Invalid trajectory; see trial results')
                 if training:
                     discovery_seeds.update(training_outbreak_seeds(summaries[-len(jobs):]))

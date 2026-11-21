@@ -334,7 +334,7 @@ class StateTests(unittest.TestCase):
             self.assertEqual(previous_outbreak_seeds(Path(directory)), {77})
 
     def test_private_ppo_retries_preserve_seed_and_denominator_on_interruption(self):
-        from compare_spatial import collect_pairs, heldout_consistency, previous_outbreak_seeds
+        from compare_spatial import collect_pairs, heldout_consistency, physical_attempts, previous_outbreak_seeds
         from unittest.mock import Mock
         jobs = [('inst19', 'control', {}, 123, 'left'),
                 ('inst20', 'candidate', {}, 123, 'right')]
@@ -349,18 +349,46 @@ class StateTests(unittest.TestCase):
             run = root/'coverage-interruption'
             run.mkdir()
             with self.assertRaises(KeyboardInterrupt):
-                collect_pairs(pool, jobs, run)
+                collect_pairs(pool, jobs, run, policy_ids={'control': 'left', 'candidate': 'right'})
             ledger = [json.loads(line) for line in (run/'attempts.jsonl').read_text().splitlines()]
             self.assertEqual([(e['attempt'], e['status']) for e in ledger],
                              [(0,'scheduled'), (0,'scheduled'), (0,'finished'), (0,'finished'),
                               (1,'scheduled'), (1,'scheduled')])
             self.assertEqual(previous_outbreak_seeds(root), {77})
+            physical = physical_attempts(run/'attempts.jsonl')
+            self.assertEqual([r['status'] for r in physical], ['finished','finished','scheduled','scheduled'])
+            self.assertEqual(heldout_consistency(physical, 'right')['incomplete'], 2)
 
         row = dict(phase='evaluation', policy_id='frozen', start_kind='fresh', end='won',
                    saved_frac=.4, outbreak_seed=77, prior_attempt_seeds=[77])
         self.assertEqual(heldout_consistency([row], 'frozen')['complete'], 0)
         result = heldout_consistency([dict(row,outbreak_seed=78)], 'frozen')
         self.assertEqual((result['complete'], result['minimum'], result['mean']), (1,.4,.4))
+
+    def test_native_consistency_counts_original_attempt_before_replacement(self):
+        from compare_spatial import heldout_consistency, physical_attempts
+
+        with tempfile.TemporaryDirectory() as directory:
+            journal = Path(directory)/'attempts.jsonl'
+            entries = []
+            for seed in range(31):
+                episode = str(max(0, seed - 1))
+                slot = dict(episode=episode, attempt=int(seed == 1), phase='evaluation', policy_id='frozen')
+                entries.append(dict(slot, status='scheduled'))
+                outcome = dict(err='worker failed') if seed == 0 else dict(
+                    start_kind='fresh', end='won', win=True, saved_frac=.4, outbreak_seed=seed)
+                entries.append(dict(slot, status='finished', **outcome))
+            journal.write_text(''.join(json.dumps(row)+'\n' for row in entries),encoding='utf-8')
+            report = heldout_consistency(physical_attempts(journal), 'frozen')
+            self.assertFalse(report['passed'])
+            self.assertEqual((report['attempts'], report['qualifying'], report['incomplete']), (30,29,1))
+            entries[1] = dict(entries[1], err=None, start_kind='fresh', end='won',
+                              win=True, saved_frac=.01, outbreak_seed=0)
+            journal.write_text(''.join(json.dumps(row)+'\n' for row in entries),encoding='utf-8')
+            report = heldout_consistency(physical_attempts(journal), 'frozen')
+            self.assertTrue(report['passed'])
+            self.assertEqual((report['minimum'], report['qualifying']), (.01, 29))
+            self.assertAlmostEqual(report['block_means'][0], .361)
 
     def test_private_ppo_splits_the_existing_cpu_allowance_and_restores_the_worker(self):
         import compare_spatial as comp
@@ -628,7 +656,7 @@ class StateTests(unittest.TestCase):
             (root/'analysis').mkdir()
             trials = []
 
-            def collect(pool, jobs, run, *, observe):
+            def collect(pool, jobs, run, *, observe, policy_ids):
                 self.assertTrue(observe)
                 trials.append(jobs)
                 (run/'stop-after-round').touch()
