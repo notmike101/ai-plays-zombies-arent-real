@@ -2,6 +2,8 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
+
 - At 20:12 Central, capacity study 263207 finished all four frozen
   pairs. Seven retries, one wide planning timeout and zero eligible
   natural finishes. All seven battles began with zero sheltered
