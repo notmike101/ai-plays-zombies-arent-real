@@ -2,6 +2,40 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 18:18 Central, shelter duration 227683 checkpointed five
+  rounds. Both arms entered all ten battles and reached retry
+  each time. Baseline measured two episodes with protected time.
+  Candidate recorded three, with .14484792 total verified extra
+  reward and zero reward mismatches. Round 1 had 15.43% covered
+  in both arms and the same layout fingerprint but different
+  outbreaks. Occupied breach sim 57.73 baseline / 53.90 s
+  candidate, both with one confirmed helicopter deployment.
+  Round 3 candidate had 5.05% occupied READY coverage and
+  12061.16 protected civilian-seconds. No occupied breach or
+  legal cast observed before retry at 29.40 simulated seconds.
+  Losing the unsheltered population can end a run even when
+  the shelter holds. No eligible natural outcomes. Sixth batch
+  active, operator 71548, no payload diagnostic failure recorded.
+- Staged private geometry observation comparison. Both policies
+  add 48 zero-initialized inputs and matching Adam columns from
+  the same schema-4 source. Candidate observes the best eligible
+  endpoint's projected civilian gain per start, or per-endpoint
+  gain once the model selects an anchor. Control sees zeros.
+  Uses native camera and positions, excludes people already
+  covered, and keeps masks, sampled strategy and rewards fixed.
+  88 isolated tests passed, including valid boundary/overlap
+  counts, anchored masking, old-policy parity, signal and
+  Observatory labels. Same archived source 1c3be633f44497fc
+  reproduced logits and memory within 2e-6 with the new inputs.
+  On a recorded 8142-civilian cloud and captured policy tensors,
+  median forward .501 ms and rectangle feature prep plus forward
+  1.324 ms. This measures isolated computation using a rectangular
+  client boundary, not in-game latency or buildability.
+  Stage path analysis/coverage-portable314/tmp/geometry-input-227683,
+  shelter-geometry-input.patch SHA256
+  77A9590DC6E4E6A36DDFD7AE2D581B2CE191686EF5141503077F08EF542C6986.
+  Apply check passed. Leave trainer source unchanged during 227683.
+
 - At 18:12 Central, shelter duration 227683 checkpointed its
   first round. Warm source 1c3be633f44497fc and matching Adam from
   analysis/coverage-shelter-duration-0e7fdfc762/paired.pt, arm
