@@ -4,6 +4,27 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 21:14 Central, native frozen replay audit completed.
+  All four attempts overlapped discovery as designed. Across
+  82 planning and 827 battle decisions, maximum absolute
+  sampled-log-probability residual 1.91e-6, with no PPO
+  updates or checkpoint writes. Journal analysis/
+  coverage-battle-boundary-3b89f8ea77/frozen-replay.jsonl.
+- Reconstructed prior sampling 185952 from coverage-team-
+  0ce9d6bea2: each arm had four distinct native seeds, all
+  starts 28.95% sheltered. Existing data demonstrate viable
+  sampled prep, with no isolated diversity advantage.
+- At 21:15:17, validated scratch driver launched 314807 as
+  PID 53888. Two frozen pairs: archived team bf3fc52369fc3746
+  vs 0d1d56160623a3a1, differing only in model-sampled
+  Garrison sites. Both on original per-copy planning rosters,
+  rotation, same GRU and speed. Validate distinct discovery-
+  clear native seeds and occupied starts before expansion;
+  no promotion. Restoration verified separately after exit.
+  Driver SHA256
+  642800BF26F0064D58F9BE106D70191D1A49DADDBC020D541A8C3589F6BDE096.
+  Journal analysis/coverage-team-sampled-sites-314807.
+
 - At 21:10 Central, 309427 completed and restored both
   original roster rows, independently verified against the
   manifest and settings files. Both archived-roster candidate
