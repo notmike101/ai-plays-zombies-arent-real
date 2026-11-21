@@ -4,6 +4,22 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 20:17 Central, exact-actor validation PID 66728 remained
+  live. First pair retried at 5.23% and 9.97%;
+  native seeds 2683730523 and 2580444902. Archived layout-free
+  team bf3fc52369fc3746 and base 8a691469a829158d independently
+  recovered from coverage-team-c81131e97f. The four matching
+  discovery rows match the full genome and have no layout receipts.
+  Read-only bundle check passed; no team run launched.
+- Confirmed a paired retry can replace the valid companion's
+  outcome and omit its seed from future exclusions. Staged
+  analysis/coverage-portable314/tmp/retry-ledger-audit/
+  preserve-retry-attempts.patch, SHA256
+  57F2DE1BCE49B61BDBCA5888A60DDF1356781BDA9A8D62A28424A3AB8E6E5D71.
+  Both focused retry tests and patch applicability passed. Extend
+  verification to same-run attempts before deployment. Keep current
+  validation running and ordinary throughput experiments paused.
+
 - At 20:14 Central, exact-actor evaluation 280721 launched under
   PID 66728. Frozen actor 2e654bf5875b7089 in both arms, normal
   speed, filter off vs on, four reserved pairs on inst19/20.
