@@ -4,6 +4,24 @@
 
 - Independent audit, November 20 at 20:12 Central: see notes/boston-l1-audit.md and scripts/audit_boston_l1.py. Capacity operator 76248 exited. Frozen 128 retried 4/4; frozen 192 retried 3/4 and timed out once. Zero qualifying finishes; one standard discovery overlap. Observatory PID 21012 remained active. Production SHA verified. Hold deployment for baseline recovery and isolated native comparisons.
 
+- At 20:59 Central, 281906 finished eight frozen attempts.
+  Candidate four retries (9.38%, 7.27%, 7.81%, 3.54%) on
+  two distinct seeds, 28.95% sheltered; control two retries
+  and two timeouts, all four discovery overlaps. No eligible
+  natural finishes. No promotion or scale-up.
+- At 20:59:46, archived-planning-roster validation 309427
+  launched PID 58128 after predecessor exit and game-idle
+  checks. Two counterbalanced frozen pairs on inst19/20.
+  Same two actors, no layout replay or learning. Each
+  wave reloads the exact archived planning roster for its
+  copy; after shutdown restores the pre-run planning roster.
+  Original values are recorded before any change. Battle
+  roster remains the existing copy state, historical unknown.
+  Mechanism screen only; stop on interface or roster mismatch.
+  Journal analysis/coverage-team-frozen-roster-309427;
+  isolated driver SHA256
+  759CB41E3E8BD1A4D240CEA5B4FEDB894B87CBDC24C6008953AF8768E9870AA4.
+
 - At 20:56 Central, current-roster operator 81484 scheduled
   the fourth pair. Candidate's three recorded games have
   all retried (9.38%, 7.27%, 7.81%); third repeated its
