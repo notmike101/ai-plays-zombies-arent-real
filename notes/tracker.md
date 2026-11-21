@@ -2,6 +2,14 @@
 
 ## CURRENT STATE (2026-11-20 — retained defense and planning exploration)
 
+- At 20:12 Central, capacity study 263207 finished all four frozen
+  pairs. Seven retries, one wide planning timeout and zero eligible
+  natural finishes. All seven battles began with zero sheltered
+  civilians. Confirmed spends one standard and seven wide. Standard
+  had one discovery overlap. Neither model qualified. Operator PID
+  76248 exited. Production checkpoint hash and Observatory PID 21012
+  verified. No replacement run launched during the independent audit.
+
 - At 20:06 Central, capacity study finished eight training batches.
   Standard 128 had 14 retries and two timeouts. Wide 192 had eight
   retries and eight timeouts. Neither had a natural finish. PID
